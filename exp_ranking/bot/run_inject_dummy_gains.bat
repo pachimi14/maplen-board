@@ -7,6 +7,10 @@ title MSU Ranking - Inject Demo Gains
 echo ========================================
 echo  Inject dummy EXP gains (UI test)
 echo  rankings.json -^> rankings.json.bak
+echo.
+echo  NOTE: This diverges from GitHub Pages / production data.
+echo  To restore production JSON, run:
+echo    run_sync_rankings_from_pages.bat
 echo ========================================
 echo.
 

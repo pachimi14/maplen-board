@@ -16,6 +16,16 @@ if exist ".venv\Scripts\python.exe" (
     set "PYTHON=python"
 )
 
+rem Same defaults as .github/workflows/exp-ranking-pages.yml
+set "RANKING_MIN_LEVEL=225"
+set "RANKING_MAX_PAGES=600"
+set "RANKING_REQUEST_DELAY_SEC=0.35"
+set "SNAPSHOT_RETENTION_DAYS=35"
+set "MVP_HISTORY_DAYS=35"
+set "MVP_EXPORT_TOP_N=0"
+set "SQLITE_DB_PATH=data/ranking.db"
+set "MVP_JSON_OUTPUT_PATH=../web/public/data/rankings.json"
+
 "%PYTHON%" main.py
 set "EXIT_CODE=%ERRORLEVEL%"
 
