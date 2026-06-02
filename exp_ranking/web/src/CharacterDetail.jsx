@@ -159,14 +159,14 @@ export default function CharacterDetail({
             </div>
           </div>
           <div className="bg-slate-950 rounded-2xl p-4">
-            <div className="text-slate-400 text-sm">EXP（レベル内）</div>
+            <div className="text-slate-400 text-sm">EXP</div>
             {level >= 250 ? (
               <div className="text-2xl font-bold mt-1">MAX</div>
             ) : (
               <>
                 <div className="text-2xl font-bold mt-1">{expPercent.toFixed(3)}%</div>
                 <div className="text-base font-semibold text-cyan-300 mt-1 tabular-nums">
-                  {formatExpExact(levelExp)} EXP
+                  {formatExpExact(levelExp)}
                 </div>
               </>
             )}

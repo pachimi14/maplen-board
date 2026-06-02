@@ -224,18 +224,16 @@ export default function App() {
             <p className="text-sm text-slate-400">MapleStory N</p>
             <h1 className="text-3xl md:text-5xl font-bold tracking-tight">EXP Ranking</h1>
             <p className="text-slate-400 mt-2">
-              {meta.rankingMinLevel
-                ? `Lv.${meta.rankingMinLevel}+`
-                : meta.rankingTopN
-                  ? `取得 ${meta.rankingTopN} 人`
-                  : ""}
-              {meta.characterCount != null ? ` / 表示 ${meta.characterCount} 人` : ""}
-              {meta.snapshotRetentionDays
-                ? ` / DB保持 ${meta.snapshotRetentionDays} 日`
-                : meta.mvpHistoryDays
-                  ? ` / 履歴 ${meta.mvpHistoryDays} 日`
-                  : ""}
-              {meta.latestSnapshotDate ? ` / 最新 ${meta.latestSnapshotDate}` : ""}
+              {[
+                meta.rankingMinLevel
+                  ? `Lv.${meta.rankingMinLevel}+`
+                  : meta.rankingTopN
+                    ? `取得 ${meta.rankingTopN} 人`
+                    : null,
+                meta.latestSnapshotDate ? `最新 ${meta.latestSnapshotDate}` : null,
+              ]
+                .filter(Boolean)
+                .join(" / ")}
             </p>
             {meta.demoGains ? (
               <p className="text-amber-300 text-sm mt-1">
