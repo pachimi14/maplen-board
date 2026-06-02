@@ -293,7 +293,7 @@ export default function App() {
           </div>
         ) : null}
 
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 xl:items-start">
           <Card className="xl:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl shadow-xl">
             <CardContent className="p-5 space-y-4">
               <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
@@ -383,7 +383,7 @@ export default function App() {
               </div>
 
               <div className="overflow-hidden rounded-2xl border border-slate-800">
-                <table className="w-full text-sm">
+                <table className="w-full text-base">
                   <thead className="bg-slate-950 text-slate-400">
                     <tr>
                       <th className="text-center p-3 w-12">
@@ -423,7 +423,7 @@ export default function App() {
                         <td className="p-3 font-bold text-slate-400">#{character.rank}</td>
                         <td className="p-3">
                           <div className="font-semibold">{character.name}</div>
-                          <div className="text-xs text-slate-400">{formatJobName(character.job)}</div>
+                          <div className="text-sm text-slate-400">{formatJobName(character.job)}</div>
                         </td>
                         <td className="p-3 text-right font-medium">{formatLevelExp(character)}</td>
                         <td
@@ -462,16 +462,18 @@ export default function App() {
           </Card>
 
           {selectedCharacter ? (
-            <CharacterDetail
-              character={selectedCharacter}
-              characters={rankingPool.length ? rankingPool : characters}
-              gainRankMaps={gainRankMaps}
-              expTable={expTable}
-              isFavorite={isFavorite(selectedCharacter)}
-              onToggleFavorite={() => toggleFavorite(selectedCharacter)}
-            />
+            <div className="xl:col-span-1 min-w-0">
+              <CharacterDetail
+                character={selectedCharacter}
+                characters={rankingPool.length ? rankingPool : characters}
+                gainRankMaps={gainRankMaps}
+                expTable={expTable}
+                isFavorite={isFavorite(selectedCharacter)}
+                onToggleFavorite={() => toggleFavorite(selectedCharacter)}
+              />
+            </div>
           ) : (
-            <Card className="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl">
+            <Card className="xl:col-span-1 bg-slate-900 border border-slate-800 rounded-2xl shadow-xl">
               <CardContent className="p-8 text-center text-slate-400">
                 <Star size={32} className="mx-auto mb-3 text-amber-400/60" />
                 <p>お気に入りに登録されたキャラがいません。</p>

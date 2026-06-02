@@ -3,10 +3,10 @@ import FavoriteStar from "./FavoriteStar";
 import {
   formatExp,
   formatJobName,
-  formatLevelExp,
   gainRankClass,
   GAIN_PERIOD_LABELS,
   getGainAmount,
+  levelExpPercent,
   topGainersForPeriod,
 } from "./rankingUtils";
 
@@ -28,7 +28,7 @@ export default function TopGainHighlights({
             key={period}
             className="bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-2"
           >
-            <h3 className="font-semibold text-xs text-slate-400 mb-1.5">
+            <h3 className="font-semibold text-base text-slate-400 mb-1.5">
               {GAIN_PERIOD_LABELS[period]} 増加量 TOP3
             </h3>
             <ul className="space-y-1">
@@ -43,8 +43,8 @@ export default function TopGainHighlights({
                         : "border-slate-800/80 bg-slate-950/60"
                     }`}
                   >
-                    <div className="flex items-center justify-between gap-2 min-w-0">
-                      <div className="flex items-center gap-1 min-w-0">
+                    <div className="grid grid-cols-[auto_auto_minmax(0,1fr)_auto] gap-x-1 gap-y-0.5 items-start min-w-0">
+                      <div className="col-start-1 row-start-1 w-3.5 shrink-0 flex justify-center">
                         {onToggleFavorite ? (
                           <FavoriteStar
                             active={isFavorite?.(character)}
@@ -52,22 +52,31 @@ export default function TopGainHighlights({
                             size={14}
                           />
                         ) : null}
-                        <span
-                          className={`font-bold text-xs shrink-0 ${gainRankClass(character.gainRank)}`}
-                        >
-                          #{character.gainRank}
-                        </span>
-                        <span className="font-semibold text-sm truncate">
-                          {character.name}
-                        </span>
                       </div>
-                      <span className="text-emerald-400 text-xs font-semibold shrink-0 tabular-nums">
+                      <span
+                        className={`col-start-2 row-start-1 font-bold text-base shrink-0 leading-snug ${gainRankClass(character.gainRank)}`}
+                      >
+                        #{character.gainRank}
+                      </span>
+                      <span className="col-start-3 row-start-1 font-semibold text-base leading-snug break-words min-w-0">
+                        {character.name}
+                      </span>
+                      <span className="col-start-4 row-start-1 text-emerald-400 text-base font-semibold tabular-nums whitespace-nowrap shrink-0">
                         +{formatExp(getGainAmount(character, period))}
                       </span>
-                    </div>
-                    <div className="text-[11px] text-slate-500 truncate mt-0.5 leading-tight pl-5">
-                      {formatJobName(character.job)} · レベル順位 #{character.rank} ·{" "}
-                      {formatLevelExp(character)}
+                      <p className="col-start-3 row-start-2 col-end-4 min-w-0 text-sm text-slate-500 leading-snug truncate text-left">
+                        {(character.level ?? 0) >= 250 ? (
+                          <>
+                            Lv.{character.level} MAX {formatJobName(character.job)} レベル順位 #
+                            {character.rank}
+                          </>
+                        ) : (
+                          <>
+                            Lv.{character.level} {levelExpPercent(character).toFixed(3)}%{" "}
+                            {formatJobName(character.job)} レベル順位 #{character.rank}
+                          </>
+                        )}
+                      </p>
                     </div>
                   </button>
                 </li>

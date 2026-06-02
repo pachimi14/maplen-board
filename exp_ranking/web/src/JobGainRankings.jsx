@@ -238,7 +238,7 @@ export default function JobGainRankings({
             </Button>
           </div>
           <div className="overflow-hidden rounded-xl border border-slate-800">
-            <table className="w-full text-sm">
+            <table className="w-full text-base">
               <thead className="bg-slate-900 text-slate-400">
                 <tr>
                   <th className="text-left p-3 w-12" />
@@ -290,12 +290,12 @@ export default function JobGainRankings({
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <h4 className="font-bold">{group.job}</h4>
-                    <p className="text-xs text-slate-500">{group.memberCount} 人</p>
+                    <p className="text-sm text-slate-500">{group.memberCount} 人</p>
                   </div>
                   {group.memberCount > TOP_PER_JOB ? (
                     <Button
                       variant="outline"
-                      className="border-slate-700 text-xs shrink-0 py-1"
+                      className="border-slate-700 text-sm shrink-0 py-1"
                       onClick={() => onExpandJob(group.job)}
                     >
                       全員
@@ -333,7 +333,7 @@ export default function JobGainRankings({
                             +{formatExp(getGainAmount(character, period))}
                           </span>
                         </div>
-                        <div className="text-xs text-slate-500 mt-1 pl-7">
+                        <div className="text-sm text-slate-500 mt-1 pl-7">
                           {formatLevelExp(character)} · レベル順位 #{character.rank}
                         </div>
                       </button>
@@ -341,7 +341,7 @@ export default function JobGainRankings({
                   ))}
                 </ul>
               ) : (
-                <p className="text-xs text-slate-600 py-2">ランキング対象のキャラがいません</p>
+                <p className="text-sm text-slate-600 py-2">ランキング対象のキャラがいません</p>
               )}
               </div>
             ))}
@@ -365,12 +365,12 @@ export default function JobGainRankings({
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <h4 className="font-bold">{group.job}</h4>
-                        <p className="text-xs text-slate-500">{group.memberCount} 人</p>
+                        <p className="text-sm text-slate-500">{group.memberCount} 人</p>
                       </div>
                       {group.memberCount > TOP_PER_JOB ? (
                         <Button
                           variant="outline"
-                          className="border-slate-700 text-xs shrink-0 py-1"
+                          className="border-slate-700 text-sm shrink-0 py-1"
                           onClick={() => onExpandJob(group.job)}
                         >
                           全員

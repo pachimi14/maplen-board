@@ -43,7 +43,7 @@ function RankChartDot({ cx, cy, payload }) {
         y={cy - 12}
         textAnchor="middle"
         fill="#f8fafc"
-        fontSize={11}
+        fontSize={12}
         fontWeight={600}
       >
         #{payload.dailyRank}
@@ -74,10 +74,10 @@ function RankChartTooltip({ active, payload, label }) {
 
 function GainStatCard({ label, amount, rank }) {
   return (
-    <div className="bg-slate-950 rounded-2xl p-4">
-      <div className="text-slate-400 text-sm">{label}</div>
-      <div className="text-xl font-bold text-emerald-400 mt-1">+{formatExp(amount)}</div>
-      <div className="text-sm text-slate-400 mt-1">
+    <div className="bg-slate-950 rounded-2xl p-4 min-w-0">
+      <div className="text-slate-400 text-xs sm:text-sm truncate">{label}</div>
+      <div className="text-lg font-bold text-emerald-400 mt-1 truncate">+{formatExp(amount)}</div>
+      <div className="text-xs sm:text-sm text-slate-400 mt-1">
         順位{" "}
         <span className="text-slate-100 font-semibold">{rank != null ? `#${rank}` : "-"}</span>
       </div>
@@ -127,13 +127,13 @@ export default function CharacterDetail({
   const levelExp = currentLevelExp(character, expTable);
 
   return (
-    <Card className="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto">
-      <CardContent className="p-5 space-y-5">
+    <Card className="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl w-full">
+      <CardContent className="p-6 md:p-7 space-y-6">
         <div className="flex items-start gap-4">
           <img
             src={character.imageUrl}
             alt=""
-            className="w-16 h-16 rounded-2xl bg-slate-800 object-cover shrink-0"
+            className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-slate-800 object-cover shrink-0"
           />
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-2">
@@ -145,35 +145,38 @@ export default function CharacterDetail({
                 <FavoriteStar active={isFavorite} onToggle={onToggleFavorite} size={22} />
               ) : null}
             </div>
-            <h2 className="text-2xl font-bold truncate">{character.name}</h2>
-            <p className="text-slate-400">{formatJobName(character.job)}</p>
-            <p className="text-sm text-slate-500 mt-1">レベル順位 #{character.rank}</p>
-          </div>
-        </div>
+            <h2 className="text-2xl font-bold break-words leading-tight mt-1">
+              {character.name}
+            </h2>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-slate-950 rounded-2xl p-4">
-            <div className="text-slate-400 text-sm">レベル</div>
-            <div className="text-2xl font-bold mt-1">
-              {level >= 250 ? `Lv.${level}` : `Lv.${level}`}
+            <div className="flex items-baseline justify-between gap-3 mt-2">
+              <p className="text-slate-400 min-w-0">{formatJobName(character.job)}</p>
+              <p className="shrink-0 text-right tabular-nums font-bold text-lg whitespace-nowrap">
+                Lv.{level}
+                {level >= 250 ? (
+                  <span className="text-slate-300 ml-3">MAX</span>
+                ) : (
+                  <span className="ml-3">{expPercent.toFixed(3)}%</span>
+                )}
+              </p>
             </div>
-          </div>
-          <div className="bg-slate-950 rounded-2xl p-4">
-            <div className="text-slate-400 text-sm">EXP</div>
-            {level >= 250 ? (
-              <div className="text-2xl font-bold mt-1">MAX</div>
-            ) : (
-              <>
-                <div className="text-2xl font-bold mt-1">{expPercent.toFixed(3)}%</div>
-                <div className="text-base font-semibold text-cyan-300 mt-1 tabular-nums">
+
+            <div className="flex items-baseline justify-between gap-3 mt-1">
+              <p className="text-sm text-slate-500 shrink-0">レベル順位</p>
+              {level >= 250 ? (
+                <span className="shrink-0" aria-hidden />
+              ) : (
+                <p className="min-w-0 max-w-[60%] text-right text-sm font-semibold text-cyan-300 tabular-nums leading-tight break-all">
                   {formatExpExact(levelExp)}
-                </div>
-              </>
-            )}
+                </p>
+              )}
+            </div>
+
+            <p className="text-sm text-slate-500 font-semibold mt-0.5">#{character.rank}</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <GainStatCard
             label={`${GAIN_PERIOD_LABELS.daily}増加`}
             amount={dailyGain}
@@ -191,26 +194,31 @@ export default function CharacterDetail({
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="bg-slate-950 rounded-2xl p-4">
-            <div className="text-slate-400 text-sm">今日の増加量で Lv250 まで</div>
+        <div className="grid grid-cols-2 gap-4 min-w-0">
+          <div className="bg-slate-950 rounded-2xl p-5 min-w-0 overflow-hidden">
+            <div className="text-slate-400 text-sm leading-snug">今日の増加量で Lv250 まで</div>
             {daysTo250.label ? (
-              <div className="text-2xl font-bold mt-1">{daysTo250.label}</div>
+              <div className="text-xl font-bold mt-1 break-words">{daysTo250.label}</div>
             ) : (
               <>
-                <div className="text-2xl font-bold mt-1">約 {daysTo250.days} 日</div>
-                <div className="text-lg font-semibold text-cyan-300 mt-1">
+                <div className="text-xl font-bold mt-1">約 {daysTo250.days} 日</div>
+                <div className="text-base font-semibold text-cyan-300 mt-1 break-words">
                   {daysTo250.targetDateLabel}
                 </div>
               </>
             )}
           </div>
-          <div className="bg-slate-950 rounded-2xl p-4">
-            <div className="text-slate-400 text-sm">デイリー増加 過去最高</div>
-            <div className="text-2xl font-bold text-amber-300 mt-1">
-              +{formatExpExact(bestDaily.bestGain)}
+          <div className="bg-slate-950 rounded-2xl p-5 min-w-0 overflow-hidden">
+            <div className="text-slate-400 text-sm leading-snug">デイリー増加 過去最高</div>
+            <div
+              className="mt-1 max-w-full overflow-x-auto [scrollbar-width:thin]"
+              title={`+${formatExpExact(bestDaily.bestGain)}`}
+            >
+              <div className="text-base font-bold text-amber-300 tabular-nums leading-tight whitespace-nowrap">
+                +{formatExpExact(bestDaily.bestGain)}
+              </div>
             </div>
-            <p className="text-xs text-slate-500 mt-2">
+            <p className="text-sm text-slate-500 mt-2 break-words">
               {bestDaily.bestDate ? `記録日 ${bestDaily.bestDate}` : "データなし"}
             </p>
           </div>
@@ -218,12 +226,16 @@ export default function CharacterDetail({
 
         <div>
           <h3 className="font-bold mb-3">直近1週間のデイリー経験値増加量</h3>
-          <div className="h-52">
+          <div className="h-64 md:h-72">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={weekGainSeries}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                <XAxis dataKey="date" tick={{ fill: "#94a3b8", fontSize: 12 }} />
-                <YAxis tickFormatter={formatExp} tick={{ fill: "#94a3b8", fontSize: 11 }} width={56} />
+                <XAxis dataKey="date" tick={{ fill: "#94a3b8", fontSize: 13 }} />
+                <YAxis
+                  tickFormatter={formatExp}
+                  tick={{ fill: "#94a3b8", fontSize: 12 }}
+                  width={58}
+                />
                 <Tooltip formatter={(value) => [formatExp(value), "増加量"]} />
                 <Bar dataKey="dailyGain" fill="#34d399" radius={[6, 6, 0, 0]} />
               </BarChart>
@@ -233,7 +245,7 @@ export default function CharacterDetail({
 
         <div>
           <h3 className="font-bold mb-3">直近1週間のデイリー増加量順位</h3>
-          <div className="h-64">
+          <div className="h-72 md:h-80">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
                 data={weekRankSeries}
@@ -247,7 +259,7 @@ export default function CharacterDetail({
                 />
                 <XAxis
                   dataKey="date"
-                  tick={{ fill: "#94a3b8", fontSize: 12 }}
+                  tick={{ fill: "#94a3b8", fontSize: 13 }}
                   axisLine={{ stroke: "#475569" }}
                 />
                 <YAxis
@@ -256,7 +268,7 @@ export default function CharacterDetail({
                   domain={rankChartScale.domain}
                   ticks={rankChartScale.ticks}
                   tickFormatter={(value) => `#${value}`}
-                  tick={{ fill: "#94a3b8", fontSize: 11 }}
+                  tick={{ fill: "#94a3b8", fontSize: 12 }}
                   width={44}
                   axisLine={{ stroke: "#475569" }}
                 />
@@ -280,9 +292,6 @@ export default function CharacterDetail({
               </LineChart>
             </ResponsiveContainer>
           </div>
-          <p className="text-xs text-slate-500 mt-2">
-            上ほど上位（表示範囲はこの1週間の順位変動に合わせて自動調整）
-          </p>
         </div>
       </CardContent>
     </Card>
