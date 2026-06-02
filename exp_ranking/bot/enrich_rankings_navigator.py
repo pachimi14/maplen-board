@@ -99,6 +99,12 @@ def main() -> int:
         action="store_true",
         help="Only apply cached worldId from SQLite",
     )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=0,
+        help="Navigator: only process this many pending keys (0 = all)",
+    )
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -148,9 +154,18 @@ def main() -> int:
     )
 
     if not args.skip_navigator and asset_keys:
+        pending_keys = asset_keys
+        if args.limit > 0:
+            existing = load_character_meta(db_path)
+            pending_keys = [
+                key
+                for key in asset_keys
+                if key and not str(existing.get(key, "")).strip()
+            ][: args.limit]
+            logger.info("Navigator limit: processing %s keys", len(pending_keys))
         sync_world_ids(
             db_path,
-            asset_keys,
+            pending_keys,
             request_delay_sec=config.navigator_request_delay_sec(),
             skip_existing=True,
         )
