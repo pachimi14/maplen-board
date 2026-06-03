@@ -147,6 +147,122 @@ def load_all_snapshots(db_path: Path) -> list[SnapshotRow]:
     ]
 
 
+def checkpoint_db(db_path: Path) -> None:
+    if not db_path.exists():
+        return
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+        conn.commit()
+
+
+def export_character_meta_file(db_path: Path, meta_json_path: Path) -> int:
+    import json
+
+    meta = {
+        key: value
+        for key, value in load_character_meta(db_path).items()
+        if key and str(value).strip()
+    }
+    meta_json_path.parent.mkdir(parents=True, exist_ok=True)
+    meta_json_path.write_text(
+        json.dumps(meta, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    logger.info("Exported character_meta.json: %s keys -> %s", len(meta), meta_json_path)
+    return len(meta)
+
+
+def import_character_meta_file(db_path: Path, meta_json_path: Path) -> int:
+    import json
+
+    if not meta_json_path.exists():
+        return 0
+
+    try:
+        payload = json.loads(meta_json_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return 0
+
+    if not isinstance(payload, dict):
+        return 0
+
+    from datetime import datetime, timezone
+
+    updated_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    imported = 0
+    for asset_key, world_id in payload.items():
+        key = str(asset_key).strip()
+        world = str(world_id).strip()
+        if not key or not world:
+            continue
+        upsert_character_meta(db_path, key, world, updated_at)
+        imported += 1
+
+    if imported:
+        logger.info(
+            "Imported character_meta.json: %s keys from %s",
+            imported,
+            meta_json_path,
+        )
+    return imported
+
+
+def hydrate_character_meta_from_url(db_path: Path, url: str) -> int:
+    """Load worldId from the last deployed rankings.json (GitHub Pages)."""
+    import json
+
+    import requests
+
+    if not url:
+        return 0
+
+    try:
+        response = requests.get(
+            url,
+            timeout=120,
+            headers={
+                "Accept": "application/json",
+                "User-Agent": "msu-ranking-bot/1.0",
+            },
+        )
+        if response.status_code != 200:
+            logger.warning(
+                "Pages rankings.json not available for hydrate: HTTP %s",
+                response.status_code,
+            )
+            return 0
+        payload = response.json()
+    except Exception as exc:
+        logger.warning("Pages rankings.json hydrate failed: %s", exc)
+        return 0
+
+    characters = payload.get("characters")
+    if not isinstance(characters, list):
+        return 0
+
+    from datetime import datetime, timezone
+
+    updated_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    imported = 0
+    for character in characters:
+        if not isinstance(character, dict):
+            continue
+        asset_key = str(character.get("characterAssetKey") or "").strip()
+        world_id = str(character.get("worldId") or "").strip()
+        if not asset_key or not world_id:
+            continue
+        upsert_character_meta(db_path, asset_key, world_id, updated_at)
+        imported += 1
+
+    if imported:
+        logger.info(
+            "Hydrated character_meta from Pages JSON: %s keys (%s)",
+            imported,
+            url,
+        )
+    return imported
+
+
 def count_character_meta(db_path: Path) -> int:
     if not db_path.exists():
         return 0
@@ -211,7 +327,11 @@ def load_character_meta(db_path: Path) -> dict[str, str]:
             """
         ).fetchall()
 
-    return {str(row[0]): str(row[1] or "") for row in rows}
+    return {
+        str(row[0]): str(row[1] or "")
+        for row in rows
+        if str(row[1] or "").strip()
+    }
 
 
 def upsert_character_meta(

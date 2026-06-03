@@ -22,9 +22,14 @@ from mvp_export import export_mvp_json, filter_snapshots_for_history
 from navigator import collect_asset_keys, extract_asset_key, sync_world_ids
 from sqlite_storage import (
     append_snapshots,
+    checkpoint_db,
     count_character_meta,
     delete_snapshots_before,
+    export_character_meta_file,
     hydrate_character_meta_from_json,
+    hydrate_character_meta_from_url,
+    import_character_meta_file,
+    init_db,
     load_all_snapshots,
     load_character_meta,
 )
@@ -299,17 +304,38 @@ def run() -> int:
 
     db_path = config.sqlite_db_path()
     json_path = config.mvp_json_output_path()
-    cached_meta = count_character_meta(db_path)
-    logger.info("character_meta in DB before sync: %s with worldId", cached_meta)
+    meta_json_path = config.character_meta_json_path()
+    init_db(db_path)
 
-    if json_path.exists() and cached_meta == 0:
+    import_character_meta_file(db_path, meta_json_path)
+    cached_meta = count_character_meta(db_path)
+    logger.info("character_meta in DB after file import: %s with worldId", cached_meta)
+
+    if json_path.exists():
         hydrated = hydrate_character_meta_from_json(db_path, json_path)
         if hydrated:
             cached_meta = count_character_meta(db_path)
-            logger.info("character_meta after JSON hydrate: %s", cached_meta)
+            logger.info("character_meta after local rankings.json: %s", cached_meta)
+
+    if config.hydrate_meta_from_pages():
+        pages_hydrated = hydrate_character_meta_from_url(
+            db_path, config.pages_rankings_url()
+        )
+        if pages_hydrated:
+            cached_meta = count_character_meta(db_path)
+            logger.info(
+                "character_meta after Pages hydrate: %s (imported %s)",
+                cached_meta,
+                pages_hydrated,
+            )
 
     if config.navigator_fetch_enabled():
         asset_keys = collect_asset_keys(ranking)
+        logger.info(
+            "Navigator sync starting: %s ranking keys, %s cached worldIds in DB",
+            len(asset_keys),
+            cached_meta,
+        )
         sync_world_ids(
             db_path,
             asset_keys,
@@ -376,6 +402,14 @@ def run() -> int:
         snapshot_retention_days=retention_days,
         ranking_min_level=min_level,
         character_meta=character_meta,
+    )
+
+    meta_exported = export_character_meta_file(db_path, meta_json_path)
+    checkpoint_db(db_path)
+    logger.info(
+        "character_meta after run: %s in DB, %s in character_meta.json",
+        count_character_meta(db_path),
+        meta_exported,
     )
 
     logger.info(

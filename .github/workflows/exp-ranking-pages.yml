@@ -38,15 +38,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Restore ranking database cache
+      - name: Restore ranking data cache
         id: ranking_db_cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
-          path: exp_ranking/bot/data/ranking.db
-          key: exp-ranking-db-v2-${{ github.repository }}
+          path: exp_ranking/bot/data
+          key: exp-ranking-data-v3-${{ github.repository }}-meta0
           restore-keys: |
-            exp-ranking-db-v2-${{ github.repository }}
-            exp-ranking-db-${{ github.repository }}
+            exp-ranking-data-v3-${{ github.repository }}-meta
+
+      - name: Log cache restore
+        run: |
+          echo "cache-hit=${{ steps.ranking_db_cache.outputs.cache-hit }}"
+          echo "cache-primary-key=${{ steps.ranking_db_cache.outputs.cache-primary-key }}"
+          ls -la exp_ranking/bot/data/ || true
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -70,16 +75,27 @@ jobs:
           MVP_EXPORT_TOP_N: "0"
           SQLITE_DB_PATH: data/ranking.db
           MVP_JSON_OUTPUT_PATH: ../web/public/data/rankings.json
+          CHARACTER_META_JSON_PATH: data/character_meta.json
           NAVIGATOR_REQUEST_DELAY_SEC: "0.35"
           NAVIGATOR_FETCH_ENABLED: "true"
+          HYDRATE_META_FROM_PAGES: "true"
+          MVP_PAGES_RANKINGS_URL: https://pachimi14.github.io/msu-exp-ranking/data/rankings.json
         run: python main.py
 
-      - name: Save ranking database cache
-        if: success()
+      - name: Count navigator meta for cache key
+        id: meta_count
+        working-directory: exp_ranking/bot
+        run: |
+          COUNT=$(python -c "from config import sqlite_db_path; from sqlite_storage import count_character_meta; print(count_character_meta(sqlite_db_path()))")
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+          echo "character_meta count=$COUNT"
+
+      - name: Save ranking data cache
+        if: success() && steps.meta_count.outputs.count != '0'
         uses: actions/cache/save@v4
         with:
-          path: exp_ranking/bot/data/ranking.db
-          key: exp-ranking-db-v2-${{ github.repository }}
+          path: exp_ranking/bot/data
+          key: exp-ranking-data-v3-${{ github.repository }}-meta${{ steps.meta_count.outputs.count }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4

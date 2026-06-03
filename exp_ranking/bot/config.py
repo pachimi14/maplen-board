@@ -88,3 +88,20 @@ def benchmark_character_name() -> str:
 def mvp_json_output_path() -> Path:
     default = str(BASE_DIR.parent / "web" / "public" / "data" / "rankings.json")
     return env_path("MVP_JSON_OUTPUT_PATH", default)
+
+
+def character_meta_json_path() -> Path:
+    default = str(BASE_DIR / "data" / "character_meta.json")
+    return env_path("CHARACTER_META_JSON_PATH", default)
+
+
+def pages_rankings_url() -> str:
+    return os.environ.get(
+        "MVP_PAGES_RANKINGS_URL",
+        "https://pachimi14.github.io/msu-exp-ranking/data/rankings.json",
+    ).strip()
+
+
+def hydrate_meta_from_pages() -> bool:
+    raw = os.environ.get("HYDRATE_META_FROM_PAGES", "true").strip().lower()
+    return raw not in ("0", "false", "no", "off")
