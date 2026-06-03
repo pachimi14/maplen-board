@@ -13,7 +13,7 @@ JST = ZoneInfo("Asia/Tokyo")
 JST_RESET_HOUR = 9
 JST_RESET_MINUTE = 0
 JST_FETCH_HOUR = 9
-JST_FETCH_MINUTE = 5
+JST_FETCH_MINUTE = 20
 
 MAX_WAIT_SEC = 6 * 60 * 60
 
@@ -37,7 +37,7 @@ def jst_fetch_window_start(
 
 
 def wait_until_jst_fetch_window(logger: logging.Logger | None = None) -> None:
-    """Block until JST 09:05 (ranking reset 09:00 + buffer)."""
+    """Block until JST 09:20 (ranking reset 09:00 + buffer)."""
     log = logger or logging.getLogger(__name__)
     waited = 0
     while True:

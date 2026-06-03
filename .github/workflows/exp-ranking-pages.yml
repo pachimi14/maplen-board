@@ -15,10 +15,11 @@ on:
       - ".github/workflows/exp-ranking-pages.yml"
       - "README.md"
   schedule:
-    # UTC 00:05 ≒ JST 09:05 (ranking day resets JST 09:00; job waits until 09:05 if early)
-    - cron: "5 0 * * *"
-    # UTC 00:25 ≒ JST 09:25 fallback when GitHub delays the primary schedule
-    - cron: "25 0 * * *"
+    # キュー時刻は JST。遅延~5h想定: JST4:20→~9:20, 5:20→~10:20, 6:20→~11:20。定刻: JST9:20。
+    - cron: "20 19 * * *"
+    - cron: "20 20 * * *"
+    - cron: "20 21 * * *"
+    - cron: "20 0 * * *"
   workflow_dispatch:
 
 concurrency:
@@ -72,11 +73,8 @@ jobs:
         run: |
           echo "legacy-cache-hit=${{ steps.legacy_db_cache.outputs.cache-hit }}"
           echo "v3-cache-hit=${{ steps.ranking_db_cache.outputs.cache-hit }}"
-          echo "v3-cache-primary-key=${{ steps.ranking_db_cache.outputs.cache-primary-key }}"
+          echo "schedule=${{ github.event.schedule }}"
           ls -la exp_ranking/bot/data/ || true
-          if [ -f exp_ranking/bot/data/ranking.legacy.db ]; then
-            echo "legacy-preserved-bytes=$(wc -c < exp_ranking/bot/data/ranking.legacy.db)"
-          fi
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -90,6 +88,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Fetch ranking and export JSON
+        id: fetch_ranking
         working-directory: exp_ranking/bot
         env:
           RANKING_MIN_LEVEL: "225"
@@ -106,12 +105,24 @@ jobs:
           HYDRATE_META_FROM_PAGES: "true"
           MVP_PAGES_RANKINGS_URL: https://pachimi14.github.io/msu-exp-ranking/data/rankings.json
           IMPORT_SNAPSHOTS_JSON: data/seed/rankings_seed.json
-          ENFORCE_JST_FETCH_WINDOW: ${{ github.event_name == 'schedule' && 'true' || '' }}
-          SKIP_FETCH_IF_RANKING_DAY_EXISTS: ${{ github.event_name == 'schedule' && 'true' || '' }}
+          ENFORCE_JST_FETCH_WINDOW: ${{ github.event_name == 'schedule' && github.event.schedule == '20 0 * * *' && 'true' || '' }}
+          SKIP_RUN_IF_RANKING_DAY_EXISTS: ${{ github.event_name == 'schedule' && 'true' || '' }}
+          SKIP_RUN_MIN_SNAPSHOT_ROWS: "1000"
         run: python main.py
+
+      - name: Check if today's ranking day is already complete
+        id: deploy_gate
+        run: |
+          if [ -f exp_ranking/bot/data/.ranking_day_complete ]; then
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+            echo "Skip deploy: $(cat exp_ranking/bot/data/.ranking_day_complete)"
+          else
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Count navigator meta for cache key
         id: meta_count
+        if: steps.deploy_gate.outputs.deploy == 'true'
         working-directory: exp_ranking/bot
         run: |
           COUNT=$(python -c "from config import sqlite_db_path; from sqlite_storage import count_character_meta; print(count_character_meta(sqlite_db_path()))")
@@ -119,13 +130,14 @@ jobs:
           echo "character_meta count=$COUNT"
 
       - name: Save ranking data cache
-        if: success() && steps.meta_count.outputs.count != '0'
+        if: success() && steps.deploy_gate.outputs.deploy == 'true' && steps.meta_count.outputs.count != '0'
         uses: actions/cache/save@v4
         with:
           path: exp_ranking/bot/data
           key: exp-ranking-data-v3-${{ github.repository }}-meta${{ steps.meta_count.outputs.count }}
 
       - name: Set up Node.js
+        if: steps.deploy_gate.outputs.deploy == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -133,20 +145,24 @@ jobs:
           cache-dependency-path: exp_ranking/web/package-lock.json
 
       - name: Install web dependencies
+        if: steps.deploy_gate.outputs.deploy == 'true'
         working-directory: exp_ranking/web
         run: npm ci
 
       - name: Build web
+        if: steps.deploy_gate.outputs.deploy == 'true'
         working-directory: exp_ranking/web
         env:
           GITHUB_PAGES: "true"
         run: npm run build
 
       - name: Upload Pages artifact
+        if: steps.deploy_gate.outputs.deploy == 'true'
         uses: actions/upload-pages-artifact@v3
         with:
           path: exp_ranking/web/dist
 
       - name: Deploy to GitHub Pages
+        if: steps.deploy_gate.outputs.deploy == 'true'
         id: deployment
         uses: actions/deploy-pages@v4

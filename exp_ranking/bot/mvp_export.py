@@ -230,7 +230,7 @@ def build_mvp_payload(
             "latestSnapshotDate": latest_date,
             "rankingDayTimezone": "UTC",
             "rankingDayResetsAt": "JST 09:00 (= UTC 00:00)",
-            "scheduledFetchAfterJst": "JST 09:05 (CI may wait; fallback cron 09:25)",
+            "scheduledFetchAfterJst": "JST queue 04:20/05:20/06:20/09:20 (~+5h delay; skip if day captured)",
             "gainPeriods": gain_period_meta(latest_ranking_day),
             "rankingTopN": ranking_top_n,
             "rankingMinLevel": ranking_min_level,

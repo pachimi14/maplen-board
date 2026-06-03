@@ -140,6 +140,23 @@ def skip_fetch_if_ranking_day_exists() -> bool:
     return raw in ("1", "true", "yes", "on")
 
 
+def skip_run_if_ranking_day_exists() -> bool:
+    raw = os.environ.get("SKIP_RUN_IF_RANKING_DAY_EXISTS", "").strip().lower()
+    return raw in ("1", "true", "yes", "on")
+
+
+def skip_run_min_snapshot_rows() -> int:
+    raw = os.environ.get("SKIP_RUN_MIN_SNAPSHOT_ROWS", "1000").strip()
+    try:
+        return max(1, int(raw))
+    except ValueError:
+        return 1000
+
+
+def ranking_day_skip_marker_path() -> Path:
+    return BASE_DIR / "data" / ".ranking_day_complete"
+
+
 def resolve_snapshot_import_path(db_path: Path) -> Path | None:
     """Pick a rankings.json seed when DB is missing snapshot days from that file."""
     candidates: list[Path] = [snapshot_seed_json_path()]
