@@ -515,6 +515,7 @@ export default function App() {
                 characters={rankingPool.length ? rankingPool : characters}
                 gainRankMaps={gainRankMaps}
                 expTable={expTable}
+                rankingMeta={meta}
                 isFavorite={isFavorite(selectedCharacter)}
                 onToggleFavorite={() => toggleFavorite(selectedCharacter)}
               />

@@ -6,6 +6,21 @@ export const GAIN_PERIOD_LABELS = {
   monthly: "月間",
 };
 
+/** JST reset boundaries (must match bot ranking_periods.py). */
+export const GAIN_PERIOD_RESETS = {
+  daily: "毎日 9:00 JST",
+  weekly: "毎週木曜 9:00 JST",
+  monthly: "毎月1日 9:00 JST",
+};
+
+export function gainPeriodRange(meta, period) {
+  const block = meta?.gainPeriods?.[period];
+  if (!block?.periodStart || !block?.periodEnd) {
+    return null;
+  }
+  return { start: block.periodStart, end: block.periodEnd };
+}
+
 export const WORLD_IDS = ["Ain", "Errai", "Fang"];
 
 export function characterWorldId(character) {
@@ -198,14 +213,40 @@ export function lastHistoryPoints(character, count = 7) {
   return history.slice(-count);
 }
 
+/** History points whose snapshotDate falls in [start, end] (ISO dates). */
+export function historyPointsInPeriod(character, periodStart, periodEnd) {
+  const history = Array.isArray(character.history) ? character.history : [];
+  if (!periodStart || !periodEnd) {
+    return history;
+  }
+  return history.filter((point) => {
+    const snapshotDate = point.snapshotDate;
+    if (!snapshotDate) {
+      return true;
+    }
+    return snapshotDate >= periodStart && snapshotDate <= periodEnd;
+  });
+}
+
 /** Per-day daily gain rank among all characters (same date label in history). */
-export function buildWeekDailyRankSeries(characters, characterId, days = 7) {
+export function buildWeekDailyRankSeries(
+  characters,
+  characterId,
+  days = 7,
+  periodStart = null,
+  periodEnd = null,
+) {
   const target = characters.find((item) => item.id === characterId);
   if (!target) {
     return [];
   }
 
-  return lastHistoryPoints(target, days).map((point) => {
+  const points =
+    periodStart && periodEnd
+      ? historyPointsInPeriod(target, periodStart, periodEnd)
+      : lastHistoryPoints(target, days);
+
+  return points.map((point) => {
     const date = point.date;
     const ranked = characters
       .map((character) => {

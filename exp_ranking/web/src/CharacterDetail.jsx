@@ -25,10 +25,13 @@ import {
   formatExp,
   formatExpExact,
   GAIN_PERIOD_LABELS,
+  GAIN_PERIOD_RESETS,
   getGainRank,
   formatJobName,
   getGainAmount,
   getNavigatorUrl,
+  gainPeriodRange,
+  historyPointsInPeriod,
   lastHistoryPoints,
   levelExpPercent,
 } from "./rankingUtils";
@@ -74,10 +77,13 @@ function RankChartTooltip({ active, payload, label }) {
   );
 }
 
-function GainStatCard({ label, amount, rank }) {
+function GainStatCard({ label, amount, rank, hint }) {
   return (
     <div className="bg-slate-950 rounded-2xl p-4 min-w-0">
       <div className="text-slate-400 text-xs sm:text-sm truncate">{label}</div>
+      {hint ? (
+        <div className="text-[10px] sm:text-xs text-slate-500 truncate mt-0.5">{hint}</div>
+      ) : null}
       <div className="text-lg font-bold text-emerald-400 mt-1 truncate">+{formatExp(amount)}</div>
       <div className="text-xs sm:text-sm text-slate-400 mt-1">
         順位{" "}
@@ -92,9 +98,11 @@ export default function CharacterDetail({
   characters,
   gainRankMaps,
   expTable,
+  rankingMeta = null,
   isFavorite = false,
   onToggleFavorite,
 }) {
+  const weeklyRange = gainPeriodRange(rankingMeta, "weekly");
   const dailyGain = getGainAmount(character, "daily");
   const weeklyGain = getGainAmount(character, "weekly");
   const monthlyGain = getGainAmount(character, "monthly");
@@ -103,14 +111,29 @@ export default function CharacterDetail({
   const weeklyRank = getGainRank(gainRankMaps, character.id, "weekly");
   const monthlyRank = getGainRank(gainRankMaps, character.id, "monthly");
 
-  const weekGainSeries = useMemo(
-    () => lastHistoryPoints(character, 7),
-    [character]
-  );
+  const weekGainSeries = useMemo(() => {
+    if (weeklyRange) {
+      return historyPointsInPeriod(
+        character,
+        weeklyRange.start,
+        weeklyRange.end,
+      );
+    }
+    return lastHistoryPoints(character, 7);
+  }, [character, weeklyRange]);
 
   const weekRankSeries = useMemo(
-    () => enrichRankSeries(buildWeekDailyRankSeries(characters, character.id, 7)),
-    [characters, character.id]
+    () =>
+      enrichRankSeries(
+        buildWeekDailyRankSeries(
+          characters,
+          character.id,
+          7,
+          weeklyRange?.start,
+          weeklyRange?.end,
+        ),
+      ),
+    [characters, character.id, weeklyRange],
   );
 
   const rankChartScale = useMemo(
@@ -196,16 +219,19 @@ export default function CharacterDetail({
             label={`${GAIN_PERIOD_LABELS.daily}増加`}
             amount={dailyGain}
             rank={dailyRank}
+            hint={GAIN_PERIOD_RESETS.daily}
           />
           <GainStatCard
             label={`${GAIN_PERIOD_LABELS.weekly}増加`}
             amount={weeklyGain}
             rank={weeklyRank}
+            hint={GAIN_PERIOD_RESETS.weekly}
           />
           <GainStatCard
             label={`${GAIN_PERIOD_LABELS.monthly}増加`}
             amount={monthlyGain}
             rank={monthlyRank}
+            hint={GAIN_PERIOD_RESETS.monthly}
           />
         </div>
 
@@ -240,7 +266,7 @@ export default function CharacterDetail({
         </div>
 
         <div>
-          <h3 className="font-bold mb-3">直近1週間のデイリー経験値増加量</h3>
+          <h3 className="font-bold mb-3">週間期間のデイリー経験値増加量</h3>
           <div className="h-64 md:h-72">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={weekGainSeries}>
@@ -259,7 +285,7 @@ export default function CharacterDetail({
         </div>
 
         <div>
-          <h3 className="font-bold mb-3">直近1週間のデイリー増加量順位</h3>
+          <h3 className="font-bold mb-3">週間期間のデイリー増加量順位</h3>
           <div className="h-72 md:h-80">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart

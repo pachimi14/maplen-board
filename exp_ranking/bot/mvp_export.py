@@ -21,6 +21,12 @@ from level_exp import (
 from job_names import format_job_name
 from models import AnalysisRow, SnapshotRow
 from navigator import KNOWN_WORLD_IDS, navigator_character_url
+from ranking_periods import (
+    gain_period_meta,
+    monthly_period_start,
+    sum_daily_gains_in_period,
+    weekly_period_start,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +78,9 @@ def build_mvp_characters(
         return []
 
     latest_date = latest_snapshot_date or max(row.snapshot_date for row in snapshots)
+    latest_ranking_day = date.fromisoformat(latest_date)
+    week_start = weekly_period_start(latest_ranking_day)
+    month_start = monthly_period_start(latest_ranking_day)
     analysis_by_key = _analysis_lookup(analysis_rows)
     meta = character_meta or {}
     name_to_asset_key = build_name_to_asset_key(snapshots)
@@ -100,6 +109,7 @@ def build_mvp_characters(
         )
 
         history: list[dict[str, Any]] = []
+        daily_by_date: list[tuple[str, int | None]] = []
         for snap in rows_sorted:
             analysis = analysis_by_key.get(
                 (snap.snapshot_date, snap.character_name.casefold())
@@ -108,10 +118,12 @@ def build_mvp_characters(
             if analysis and analysis.daily_exp_gain is not None:
                 daily_gain = analysis.daily_exp_gain
 
+            daily_by_date.append((snap.snapshot_date, daily_gain))
             level_pct = calculate_level_exp_percent(snap.level, snap.exp)
             history.append(
                 {
                     "date": _format_chart_date(snap.snapshot_date),
+                    "snapshotDate": snap.snapshot_date,
                     "level": snap.level,
                     "levelExpPercent": level_pct,
                     "expPercent": level_pct,
@@ -119,13 +131,17 @@ def build_mvp_characters(
                 }
             )
 
-        daily_gains = [
-            point["dailyGain"]
-            for point in history
-            if point.get("dailyGain") is not None
-        ]
-        weekly_gain = sum(daily_gains[-7:]) if daily_gains else 0
-        monthly_gain = sum(daily_gains[-30:]) if daily_gains else 0
+        weekly_gain = sum_daily_gains_in_period(
+            daily_by_date,
+            period_start=week_start,
+            period_end=latest_ranking_day,
+        )
+        monthly_gain = sum_daily_gains_in_period(
+            daily_by_date,
+            period_start=month_start,
+            period_end=latest_ranking_day,
+        )
+        daily_gains = [gain for _, gain in daily_by_date if gain is not None]
         if latest_analysis and latest_analysis.daily_exp_gain is not None:
             latest_daily_gain = latest_analysis.daily_exp_gain
         elif daily_gains:
@@ -201,6 +217,7 @@ def build_mvp_payload(
         character_meta=character_meta,
     )
     snapshot_dates = sorted({row.snapshot_date for row in snapshots})
+    latest_ranking_day = date.fromisoformat(latest_date) if latest_date else date.today()
 
     return {
         "meta": {
@@ -213,6 +230,7 @@ def build_mvp_payload(
             "latestSnapshotDate": latest_date,
             "rankingDayTimezone": "UTC",
             "rankingDayResetsAt": "UTC 00:00 (= JST 09:00)",
+            "gainPeriods": gain_period_meta(latest_ranking_day),
             "rankingTopN": ranking_top_n,
             "rankingMinLevel": ranking_min_level,
             "mvpHistoryDays": history_days,
