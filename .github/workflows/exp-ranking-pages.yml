@@ -13,6 +13,7 @@ on:
     paths:
       - "exp_ranking/**"
       - ".github/workflows/exp-ranking-pages.yml"
+      - "README.md"
   schedule:
     # UTC 00:15 ≒ JST 09:15 (after ranking day rollover at JST 09:00)
     - cron: "15 0 * * *"
@@ -102,6 +103,7 @@ jobs:
           NAVIGATOR_FETCH_ENABLED: "true"
           HYDRATE_META_FROM_PAGES: "true"
           MVP_PAGES_RANKINGS_URL: https://pachimi14.github.io/msu-exp-ranking/data/rankings.json
+          IMPORT_SNAPSHOTS_JSON: data/seed/rankings_seed.json
         run: python main.py
 
       - name: Count navigator meta for cache key

@@ -36,7 +36,9 @@ from sqlite_storage import (
     load_all_snapshots,
     load_character_meta,
     import_snapshots_from_mvp_json,
+    list_snapshot_dates,
     merge_ranking_databases,
+    snapshot_dates_in_mvp_json,
 )
 from utils import normalize_int
 
@@ -321,11 +323,16 @@ def run() -> int:
                 count_snapshot_dates(db_path),
             )
 
-    snapshot_days_before = count_snapshot_dates(db_path)
-    import_json = config.import_snapshots_json_path(
-        db_snapshot_days=snapshot_days_before
-    )
+    import_json = config.resolve_snapshot_import_path(db_path)
     if import_json:
+        seed_dates = snapshot_dates_in_mvp_json(import_json)
+        db_dates_before = set(list_snapshot_dates(db_path))
+        missing = sorted(seed_dates - db_dates_before)
+        logger.info(
+            "Importing snapshot seed: %s (missing dates: %s)",
+            import_json,
+            missing or "none",
+        )
         imported_rows = import_snapshots_from_mvp_json(db_path, import_json)
         if imported_rows:
             logger.info(

@@ -395,6 +395,50 @@ def latest_snapshot_date(db_path: Path) -> str | None:
     return str(row[0]) if row and row[0] else None
 
 
+def list_snapshot_dates(db_path: Path) -> list[str]:
+    if not db_path.exists():
+        return []
+    init_db(db_path)
+    with sqlite3.connect(db_path) as conn:
+        rows = conn.execute(
+            "SELECT DISTINCT snapshot_date FROM ranking_snapshot ORDER BY snapshot_date"
+        ).fetchall()
+    return [str(row[0]) for row in rows if row[0]]
+
+
+def snapshot_dates_in_mvp_json(json_path: Path) -> set[str]:
+    import json
+
+    try:
+        payload = json.loads(json_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return set()
+
+    meta = payload.get("meta")
+    characters = payload.get("characters")
+    if not isinstance(meta, dict) or not isinstance(characters, list):
+        return set()
+
+    latest_date = str(meta.get("latestSnapshotDate") or "").strip()
+    if not latest_date:
+        return set()
+
+    dates: set[str] = set()
+    for character in characters:
+        if not isinstance(character, dict):
+            continue
+        history = character.get("history")
+        if not isinstance(history, list):
+            continue
+        for point in history:
+            if not isinstance(point, dict):
+                continue
+            chart_date = str(point.get("date") or "").strip()
+            if chart_date and "/" in chart_date:
+                dates.add(_chart_date_to_iso(chart_date, latest_date))
+    return dates
+
+
 def count_snapshot_dates(db_path: Path) -> int:
     if not db_path.exists():
         return 0
