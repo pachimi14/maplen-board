@@ -38,6 +38,24 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Restore legacy ranking database cache (v2 path)
+        id: legacy_db_cache
+        uses: actions/cache/restore@v4
+        with:
+          path: exp_ranking/bot/data/ranking.db
+          key: exp-ranking-db-v2-${{ github.repository }}
+          restore-keys: |
+            exp-ranking-db-v2-${{ github.repository }}
+            exp-ranking-db-${{ github.repository }}
+
+      - name: Preserve legacy DB before v3 restore
+        run: |
+          mkdir -p exp_ranking/bot/data
+          if [ -f exp_ranking/bot/data/ranking.db ]; then
+            cp exp_ranking/bot/data/ranking.db exp_ranking/bot/data/ranking.legacy.db
+            echo "legacy-db-bytes=$(wc -c < exp_ranking/bot/data/ranking.legacy.db)"
+          fi
+
       - name: Restore ranking data cache
         id: ranking_db_cache
         uses: actions/cache/restore@v4
@@ -47,22 +65,14 @@ jobs:
           restore-keys: |
             exp-ranking-data-v3-${{ github.repository }}-meta
 
-      - name: Restore legacy ranking database cache
-        uses: actions/cache/restore@v4
-        with:
-          path: exp_ranking/bot/data/ranking.legacy.db
-          key: exp-ranking-db-v2-${{ github.repository }}
-          restore-keys: |
-            exp-ranking-db-v2-${{ github.repository }}
-            exp-ranking-db-${{ github.repository }}
-
       - name: Log cache restore
         run: |
-          echo "cache-hit=${{ steps.ranking_db_cache.outputs.cache-hit }}"
-          echo "cache-primary-key=${{ steps.ranking_db_cache.outputs.cache-primary-key }}"
+          echo "legacy-cache-hit=${{ steps.legacy_db_cache.outputs.cache-hit }}"
+          echo "v3-cache-hit=${{ steps.ranking_db_cache.outputs.cache-hit }}"
+          echo "v3-cache-primary-key=${{ steps.ranking_db_cache.outputs.cache-primary-key }}"
           ls -la exp_ranking/bot/data/ || true
           if [ -f exp_ranking/bot/data/ranking.legacy.db ]; then
-            echo "legacy-db-bytes=$(wc -c < exp_ranking/bot/data/ranking.legacy.db)"
+            echo "legacy-preserved-bytes=$(wc -c < exp_ranking/bot/data/ranking.legacy.db)"
           fi
 
       - name: Set up Python

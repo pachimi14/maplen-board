@@ -105,3 +105,29 @@ def pages_rankings_url() -> str:
 def hydrate_meta_from_pages() -> bool:
     raw = os.environ.get("HYDRATE_META_FROM_PAGES", "true").strip().lower()
     return raw not in ("0", "false", "no", "off")
+
+
+def import_snapshots_json_path(*, db_snapshot_days: int) -> Path | None:
+    raw = os.environ.get("IMPORT_SNAPSHOTS_JSON", "").strip()
+    if raw:
+        return env_path("IMPORT_SNAPSHOTS_JSON", raw)
+    if db_snapshot_days >= 2:
+        return None
+    default = BASE_DIR.parent / "web" / "public" / "data" / "rankings.json"
+    if default.exists() and (_read_snapshot_days(default) or 0) >= 2:
+        return default
+    return None
+
+
+def _read_snapshot_days(json_path: Path) -> int | None:
+    import json
+
+    try:
+        payload = json.loads(json_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    meta = payload.get("meta")
+    if not isinstance(meta, dict):
+        return None
+    days = meta.get("snapshotDays")
+    return int(days) if days is not None else None

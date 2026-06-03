@@ -443,6 +443,125 @@ def backfill_character_asset_keys(db_path: Path) -> int:
     return updated
 
 
+def _chart_date_to_iso(chart_date: str, latest_snapshot_date: str) -> str:
+    from datetime import date
+
+    month_str, day_str = chart_date.strip().split("/", 1)
+    month = int(month_str)
+    day = int(day_str)
+    year = int(latest_snapshot_date[:4])
+    candidate = date(year, month, day)
+    latest = date.fromisoformat(latest_snapshot_date)
+    if candidate > latest:
+        candidate = date(year - 1, month, day)
+    return candidate.isoformat()
+
+
+def import_snapshots_from_mvp_json(db_path: Path, json_path: Path) -> int:
+    """Rebuild SQLite snapshot rows from rankings.json history (recovery)."""
+    import json
+    from collections import defaultdict
+    from datetime import datetime, timezone
+
+    from level_exp import exp_required_for_level
+
+    try:
+        payload = json.loads(json_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning("Cannot import snapshots from %s: %s", json_path, exc)
+        return 0
+
+    characters = payload.get("characters")
+    meta = payload.get("meta")
+    if not isinstance(characters, list) or not isinstance(meta, dict):
+        return 0
+
+    latest_date = str(meta.get("latestSnapshotDate") or "").strip()
+    if not latest_date:
+        return 0
+
+    updated_raw = str(meta.get("updatedAt") or "").strip()
+    fetched_at = updated_raw or datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+    pending: dict[str, list[dict[str, object]]] = defaultdict(list)
+    for character in characters:
+        if not isinstance(character, dict):
+            continue
+        name = str(character.get("name") or "").strip()
+        if not name:
+            continue
+        asset_key = str(character.get("characterAssetKey") or "").strip()
+        latest_rank = int(character.get("rank") or 0)
+        image_url = str(character.get("imageUrl") or "").strip()
+        history = character.get("history")
+        if not isinstance(history, list):
+            continue
+
+        for point in history:
+            if not isinstance(point, dict):
+                continue
+            chart_date = str(point.get("date") or "").strip()
+            if not chart_date or "/" not in chart_date:
+                continue
+            snapshot_date = _chart_date_to_iso(chart_date, latest_date)
+            level = int(point.get("level") or 0)
+            percent = float(
+                point.get("levelExpPercent")
+                if point.get("levelExpPercent") is not None
+                else point.get("expPercent") or 0
+            )
+            required = exp_required_for_level(level)
+            exp = int(required * percent / 100.0) if required else 0
+            pending[snapshot_date].append(
+                {
+                    "name": name,
+                    "asset_key": asset_key,
+                    "level": level,
+                    "exp": exp,
+                    "image_url": image_url,
+                    "sort_rank": latest_rank if latest_rank > 0 else 999_999,
+                }
+            )
+
+    if not pending:
+        return 0
+
+    init_db(db_path)
+    imported = 0
+    for snapshot_date in sorted(pending.keys()):
+        entries = sorted(
+            pending[snapshot_date],
+            key=lambda item: (int(item["sort_rank"]), str(item["name"]).casefold()),
+        )
+        rows: list[SnapshotRow] = []
+        for rank, entry in enumerate(entries, start=1):
+            rows.append(
+                SnapshotRow(
+                    snapshot_date=snapshot_date,
+                    rank=rank,
+                    rank_fluctuation=0,
+                    character_name=str(entry["name"]),
+                    class_code="",
+                    job_code="",
+                    level=int(entry["level"]),
+                    exp=int(entry["exp"]),
+                    image_url=str(entry["image_url"]),
+                    character_asset_key=str(entry["asset_key"]),
+                )
+            )
+        saved, _ = append_snapshots(db_path, rows, fetched_at)
+        imported += saved
+
+    if imported:
+        logger.info(
+            "Imported snapshot rows from MVP JSON: saved=%s days=%s source=%s",
+            imported,
+            count_snapshot_dates(db_path),
+            json_path,
+        )
+    return imported
+
+
 def merge_ranking_databases(primary_path: Path, secondary_path: Path) -> int:
     """Copy missing snapshot rows from a legacy DB into the primary DB."""
     if not secondary_path.exists():

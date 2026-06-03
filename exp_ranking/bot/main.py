@@ -34,6 +34,7 @@ from sqlite_storage import (
     init_db,
     load_all_snapshots,
     load_character_meta,
+    import_snapshots_from_mvp_json,
     merge_ranking_databases,
 )
 from utils import normalize_int
@@ -317,6 +318,19 @@ def run() -> int:
             logger.info(
                 "Ranking snapshot days after legacy merge: %s",
                 count_snapshot_dates(db_path),
+            )
+
+    snapshot_days_before = count_snapshot_dates(db_path)
+    import_json = config.import_snapshots_json_path(
+        db_snapshot_days=snapshot_days_before
+    )
+    if import_json:
+        imported_rows = import_snapshots_from_mvp_json(db_path, import_json)
+        if imported_rows:
+            logger.info(
+                "Snapshot days after JSON import: %s (from %s)",
+                count_snapshot_dates(db_path),
+                import_json,
             )
 
     import_character_meta_file(db_path, meta_json_path)

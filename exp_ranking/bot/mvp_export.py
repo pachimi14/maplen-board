@@ -33,10 +33,10 @@ def _format_chart_date(snapshot_date: str) -> str:
         return snapshot_date
 
 
-def _analysis_lookup(analysis_rows: list[AnalysisRow]) -> dict[tuple[str, int], AnalysisRow]:
-    lookup: dict[tuple[str, int], AnalysisRow] = {}
+def _analysis_lookup(analysis_rows: list[AnalysisRow]) -> dict[tuple[str, str], AnalysisRow]:
+    lookup: dict[tuple[str, str], AnalysisRow] = {}
     for row in analysis_rows:
-        lookup[(row.snapshot_date, row.rank)] = row
+        lookup[(row.snapshot_date, row.character_name.casefold())] = row
     return lookup
 
 
@@ -95,11 +95,15 @@ def build_mvp_characters(
             continue
         latest = on_latest_date[-1]
 
-        latest_analysis = analysis_by_key.get((latest.snapshot_date, latest.rank))
+        latest_analysis = analysis_by_key.get(
+            (latest.snapshot_date, latest.character_name.casefold())
+        )
 
         history: list[dict[str, Any]] = []
         for snap in rows_sorted:
-            analysis = analysis_by_key.get((snap.snapshot_date, snap.rank))
+            analysis = analysis_by_key.get(
+                (snap.snapshot_date, snap.character_name.casefold())
+            )
             daily_gain: int | None = None
             if analysis and analysis.daily_exp_gain is not None:
                 daily_gain = analysis.daily_exp_gain
