@@ -15,11 +15,10 @@ on:
       - ".github/workflows/exp-ranking-pages.yml"
       - "README.md"
   schedule:
-    # キューは JST 9:25 以降（リセット後）。遅延時の再試行用に 10:30 / 12:00 / 15:00 も入れる。
-    - cron: "25 0 * * *"
-    - cron: "30 1 * * *"
-    - cron: "0 3 * * *"
-    - cron: "0 6 * * *"
+    # キューは JST 7:00 / 8:00 / 9:00（遅延~5h想定で 12〜14時台にも到達）。実行時は 9:20 まで待機。
+    - cron: "0 22 * * *"
+    - cron: "0 23 * * *"
+    - cron: "0 0 * * *"
   workflow_dispatch:
 
 concurrency:
