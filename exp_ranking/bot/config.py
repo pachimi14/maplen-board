@@ -135,14 +135,23 @@ def enforce_jst_fetch_window() -> bool:
     return raw in ("1", "true", "yes", "on")
 
 
-def skip_fetch_if_ranking_day_exists() -> bool:
-    raw = os.environ.get("SKIP_FETCH_IF_RANKING_DAY_EXISTS", "").strip().lower()
+def force_ranking_fetch() -> bool:
+    """When true, always fetch ranking API + Navigator even if today is in DB."""
+    raw = os.environ.get("FORCE_RANKING_FETCH", "").strip().lower()
     return raw in ("1", "true", "yes", "on")
+
+
+def skip_fetch_if_ranking_day_exists() -> bool:
+    """Alias of skip_run_if_ranking_day_exists (ranking + navigator are skipped together)."""
+    return skip_run_if_ranking_day_exists()
 
 
 def skip_run_if_ranking_day_exists() -> bool:
-    raw = os.environ.get("SKIP_RUN_IF_RANKING_DAY_EXISTS", "").strip().lower()
-    return raw in ("1", "true", "yes", "on")
+    """Skip ranking API and Navigator when today's snapshot is already stored."""
+    if force_ranking_fetch():
+        return False
+    raw = os.environ.get("SKIP_RUN_IF_RANKING_DAY_EXISTS", "true").strip().lower()
+    return raw not in ("0", "false", "no", "off")
 
 
 def skip_run_min_snapshot_rows() -> int:

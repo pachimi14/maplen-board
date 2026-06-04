@@ -103,7 +103,7 @@ jobs:
           MVP_PAGES_RANKINGS_URL: https://pachimi14.github.io/msu-exp-ranking/data/rankings.json
           IMPORT_SNAPSHOTS_JSON: data/seed/rankings_seed.json
           ENFORCE_JST_FETCH_WINDOW: ${{ github.event_name == 'schedule' && 'true' || '' }}
-          SKIP_RUN_IF_RANKING_DAY_EXISTS: ${{ github.event_name == 'schedule' && 'true' || '' }}
+          SKIP_RUN_IF_RANKING_DAY_EXISTS: ${{ github.event_name == 'push' && 'false' || 'true' }}
           SKIP_RUN_MIN_SNAPSHOT_ROWS: "1000"
         run: python main.py
 

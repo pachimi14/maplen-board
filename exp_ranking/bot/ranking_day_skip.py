@@ -53,7 +53,8 @@ def try_skip_entire_run(db_path: Path, snapshot_date: str) -> bool:
     rows = count_snapshots_for_date(db_path, snapshot_date)
     mark_ranking_day_complete(snapshot_date)
     logger.info(
-        "Ranking day %s already captured (%s rows >= %s); skipping entire run",
+        "Ranking day %s already captured (%s rows >= %s); "
+        "skipping ranking fetch, Navigator, and deploy",
         snapshot_date,
         rows,
         config.skip_run_min_snapshot_rows(),

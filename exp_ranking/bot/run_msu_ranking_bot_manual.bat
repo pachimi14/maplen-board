@@ -15,6 +15,9 @@ if exist ".venv\Scripts\python.exe" (
     set "PYTHON=python"
 )
 
+set "SKIP_RUN_IF_RANKING_DAY_EXISTS=true"
+rem set "FORCE_RANKING_FETCH=true"
+
 "%PYTHON%" main.py
 set "EXIT_CODE=%ERRORLEVEL%"
 

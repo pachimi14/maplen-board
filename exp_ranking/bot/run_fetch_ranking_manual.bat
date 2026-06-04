@@ -27,6 +27,8 @@ set "SQLITE_DB_PATH=data/ranking.db"
 set "MVP_JSON_OUTPUT_PATH=../web/public/data/rankings.json"
 set "NAVIGATOR_REQUEST_DELAY_SEC=0.35"
 set "NAVIGATOR_FETCH_ENABLED=true"
+set "SKIP_RUN_IF_RANKING_DAY_EXISTS=true"
+rem set "FORCE_RANKING_FETCH=true"
 
 "%PYTHON%" main.py
 set "EXIT_CODE=%ERRORLEVEL%"
