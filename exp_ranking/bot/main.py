@@ -333,15 +333,13 @@ def run() -> int:
                 import_json,
             )
 
-    if try_skip_entire_run(db_path, snap_date):
-        return 0
-
     if config.enforce_jst_fetch_window():
         wait_until_jst_fetch_window(logger)
         fetched = now_utc()
         snap_date = snapshot_date_ranking(fetched)
-        if try_skip_entire_run(db_path, snap_date):
-            return 0
+
+    if try_skip_entire_run(db_path, snap_date):
+        return 0
 
     logger.info(
         "MSU ranking bot started (ranking_day=%s UTC, local=%s JST, min_level=%s)",

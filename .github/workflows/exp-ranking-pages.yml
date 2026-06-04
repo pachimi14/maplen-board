@@ -15,11 +15,11 @@ on:
       - ".github/workflows/exp-ranking-pages.yml"
       - "README.md"
   schedule:
-    # キュー時刻は JST。遅延~5h想定: JST4:20→~9:20, 5:20→~10:20, 6:20→~11:20。定刻: JST9:20。
-    - cron: "20 19 * * *"
-    - cron: "20 20 * * *"
-    - cron: "20 21 * * *"
-    - cron: "20 0 * * *"
+    # キューは JST 9:25 以降（リセット後）。遅延時の再試行用に 10:30 / 12:00 / 15:00 も入れる。
+    - cron: "25 0 * * *"
+    - cron: "30 1 * * *"
+    - cron: "0 3 * * *"
+    - cron: "0 6 * * *"
   workflow_dispatch:
 
 concurrency:
@@ -105,7 +105,7 @@ jobs:
           HYDRATE_META_FROM_PAGES: "true"
           MVP_PAGES_RANKINGS_URL: https://pachimi14.github.io/msu-exp-ranking/data/rankings.json
           IMPORT_SNAPSHOTS_JSON: data/seed/rankings_seed.json
-          ENFORCE_JST_FETCH_WINDOW: ${{ github.event_name == 'schedule' && github.event.schedule == '20 0 * * *' && 'true' || '' }}
+          ENFORCE_JST_FETCH_WINDOW: ${{ github.event_name == 'schedule' && 'true' || '' }}
           SKIP_RUN_IF_RANKING_DAY_EXISTS: ${{ github.event_name == 'schedule' && 'true' || '' }}
           SKIP_RUN_MIN_SNAPSHOT_ROWS: "1000"
         run: python main.py
