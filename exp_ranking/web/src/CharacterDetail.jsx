@@ -30,11 +30,11 @@ import {
   formatJobName,
   getGainAmount,
   getNavigatorUrl,
-  gainPeriodRange,
-  historyPointsInPeriod,
   lastHistoryPoints,
   levelExpPercent,
 } from "./rankingUtils";
+
+const RECENT_CHART_DAYS = 7;
 
 function RankChartDot({ cx, cy, payload }) {
   if (cx == null || cy == null || !payload) {
@@ -98,11 +98,9 @@ export default function CharacterDetail({
   characters,
   gainRankMaps,
   expTable,
-  rankingMeta = null,
   isFavorite = false,
   onToggleFavorite,
 }) {
-  const weeklyRange = gainPeriodRange(rankingMeta, "weekly");
   const dailyGain = getGainAmount(character, "daily");
   const weeklyGain = getGainAmount(character, "weekly");
   const monthlyGain = getGainAmount(character, "monthly");
@@ -111,29 +109,17 @@ export default function CharacterDetail({
   const weeklyRank = getGainRank(gainRankMaps, character.id, "weekly");
   const monthlyRank = getGainRank(gainRankMaps, character.id, "monthly");
 
-  const weekGainSeries = useMemo(() => {
-    if (weeklyRange) {
-      return historyPointsInPeriod(
-        character,
-        weeklyRange.start,
-        weeklyRange.end,
-      );
-    }
-    return lastHistoryPoints(character, 7);
-  }, [character, weeklyRange]);
+  const weekGainSeries = useMemo(
+    () => lastHistoryPoints(character, RECENT_CHART_DAYS),
+    [character],
+  );
 
   const weekRankSeries = useMemo(
     () =>
       enrichRankSeries(
-        buildWeekDailyRankSeries(
-          characters,
-          character.id,
-          7,
-          weeklyRange?.start,
-          weeklyRange?.end,
-        ),
+        buildWeekDailyRankSeries(characters, character.id, RECENT_CHART_DAYS),
       ),
-    [characters, character.id, weeklyRange],
+    [characters, character.id],
   );
 
   const rankChartScale = useMemo(
@@ -266,7 +252,7 @@ export default function CharacterDetail({
         </div>
 
         <div>
-          <h3 className="font-bold mb-3">週間期間のデイリー経験値増加量</h3>
+          <h3 className="font-bold mb-3">直近7日間のデイリー経験値増加量</h3>
           <div className="h-64 md:h-72">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={weekGainSeries}>
@@ -285,7 +271,7 @@ export default function CharacterDetail({
         </div>
 
         <div>
-          <h3 className="font-bold mb-3">週間期間のデイリー増加量順位</h3>
+          <h3 className="font-bold mb-3">直近7日間のデイリー増加量順位</h3>
           <div className="h-72 md:h-80">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart

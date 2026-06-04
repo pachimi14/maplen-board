@@ -18,7 +18,7 @@ if exist ".venv\Scripts\python.exe" (
 
 rem Same defaults as .github/workflows/exp-ranking-pages.yml
 set "RANKING_MIN_LEVEL=225"
-set "RANKING_MAX_PAGES=600"
+set "RANKING_MAX_PAGES=800"
 set "RANKING_REQUEST_DELAY_SEC=0.35"
 set "SNAPSHOT_RETENTION_DAYS=35"
 set "MVP_HISTORY_DAYS=35"
