@@ -2,10 +2,10 @@
 setlocal EnableExtensions
 cd /d "%~dp0"
 
-title MSU EXP Ranking - Data Fetch
+title MapleN Board - Data Fetch
 
 echo ========================================
-echo  MSU EXP Ranking - Data Fetch
+echo  MapleN Board - Data Fetch
 echo ========================================
 echo.
 

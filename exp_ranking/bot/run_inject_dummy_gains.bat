@@ -2,7 +2,7 @@
 setlocal EnableExtensions
 cd /d "%~dp0"
 
-title MSU Ranking - Inject Demo Gains
+title MapleN Board - Inject Demo Gains
 
 echo ========================================
 echo  Inject dummy EXP gains (UI test)

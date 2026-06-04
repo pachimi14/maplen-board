@@ -2,7 +2,7 @@
 setlocal EnableExtensions
 cd /d "%~dp0"
 
-title MSU EXP Ranking - Sync from GitHub Pages
+title MapleN Board - Sync from GitHub Pages
 
 call "%~dp0exp_ranking\bot\run_sync_rankings_from_pages.bat"
 exit /b %ERRORLEVEL%

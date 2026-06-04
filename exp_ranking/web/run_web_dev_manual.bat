@@ -2,10 +2,10 @@
 setlocal EnableExtensions
 cd /d "%~dp0"
 
-title MSN EXP Ranking - Web
+title MapleN Board - Web
 
 echo ========================================
-echo  MSN EXP Ranking - Web (dev server)
+echo  MapleN Board - Web (dev server)
 echo ========================================
 echo.
 

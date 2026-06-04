@@ -1,7 +1,7 @@
-# Build rankings.json, static web, deploy to GitHub Pages.
+# Build rankings.json, static web, deploy to GitHub Pages (MapleN Board).
 # Discord notifications: planned separately.
 
-name: EXP Ranking Pages
+name: MapleN Board Pages
 
 # GitHub: Node 20 ベースの Actions 向け（2026年後半に Node 24 が既定になる）
 env:
@@ -12,7 +12,7 @@ on:
     branches: [main, master]
     paths:
       - "exp_ranking/**"
-      - ".github/workflows/exp-ranking-pages.yml"
+      - ".github/workflows/maplen-board-pages.yml"
       - "README.md"
   schedule:
     # キューは JST 7:00 のみ（空きが多いと ~3h で起動→9:20 まで待機して取得）。実行時は 9:20 まで待機。
@@ -20,7 +20,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: exp-ranking-pages
+  group: maplen-board-pages
   cancel-in-progress: ${{ github.event_name == 'push' }}
 
 permissions:
@@ -47,6 +47,7 @@ jobs:
           key: exp-ranking-db-v2-${{ github.repository }}
           restore-keys: |
             exp-ranking-db-v2-${{ github.repository }}
+            exp-ranking-db-v2-pachimi14/msu-exp-ranking
             exp-ranking-db-${{ github.repository }}
 
       - name: Preserve legacy DB before v3 restore
@@ -62,9 +63,11 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: exp_ranking/bot/data
-          key: exp-ranking-data-v3-${{ github.repository }}-meta0
+          key: maplen-board-data-v4-${{ github.repository }}-meta0
           restore-keys: |
+            maplen-board-data-v4-${{ github.repository }}-meta
             exp-ranking-data-v3-${{ github.repository }}-meta
+            exp-ranking-data-v3-pachimi14/msu-exp-ranking-meta
 
       - name: Log cache restore
         run: |
@@ -100,7 +103,7 @@ jobs:
           NAVIGATOR_REQUEST_DELAY_SEC: "0.35"
           NAVIGATOR_FETCH_ENABLED: "true"
           HYDRATE_META_FROM_PAGES: "true"
-          MVP_PAGES_RANKINGS_URL: https://pachimi14.github.io/msu-exp-ranking/data/rankings.json
+          MVP_PAGES_RANKINGS_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/data/rankings.json
           IMPORT_SNAPSHOTS_JSON: data/seed/rankings_seed.json
           ENFORCE_JST_FETCH_WINDOW: ${{ github.event_name == 'schedule' && 'true' || '' }}
           SKIP_RUN_IF_RANKING_DAY_EXISTS: "true"
@@ -132,7 +135,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: exp_ranking/bot/data
-          key: exp-ranking-data-v3-${{ github.repository }}-meta${{ steps.meta_count.outputs.count }}
+          key: maplen-board-data-v4-${{ github.repository }}-meta${{ steps.meta_count.outputs.count }}
 
       - name: Set up Node.js
         if: steps.deploy_gate.outputs.deploy == 'true'

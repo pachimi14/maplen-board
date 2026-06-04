@@ -1,4 +1,4 @@
-# MSU Ranking Bot
+# MapleN Board Bot
 
 MSU のランキング API から **指定レベル以上**のキャラを全件取得し、SQLite に保存して `rankings.json` を出力します。
 

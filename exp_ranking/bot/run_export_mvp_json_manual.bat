@@ -2,7 +2,7 @@
 setlocal EnableExtensions
 cd /d "%~dp0"
 
-title MSU Ranking - Export MVP JSON Only
+title MapleN Board - Export MVP JSON Only
 
 echo ========================================
 echo  Export MVP JSON from SQLite

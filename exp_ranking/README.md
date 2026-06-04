@@ -1,4 +1,4 @@
-# exp_ranking
+# MapleN Board（exp_ranking）
 
 - bot: [bot/README.md](bot/README.md)
 - Pages / Actions: [DEPLOY.md](DEPLOY.md)

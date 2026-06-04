@@ -2,10 +2,10 @@
 setlocal EnableExtensions
 cd /d "%~dp0"
 
-title MSU Ranking - Data Fetch
+title MapleN Board - Data Fetch
 
 echo ========================================
-echo  MSU Ranking - Data Fetch
+echo  MapleN Board - Data Fetch
 echo  (API -^> SQLite + rankings.json)
 echo ========================================
 echo.
@@ -16,7 +16,7 @@ if exist ".venv\Scripts\python.exe" (
     set "PYTHON=python"
 )
 
-rem Same defaults as .github/workflows/exp-ranking-pages.yml
+rem Same defaults as .github/workflows/maplen-board-pages.yml
 set "RANKING_MIN_LEVEL=225"
 set "RANKING_MAX_PAGES=800"
 set "RANKING_REQUEST_DELAY_SEC=0.35"

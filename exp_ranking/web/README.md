@@ -1,4 +1,4 @@
-# web
+# MapleN Board — web
 
 `../bot` が `public/data/rankings.json` を出す。ここはそれを読むだけ。
 

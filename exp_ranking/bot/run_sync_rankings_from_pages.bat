@@ -2,7 +2,7 @@
 setlocal EnableExtensions
 cd /d "%~dp0"
 
-title MSU Ranking - Sync JSON from GitHub Pages
+title MapleN Board - Sync JSON from GitHub Pages
 
 echo ========================================
 echo  Sync rankings.json from GitHub Pages

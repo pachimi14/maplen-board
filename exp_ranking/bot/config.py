@@ -1,4 +1,4 @@
-"""Environment configuration for MSU ranking bot."""
+"""Environment configuration for MapleN Board ranking bot."""
 
 from __future__ import annotations
 
@@ -98,7 +98,7 @@ def character_meta_json_path() -> Path:
 def pages_rankings_url() -> str:
     return os.environ.get(
         "MVP_PAGES_RANKINGS_URL",
-        "https://pachimi14.github.io/msu-exp-ranking/data/rankings.json",
+        "https://pachimi14.github.io/maplen-board/data/rankings.json",
     ).strip()
 
 

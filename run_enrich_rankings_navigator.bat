@@ -2,7 +2,7 @@
 setlocal EnableExtensions
 cd /d "%~dp0"
 
-title MSU EXP Ranking - Enrich Navigator (local)
+title MapleN Board - Enrich Navigator (local)
 
 echo ========================================
 echo  Enrich rankings.json with server data

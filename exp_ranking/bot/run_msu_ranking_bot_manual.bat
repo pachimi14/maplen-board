@@ -2,10 +2,10 @@
 setlocal EnableExtensions
 cd /d "%~dp0"
 
-title MSU Ranking Bot (Manual)
+title MapleN Board Bot (Manual)
 
 echo ========================================
-echo  MSU Ranking Bot - Manual Run
+echo  MapleN Board Bot - Manual Run
 echo ========================================
 echo.
 

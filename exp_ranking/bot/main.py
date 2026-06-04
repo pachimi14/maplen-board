@@ -1,5 +1,5 @@
 """
-MSU official ranking snapshot bot.
+MapleN Board ranking snapshot bot (MSU API).
 
 Fetches ranking characters at or above min level (default 225+), stores in SQLite.
 """
@@ -354,7 +354,7 @@ def run() -> int:
         sqlite_skipped = 0
     else:
         logger.info(
-            "MSU ranking bot started (ranking_day=%s UTC, local=%s JST, min_level=%s)",
+            "MapleN Board bot started (ranking_day=%s UTC, local=%s JST, min_level=%s)",
             snap_date,
             fetched.astimezone(JST).strftime("%Y-%m-%d %H:%M:%S"),
             min_level,
@@ -516,7 +516,7 @@ def main() -> None:
     try:
         raise SystemExit(run())
     except Exception:
-        logger.exception("MSU ranking bot failed")
+        logger.exception("MapleN Board bot failed")
         raise SystemExit(1)
 
 

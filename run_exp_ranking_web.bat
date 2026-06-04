@@ -2,12 +2,12 @@
 setlocal EnableExtensions
 cd /d "%~dp0"
 
-title MSU EXP Ranking - Web
+title MapleN Board - Web
 
 echo ========================================
-echo  MSU EXP Ranking - Web
+echo  MapleN Board - Web
 echo ========================================
 echo.
 
-start "MSU EXP Ranking Web" cmd /k "%~dp0exp_ranking\web\run_web_dev_manual.bat"
+start "MapleN Board Web" cmd /k "%~dp0exp_ranking\web\run_web_dev_manual.bat"
 exit /b 0

@@ -1,4 +1,4 @@
-"""Export ranking data to JSON for the EXP Ranking MVP frontend."""
+"""Export ranking data to JSON for the MapleN Board frontend."""
 
 from __future__ import annotations
 

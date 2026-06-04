@@ -10,7 +10,7 @@ from pathlib import Path
 import requests
 
 DEFAULT_PAGES_URL = (
-    "https://pachimi14.github.io/msu-exp-ranking/data/rankings.json"
+    "https://pachimi14.github.io/maplen-board/data/rankings.json"
 )
 DEFAULT_OUTPUT = (
     Path(__file__).resolve().parent.parent / "web" / "public" / "data" / "rankings.json"

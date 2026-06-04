@@ -1,4 +1,4 @@
-# MSU Ranking（自分用メモ）
+# MapleN Board（自分用メモ）
 
 ローカル: `C:\Users\pachi\Desktop\msu ranking`  
 取引 bot は別フォルダ: `C:\Users\pachi\Desktop\msu trade`（この Git には含めない）
@@ -24,7 +24,7 @@ exp_ranking/
 
 ### ローカルと GitHub Pages でデータが違うとき
 
-`exp_ranking/web/public/data/rankings.json` は Git に含めません（日次生成物）。ローカルに古い JSON（例: Lv235・949人）や `run_inject_dummy_gains.bat` 適用後のダミーが残っていると、本番と表示がずれます。
+`exp_ranking/web/public/data/rankings.json` は Git に含めません（日次生成物）。ローカルに古い JSON や `run_inject_dummy_gains.bat` 適用後のダミーが残っていると、本番と表示がずれます。
 
 1. **本番と揃える** … `run_sync_rankings_from_pages.bat`（Pages の `rankings.json` をそのままコピー）
 2. **API から作り直す** … `run_exp_ranking_fetch.bat`（Actions と同じ Lv225+・35日設定）
@@ -32,7 +32,9 @@ exp_ranking/
 
 ## 公開まわり
 
-- リポジトリ: https://github.com/pachimi14/msu-exp-ranking （public）
-- Pages: https://pachimi14.github.io/msu-exp-ranking/
+- リポジトリ: https://github.com/pachimi14/maplen-board
+- Pages: https://pachimi14.github.io/maplen-board/
 - 手順・Actions・トラブル: [exp_ranking/DEPLOY.md](exp_ranking/DEPLOY.md)
 - bot 設定: [exp_ranking/bot/README.md](exp_ranking/bot/README.md)
+
+GitHub でリポジトリ名を `msu-exp-ranking` から `maplen-board` に変更したあと、**Settings → Pages** でサイト URL が新パスになっているか確認してください。
