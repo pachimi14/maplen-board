@@ -81,6 +81,14 @@ push 済みのワークフロー [`.github/workflows/maplen-board-pages.yml`](..
 
 **DB の保存場所**: リポジトリにはコミットしません。Actions の **キャッシュ**に `ranking.db` を保持し、日をまたいで履歴（週間・月間など）が増えていきます。
 
+## 画面が真っ白なとき
+
+リポジトリ名変更直後は、古いビルドが `/msu-exp-ranking/assets/...` を参照していることがあります（JS が 404）。
+
+1. **Actions** で **MapleN Board Pages** を **Run workflow**（再デプロイ）
+2. ブラウザで **MapleN Board** の URL を開く（`/maplen-board/`。旧 `/msu-exp-ranking/` は 404）
+3. 開発者ツール → **Network** で `assets/index-*.js` が 200 か確認
+
 **確認方法**
 
 1. [Actions タブ](https://github.com/pachimi14/maplen-board/actions) で緑の ✓ が付いているか  

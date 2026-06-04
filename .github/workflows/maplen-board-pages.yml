@@ -155,6 +155,7 @@ jobs:
         working-directory: exp_ranking/web
         env:
           GITHUB_PAGES: "true"
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: npm run build
 
       - name: Upload Pages artifact
