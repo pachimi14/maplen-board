@@ -14,8 +14,6 @@ on:
       - "exp_ranking/**"
       - ".github/workflows/maplen-board-pages.yml"
       - "README.md"
-    paths-ignore:
-      - "exp_ranking/bot/data/ranking.db"
   schedule:
     # キューは JST 8:00 のみ（空きが多いと遅延→9:20 まで待機して取得）。実行時は 9:20 まで待機。
     - cron: "0 23 * * *"
