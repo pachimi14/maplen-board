@@ -30,7 +30,8 @@ git remote add origin https://github.com/<ユーザー名>/<リポジトリ名>.
 git push -u origin main
 ```
 
-`.env` や `ranking.db` は `.gitignore` 済みです。**秘密情報は push しないでください。**
+`.env` は `.gitignore` 済みです。**秘密情報は push しないでください。**  
+`ranking.db` は **Git に毎日コミット**します（Actions が `[skip ci]` 付きで push。DB のみの変更ではワークフローは再実行されません）。
 
 ## 2. GitHub Pages を有効化
 
@@ -79,7 +80,7 @@ push 済みのワークフロー [`.github/workflows/maplen-board-pages.yml`](..
 
 **手動更新**: [Actions](https://github.com/pachimi14/maplen-board/actions) → **MapleN Board Pages** → **Run workflow**
 
-**DB の保存場所**: リポジトリにはコミットしません。Actions の **キャッシュ**に `ranking.db` を保持し、日をまたいで履歴（週間・月間など）が増えていきます。
+**DB の保存場所**: `exp_ranking/bot/data/ranking.db` を **main に毎日コミット**します。Actions キャッシュは補助（`character_meta` など）。履歴は Git が正本です。
 
 ## 画面が真っ白なとき
 

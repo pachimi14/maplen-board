@@ -14,6 +14,8 @@ on:
       - "exp_ranking/**"
       - ".github/workflows/maplen-board-pages.yml"
       - "README.md"
+    paths-ignore:
+      - "exp_ranking/bot/data/ranking.db"
   schedule:
     # キューは JST 8:00 のみ（空きが多いと遅延→9:20 まで待機して取得）。実行時は 9:20 まで待機。
     - cron: "0 23 * * *"
@@ -24,7 +26,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'push' }}
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -38,6 +40,21 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Preserve ranking.db from git
+        id: git_db
+        run: |
+          mkdir -p exp_ranking/bot/data
+          if [ -f exp_ranking/bot/data/ranking.db ]; then
+            cp exp_ranking/bot/data/ranking.db /tmp/ranking.db.from_git
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "git-db-bytes=$(wc -c < /tmp/ranking.db.from_git)"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "No ranking.db in git yet"
+          fi
 
       - name: Restore legacy ranking database cache (v2 path)
         id: legacy_db_cache
@@ -73,8 +90,29 @@ jobs:
         run: |
           echo "legacy-cache-hit=${{ steps.legacy_db_cache.outputs.cache-hit }}"
           echo "v3-cache-hit=${{ steps.ranking_db_cache.outputs.cache-hit }}"
+          echo "git-db=${{ steps.git_db.outputs.exists }}"
           echo "schedule=${{ github.event.schedule }}"
           ls -la exp_ranking/bot/data/ || true
+
+      - name: Merge ranking.db from git into working copy
+        if: steps.git_db.outputs.exists == 'true'
+        working-directory: exp_ranking/bot
+        run: |
+          python -c "
+          from pathlib import Path
+          import shutil
+          from sqlite_storage import merge_ranking_databases
+          git_db = Path('/tmp/ranking.db.from_git')
+          work_db = Path('data/ranking.db')
+          if not git_db.exists():
+              raise SystemExit(0)
+          if work_db.exists():
+              merged = merge_ranking_databases(work_db, git_db)
+              print(f'merged rows from git ranking.db: {merged}')
+          else:
+              shutil.copy(git_db, work_db)
+              print('restored ranking.db from git')
+          "
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -110,6 +148,28 @@ jobs:
           SKIP_DEPLOY_IF_DAY_CAPTURED: ${{ github.event_name == 'push' && 'false' || 'true' }}
           SKIP_RUN_MIN_SNAPSHOT_ROWS: "1000"
         run: python main.py
+
+      - name: Commit ranking database
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add exp_ranking/bot/data/ranking.db
+          if git diff --staged --quiet; then
+            echo "No ranking.db changes to commit"
+            exit 0
+          fi
+          SNAPSHOT_DATE=""
+          if [ -f exp_ranking/bot/data/.ranking_day_complete ]; then
+            SNAPSHOT_DATE="$(tr -d '\r\n' < exp_ranking/bot/data/.ranking_day_complete)"
+          fi
+          if [ -n "$SNAPSHOT_DATE" ]; then
+            MSG="chore: update ranking.db (${SNAPSHOT_DATE}) [skip ci]"
+          else
+            MSG="chore: update ranking.db [skip ci]"
+          fi
+          git commit -m "$MSG"
+          git push origin "HEAD:${{ github.ref_name }}"
 
       - name: Check if today's ranking day is already complete
         id: deploy_gate
