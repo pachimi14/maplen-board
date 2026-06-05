@@ -24,6 +24,7 @@ exp_ranking/
 
 ### ローカルと GitHub Pages でデータが違うとき
 
+`exp_ranking/bot/data/ranking.db` は **Git に毎日コミット**されます（`git pull` でローカルも追従可能）。  
 `exp_ranking/web/public/data/rankings.json` は Git に含めません（日次生成物）。ローカルに古い JSON や `run_inject_dummy_gains.bat` 適用後のダミーが残っていると、本番と表示がずれます。
 
 1. **本番と揃える** … `run_sync_rankings_from_pages.bat`（Pages の `rankings.json` をそのままコピー）

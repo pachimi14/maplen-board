@@ -10,7 +10,6 @@ exp_ranking/bot/*.pyc
 exp_ranking/bot/credentials/*.json
 !exp_ranking/bot/credentials/.gitkeep
 exp_ranking/bot/logs/
-exp_ranking/bot/data/ranking.db
 exp_ranking/web/public/data/rankings.json
 exp_ranking/web/public/data/rankings.json.bak
 
