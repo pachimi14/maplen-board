@@ -4,6 +4,7 @@ data/*.sqlite3
 data/ranking.legacy.db
 data/character_meta.json
 data/.ranking_day_complete
+data/.ranking_day_label_utc_gain
 !data/.gitkeep
 .venv/
 __pycache__/

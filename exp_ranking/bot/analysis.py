@@ -48,7 +48,7 @@ def build_analysis_rows(
         date_totals[row.character_name.casefold()] = total_exp
 
     def previous_ranking_date(snapshot_date: str) -> str | None:
-        """Calendar previous ranking day (UTC), not the previous date stored in DB."""
+        """Calendar previous UTC gain day, not the previous date stored in DB."""
         try:
             current = date.fromisoformat(snapshot_date)
         except ValueError:

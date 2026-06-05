@@ -6,7 +6,7 @@ from datetime import date, timedelta
 
 JST = "Asia/Tokyo"
 
-# Ranking day id uses UTC date (= JST calendar day at 09:00 reset).
+# Ranking day id = UTC gain day (fetch UTC date - 1; game reset UTC 00:00 / JST 09:00).
 DAILY_RESET = "毎日 9:00 JST"
 WEEKLY_RESET = "毎週木曜 9:00 JST"
 MONTHLY_RESET = "毎月1日 9:00 JST"

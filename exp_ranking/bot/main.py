@@ -19,6 +19,7 @@ import config
 from analysis import build_analysis_rows
 from identity import build_name_to_asset_key_from_ranking
 from jst_schedule import wait_until_jst_fetch_window
+from ranking_day import apply_ranking_day_label_migration, ranking_day_from_fetch
 from ranking_day_skip import (
     clear_ranking_day_skip_marker,
     log_skip_ranking_fetch_only,
@@ -53,7 +54,7 @@ from utils import normalize_int
 UTC = ZoneInfo("UTC")
 JST = ZoneInfo("Asia/Tokyo")
 
-# Official ranking day resets at UTC 00:00 (= JST 09:00)
+# Official reset UTC 00:00 (= JST 09:00); label = prior UTC calendar day (ranking_day.py).
 RANKING_DAY_TIMEZONE = UTC
 
 LOG_DIR = config.BASE_DIR / "logs"
@@ -95,13 +96,8 @@ def now_utc() -> datetime:
 
 
 def snapshot_date_ranking(dt: datetime | None = None) -> str:
-    """Ranking day id (UTC calendar date; rolls at UTC 00:00 = JST 09:00)."""
-    current = dt or now_utc()
-    if current.tzinfo is None:
-        current = current.replace(tzinfo=UTC)
-    else:
-        current = current.astimezone(UTC)
-    return current.date().isoformat()
+    """Ranking day id: UTC gain day (fetch UTC date minus one calendar day)."""
+    return ranking_day_from_fetch(dt or now_utc())
 
 
 def ranking_api_url(page_no: int) -> str:
@@ -310,6 +306,8 @@ def run() -> int:
     json_path = config.mvp_json_output_path()
     meta_json_path = config.character_meta_json_path()
     init_db(db_path)
+    if apply_ranking_day_label_migration(db_path):
+        logger.info("Applied one-time ranking-day label migration (UTC gain day)")
 
     legacy_db_path = db_path.parent / "ranking.legacy.db"
     if legacy_db_path.exists():
