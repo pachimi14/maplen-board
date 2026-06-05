@@ -457,6 +457,10 @@ def snapshot_dates_in_mvp_json(json_path: Path) -> set[str]:
         for point in history:
             if not isinstance(point, dict):
                 continue
+            snapshot_raw = str(point.get("snapshotDate") or "").strip()
+            if snapshot_raw:
+                dates.add(snapshot_raw)
+                continue
             chart_date = str(point.get("date") or "").strip()
             if chart_date and "/" in chart_date:
                 dates.add(_chart_date_to_iso(chart_date, latest_date))
@@ -529,6 +533,45 @@ def _chart_date_to_iso(chart_date: str, latest_snapshot_date: str) -> str:
     return candidate.isoformat()
 
 
+def import_missing_snapshots_from_url(db_path: Path, url: str) -> int:
+    """Import snapshot days present in remote rankings.json but missing in DB."""
+    import tempfile
+    import urllib.error
+    import urllib.request
+
+    init_db(db_path)
+    db_dates = set(list_snapshot_dates(db_path))
+
+    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tmp:
+        temp_path = Path(tmp.name)
+
+    try:
+        try:
+            with urllib.request.urlopen(url, timeout=120) as response:
+                temp_path.write_bytes(response.read())
+        except (OSError, urllib.error.URLError) as exc:
+            logger.warning("Cannot download rankings.json from %s: %s", url, exc)
+            return 0
+
+        json_dates = snapshot_dates_in_mvp_json(temp_path)
+        missing = sorted(json_dates - db_dates)
+        if not missing:
+            logger.info(
+                "Pages rankings.json has no missing snapshot days for DB (days=%s)",
+                len(db_dates),
+            )
+            return 0
+
+        logger.info(
+            "Importing missing snapshot days from %s: %s",
+            url,
+            missing,
+        )
+        return import_snapshots_from_mvp_json(db_path, temp_path)
+    finally:
+        temp_path.unlink(missing_ok=True)
+
+
 def import_snapshots_from_mvp_json(db_path: Path, json_path: Path) -> int:
     """Rebuild SQLite snapshot rows from rankings.json history (recovery)."""
     import json
@@ -572,10 +615,14 @@ def import_snapshots_from_mvp_json(db_path: Path, json_path: Path) -> int:
         for point in history:
             if not isinstance(point, dict):
                 continue
-            chart_date = str(point.get("date") or "").strip()
-            if not chart_date or "/" not in chart_date:
-                continue
-            snapshot_date = _chart_date_to_iso(chart_date, latest_date)
+            snapshot_raw = str(point.get("snapshotDate") or "").strip()
+            if snapshot_raw:
+                snapshot_date = snapshot_raw
+            else:
+                chart_date = str(point.get("date") or "").strip()
+                if not chart_date or "/" not in chart_date:
+                    continue
+                snapshot_date = _chart_date_to_iso(chart_date, latest_date)
             level = int(point.get("level") or 0)
             percent = float(
                 point.get("levelExpPercent")

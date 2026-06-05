@@ -107,6 +107,12 @@ def hydrate_meta_from_pages() -> bool:
     return raw not in ("0", "false", "no", "off")
 
 
+def snapshot_import_from_pages() -> bool:
+    """Backfill SQLite from production rankings.json when DB lacks history days."""
+    raw = os.environ.get("SNAPSHOT_IMPORT_FROM_PAGES", "true").strip().lower()
+    return raw not in ("0", "false", "no", "off")
+
+
 def snapshot_seed_json_path() -> Path:
     default = str(BASE_DIR / "data" / "seed" / "rankings_seed.json")
     return env_path("IMPORT_SNAPSHOTS_JSON", default)

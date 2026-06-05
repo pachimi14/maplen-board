@@ -31,7 +31,8 @@ git push -u origin main
 ```
 
 `.env` は `.gitignore` 済みです。**秘密情報は push しないでください。**  
-`ranking.db` は **Git に毎日コミット**します（Actions が `[skip ci]` 付きで push。DB のみの変更ではワークフローは再実行されません）。
+`ranking.db` は **Git に毎日コミット**します（Actions が `[skip ci]` 付きで push。DB のみの変更ではワークフローは再実行されません）。  
+起動時に **本番 `rankings.json` から DB に無い日付だけ取り込み**ます（`SNAPSHOT_IMPORT_FROM_PAGES=true`）。JSON→DB の復旧用です。
 
 ## 2. GitHub Pages を有効化
 

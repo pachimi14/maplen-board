@@ -42,6 +42,7 @@ from sqlite_storage import (
     hydrate_character_meta_from_url,
     import_character_meta_file,
     init_db,
+    import_missing_snapshots_from_url,
     import_snapshots_from_mvp_json,
     list_snapshot_dates,
     load_all_snapshots,
@@ -334,6 +335,18 @@ def run() -> int:
                 "Snapshot days after JSON import: %s (from %s)",
                 count_snapshot_dates(db_path),
                 import_json,
+            )
+
+    if config.snapshot_import_from_pages():
+        pages_imported = import_missing_snapshots_from_url(
+            db_path,
+            config.pages_rankings_url(),
+        )
+        if pages_imported:
+            logger.info(
+                "Snapshot days after Pages JSON import: %s (+%s rows)",
+                count_snapshot_dates(db_path),
+                pages_imported,
             )
 
     if config.enforce_jst_fetch_window():
