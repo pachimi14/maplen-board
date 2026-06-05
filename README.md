@@ -39,3 +39,5 @@ exp_ranking/
 - bot 設定: [exp_ranking/bot/README.md](exp_ranking/bot/README.md)
 
 GitHub でリポジトリ名を `msu-exp-ranking` から `maplen-board` に変更したあと、**Settings → Pages** でサイト URL が新パスになっているか確認してください。
+
+`ranking.db` は main に毎日コミットされます（詳細は [exp_ranking/DEPLOY.md](exp_ranking/DEPLOY.md)）。
