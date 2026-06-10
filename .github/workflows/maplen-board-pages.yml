@@ -18,6 +18,11 @@ on:
     # キューは JST 8:00 のみ（空きが多いと遅延→9:20 まで待機して取得）。実行時は 9:20 まで待機。
     - cron: "0 23 * * *"
   workflow_dispatch:
+    inputs:
+      force_fetch:
+        description: "ランキング API を再取得する（手動実行時はオン推奨）"
+        type: boolean
+        default: true
 
 concurrency:
   group: maplen-board-pages
@@ -145,7 +150,8 @@ jobs:
           IMPORT_SNAPSHOTS_JSON: data/seed/rankings_seed.json
           ENFORCE_JST_FETCH_WINDOW: ${{ github.event_name == 'schedule' && 'true' || '' }}
           SKIP_RUN_IF_RANKING_DAY_EXISTS: "true"
-          SKIP_DEPLOY_IF_DAY_CAPTURED: ${{ github.event_name == 'push' && 'false' || 'true' }}
+          SKIP_DEPLOY_IF_DAY_CAPTURED: ${{ github.event_name == 'schedule' && 'true' || 'false' }}
+          FORCE_RANKING_FETCH: ${{ github.event_name == 'workflow_dispatch' && inputs.force_fetch && 'true' || '' }}
           SKIP_RUN_MIN_SNAPSHOT_ROWS: "1000"
         run: python main.py
 
@@ -174,7 +180,10 @@ jobs:
       - name: Check if today's ranking day is already complete
         id: deploy_gate
         run: |
-          if [ -f exp_ranking/bot/data/.ranking_day_complete ]; then
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+            echo "Manual run: deploy enabled"
+          elif [ -f exp_ranking/bot/data/.ranking_day_complete ]; then
             echo "deploy=false" >> "$GITHUB_OUTPUT"
             echo "Skip deploy: $(cat exp_ranking/bot/data/.ranking_day_complete)"
           else
