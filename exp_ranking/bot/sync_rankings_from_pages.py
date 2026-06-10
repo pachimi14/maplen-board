@@ -9,9 +9,7 @@ from pathlib import Path
 
 import requests
 
-DEFAULT_PAGES_URL = (
-    "https://pachimi14.github.io/maplen-board/data/rankings.json"
-)
+DEFAULT_PAGES_URL = "https://lulumi-tools.com/data/rankings.json"
 DEFAULT_OUTPUT = (
     Path(__file__).resolve().parent.parent / "web" / "public" / "data" / "rankings.json"
 )

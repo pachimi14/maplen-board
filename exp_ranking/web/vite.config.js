@@ -3,13 +3,11 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
-// GitHub Pages project site: https://<user>.github.io/<repo>/
-const repoName =
-  process.env.GITHUB_REPOSITORY?.split("/")[1] ||
-  process.env.PAGES_REPO_NAME ||
-  "maplen-board";
+// Production: custom domain at site root (https://lulumi-tools.com/)
 const pagesBase =
-  process.env.GITHUB_PAGES === "true" ? `/${repoName}/` : "/";
+  process.env.GITHUB_PAGES === "true"
+    ? process.env.PAGES_BASE_PATH || "/"
+    : "/";
 
 export default defineConfig({
   base: pagesBase,
