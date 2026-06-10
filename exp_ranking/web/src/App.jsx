@@ -236,8 +236,8 @@ export default function App() {
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="text-sm text-slate-400">MaplestoryN EXP Ranking</p>
-            <h1 className="text-3xl md:text-5xl font-bold tracking-tight">LulumiTools</h1>
+            <p className="text-sm text-slate-400">Lulumi Tools</p>
+            <h1 className="text-3xl md:text-5xl font-bold tracking-tight">MapleN Exp Ranking</h1>
             {meta.demoGains ? (
               <p className="text-amber-300 text-sm mt-1">
                 デモ用ダミー増加量データ（{meta.demoGainDays || "?"} 日分）
