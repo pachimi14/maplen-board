@@ -252,14 +252,16 @@ export default function App() {
             {loadError ? <p className="text-amber-400 text-sm mt-1">{loadError}</p> : null}
           </div>
           <div className="text-slate-400 text-sm md:text-base text-right md:pb-1 shrink-0 space-y-0.5">
-            {scheduledUpdateLabel ? <p>{scheduledUpdateLabel}</p> : null}
-            <p className="text-xs md:text-sm text-slate-500">
+            <p>
               {meta.rankingMinLevel
                 ? `Lv.${meta.rankingMinLevel}+`
                 : meta.rankingTopN
                   ? `取得 ${meta.rankingTopN} 人`
                   : null}
             </p>
+            {scheduledUpdateLabel ? (
+              <p className="text-xs md:text-sm text-slate-500">{scheduledUpdateLabel}</p>
+            ) : null}
           </div>
         </div>
 
