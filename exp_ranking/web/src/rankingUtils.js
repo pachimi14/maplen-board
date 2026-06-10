@@ -370,33 +370,39 @@ export function remainingExpTo250(character, expTable) {
 
 const JST_TIME_ZONE = "Asia/Tokyo";
 
-/** 「最新 2026-06-10 09:20更新」形式（ランキング日 + 定期取得の JST 時刻）。 */
-export function formatScheduledUpdateLabel(meta) {
-  const snapshotDate = String(meta?.latestSnapshotDate || "").trim();
-  const updatedAtRaw = String(meta?.updatedAt || "").trim();
-  if (!snapshotDate) {
-    return null;
-  }
+const SCHEDULED_UPDATE_TIME_UTC = "00:20";
 
-  let timePart = "";
+/** 「2026-06-10 00:20更新」形式（取得 UTC 日 + 固定 00:20）。 */
+export function formatScheduledUpdateLabel(meta) {
+  const updatedAtRaw = String(meta?.updatedAt || "").trim();
+  let updateDate = "";
+
   if (updatedAtRaw) {
     const parsed = new Date(updatedAtRaw);
     if (!Number.isNaN(parsed.getTime())) {
-      const parts = new Intl.DateTimeFormat("en-GB", {
-        timeZone: JST_TIME_ZONE,
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      }).formatToParts(parsed);
-      const hour = parts.find((item) => item.type === "hour")?.value ?? "00";
-      const minute = parts.find((item) => item.type === "minute")?.value ?? "00";
-      timePart = `${hour}:${minute}`;
+      updateDate = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "UTC",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(parsed);
     }
   }
 
-  return timePart
-    ? `最新 ${snapshotDate} ${timePart}更新`
-    : `最新 ${snapshotDate}`;
+  if (!updateDate) {
+    const snapshotDate = String(meta?.latestSnapshotDate || "").trim();
+    if (!snapshotDate) {
+      return null;
+    }
+    const rankingDay = new Date(`${snapshotDate}T00:00:00Z`);
+    if (Number.isNaN(rankingDay.getTime())) {
+      return null;
+    }
+    rankingDay.setUTCDate(rankingDay.getUTCDate() + 1);
+    updateDate = rankingDay.toISOString().slice(0, 10);
+  }
+
+  return `${updateDate} ${SCHEDULED_UPDATE_TIME_UTC}更新`;
 }
 
 /** Today’s calendar date in JST (year/month/day). */
