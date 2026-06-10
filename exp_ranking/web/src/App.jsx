@@ -251,8 +251,8 @@ export default function App() {
             ) : null}
             {loadError ? <p className="text-amber-400 text-sm mt-1">{loadError}</p> : null}
           </div>
-          <div className="text-slate-400 text-sm md:text-base text-right md:pb-1 shrink-0 space-y-0.5">
-            <p>
+          <div className="text-right md:pb-1 shrink-0 space-y-0.5">
+            <p className="text-xs md:text-sm text-slate-500">
               {meta.rankingMinLevel
                 ? `Lv.${meta.rankingMinLevel}+`
                 : meta.rankingTopN
@@ -260,7 +260,7 @@ export default function App() {
                   : null}
             </p>
             {scheduledUpdateLabel ? (
-              <p className="text-xs md:text-sm text-slate-500">{scheduledUpdateLabel}</p>
+              <p className="text-slate-400 text-sm md:text-base">{scheduledUpdateLabel}</p>
             ) : null}
           </div>
         </div>
