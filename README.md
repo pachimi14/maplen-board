@@ -34,7 +34,7 @@ exp_ranking/
 ## 公開まわり
 
 - リポジトリ: https://github.com/pachimi14/maplen-board
-- Pages: https://pachimi14.github.io/maplen-board/
+- 公開 URL: https://lulumi-tools.com/
 - 手順・Actions・トラブル: [exp_ranking/DEPLOY.md](exp_ranking/DEPLOY.md)
 - bot 設定: [exp_ranking/bot/README.md](exp_ranking/bot/README.md)
 

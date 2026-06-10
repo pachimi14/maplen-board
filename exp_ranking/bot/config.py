@@ -95,11 +95,13 @@ def character_meta_json_path() -> Path:
     return env_path("CHARACTER_META_JSON_PATH", default)
 
 
+def pages_site_url() -> str:
+    return os.environ.get("PAGES_SITE_URL", "https://lulumi-tools.com").strip().rstrip("/")
+
+
 def pages_rankings_url() -> str:
-    return os.environ.get(
-        "MVP_PAGES_RANKINGS_URL",
-        "https://pachimi14.github.io/maplen-board/data/rankings.json",
-    ).strip()
+    default = f"{pages_site_url()}/data/rankings.json"
+    return os.environ.get("MVP_PAGES_RANKINGS_URL", default).strip()
 
 
 def hydrate_meta_from_pages() -> bool:
