@@ -370,6 +370,35 @@ export function remainingExpTo250(character, expTable) {
 
 const JST_TIME_ZONE = "Asia/Tokyo";
 
+/** 「最新 2026-06-10 09:20更新」形式（ランキング日 + 定期取得の JST 時刻）。 */
+export function formatScheduledUpdateLabel(meta) {
+  const snapshotDate = String(meta?.latestSnapshotDate || "").trim();
+  const updatedAtRaw = String(meta?.updatedAt || "").trim();
+  if (!snapshotDate) {
+    return null;
+  }
+
+  let timePart = "";
+  if (updatedAtRaw) {
+    const parsed = new Date(updatedAtRaw);
+    if (!Number.isNaN(parsed.getTime())) {
+      const parts = new Intl.DateTimeFormat("en-GB", {
+        timeZone: JST_TIME_ZONE,
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      }).formatToParts(parsed);
+      const hour = parts.find((item) => item.type === "hour")?.value ?? "00";
+      const minute = parts.find((item) => item.type === "minute")?.value ?? "00";
+      timePart = `${hour}:${minute}`;
+    }
+  }
+
+  return timePart
+    ? `最新 ${snapshotDate} ${timePart}更新`
+    : `最新 ${snapshotDate}`;
+}
+
 /** Today’s calendar date in JST (year/month/day). */
 export function todayPartsInJst(reference = new Date()) {
   const parts = new Intl.DateTimeFormat("en-US", {

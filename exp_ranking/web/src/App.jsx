@@ -14,6 +14,7 @@ import {
   formatExp,
   formatJobName,
   formatLevelExp,
+  formatScheduledUpdateLabel,
   gainRankClass,
   GAIN_PERIOD_LABELS,
   getGainAmount,
@@ -97,6 +98,11 @@ export default function App() {
     const fromMeta = Array.isArray(meta.worldIds) ? meta.worldIds : WORLD_IDS;
     return ["all", ...fromMeta];
   }, [meta.worldIds]);
+
+  const scheduledUpdateLabel = useMemo(
+    () => formatScheduledUpdateLabel(meta),
+    [meta]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -245,18 +251,16 @@ export default function App() {
             ) : null}
             {loadError ? <p className="text-amber-400 text-sm mt-1">{loadError}</p> : null}
           </div>
-          <p className="text-slate-400 text-sm md:text-base text-right md:pb-1 shrink-0">
-            {[
-              meta.rankingMinLevel
+          <div className="text-slate-400 text-sm md:text-base text-right md:pb-1 shrink-0 space-y-0.5">
+            {scheduledUpdateLabel ? <p>{scheduledUpdateLabel}</p> : null}
+            <p className="text-xs md:text-sm text-slate-500">
+              {meta.rankingMinLevel
                 ? `Lv.${meta.rankingMinLevel}+`
                 : meta.rankingTopN
                   ? `取得 ${meta.rankingTopN} 人`
-                  : null,
-              meta.latestSnapshotDate ? `最新 ${meta.latestSnapshotDate}` : null,
-            ]
-              .filter(Boolean)
-              .join(" / ")}
-          </p>
+                  : null}
+            </p>
+          </div>
         </div>
 
         <TopGainHighlights
