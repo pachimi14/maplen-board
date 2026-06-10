@@ -241,9 +241,6 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment_try.outcome == 'success' && steps.deployment_try.outputs.page_url || steps.deployment.outputs.page_url }}
     steps:
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-
       - name: Deploy to GitHub Pages
         id: deployment_try
         uses: actions/deploy-pages@v4
@@ -259,7 +256,7 @@ jobs:
         uses: actions/deploy-pages@v4
 
       - name: Verify deploy succeeded
-        if: steps.deployment_try.outcome == 'failure' && steps.deployment.outcome == 'failure'
+        if: steps.deployment_try.outcome == 'failure' && steps.deployment.outcome != 'success'
         run: |
           echo "Pages deployment failed after retry"
           exit 1
