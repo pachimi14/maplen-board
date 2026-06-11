@@ -149,6 +149,12 @@ def force_ranking_fetch() -> bool:
     return raw in ("1", "true", "yes", "on")
 
 
+def skip_msu_ranking_fetch() -> bool:
+    """When true, never call MSU ranking / Navigator APIs (re-export from SQLite only)."""
+    raw = os.environ.get("SKIP_MSU_RANKING_FETCH", "").strip().lower()
+    return raw in ("1", "true", "yes", "on")
+
+
 def skip_fetch_if_ranking_day_exists() -> bool:
     """Alias of skip_run_if_ranking_day_exists (ranking + navigator are skipped together)."""
     return skip_run_if_ranking_day_exists()
