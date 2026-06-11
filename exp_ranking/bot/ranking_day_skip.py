@@ -39,6 +39,8 @@ def ranking_day_already_captured(db_path: Path, snapshot_date: str) -> bool:
 
 
 def should_skip_ranking_fetch(db_path: Path, snapshot_date: str) -> bool:
+    if config.skip_msu_ranking_fetch():
+        return True
     if not config.skip_run_if_ranking_day_exists():
         return False
     return ranking_day_already_captured(db_path, snapshot_date)

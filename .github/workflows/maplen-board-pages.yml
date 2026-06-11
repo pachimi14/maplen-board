@@ -141,9 +141,10 @@ jobs:
           MVP_JSON_OUTPUT_PATH: ../web/public/data/rankings.json
           CHARACTER_META_JSON_PATH: data/character_meta.json
           NAVIGATOR_REQUEST_DELAY_SEC: "0.35"
-          NAVIGATOR_FETCH_ENABLED: "true"
-          HYDRATE_META_FROM_PAGES: "true"
-          SNAPSHOT_IMPORT_FROM_PAGES: "true"
+          SKIP_MSU_RANKING_FETCH: ${{ contains(github.event.head_commit.message, '[web-only]') && 'true' || '' }}
+          NAVIGATOR_FETCH_ENABLED: ${{ contains(github.event.head_commit.message, '[web-only]') && 'false' || 'true' }}
+          HYDRATE_META_FROM_PAGES: ${{ contains(github.event.head_commit.message, '[web-only]') && 'false' || 'true' }}
+          SNAPSHOT_IMPORT_FROM_PAGES: ${{ contains(github.event.head_commit.message, '[web-only]') && 'false' || 'true' }}
           PAGES_SITE_URL: https://lulumi-tools.com
           MVP_PAGES_RANKINGS_URL: https://lulumi-tools.com/data/rankings.json
           IMPORT_SNAPSHOTS_JSON: data/seed/rankings_seed.json
@@ -157,7 +158,10 @@ jobs:
       - name: Check if today's ranking day is already complete
         id: deploy_gate
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          if [ "${{ contains(github.event.head_commit.message, '[web-only]') }}" = "true" ]; then
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+            echo "Web-only redeploy: deploy enabled"
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "deploy=true" >> "$GITHUB_OUTPUT"
             echo "Manual run: deploy enabled"
           elif [ -f exp_ranking/bot/data/.ranking_day_complete ]; then
