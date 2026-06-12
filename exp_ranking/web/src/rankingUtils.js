@@ -126,16 +126,16 @@ export function formatExp(value) {
   return Number(value || 0).toLocaleString();
 }
 
-/** EXP record display with 3 fractional digits (e.g. +565.407B). */
+/** EXP record display with 2 fractional digits (e.g. +565.41B). */
 export function formatExpRecord(value) {
   if (value >= 1_000_000_000_000) {
-    return `${(value / 1_000_000_000_000).toFixed(3)}T`;
+    return `${(value / 1_000_000_000_000).toFixed(2)}T`;
   }
   if (value >= 1_000_000_000) {
-    return `${(value / 1_000_000_000).toFixed(3)}B`;
+    return `${(value / 1_000_000_000).toFixed(2)}B`;
   }
   if (value >= 1_000_000) {
-    return `${(value / 1_000_000).toFixed(3)}M`;
+    return `${(value / 1_000_000).toFixed(2)}M`;
   }
   return Number(value || 0).toLocaleString();
 }

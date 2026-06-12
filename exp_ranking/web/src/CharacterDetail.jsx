@@ -328,14 +328,16 @@ export default function CharacterDetail({
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 min-w-0">
-          <LevelEstimateCard
-            daysTo250={daysTo250}
-            daysTo275={daysTo275}
-            dateParts250={dateParts250}
-            dateParts275={dateParts275}
-            t={t}
-          />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 min-w-0">
+          <div className="sm:col-span-2 min-w-0">
+            <LevelEstimateCard
+              daysTo250={daysTo250}
+              daysTo275={daysTo275}
+              dateParts250={dateParts250}
+              dateParts275={dateParts275}
+              t={t}
+            />
+          </div>
           <BestDailyRecordCard bestDaily={bestDaily} recordParts={recordParts} t={t} />
         </div>
 
