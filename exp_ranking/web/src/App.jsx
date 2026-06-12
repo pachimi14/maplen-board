@@ -71,7 +71,7 @@ function parseExpTable(meta) {
 }
 
 export default function App() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const dailyPeriod = useGainPeriodLabel("daily");
   const weeklyPeriod = useGainPeriodLabel("weekly");
   const monthlyPeriod = useGainPeriodLabel("monthly");
@@ -101,8 +101,8 @@ export default function App() {
   }, [meta.worldIds]);
 
   const scheduledUpdateLabel = useMemo(
-    () => formatScheduledUpdateLabel(meta, t),
-    [meta, t]
+    () => formatScheduledUpdateLabel(meta, t, language),
+    [meta, t, language]
   );
 
   const rankingListTitle = useMemo(() => {
