@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { UserRound } from "lucide-react";
 import FavoriteStar from "./FavoriteStar";
 import NavigatorLink from "./NavigatorLink";
+import { useGainPeriodLabel, useTranslation } from "./i18n/I18nContext";
 import {
   BarChart,
   Bar,
@@ -24,8 +25,7 @@ import {
   currentLevelExp,
   formatExp,
   formatExpExact,
-  GAIN_PERIOD_LABELS,
-  GAIN_PERIOD_RESETS,
+  formatTargetDateAfterDays,
   getGainRank,
   formatJobName,
   getGainAmount,
@@ -58,6 +58,7 @@ function RankChartDot({ cx, cy, payload }) {
 }
 
 function RankChartTooltip({ active, payload, label }) {
+  const { t } = useTranslation();
   if (!active || !payload?.length) {
     return null;
   }
@@ -65,19 +66,26 @@ function RankChartTooltip({ active, payload, label }) {
   return (
     <div className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm shadow-lg">
       <div className="text-slate-400">{label}</div>
-      <div className="font-bold text-white mt-0.5">順位 #{row.dailyRank}</div>
+      <div className="font-bold text-white mt-0.5">
+        {t("characterDetail.rankTooltip", { rank: row.dailyRank })}
+      </div>
       {row.rankDelta == null ? null : row.rankDelta > 0 ? (
-        <div className="text-emerald-400 mt-1">↑ {row.rankDelta} 位上昇</div>
+        <div className="text-emerald-400 mt-1">
+          {t("characterDetail.rankUp", { count: row.rankDelta })}
+        </div>
       ) : row.rankDelta < 0 ? (
-        <div className="text-rose-400 mt-1">↓ {Math.abs(row.rankDelta)} 位下降</div>
+        <div className="text-rose-400 mt-1">
+          {t("characterDetail.rankDown", { count: Math.abs(row.rankDelta) })}
+        </div>
       ) : (
-        <div className="text-slate-400 mt-1">前日と同順位</div>
+        <div className="text-slate-400 mt-1">{t("characterDetail.rankSame")}</div>
       )}
     </div>
   );
 }
 
 function GainStatCard({ label, amount, rank, hint }) {
+  const { t } = useTranslation();
   return (
     <div className="bg-slate-950 rounded-2xl p-4 min-w-0">
       <div className="text-slate-400 text-xs sm:text-sm truncate">{label}</div>
@@ -86,7 +94,7 @@ function GainStatCard({ label, amount, rank, hint }) {
       ) : null}
       <div className="text-lg font-bold text-emerald-400 mt-1 truncate">+{formatExp(amount)}</div>
       <div className="text-xs sm:text-sm text-slate-400 mt-1">
-        順位{" "}
+        {t("characterDetail.rank")}{" "}
         <span className="text-slate-100 font-semibold">{rank != null ? `#${rank}` : "-"}</span>
       </div>
     </div>
@@ -101,6 +109,11 @@ export default function CharacterDetail({
   isFavorite = false,
   onToggleFavorite,
 }) {
+  const { t } = useTranslation();
+  const dailyPeriod = useGainPeriodLabel("daily");
+  const weeklyPeriod = useGainPeriodLabel("weekly");
+  const monthlyPeriod = useGainPeriodLabel("monthly");
+
   const dailyGain = getGainAmount(character, "daily");
   const weeklyGain = getGainAmount(character, "weekly");
   const monthlyGain = getGainAmount(character, "monthly");
@@ -133,6 +146,13 @@ export default function CharacterDetail({
     [character, expTable]
   );
 
+  const targetDateLabel = useMemo(() => {
+    if (!daysTo250.days) {
+      return null;
+    }
+    return formatTargetDateAfterDays(daysTo250.days, t);
+  }, [daysTo250.days, t]);
+
   const level = character.level ?? 0;
   const expPercent = levelExpPercent(character);
   const levelExp = currentLevelExp(character, expTable);
@@ -151,7 +171,7 @@ export default function CharacterDetail({
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 text-slate-400 text-sm">
                 <UserRound size={16} />
-                キャラクター詳細
+                {t("characterDetail.title")}
               </div>
               {onToggleFavorite ? (
                 <FavoriteStar active={isFavorite} onToggle={onToggleFavorite} size={22} />
@@ -186,7 +206,7 @@ export default function CharacterDetail({
             </div>
 
             <div className="flex items-baseline justify-between gap-3 mt-1">
-              <p className="text-sm text-slate-500 shrink-0">レベル順位</p>
+              <p className="text-sm text-slate-500 shrink-0">{t("characterDetail.levelRank")}</p>
               {level >= 250 ? (
                 <span className="shrink-0" aria-hidden />
               ) : (
@@ -202,41 +222,51 @@ export default function CharacterDetail({
 
         <div className="grid grid-cols-3 gap-3">
           <GainStatCard
-            label={`${GAIN_PERIOD_LABELS.daily}増加`}
+            label={t("characterDetail.gainLabel", { period: dailyPeriod })}
             amount={dailyGain}
             rank={dailyRank}
-            hint={GAIN_PERIOD_RESETS.daily}
+            hint={t("period.resetDaily")}
           />
           <GainStatCard
-            label={`${GAIN_PERIOD_LABELS.weekly}増加`}
+            label={t("characterDetail.gainLabel", { period: weeklyPeriod })}
             amount={weeklyGain}
             rank={weeklyRank}
-            hint={GAIN_PERIOD_RESETS.weekly}
+            hint={t("period.resetWeekly")}
           />
           <GainStatCard
-            label={`${GAIN_PERIOD_LABELS.monthly}増加`}
+            label={t("characterDetail.gainLabel", { period: monthlyPeriod })}
             amount={monthlyGain}
             rank={monthlyRank}
-            hint={GAIN_PERIOD_RESETS.monthly}
+            hint={t("period.resetMonthly")}
           />
         </div>
 
         <div className="grid grid-cols-2 gap-4 min-w-0">
           <div className="bg-slate-950 rounded-2xl p-5 min-w-0 overflow-hidden">
-            <div className="text-slate-400 text-sm leading-snug">今日の増加量で Lv250 まで</div>
-            {daysTo250.label ? (
-              <div className="text-xl font-bold mt-1 break-words">{daysTo250.label}</div>
+            <div className="text-slate-400 text-sm leading-snug">
+              {t("characterDetail.lv250Title")}
+            </div>
+            {daysTo250.completed ? (
+              <div className="text-xl font-bold mt-1 break-words">
+                {t("characterDetail.lv250Done")}
+              </div>
+            ) : daysTo250.noGain ? (
+              <div className="text-xl font-bold mt-1">-</div>
             ) : (
               <>
-                <div className="text-xl font-bold mt-1">約 {daysTo250.days} 日</div>
+                <div className="text-xl font-bold mt-1">
+                  {t("characterDetail.aboutDays", { days: daysTo250.days })}
+                </div>
                 <div className="text-base font-semibold text-cyan-300 mt-1 break-words">
-                  {daysTo250.targetDateLabel}
+                  {targetDateLabel}
                 </div>
               </>
             )}
           </div>
           <div className="bg-slate-950 rounded-2xl p-5 min-w-0 overflow-hidden">
-            <div className="text-slate-400 text-sm leading-snug">デイリー増加 過去最高</div>
+            <div className="text-slate-400 text-sm leading-snug">
+              {t("characterDetail.bestDailyTitle")}
+            </div>
             <div
               className="mt-1 max-w-full overflow-x-auto [scrollbar-width:thin]"
               title={`+${formatExpExact(bestDaily.bestGain)}`}
@@ -246,13 +276,15 @@ export default function CharacterDetail({
               </div>
             </div>
             <p className="text-sm text-slate-500 mt-2 break-words">
-              {bestDaily.bestDate ? `記録日 ${bestDaily.bestDate}` : "データなし"}
+              {bestDaily.bestDate
+                ? t("characterDetail.recordDate", { date: bestDaily.bestDate })
+                : t("characterDetail.noData")}
             </p>
           </div>
         </div>
 
         <div>
-          <h3 className="font-bold mb-3">直近7日間のデイリー経験値増加量</h3>
+          <h3 className="font-bold mb-3">{t("characterDetail.chartGain7d")}</h3>
           <div className="h-64 md:h-72">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={weekGainSeries}>
@@ -263,7 +295,9 @@ export default function CharacterDetail({
                   tick={{ fill: "#94a3b8", fontSize: 12 }}
                   width={58}
                 />
-                <Tooltip formatter={(value) => [formatExp(value), "増加量"]} />
+                <Tooltip
+                  formatter={(value) => [formatExp(value), t("characterDetail.gainAmount")]}
+                />
                 <Bar dataKey="dailyGain" fill="#34d399" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -271,7 +305,7 @@ export default function CharacterDetail({
         </div>
 
         <div>
-          <h3 className="font-bold mb-3">直近7日間のデイリー増加量順位</h3>
+          <h3 className="font-bold mb-3">{t("characterDetail.chartRank7d")}</h3>
           <div className="h-72 md:h-80">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart

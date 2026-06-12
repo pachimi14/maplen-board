@@ -8,11 +8,11 @@ import {
   JOB_ALLIANCES,
   JOB_TAXONOMY,
 } from "./jobCategories";
+import { useGainPeriodLabel, useTranslation } from "./i18n/I18nContext";
 import {
   buildGainRankingByJob,
   formatExp,
   formatLevelExp,
-  GAIN_PERIOD_LABELS,
   gainRankClass,
   getGainAmount,
 } from "./rankingUtils";
@@ -33,10 +33,11 @@ export default function JobGainRankings({
   expandedJob,
   onExpandJob,
 }) {
+  const { t, translateAlliance, translateBranch } = useTranslation();
+  const periodLabel = useGainPeriodLabel(period);
   const [jobQuery, setJobQuery] = useState("");
   const [alliance, setAlliance] = useState("冒険家");
   const [branch, setBranch] = useState("戦士");
-  const periodLabel = GAIN_PERIOD_LABELS[period] ?? period;
 
   const flatGroups = useMemo(
     () => buildGainRankingByJob(characters, period, TOP_PER_JOB),
@@ -155,10 +156,10 @@ export default function JobGainRankings({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-lg font-bold">
-            {periodLabel} EXP 増加量 — 職業別
+            {t("jobRanking.title", { period: periodLabel })}
           </h3>
           <p className="text-sm text-slate-400">
-            冒険家・英雄・シグナス別に表示（各職業 TOP {TOP_PER_JOB}）
+            {t("jobRanking.subtitle", { count: TOP_PER_JOB })}
           </p>
         </div>
         <div className="relative w-full sm:w-64">
@@ -166,7 +167,7 @@ export default function JobGainRankings({
           <Input
             value={jobQuery}
             onChange={(event) => setJobQuery(event.target.value)}
-            placeholder="職業名で絞り込み"
+            placeholder={t("search.job")}
             className="pl-10 bg-slate-950 border-slate-800 text-slate-100"
           />
         </div>
@@ -193,7 +194,7 @@ export default function JobGainRankings({
                 }
               }}
             >
-              {name}
+              {translateAlliance(name)}
               {count > 0 ? ` (${count})` : ""}
             </Button>
           );
@@ -216,7 +217,7 @@ export default function JobGainRankings({
                   onExpandJob(null);
                 }}
               >
-                {name}
+                {translateBranch(name)}
                 {count > 0 ? ` (${count})` : ""}
               </Button>
             );
@@ -230,11 +231,11 @@ export default function JobGainRankings({
             <h4 className="font-bold text-lg">
               {expandedGroup.job}
               <span className="text-slate-400 text-sm font-normal ml-2">
-                {expandedGroup.memberCount} 人
+                {t("jobRanking.members", { count: expandedGroup.memberCount })}
               </span>
             </h4>
             <Button variant="outline" className="border-slate-700" onClick={() => onExpandJob(null)}>
-              職業一覧に戻る
+              {t("jobRanking.backToList")}
             </Button>
           </div>
           <div className="overflow-hidden rounded-xl border border-slate-800">
@@ -242,11 +243,13 @@ export default function JobGainRankings({
               <thead className="bg-slate-900 text-slate-400">
                 <tr>
                   <th className="text-left p-3 w-12" />
-                  <th className="text-left p-3">職業内順位</th>
-                  <th className="text-left p-3">キャラ</th>
-                  <th className="text-right p-3 whitespace-nowrap">Lv / EXP%</th>
-                  <th className="text-right p-3">{periodLabel}増加</th>
-                  <th className="text-right p-3">レベル順位</th>
+                  <th className="text-left p-3">{t("jobRanking.jobRank")}</th>
+                  <th className="text-left p-3">{t("jobRanking.character")}</th>
+                  <th className="text-right p-3 whitespace-nowrap">{t("table.lvExp")}</th>
+                  <th className="text-right p-3">
+                    {t("jobRanking.gain", { period: periodLabel })}
+                  </th>
+                  <th className="text-right p-3">{t("jobRanking.levelRank")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -292,7 +295,9 @@ export default function JobGainRankings({
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <h4 className="font-bold">{group.job}</h4>
-                    <p className="text-sm text-slate-500">{group.memberCount} 人</p>
+                    <p className="text-sm text-slate-500">
+                      {t("jobRanking.members", { count: group.memberCount })}
+                    </p>
                   </div>
                   {group.memberCount > TOP_PER_JOB ? (
                     <Button
@@ -300,7 +305,7 @@ export default function JobGainRankings({
                       className="border-slate-700 text-sm shrink-0 py-1"
                       onClick={() => onExpandJob(group.job)}
                     >
-                      全員
+                      {t("jobRanking.showAll")}
                     </Button>
                   ) : null}
                 </div>
@@ -336,14 +341,15 @@ export default function JobGainRankings({
                           </span>
                         </div>
                         <div className="text-sm text-slate-500 mt-1 pl-7">
-                          {formatLevelExp(character)} · レベル順位 #{character.rank}
+                          {formatLevelExp(character)} · {t("jobRanking.levelRank")} #
+                          {character.rank}
                         </div>
                       </button>
                     </li>
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-slate-600 py-2">ランキング対象のキャラがいません</p>
+                <p className="text-sm text-slate-600 py-2">{t("jobRanking.noMembers")}</p>
               )}
               </div>
             ))}
@@ -351,13 +357,13 @@ export default function JobGainRankings({
 
           {filteredJobs.length === 0 && jobQuery.trim() ? (
             <p className="text-sm text-slate-500 text-center py-8">
-              検索に一致する職業がありません。
+              {t("jobRanking.noSearchMatch")}
             </p>
           ) : null}
 
           {filteredOtherJobs.length > 0 ? (
             <div className="space-y-3 pt-2 border-t border-slate-800">
-              <h4 className="font-semibold text-slate-300">その他の職業</h4>
+              <h4 className="font-semibold text-slate-300">{t("jobRanking.otherJobs")}</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {filteredOtherJobs.map((group) => (
                   <div
@@ -367,7 +373,9 @@ export default function JobGainRankings({
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <h4 className="font-bold">{group.job}</h4>
-                        <p className="text-sm text-slate-500">{group.memberCount} 人</p>
+                        <p className="text-sm text-slate-500">
+                          {t("jobRanking.members", { count: group.memberCount })}
+                        </p>
                       </div>
                       {group.memberCount > TOP_PER_JOB ? (
                         <Button
@@ -375,7 +383,7 @@ export default function JobGainRankings({
                           className="border-slate-700 text-sm shrink-0 py-1"
                           onClick={() => onExpandJob(group.job)}
                         >
-                          全員
+                          {t("jobRanking.showAll")}
                         </Button>
                       ) : null}
                     </div>

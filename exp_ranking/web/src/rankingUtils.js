@@ -373,7 +373,7 @@ const JST_TIME_ZONE = "Asia/Tokyo";
 const SCHEDULED_UPDATE_TIME_UTC = "00:20";
 
 /** 「2026-06-10 00:20更新」形式（取得 UTC 日 + 固定 00:20）。 */
-export function formatScheduledUpdateLabel(meta) {
+export function formatScheduledUpdateLabel(meta, t) {
   const updatedAtRaw = String(meta?.updatedAt || "").trim();
   let updateDate = "";
 
@@ -402,7 +402,23 @@ export function formatScheduledUpdateLabel(meta) {
     updateDate = rankingDay.toISOString().slice(0, 10);
   }
 
+  if (t) {
+    return t("app.updatedAt", {
+      date: updateDate,
+      time: SCHEDULED_UPDATE_TIME_UTC,
+    });
+  }
   return `${updateDate} ${SCHEDULED_UPDATE_TIME_UTC}更新`;
+}
+
+/** Target calendar date label for Lv250 estimate. */
+export function formatTargetDateAfterDays(daysFromToday, t, reference = new Date()) {
+  const { year, month, day } = todayPartsInJst(reference);
+  const target = new Date(Date.UTC(year, month - 1, day + daysFromToday));
+  return t("date.monthDay", {
+    month: target.getUTCMonth() + 1,
+    day: target.getUTCDate(),
+  });
 }
 
 /** Today’s calendar date in JST (year/month/day). */
@@ -437,21 +453,21 @@ export function formatJapaneseDateAfterDays(daysFromToday, reference = new Date(
 /** Days until Lv250 using today's daily gain only. */
 export function estimateDaysTo250FromToday(character, expTable) {
   if (character.level >= 250) {
-    return { days: 0, label: "達成済み", targetDateLabel: null };
+    return { days: 0, completed: true, noGain: false };
   }
 
   const todayGain = character.history?.at(-1)?.dailyGain ?? 0;
   const remaining = remainingExpTo250(character, expTable);
 
   if (!todayGain) {
-    return { days: null, label: "-", targetDateLabel: null };
+    return { days: null, completed: false, noGain: true };
   }
 
   const days = Math.ceil(remaining / todayGain);
   return {
     days,
-    label: null,
-    targetDateLabel: formatJapaneseDateAfterDays(days),
+    completed: false,
+    noGain: false,
   };
 }
 

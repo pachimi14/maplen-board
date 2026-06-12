@@ -7,6 +7,8 @@ import CharacterDetail from "./CharacterDetail";
 import FavoriteStar from "./FavoriteStar";
 import TopGainHighlights from "./TopGainHighlights";
 import JobGainRankings from "./JobGainRankings";
+import LanguageSwitcher from "./LanguageSwitcher";
+import { useGainPeriodLabel, useTranslation } from "./i18n/I18nContext";
 import { useFavorites } from "./useFavorites";
 import NavigatorLink from "./NavigatorLink";
 import {
@@ -16,7 +18,6 @@ import {
   formatLevelExp,
   formatScheduledUpdateLabel,
   gainRankClass,
-  GAIN_PERIOD_LABELS,
   getGainAmount,
   getNavigatorUrl,
   matchesWorldFilter,
@@ -54,21 +55,11 @@ const FALLBACK_EXP_TABLE = {
 const PAGE_SIZE = 20;
 
 const SORT_OPTIONS = [
-  { key: "rank", label: "レベル順位" },
-  { key: "daily", label: "Daily" },
-  { key: "weekly", label: "Weekly" },
-  { key: "monthly", label: "Monthly" },
+  { key: "rank", labelKey: "sort.levelRank" },
+  { key: "daily", labelKey: "period.dailyShort" },
+  { key: "weekly", labelKey: "period.weeklyShort" },
+  { key: "monthly", labelKey: "period.monthlyShort" },
 ];
-
-function rankingListTitle(sortKey, gainRankView) {
-  if (gainRankView === "byJob" && sortKey !== "rank") {
-    return `${GAIN_PERIOD_LABELS[sortKey]} 増加量 — 職業別ランキング`;
-  }
-  if (sortKey === "rank") {
-    return "レベル順位ランキング";
-  }
-  return `${GAIN_PERIOD_LABELS[sortKey]} 増加量ランキング`;
-}
 
 function parseExpTable(meta) {
   const table = meta?.expTable || {};
@@ -80,6 +71,16 @@ function parseExpTable(meta) {
 }
 
 export default function App() {
+  const { t } = useTranslation();
+  const dailyPeriod = useGainPeriodLabel("daily");
+  const weeklyPeriod = useGainPeriodLabel("weekly");
+  const monthlyPeriod = useGainPeriodLabel("monthly");
+  const periodLabels = {
+    daily: dailyPeriod,
+    weekly: weeklyPeriod,
+    monthly: monthlyPeriod,
+  };
+
   const [query, setQuery] = useState("");
   const [gainRankView, setGainRankView] = useState("overall");
   const [expandedJob, setExpandedJob] = useState(null);
@@ -100,9 +101,19 @@ export default function App() {
   }, [meta.worldIds]);
 
   const scheduledUpdateLabel = useMemo(
-    () => formatScheduledUpdateLabel(meta),
-    [meta]
+    () => formatScheduledUpdateLabel(meta, t),
+    [meta, t]
   );
+
+  const rankingListTitle = useMemo(() => {
+    if (gainRankView === "byJob" && sortKey !== "rank") {
+      return t("sort.gainByJob", { period: periodLabels[sortKey] });
+    }
+    if (sortKey === "rank") {
+      return t("sort.levelRanking");
+    }
+    return t("sort.gainRanking", { period: periodLabels[sortKey] });
+  }, [gainRankView, sortKey, t, periodLabels]);
 
   useEffect(() => {
     let cancelled = false;
@@ -217,7 +228,7 @@ export default function App() {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center">
-        ランキングデータを読み込み中...
+        {t("app.loading")}
       </div>
     );
   }
@@ -225,10 +236,8 @@ export default function App() {
   if (!characters.length) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 p-8">
-        <h1 className="text-2xl font-bold mb-4">データがありません</h1>
-        <p className="text-slate-400 mb-4">
-          先に bot を実行して rankings.json を生成してください。
-        </p>
+        <h1 className="text-2xl font-bold mb-4">{t("app.noDataTitle")}</h1>
+        <p className="text-slate-400 mb-4">{t("app.noDataHint")}</p>
         {loadError ? <p className="text-red-400">{loadError}</p> : null}
         <pre className="bg-slate-900 p-4 rounded-xl text-sm text-slate-300">
           run_exp_ranking_fetch.bat
@@ -246,22 +255,25 @@ export default function App() {
             <h1 className="text-3xl md:text-5xl font-bold tracking-tight">MapleN Exp Ranking</h1>
             {meta.demoGains ? (
               <p className="text-amber-300 text-sm mt-1">
-                デモ用ダミー増加量データ（{meta.demoGainDays || "?"} 日分）
+                {t("app.demoGains", { days: meta.demoGainDays || "?" })}
               </p>
             ) : null}
             {loadError ? <p className="text-amber-400 text-sm mt-1">{loadError}</p> : null}
           </div>
-          <div className="text-right md:pb-1 shrink-0 space-y-0.5">
-            <p className="text-xs md:text-sm text-slate-500">
-              {meta.rankingMinLevel
-                ? `Lv.${meta.rankingMinLevel}+`
-                : meta.rankingTopN
-                  ? `取得 ${meta.rankingTopN} 人`
-                  : null}
-            </p>
-            {scheduledUpdateLabel ? (
-              <p className="text-slate-400 text-sm md:text-base">{scheduledUpdateLabel}</p>
-            ) : null}
+          <div className="text-right md:pb-1 shrink-0 space-y-2">
+            <LanguageSwitcher />
+            <div className="space-y-0.5">
+              <p className="text-xs md:text-sm text-slate-500">
+                {meta.rankingMinLevel
+                  ? `Lv.${meta.rankingMinLevel}+`
+                  : meta.rankingTopN
+                    ? t("app.fetchedCount", { count: meta.rankingTopN })
+                    : null}
+              </p>
+              {scheduledUpdateLabel ? (
+                <p className="text-slate-400 text-sm md:text-base">{scheduledUpdateLabel}</p>
+              ) : null}
+            </div>
           </div>
         </div>
 
@@ -286,7 +298,7 @@ export default function App() {
                 }
               }}
             >
-              {option.label}
+              {t(option.labelKey)}
             </Button>
           ))}
         </div>
@@ -300,7 +312,7 @@ export default function App() {
                 setExpandedJob(null);
               }}
             >
-              全体
+              {t("view.overall")}
             </Button>
             <Button
               variant={gainRankView === "byJob" ? "default" : "outline"}
@@ -309,7 +321,7 @@ export default function App() {
                 setExpandedJob(null);
               }}
             >
-              職業別
+              {t("view.byJob")}
             </Button>
           </div>
         ) : null}
@@ -321,7 +333,7 @@ export default function App() {
               variant={worldFilter === world ? "default" : "outline"}
               onClick={() => setWorldFilter(world)}
             >
-              {world === "all" ? "全サーバー" : world}
+              {world === "all" ? t("view.allServers") : world}
             </Button>
           ))}
         </div>
@@ -330,7 +342,7 @@ export default function App() {
           <Card className="xl:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl shadow-xl">
             <CardContent className="p-5 space-y-4">
               <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
-                <h2 className="text-xl font-bold">{rankingListTitle(sortKey, gainRankView)}</h2>
+                <h2 className="text-xl font-bold">{rankingListTitle}</h2>
                 <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
                   <Button
                     type="button"
@@ -347,7 +359,7 @@ export default function App() {
                       size={16}
                       className={`mr-2 inline ${favoritesOnly ? "fill-current" : ""}`}
                     />
-                    お気に入りのみ
+                    {t("favorite.only")}
                     {favoriteCount > 0 ? ` (${favoriteCount})` : ""}
                   </Button>
                   <div className="relative w-full md:w-72">
@@ -355,7 +367,7 @@ export default function App() {
                     <Input
                       value={query}
                       onChange={(event) => setQuery(event.target.value)}
-                      placeholder="キャラ名・職業・サーバーで検索"
+                      placeholder={t("search.character")}
                       className="pl-10 bg-slate-950 border-slate-800 text-slate-100"
                     />
                   </div>
@@ -377,7 +389,7 @@ export default function App() {
 
               {favoritesOnly && displayCharacters.length === 0 && !showJobRanking ? (
                 <p className="text-sm text-amber-300/90 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3">
-                  お気に入りに登録されたキャラがいません。一覧の☆を押して追加してください。
+                  {t("favorite.emptyList")}
                 </p>
               ) : null}
 
@@ -385,12 +397,18 @@ export default function App() {
                 <>
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-sm text-slate-400">
                 <span>
-                  {favoritesOnly ? "お気に入り " : ""}
-                  {displayCharacters.length.toLocaleString()} 件中{" "}
-                  {displayCharacters.length === 0
-                    ? 0
-                    : `${pageStart + 1}-${Math.min(pageStart + PAGE_SIZE, displayCharacters.length)}`}
-                  件を表示
+                  {favoritesOnly ? t("pagination.favoritesPrefix") : ""}
+                  {t("pagination.range", {
+                    total: displayCharacters.length.toLocaleString(),
+                    from:
+                      displayCharacters.length === 0
+                        ? 0
+                        : pageStart + 1,
+                    to:
+                      displayCharacters.length === 0
+                        ? 0
+                        : Math.min(pageStart + PAGE_SIZE, displayCharacters.length),
+                  })}
                 </span>
                 <div className="flex items-center gap-2">
                   <Button
@@ -399,7 +417,7 @@ export default function App() {
                     disabled={safePage <= 1}
                     onClick={() => setPage((current) => Math.max(1, current - 1))}
                   >
-                    前へ
+                    {t("pagination.prev")}
                   </Button>
                   <span>
                     {safePage} / {totalPages}
@@ -410,7 +428,7 @@ export default function App() {
                     disabled={safePage >= totalPages}
                     onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
                   >
-                    次へ
+                    {t("pagination.next")}
                   </Button>
                 </div>
               </div>
@@ -423,15 +441,15 @@ export default function App() {
                         <Star size={14} className="inline text-amber-400/80" />
                       </th>
                       {showGainRank ? (
-                        <th className="text-left p-3">増加順位</th>
+                        <th className="text-left p-3">{t("table.gainRank")}</th>
                       ) : null}
-                      <th className="text-left p-3">レベル順位</th>
-                      <th className="text-left p-3">Character</th>
-                      <th className="text-left p-3">Server</th>
-                      <th className="text-right p-3 whitespace-nowrap">Lv / EXP%</th>
-                      <th className="text-right p-3">Daily</th>
-                      <th className="text-right p-3">Weekly</th>
-                      <th className="text-right p-3">Monthly</th>
+                      <th className="text-left p-3">{t("table.levelRank")}</th>
+                      <th className="text-left p-3">{t("table.character")}</th>
+                      <th className="text-left p-3">{t("table.server")}</th>
+                      <th className="text-right p-3 whitespace-nowrap">{t("table.lvExp")}</th>
+                      <th className="text-right p-3">{t("table.daily")}</th>
+                      <th className="text-right p-3">{t("table.weekly")}</th>
+                      <th className="text-right p-3">{t("table.monthly")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -531,8 +549,8 @@ export default function App() {
             <Card className="xl:col-span-1 bg-slate-900 border border-slate-800 rounded-2xl shadow-xl">
               <CardContent className="p-8 text-center text-slate-400">
                 <Star size={32} className="mx-auto mb-3 text-amber-400/60" />
-                <p>お気に入りに登録されたキャラがいません。</p>
-                <p className="text-sm mt-2">一覧の☆を押して追加してください。</p>
+                <p>{t("favorite.emptyDetail")}</p>
+                <p className="text-sm mt-2">{t("favorite.emptyDetailHint")}</p>
               </CardContent>
             </Card>
           )}

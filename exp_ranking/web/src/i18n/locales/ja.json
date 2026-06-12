@@ -1,0 +1,117 @@
+{
+  "lang": {
+    "ja": "日本語",
+    "en": "English",
+    "switch": "言語"
+  },
+  "app": {
+    "loading": "ランキングデータを読み込み中...",
+    "noDataTitle": "データがありません",
+    "noDataHint": "先に bot を実行して rankings.json を生成してください。",
+    "demoGains": "デモ用ダミー増加量データ（{{days}} 日分）",
+    "fetchedCount": "取得 {{count}} 人",
+    "updatedAt": "{{date}} {{time}}更新"
+  },
+  "period": {
+    "daily": "日間",
+    "weekly": "週間",
+    "monthly": "月間",
+    "dailyShort": "Daily",
+    "weeklyShort": "Weekly",
+    "monthlyShort": "Monthly",
+    "resetDaily": "毎日 9:00 JST",
+    "resetWeekly": "毎週木曜 9:00 JST",
+    "resetMonthly": "毎月1日 9:00 JST"
+  },
+  "sort": {
+    "levelRank": "レベル順位",
+    "levelRanking": "レベル順位ランキング",
+    "gainRanking": "{{period}} 増加量ランキング",
+    "gainByJob": "{{period}} 増加量 — 職業別ランキング"
+  },
+  "view": {
+    "overall": "全体",
+    "byJob": "職業別",
+    "allServers": "全サーバー"
+  },
+  "search": {
+    "character": "キャラ名・職業・サーバーで検索",
+    "job": "職業名で絞り込み"
+  },
+  "favorite": {
+    "only": "お気に入りのみ",
+    "add": "お気に入りに追加",
+    "remove": "お気に入りを解除",
+    "emptyList": "お気に入りに登録されたキャラがいません。一覧の☆を押して追加してください。",
+    "emptyDetail": "お気に入りに登録されたキャラがいません。",
+    "emptyDetailHint": "一覧の☆を押して追加してください。"
+  },
+  "pagination": {
+    "favoritesPrefix": "お気に入り ",
+    "range": "{{total}} 件中 {{from}}-{{to}} 件を表示",
+    "prev": "前へ",
+    "next": "次へ"
+  },
+  "table": {
+    "gainRank": "増加順位",
+    "levelRank": "レベル順位",
+    "character": "Character",
+    "server": "Server",
+    "lvExp": "Lv / EXP%",
+    "daily": "Daily",
+    "weekly": "Weekly",
+    "monthly": "Monthly"
+  },
+  "highlights": {
+    "top3": "{{period}} 増加量 TOP3",
+    "levelRank": "レベル順位"
+  },
+  "characterDetail": {
+    "title": "キャラクター詳細",
+    "levelRank": "レベル順位",
+    "gainLabel": "{{period}}増加",
+    "rank": "順位",
+    "lv250Title": "今日の増加量で Lv250 まで",
+    "lv250Done": "達成済み",
+    "aboutDays": "約 {{days}} 日",
+    "bestDailyTitle": "デイリー増加 過去最高",
+    "recordDate": "記録日 {{date}}",
+    "noData": "データなし",
+    "chartGain7d": "直近7日間のデイリー経験値増加量",
+    "chartRank7d": "直近7日間のデイリー増加量順位",
+    "gainAmount": "増加量",
+    "rankUp": "↑ {{count}} 位上昇",
+    "rankDown": "↓ {{count}} 位下降",
+    "rankSame": "前日と同順位",
+    "rankTooltip": "順位 #{{rank}}"
+  },
+  "jobRanking": {
+    "title": "{{period}} EXP 増加量 — 職業別",
+    "subtitle": "冒険家・英雄・シグナス別に表示（各職業 TOP {{count}}）",
+    "members": "{{count}} 人",
+    "backToList": "職業一覧に戻る",
+    "jobRank": "職業内順位",
+    "character": "キャラ",
+    "gain": "{{period}}増加",
+    "levelRank": "レベル順位",
+    "showAll": "全員",
+    "noMembers": "ランキング対象のキャラがいません",
+    "noSearchMatch": "検索に一致する職業がありません。",
+    "otherJobs": "その他の職業"
+  },
+  "alliance": {
+    "冒険家": "冒険家",
+    "英雄": "英雄",
+    "シグナス": "シグナス"
+  },
+  "branch": {
+    "戦士": "戦士",
+    "魔法使い": "魔法使い",
+    "弓使い": "弓使い",
+    "盗賊": "盗賊",
+    "海賊": "海賊"
+  },
+  "date": {
+    "monthDay": "{{month}}月{{day}}日"
+  }
+}

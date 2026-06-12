@@ -1,12 +1,16 @@
 import React from "react";
 import { Star } from "lucide-react";
+import { useTranslation } from "./i18n/I18nContext";
 
 export default function FavoriteStar({ active, onToggle, size = 18, className = "" }) {
+  const { t } = useTranslation();
+  const label = active ? t("favorite.remove") : t("favorite.add");
+
   return (
     <button
       type="button"
-      aria-label={active ? "お気に入りを解除" : "お気に入りに追加"}
-      title={active ? "お気に入りを解除" : "お気に入りに追加"}
+      aria-label={label}
+      title={label}
       onClick={(event) => {
         event.stopPropagation();
         onToggle();

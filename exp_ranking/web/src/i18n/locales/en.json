@@ -1,0 +1,117 @@
+{
+  "lang": {
+    "ja": "日本語",
+    "en": "English",
+    "switch": "Language"
+  },
+  "app": {
+    "loading": "Loading ranking data...",
+    "noDataTitle": "No data available",
+    "noDataHint": "Run the bot first to generate rankings.json.",
+    "demoGains": "Demo dummy gain data ({{days}} days)",
+    "fetchedCount": "Top {{count}} fetched",
+    "updatedAt": "Updated {{date}} {{time}} UTC"
+  },
+  "period": {
+    "daily": "Daily",
+    "weekly": "Weekly",
+    "monthly": "Monthly",
+    "dailyShort": "Daily",
+    "weeklyShort": "Weekly",
+    "monthlyShort": "Monthly",
+    "resetDaily": "Daily 9:00 JST",
+    "resetWeekly": "Thu 9:00 JST",
+    "resetMonthly": "1st 9:00 JST"
+  },
+  "sort": {
+    "levelRank": "Level rank",
+    "levelRanking": "Level ranking",
+    "gainRanking": "{{period}} gain ranking",
+    "gainByJob": "{{period}} gain — by job"
+  },
+  "view": {
+    "overall": "Overall",
+    "byJob": "By job",
+    "allServers": "All servers"
+  },
+  "search": {
+    "character": "Search name, job, or server",
+    "job": "Filter by job name"
+  },
+  "favorite": {
+    "only": "Favorites only",
+    "add": "Add to favorites",
+    "remove": "Remove from favorites",
+    "emptyList": "No favorite characters yet. Tap ☆ in the list to add one.",
+    "emptyDetail": "No favorite characters yet.",
+    "emptyDetailHint": "Tap ☆ in the list to add one."
+  },
+  "pagination": {
+    "favoritesPrefix": "Favorites ",
+    "range": "Showing {{from}}-{{to}} of {{total}}",
+    "prev": "Prev",
+    "next": "Next"
+  },
+  "table": {
+    "gainRank": "Gain rank",
+    "levelRank": "Level rank",
+    "character": "Character",
+    "server": "Server",
+    "lvExp": "Lv / EXP%",
+    "daily": "Daily",
+    "weekly": "Weekly",
+    "monthly": "Monthly"
+  },
+  "highlights": {
+    "top3": "{{period}} gain TOP3",
+    "levelRank": "level rank"
+  },
+  "characterDetail": {
+    "title": "Character details",
+    "levelRank": "Level rank",
+    "gainLabel": "{{period}} gain",
+    "rank": "Rank",
+    "lv250Title": "Days to Lv250 at today's gain",
+    "lv250Done": "Completed",
+    "aboutDays": "About {{days}} days",
+    "bestDailyTitle": "Best daily gain",
+    "recordDate": "Recorded {{date}}",
+    "noData": "No data",
+    "chartGain7d": "Daily EXP gain (last 7 days)",
+    "chartRank7d": "Daily gain rank (last 7 days)",
+    "gainAmount": "Gain",
+    "rankUp": "↑ {{count}} places",
+    "rankDown": "↓ {{count}} places",
+    "rankSame": "Same as previous day",
+    "rankTooltip": "Rank #{{rank}}"
+  },
+  "jobRanking": {
+    "title": "{{period}} EXP gain — by job",
+    "subtitle": "Adventurer / Hero / Cygnus (TOP {{count}} per job)",
+    "members": "{{count}} players",
+    "backToList": "Back to job list",
+    "jobRank": "Job rank",
+    "character": "Character",
+    "gain": "{{period}} gain",
+    "levelRank": "Level rank",
+    "showAll": "All",
+    "noMembers": "No ranked characters for this job",
+    "noSearchMatch": "No jobs match your search.",
+    "otherJobs": "Other jobs"
+  },
+  "alliance": {
+    "冒険家": "Adventurer",
+    "英雄": "Hero",
+    "シグナス": "Cygnus"
+  },
+  "branch": {
+    "戦士": "Warrior",
+    "魔法使い": "Magician",
+    "弓使い": "Bowman",
+    "盗賊": "Thief",
+    "海賊": "Pirate"
+  },
+  "date": {
+    "monthDay": "{{month}}/{{day}}"
+  }
+}
