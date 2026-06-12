@@ -52,7 +52,7 @@ export function I18nProvider({ children }) {
     (key, vars) => {
       const template =
         getNested(MESSAGES[language], key) ??
-        getNested(MESSAGES.ja, key) ??
+        getNested(MESSAGES.en, key) ??
         key;
       return interpolate(template, vars);
     },

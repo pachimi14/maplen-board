@@ -32,7 +32,7 @@ function matchBrowserLanguage(tag) {
 
 export function detectLanguage() {
   if (typeof window === "undefined") {
-    return "ja";
+    return "en";
   }
 
   const stored = window.localStorage.getItem(STORAGE_KEY);
