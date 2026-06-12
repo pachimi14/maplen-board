@@ -373,15 +373,31 @@ const JST_TIME_ZONE = "Asia/Tokyo";
 /** Fixed label for the daily scheduled fetch slot (same value in JA/EN). */
 const SCHEDULED_UPDATE_TIME = "00:20";
 
+function formatUpdateDateLabel(isoDate, language) {
+  const parsed = new Date(`${isoDate}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime())) {
+    return isoDate;
+  }
+  if (language === "en") {
+    return new Intl.DateTimeFormat("en-GB", {
+      timeZone: "UTC",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    }).format(parsed);
+  }
+  return isoDate;
+}
+
 /** 「2026-06-10 00:20更新」形式（取得 UTC 日 + 固定 00:20）。 */
-export function formatScheduledUpdateLabel(meta, t) {
+export function formatScheduledUpdateLabel(meta, t, language = "ja") {
   const updatedAtRaw = String(meta?.updatedAt || "").trim();
-  let updateDate = "";
+  let updateDateIso = "";
 
   if (updatedAtRaw) {
     const parsed = new Date(updatedAtRaw);
     if (!Number.isNaN(parsed.getTime())) {
-      updateDate = new Intl.DateTimeFormat("en-CA", {
+      updateDateIso = new Intl.DateTimeFormat("en-CA", {
         timeZone: "UTC",
         year: "numeric",
         month: "2-digit",
@@ -390,7 +406,7 @@ export function formatScheduledUpdateLabel(meta, t) {
     }
   }
 
-  if (!updateDate) {
+  if (!updateDateIso) {
     const snapshotDate = String(meta?.latestSnapshotDate || "").trim();
     if (!snapshotDate) {
       return null;
@@ -400,8 +416,10 @@ export function formatScheduledUpdateLabel(meta, t) {
       return null;
     }
     rankingDay.setUTCDate(rankingDay.getUTCDate() + 1);
-    updateDate = rankingDay.toISOString().slice(0, 10);
+    updateDateIso = rankingDay.toISOString().slice(0, 10);
   }
+
+  const updateDate = formatUpdateDateLabel(updateDateIso, language);
 
   if (t) {
     return t("app.updatedAt", {
