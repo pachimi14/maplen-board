@@ -70,7 +70,7 @@
     "gainLabel": "{{period}}増加",
     "rank": "順位",
     "lv250Title": "今日の増加量で Lv250 まで",
-    "lv250Done": "達成済み",
+    "lv275Title": "今日の増加量で Lv275 まで",
     "aboutDays": "約 {{days}} 日",
     "bestDailyTitle": "デイリー増加 過去最高",
     "recordDate": "記録日 {{date}}",
@@ -110,6 +110,7 @@
     "海賊": "海賊"
   },
   "date": {
-    "monthDay": "{{month}}月{{day}}日"
+    "monthDay": "{{month}}月{{day}}日",
+    "yearMonthDay": "{{year}}年{{month}}月{{day}}日"
   }
 }

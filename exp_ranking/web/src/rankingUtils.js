@@ -126,6 +126,9 @@ export function formatExp(value) {
   return Number(value || 0).toLocaleString();
 }
 
+export const LEVEL_CAP = 275;
+export const MILESTONE_LEVEL_250 = 250;
+
 export function levelExpPercent(character) {
   return Number(character?.levelExpPercent ?? character?.expPercent ?? 0);
 }
@@ -137,7 +140,7 @@ export function currentLevelExp(character, expTable = {}) {
   }
 
   const level = character?.level ?? 0;
-  if (level >= 250) {
+  if (level >= LEVEL_CAP) {
     return 0;
   }
 
@@ -158,7 +161,7 @@ export function formatExpExact(value) {
 export function formatLevelExp(character) {
   const level = character?.level ?? 0;
   const percent = levelExpPercent(character);
-  if (level >= 250) {
+  if (level >= LEVEL_CAP) {
     return `Lv.${level} MAX`;
   }
   return `Lv.${level} ${percent.toFixed(3)}%`;
@@ -345,8 +348,8 @@ export function findBestDailyGain(character) {
   return { bestGain, bestDate };
 }
 
-export function remainingExpTo250(character, expTable) {
-  if (character.level >= 250) {
+export function remainingExpToLevel(character, expTable, targetLevel) {
+  if (character.level >= targetLevel) {
     return 0;
   }
 
@@ -361,11 +364,19 @@ export function remainingExpTo250(character, expTable) {
 
   let totalRemaining = currentLevelRemaining;
 
-  for (let level = character.level + 1; level < 250; level += 1) {
+  for (let level = character.level + 1; level < targetLevel; level += 1) {
     totalRemaining += expTable[level] || 0;
   }
 
   return totalRemaining;
+}
+
+export function remainingExpTo250(character, expTable) {
+  return remainingExpToLevel(character, expTable, MILESTONE_LEVEL_250);
+}
+
+export function remainingExpTo275(character, expTable) {
+  return remainingExpToLevel(character, expTable, LEVEL_CAP);
 }
 
 const JST_TIME_ZONE = "Asia/Tokyo";
@@ -427,11 +438,12 @@ export function formatScheduledUpdateLabel(meta, t) {
   return `${updateDate}, ${SCHEDULED_UPDATE_TIME} UTC`;
 }
 
-/** Target calendar date label for Lv250 estimate. */
+/** Target calendar date label (JST) for level-cap estimates. */
 export function formatTargetDateAfterDays(daysFromToday, t, reference = new Date()) {
   const { year, month, day } = todayPartsInJst(reference);
   const target = new Date(Date.UTC(year, month - 1, day + daysFromToday));
-  return t("date.monthDay", {
+  return t("date.yearMonthDay", {
+    year: target.getUTCFullYear(),
     month: target.getUTCMonth() + 1,
     day: target.getUTCDate(),
   });
@@ -466,14 +478,13 @@ export function formatJapaneseDateAfterDays(daysFromToday, reference = new Date(
   );
 }
 
-/** Days until Lv250 using today's daily gain only. */
-export function estimateDaysTo250FromToday(character, expTable) {
-  if (character.level >= 250) {
+function estimateDaysToLevelFromToday(character, expTable, targetLevel) {
+  if (character.level >= targetLevel) {
     return { days: 0, completed: true, noGain: false };
   }
 
   const todayGain = character.history?.at(-1)?.dailyGain ?? 0;
-  const remaining = remainingExpTo250(character, expTable);
+  const remaining = remainingExpToLevel(character, expTable, targetLevel);
 
   if (!todayGain) {
     return { days: null, completed: false, noGain: true };
@@ -485,6 +496,16 @@ export function estimateDaysTo250FromToday(character, expTable) {
     completed: false,
     noGain: false,
   };
+}
+
+/** Days until Lv250 using today's daily gain only. */
+export function estimateDaysTo250FromToday(character, expTable) {
+  return estimateDaysToLevelFromToday(character, expTable, MILESTONE_LEVEL_250);
+}
+
+/** Days until Lv275 using today's daily gain only. */
+export function estimateDaysTo275FromToday(character, expTable) {
+  return estimateDaysToLevelFromToday(character, expTable, LEVEL_CAP);
 }
 
 export function topGainersForPeriod(characters, period, limit = 3) {

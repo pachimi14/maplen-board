@@ -70,7 +70,7 @@
     "gainLabel": "เพิ่ม {{period}}",
     "rank": "อันดับ",
     "lv250Title": "ถึง Lv250 ด้วยการเพิ่มวันนี้",
-    "lv250Done": "สำเร็จแล้ว",
+    "lv275Title": "ถึง Lv275 ด้วยการเพิ่มวันนี้",
     "aboutDays": "ประมาณ {{days}} วัน",
     "bestDailyTitle": "เพิ่มรายวันสูงสุด",
     "recordDate": "วันที่บันทึก {{date}}",
@@ -110,6 +110,7 @@
     "海賊": "Pirate"
   },
   "date": {
-    "monthDay": "{{day}}/{{month}}"
+    "monthDay": "{{day}}/{{month}}",
+    "yearMonthDay": "{{day}}/{{month}}/{{year}}"
   }
 }

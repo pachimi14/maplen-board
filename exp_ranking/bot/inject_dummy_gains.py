@@ -68,7 +68,7 @@ def _build_history(
             }
         )
 
-        if level < 250:
+        if level < 275:
             pct_delta = min(12.0, gain / 80_000_000_000)
             pct = max(0.0, pct - pct_delta)
 

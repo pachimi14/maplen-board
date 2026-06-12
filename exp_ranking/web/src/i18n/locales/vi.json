@@ -70,7 +70,7 @@
     "gainLabel": "Tăng {{period}}",
     "rank": "Hạng",
     "lv250Title": "Đến Lv250 với mức tăng hôm nay",
-    "lv250Done": "Đã đạt",
+    "lv275Title": "Đến Lv275 với mức tăng hôm nay",
     "aboutDays": "Khoảng {{days}} ngày",
     "bestDailyTitle": "Tăng ngày cao nhất",
     "recordDate": "Ngày ghi nhận {{date}}",
@@ -110,6 +110,7 @@
     "海賊": "Pirate"
   },
   "date": {
-    "monthDay": "{{day}}/{{month}}"
+    "monthDay": "{{day}}/{{month}}",
+    "yearMonthDay": "{{day}}/{{month}}/{{year}}"
   }
 }

@@ -70,7 +70,7 @@
     "gainLabel": "EXP {{period}}",
     "rank": "Rango",
     "lv250Title": "Días hasta Lv250 con la EXP de hoy",
-    "lv250Done": "Completado",
+    "lv275Title": "Días hasta Lv275 con la EXP de hoy",
     "aboutDays": "Unos {{days}} días",
     "bestDailyTitle": "Mejor EXP diaria",
     "recordDate": "Registrado {{date}}",
@@ -110,6 +110,7 @@
     "海賊": "Pirata"
   },
   "date": {
-    "monthDay": "{{day}}/{{month}}"
+    "monthDay": "{{day}}/{{month}}",
+    "yearMonthDay": "{{day}}/{{month}}/{{year}}"
   }
 }

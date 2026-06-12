@@ -70,7 +70,7 @@
     "gainLabel": "{{period}} gain",
     "rank": "Rank",
     "lv250Title": "Days to Lv250 at today's gain",
-    "lv250Done": "Completed",
+    "lv275Title": "Days to Lv275 at today's gain",
     "aboutDays": "About {{days}} days",
     "bestDailyTitle": "Best daily gain",
     "recordDate": "Recorded {{date}}",
@@ -110,6 +110,7 @@
     "海賊": "Pirate"
   },
   "date": {
-    "monthDay": "{{month}}/{{day}}"
+    "monthDay": "{{month}}/{{day}}",
+    "yearMonthDay": "{{month}}/{{day}}/{{year}}"
   }
 }

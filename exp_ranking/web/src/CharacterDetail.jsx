@@ -21,6 +21,7 @@ import {
   buildWeekDailyRankSeries,
   enrichRankSeries,
   estimateDaysTo250FromToday,
+  estimateDaysTo275FromToday,
   findBestDailyGain,
   currentLevelExp,
   formatExp,
@@ -31,6 +32,7 @@ import {
   getGainAmount,
   getNavigatorUrl,
   lastHistoryPoints,
+  LEVEL_CAP,
   levelExpPercent,
 } from "./rankingUtils";
 
@@ -146,12 +148,24 @@ export default function CharacterDetail({
     [character, expTable]
   );
 
-  const targetDateLabel = useMemo(() => {
+  const daysTo275 = useMemo(
+    () => estimateDaysTo275FromToday(character, expTable),
+    [character, expTable]
+  );
+
+  const targetDateLabel250 = useMemo(() => {
     if (!daysTo250.days) {
       return null;
     }
     return formatTargetDateAfterDays(daysTo250.days, t);
   }, [daysTo250.days, t]);
+
+  const targetDateLabel275 = useMemo(() => {
+    if (!daysTo275.days) {
+      return null;
+    }
+    return formatTargetDateAfterDays(daysTo275.days, t);
+  }, [daysTo275.days, t]);
 
   const level = character.level ?? 0;
   const expPercent = levelExpPercent(character);
@@ -197,7 +211,7 @@ export default function CharacterDetail({
               </p>
               <p className="shrink-0 text-right tabular-nums font-bold text-lg whitespace-nowrap">
                 Lv.{level}
-                {level >= 250 ? (
+                {level >= LEVEL_CAP ? (
                   <span className="text-slate-300 ml-3">MAX</span>
                 ) : (
                   <span className="ml-3">{expPercent.toFixed(3)}%</span>
@@ -207,7 +221,7 @@ export default function CharacterDetail({
 
             <div className="flex items-baseline justify-between gap-3 mt-1">
               <p className="text-sm text-slate-500 shrink-0">{t("characterDetail.levelRank")}</p>
-              {level >= 250 ? (
+              {level >= LEVEL_CAP ? (
                 <span className="shrink-0" aria-hidden />
               ) : (
                 <p className="min-w-0 max-w-[60%] text-right text-sm font-semibold text-cyan-300 tabular-nums leading-tight break-all">
@@ -241,24 +255,37 @@ export default function CharacterDetail({
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4 min-w-0">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 min-w-0">
           <div className="bg-slate-950 rounded-2xl p-5 min-w-0 overflow-hidden">
             <div className="text-slate-400 text-sm leading-snug">
               {t("characterDetail.lv250Title")}
             </div>
-            {daysTo250.completed ? (
-              <div className="text-xl font-bold mt-1 break-words">
-                {t("characterDetail.lv250Done")}
-              </div>
-            ) : daysTo250.noGain ? (
-              <div className="text-xl font-bold mt-1">-</div>
+            {daysTo250.completed || daysTo250.noGain ? (
+              <div className="text-xl font-bold mt-1 tabular-nums">--</div>
             ) : (
               <>
                 <div className="text-xl font-bold mt-1">
                   {t("characterDetail.aboutDays", { days: daysTo250.days })}
                 </div>
                 <div className="text-base font-semibold text-cyan-300 mt-1 break-words">
-                  {targetDateLabel}
+                  {targetDateLabel250}
+                </div>
+              </>
+            )}
+          </div>
+          <div className="bg-slate-950 rounded-2xl p-5 min-w-0 overflow-hidden">
+            <div className="text-slate-400 text-sm leading-snug">
+              {t("characterDetail.lv275Title")}
+            </div>
+            {daysTo275.completed || daysTo275.noGain ? (
+              <div className="text-xl font-bold mt-1 tabular-nums">--</div>
+            ) : (
+              <>
+                <div className="text-xl font-bold mt-1">
+                  {t("characterDetail.aboutDays", { days: daysTo275.days })}
+                </div>
+                <div className="text-base font-semibold text-cyan-300 mt-1 break-words">
+                  {targetDateLabel275}
                 </div>
               </>
             )}

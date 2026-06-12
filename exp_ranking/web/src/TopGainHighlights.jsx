@@ -6,6 +6,7 @@ import {
   formatJobName,
   gainRankClass,
   getGainAmount,
+  LEVEL_CAP,
   levelExpPercent,
   topGainersForPeriod,
 } from "./rankingUtils";
@@ -56,7 +57,7 @@ function PeriodTop3({ period, characters, selectedId, onSelect, isFavorite, onTo
                   +{formatExp(getGainAmount(character, period))}
                 </span>
                 <p className="col-start-3 row-start-2 col-end-4 min-w-0 text-sm text-slate-500 leading-snug truncate text-left">
-                  {(character.level ?? 0) >= 250 ? (
+                  {(character.level ?? 0) >= LEVEL_CAP ? (
                     <>
                       Lv.{character.level} MAX {formatJobName(character.job)}{" "}
                       {t("highlights.levelRank")} #{character.rank}

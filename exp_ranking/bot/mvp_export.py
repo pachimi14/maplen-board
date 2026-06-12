@@ -14,6 +14,7 @@ from identity import build_name_to_asset_key, resolve_snapshot_identity
 from level_exp import (
     EXP_TO_NEXT_LEVEL,
     TARGET_TOTAL_EXP_250,
+    TARGET_TOTAL_EXP_275,
     calculate_level_exp_percent,
     calculate_total_exp_from_240,
     exp_required_for_level,
@@ -238,6 +239,8 @@ def build_mvp_payload(
             "rankingMinLevel": ranking_min_level,
             "mvpHistoryDays": history_days,
             "targetTotalExp250": TARGET_TOTAL_EXP_250,
+            "targetTotalExp275": TARGET_TOTAL_EXP_275,
+            "levelCap": 275,
             "expTable": {
                 str(level): EXP_TO_NEXT_LEVEL[level]
                 for level in sorted(EXP_TO_NEXT_LEVEL)
