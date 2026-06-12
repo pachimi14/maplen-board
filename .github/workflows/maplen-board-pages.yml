@@ -227,15 +227,6 @@ jobs:
           if-no-files-found: ignore
           retention-days: 1
 
-      - name: Upload ranking day marker
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ranking-day-marker
-          path: exp_ranking/bot/data/.ranking_day_complete
-          if-no-files-found: ignore
-          retention-days: 1
-
   deploy:
     needs: build
     if: needs.build.outputs.deploy == 'true'
@@ -288,12 +279,6 @@ jobs:
         with:
           name: ranking-db
           path: exp_ranking/bot/data
-
-      - name: Download ranking day marker
-        uses: actions/download-artifact@v4
-        with:
-          name: ranking-day-marker
-          path: exp_ranking/bot/data
         continue-on-error: true
 
       - name: Commit ranking database
@@ -303,6 +288,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
+          if [ ! -f exp_ranking/bot/data/ranking.db ]; then
+            echo "No ranking.db artifact to commit"
+            exit 0
+          fi
           git add exp_ranking/bot/data/ranking.db
           if git diff --staged --quiet; then
             echo "No ranking.db changes to commit"
