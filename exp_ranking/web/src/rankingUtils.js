@@ -370,7 +370,8 @@ export function remainingExpTo250(character, expTable) {
 
 const JST_TIME_ZONE = "Asia/Tokyo";
 
-const SCHEDULED_UPDATE_TIME_UTC = "00:20";
+/** Fixed label for the daily scheduled fetch slot (same value in JA/EN). */
+const SCHEDULED_UPDATE_TIME = "00:20";
 
 /** 「2026-06-10 00:20更新」形式（取得 UTC 日 + 固定 00:20）。 */
 export function formatScheduledUpdateLabel(meta, t) {
@@ -405,10 +406,10 @@ export function formatScheduledUpdateLabel(meta, t) {
   if (t) {
     return t("app.updatedAt", {
       date: updateDate,
-      time: SCHEDULED_UPDATE_TIME_UTC,
+      time: SCHEDULED_UPDATE_TIME,
     });
   }
-  return `${updateDate} ${SCHEDULED_UPDATE_TIME_UTC}更新`;
+  return `${updateDate} ${SCHEDULED_UPDATE_TIME}更新`;
 }
 
 /** Target calendar date label for Lv250 estimate. */
