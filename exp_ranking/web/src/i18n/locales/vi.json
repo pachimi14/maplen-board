@@ -1,0 +1,115 @@
+{
+  "lang": {
+    "switch": "Ngôn ngữ"
+  },
+  "app": {
+    "loading": "Đang tải dữ liệu xếp hạng...",
+    "noDataTitle": "Không có dữ liệu",
+    "noDataHint": "Hãy chạy bot để tạo rankings.json trước.",
+    "demoGains": "Dữ liệu EXP tăng giả ({{days}} ngày)",
+    "fetchedCount": "Lấy {{count}} nhân vật",
+    "updatedAt": "{{date}}, {{time}} UTC"
+  },
+  "period": {
+    "daily": "Ngày",
+    "weekly": "Tuần",
+    "monthly": "Tháng",
+    "dailyShort": "Daily",
+    "weeklyShort": "Weekly",
+    "monthlyShort": "Monthly",
+    "resetDaily": "Hàng ngày 9:00 JST",
+    "resetWeekly": "Thứ Năm 9:00 JST",
+    "resetMonthly": "Ngày 1 hàng tháng 9:00 JST"
+  },
+  "sort": {
+    "levelRank": "Hạng level",
+    "levelRanking": "Bảng xếp hạng level",
+    "gainRanking": "Xếp hạng tăng EXP {{period}}",
+    "gainByJob": "Tăng EXP {{period}} — theo nghề"
+  },
+  "view": {
+    "overall": "Tổng thể",
+    "byJob": "Theo nghề",
+    "allServers": "Tất cả máy chủ"
+  },
+  "search": {
+    "character": "Tìm tên, nghề, máy chủ",
+    "job": "Lọc theo tên nghề"
+  },
+  "favorite": {
+    "only": "Chỉ yêu thích",
+    "add": "Thêm vào yêu thích",
+    "remove": "Bỏ khỏi yêu thích",
+    "emptyList": "Chưa có nhân vật yêu thích. Nhấn ☆ trong danh sách để thêm.",
+    "emptyDetail": "Chưa có nhân vật yêu thích.",
+    "emptyDetailHint": "Nhấn ☆ trong danh sách để thêm."
+  },
+  "pagination": {
+    "favoritesPrefix": "Yêu thích ",
+    "range": "Hiển thị {{from}}-{{to}} / {{total}}",
+    "prev": "Trước",
+    "next": "Sau"
+  },
+  "table": {
+    "gainRank": "Hạng tăng",
+    "levelRank": "Hạng level",
+    "character": "Nhân vật",
+    "server": "Máy chủ",
+    "lvExp": "Lv / EXP%",
+    "daily": "Daily",
+    "weekly": "Weekly",
+    "monthly": "Monthly"
+  },
+  "highlights": {
+    "top3": "TOP3 tăng EXP {{period}}",
+    "levelRank": "hạng level"
+  },
+  "characterDetail": {
+    "title": "Chi tiết nhân vật",
+    "levelRank": "Hạng level",
+    "gainLabel": "Tăng {{period}}",
+    "rank": "Hạng",
+    "lv250Title": "Đến Lv250 với mức tăng hôm nay",
+    "lv250Done": "Đã đạt",
+    "aboutDays": "Khoảng {{days}} ngày",
+    "bestDailyTitle": "Tăng ngày cao nhất",
+    "recordDate": "Ngày ghi nhận {{date}}",
+    "noData": "Không có dữ liệu",
+    "chartGain7d": "EXP tăng theo ngày (7 ngày gần nhất)",
+    "chartRank7d": "Hạng tăng theo ngày (7 ngày gần nhất)",
+    "gainAmount": "Lượng tăng",
+    "rankUp": "↑ Tăng {{count}} hạng",
+    "rankDown": "↓ Giảm {{count}} hạng",
+    "rankSame": "Giữ nguyên so với hôm trước",
+    "rankTooltip": "Hạng #{{rank}}"
+  },
+  "jobRanking": {
+    "title": "Tăng EXP {{period}} — theo nghề",
+    "subtitle": "Adventurer / Hero / Cygnus (TOP {{count}} mỗi nghề)",
+    "members": "{{count}} người",
+    "backToList": "Quay lại danh sách nghề",
+    "jobRank": "Hạng trong nghề",
+    "character": "Nhân vật",
+    "gain": "Tăng {{period}}",
+    "levelRank": "Hạng level",
+    "showAll": "Tất cả",
+    "noMembers": "Không có nhân vật xếp hạng cho nghề này",
+    "noSearchMatch": "Không có nghề khớp với tìm kiếm.",
+    "otherJobs": "Nghề khác"
+  },
+  "alliance": {
+    "冒険家": "Adventurer",
+    "英雄": "Hero",
+    "シグナス": "Cygnus"
+  },
+  "branch": {
+    "戦士": "Warrior",
+    "魔法使い": "Magician",
+    "弓使い": "Bowman",
+    "盗賊": "Thief",
+    "海賊": "Pirate"
+  },
+  "date": {
+    "monthDay": "{{day}}/{{month}}"
+  }
+}

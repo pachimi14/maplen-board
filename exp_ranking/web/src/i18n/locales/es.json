@@ -1,0 +1,115 @@
+{
+  "lang": {
+    "switch": "Idioma"
+  },
+  "app": {
+    "loading": "Cargando datos del ranking...",
+    "noDataTitle": "No hay datos",
+    "noDataHint": "Ejecuta el bot para generar rankings.json primero.",
+    "demoGains": "Datos de EXP de demostración ({{days}} días)",
+    "fetchedCount": "Top {{count}} obtenidos",
+    "updatedAt": "{{date}}, {{time}} UTC"
+  },
+  "period": {
+    "daily": "Diario",
+    "weekly": "Semanal",
+    "monthly": "Mensual",
+    "dailyShort": "Daily",
+    "weeklyShort": "Weekly",
+    "monthlyShort": "Monthly",
+    "resetDaily": "Diario 9:00 JST",
+    "resetWeekly": "Jueves 9:00 JST",
+    "resetMonthly": "Día 1 9:00 JST"
+  },
+  "sort": {
+    "levelRank": "Rango de nivel",
+    "levelRanking": "Ranking de nivel",
+    "gainRanking": "Ranking de EXP {{period}}",
+    "gainByJob": "EXP {{period}} — por clase"
+  },
+  "view": {
+    "overall": "General",
+    "byJob": "Por clase",
+    "allServers": "Todos los servidores"
+  },
+  "search": {
+    "character": "Buscar nombre, clase o servidor",
+    "job": "Filtrar por clase"
+  },
+  "favorite": {
+    "only": "Solo favoritos",
+    "add": "Añadir a favoritos",
+    "remove": "Quitar de favoritos",
+    "emptyList": "No hay personajes favoritos. Pulsa ☆ en la lista para añadir.",
+    "emptyDetail": "No hay personajes favoritos.",
+    "emptyDetailHint": "Pulsa ☆ en la lista para añadir."
+  },
+  "pagination": {
+    "favoritesPrefix": "Favoritos ",
+    "range": "Mostrando {{from}}-{{to}} de {{total}}",
+    "prev": "Anterior",
+    "next": "Siguiente"
+  },
+  "table": {
+    "gainRank": "Rango de EXP",
+    "levelRank": "Rango de nivel",
+    "character": "Personaje",
+    "server": "Servidor",
+    "lvExp": "Lv / EXP%",
+    "daily": "Daily",
+    "weekly": "Weekly",
+    "monthly": "Monthly"
+  },
+  "highlights": {
+    "top3": "TOP3 EXP {{period}}",
+    "levelRank": "rango de nivel"
+  },
+  "characterDetail": {
+    "title": "Detalle del personaje",
+    "levelRank": "Rango de nivel",
+    "gainLabel": "EXP {{period}}",
+    "rank": "Rango",
+    "lv250Title": "Días hasta Lv250 con la EXP de hoy",
+    "lv250Done": "Completado",
+    "aboutDays": "Unos {{days}} días",
+    "bestDailyTitle": "Mejor EXP diaria",
+    "recordDate": "Registrado {{date}}",
+    "noData": "Sin datos",
+    "chartGain7d": "EXP diaria (últimos 7 días)",
+    "chartRank7d": "Rango de EXP diaria (últimos 7 días)",
+    "gainAmount": "EXP",
+    "rankUp": "↑ {{count}} puestos",
+    "rankDown": "↓ {{count}} puestos",
+    "rankSame": "Igual que ayer",
+    "rankTooltip": "Rango #{{rank}}"
+  },
+  "jobRanking": {
+    "title": "EXP {{period}} — por clase",
+    "subtitle": "Adventurer / Hero / Cygnus (TOP {{count}} por clase)",
+    "members": "{{count}} jugadores",
+    "backToList": "Volver a clases",
+    "jobRank": "Rango en clase",
+    "character": "Personaje",
+    "gain": "EXP {{period}}",
+    "levelRank": "Rango de nivel",
+    "showAll": "Todos",
+    "noMembers": "No hay personajes en el ranking de esta clase",
+    "noSearchMatch": "Ninguna clase coincide con la búsqueda.",
+    "otherJobs": "Otras clases"
+  },
+  "alliance": {
+    "冒険家": "Aventurero",
+    "英雄": "Héroe",
+    "シグナス": "Cygnus"
+  },
+  "branch": {
+    "戦士": "Guerrero",
+    "魔法使い": "Mago",
+    "弓使い": "Arquero",
+    "盗賊": "Ladrón",
+    "海賊": "Pirata"
+  },
+  "date": {
+    "monthDay": "{{day}}/{{month}}"
+  }
+}
