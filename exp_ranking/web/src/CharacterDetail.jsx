@@ -123,15 +123,28 @@ function SplitDateLines({ parts }) {
   );
 }
 
+function AboutDaysDisplay({ days, showPlaceholder, t }) {
+  if (showPlaceholder) {
+    return <div className="text-lg font-bold mt-2 tabular-nums">--</div>;
+  }
+
+  return (
+    <div className="mt-2 leading-tight">
+      <div className="text-xs text-slate-400">{t("characterDetail.aboutDaysPrefix")}</div>
+      <div className="text-lg font-bold tabular-nums mt-0.5">
+        {t("characterDetail.aboutDaysCount", { days })}
+      </div>
+    </div>
+  );
+}
+
 function LevelEstimateColumn({ label, estimate, dateParts, t }) {
   const showPlaceholder = estimate.completed || estimate.noGain;
 
   return (
     <div className="px-2 sm:px-4 py-1 text-center min-w-0">
-      <div className="text-slate-400 text-sm leading-snug whitespace-nowrap">{label}</div>
-      <div className="text-lg font-bold mt-2 tabular-nums whitespace-nowrap">
-        {showPlaceholder ? "--" : t("characterDetail.aboutDays", { days: estimate.days })}
-      </div>
+      <div className="text-slate-400 text-sm leading-snug">{label}</div>
+      <AboutDaysDisplay days={estimate.days} showPlaceholder={showPlaceholder} t={t} />
       <SplitDateLines parts={showPlaceholder ? null : dateParts} />
     </div>
   );
