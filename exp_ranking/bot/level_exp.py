@@ -79,6 +79,10 @@ TOTAL_EXP_225_TO_250: int = sum(
     EXP_TO_NEXT_LEVEL[level] for level in range(TABLE_MIN_LEVEL, MILESTONE_LEVEL_250)
 )
 
+TOTAL_EXP_225_TO_275: int = sum(
+    EXP_TO_NEXT_LEVEL[level] for level in range(TABLE_MIN_LEVEL, LEVEL_CAP)
+)
+
 
 def exp_required_for_level(level: int) -> int | None:
     if level >= LEVEL_CAP:
@@ -123,8 +127,8 @@ def calculate_exp_to_275(level: int, exp: int) -> int:
 
 def calculate_total_exp_from_240(level: int, exp: int) -> int:
     """Cumulative EXP from Lv240 start (for 240+ daily gain / analysis)."""
-    if level >= MILESTONE_LEVEL_250:
-        return TARGET_TOTAL_EXP_250
+    if level >= LEVEL_CAP:
+        return TARGET_TOTAL_EXP_275
     if level < 240:
         return 0
 
@@ -135,12 +139,21 @@ def calculate_total_exp_from_240(level: int, exp: int) -> int:
 
 
 def calculate_progress_toward_250(level: int, exp: int) -> int:
-    """Monotonic progress value toward Lv250 (daily gain for all ranked levels)."""
+    """Monotonic progress value toward Lv250 (legacy milestone metric)."""
     if level >= MILESTONE_LEVEL_250:
         return TOTAL_EXP_225_TO_250
     if level < TABLE_MIN_LEVEL:
         return 0
     return TOTAL_EXP_225_TO_250 - calculate_exp_to_250(level, exp)
+
+
+def calculate_progress_toward_275(level: int, exp: int) -> int:
+    """Monotonic progress value toward level cap (used for daily gain)."""
+    if level >= LEVEL_CAP:
+        return TOTAL_EXP_225_TO_275
+    if level < TABLE_MIN_LEVEL:
+        return 0
+    return TOTAL_EXP_225_TO_275 - calculate_exp_to_275(level, exp)
 
 
 def calculate_exp_percent(level: int, exp: int) -> float:

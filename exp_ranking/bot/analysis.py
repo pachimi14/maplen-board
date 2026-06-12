@@ -8,7 +8,7 @@ from identity import build_name_to_asset_key, resolve_snapshot_identity
 from models import AnalysisRow, SnapshotRow
 from level_exp import (
     calculate_exp_to_250,
-    calculate_progress_toward_250,
+    calculate_progress_toward_275,
     calculate_total_exp_from_240,
 )
 from utils import normalize_int
@@ -40,7 +40,7 @@ def build_analysis_rows(
 
     for row in ordered:
         identity = snapshot_identity_key(row, name_to_asset_key)
-        progress = calculate_progress_toward_250(row.level, row.exp)
+        progress = calculate_progress_toward_275(row.level, row.exp)
         progress_by_date_identity[(row.snapshot_date, identity)] = progress
 
         total_exp = calculate_total_exp_from_240(row.level, row.exp)
