@@ -1,7 +1,5 @@
 {
   "lang": {
-    "ja": "日本語",
-    "en": "English",
     "switch": "言語"
   },
   "app": {
@@ -10,7 +8,7 @@
     "noDataHint": "先に bot を実行して rankings.json を生成してください。",
     "demoGains": "デモ用ダミー増加量データ（{{days}} 日分）",
     "fetchedCount": "取得 {{count}} 人",
-    "updatedAt": "{{date}} {{time}}更新"
+    "updatedAt": "{{date}}, {{time}} UTC"
   },
   "period": {
     "daily": "日間",

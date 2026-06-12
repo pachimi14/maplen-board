@@ -373,24 +373,21 @@ const JST_TIME_ZONE = "Asia/Tokyo";
 /** Fixed label for the daily scheduled fetch slot (same value in JA/EN). */
 const SCHEDULED_UPDATE_TIME = "00:20";
 
-function formatUpdateDateLabel(isoDate, language) {
+function formatUpdateDateLabel(isoDate) {
   const parsed = new Date(`${isoDate}T00:00:00Z`);
   if (Number.isNaN(parsed.getTime())) {
     return isoDate;
   }
-  if (language === "en") {
-    return new Intl.DateTimeFormat("en-GB", {
-      timeZone: "UTC",
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    }).format(parsed);
-  }
-  return isoDate;
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "UTC",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  }).format(parsed);
 }
 
-/** 「2026-06-10 00:20更新」形式（取得 UTC 日 + 固定 00:20）。 */
-export function formatScheduledUpdateLabel(meta, t, language = "ja") {
+/** 「12 Jun 2026, 00:20 UTC」形式（取得 UTC 日 + 固定 00:20、全言語共通）。 */
+export function formatScheduledUpdateLabel(meta, t) {
   const updatedAtRaw = String(meta?.updatedAt || "").trim();
   let updateDateIso = "";
 
@@ -419,7 +416,7 @@ export function formatScheduledUpdateLabel(meta, t, language = "ja") {
     updateDateIso = rankingDay.toISOString().slice(0, 10);
   }
 
-  const updateDate = formatUpdateDateLabel(updateDateIso, language);
+  const updateDate = formatUpdateDateLabel(updateDateIso);
 
   if (t) {
     return t("app.updatedAt", {
@@ -427,7 +424,7 @@ export function formatScheduledUpdateLabel(meta, t, language = "ja") {
       time: SCHEDULED_UPDATE_TIME,
     });
   }
-  return `${updateDate} ${SCHEDULED_UPDATE_TIME}更新`;
+  return `${updateDate}, ${SCHEDULED_UPDATE_TIME} UTC`;
 }
 
 /** Target calendar date label for Lv250 estimate. */

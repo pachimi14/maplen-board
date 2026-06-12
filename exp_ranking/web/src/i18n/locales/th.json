@@ -1,0 +1,115 @@
+{
+  "lang": {
+    "switch": "ภาษา"
+  },
+  "app": {
+    "loading": "กำลังโหลดข้อมูลอันดับ...",
+    "noDataTitle": "ไม่มีข้อมูล",
+    "noDataHint": "รัน bot เพื่อสร้าง rankings.json ก่อน",
+    "demoGains": "ข้อมูลเพิ่ม EXP จำลอง ({{days}} วัน)",
+    "fetchedCount": "ดึงข้อมูล {{count}} คน",
+    "updatedAt": "{{date}}, {{time}} UTC"
+  },
+  "period": {
+    "daily": "รายวัน",
+    "weekly": "รายสัปดาห์",
+    "monthly": "รายเดือน",
+    "dailyShort": "Daily",
+    "weeklyShort": "Weekly",
+    "monthlyShort": "Monthly",
+    "resetDaily": "ทุกวัน 9:00 JST",
+    "resetWeekly": "ทุกพฤหัส 9:00 JST",
+    "resetMonthly": "วันที่ 1 ของเดือน 9:00 JST"
+  },
+  "sort": {
+    "levelRank": "อันดับเลเวล",
+    "levelRanking": "อันดับเลเวล",
+    "gainRanking": "อันดับเพิ่ม EXP {{period}}",
+    "gainByJob": "เพิ่ม EXP {{period}} — ตามอาชีพ"
+  },
+  "view": {
+    "overall": "ทั้งหมด",
+    "byJob": "ตามอาชีพ",
+    "allServers": "ทุกเซิร์ฟเวอร์"
+  },
+  "search": {
+    "character": "ค้นหาชื่อ อาชีพ เซิร์ฟเวอร์",
+    "job": "กรองตามชื่ออาชีพ"
+  },
+  "favorite": {
+    "only": "รายการโปรดเท่านั้น",
+    "add": "เพิ่มในรายการโปรด",
+    "remove": "นำออกจากรายการโปรด",
+    "emptyList": "ยังไม่มีตัวละครในรายการโปรด กด ☆ ในรายการเพื่อเพิ่ม",
+    "emptyDetail": "ยังไม่มีตัวละครในรายการโปรด",
+    "emptyDetailHint": "กด ☆ ในรายการเพื่อเพิ่ม"
+  },
+  "pagination": {
+    "favoritesPrefix": "รายการโปรด ",
+    "range": "แสดง {{from}}-{{to}} จาก {{total}}",
+    "prev": "ก่อนหน้า",
+    "next": "ถัดไป"
+  },
+  "table": {
+    "gainRank": "อันดับเพิ่ม",
+    "levelRank": "อันดับเลเวล",
+    "character": "ตัวละคร",
+    "server": "เซิร์ฟเวอร์",
+    "lvExp": "Lv / EXP%",
+    "daily": "Daily",
+    "weekly": "Weekly",
+    "monthly": "Monthly"
+  },
+  "highlights": {
+    "top3": "TOP3 เพิ่ม EXP {{period}}",
+    "levelRank": "อันดับเลเวล"
+  },
+  "characterDetail": {
+    "title": "รายละเอียดตัวละคร",
+    "levelRank": "อันดับเลเวล",
+    "gainLabel": "เพิ่ม {{period}}",
+    "rank": "อันดับ",
+    "lv250Title": "ถึง Lv250 ด้วยการเพิ่มวันนี้",
+    "lv250Done": "สำเร็จแล้ว",
+    "aboutDays": "ประมาณ {{days}} วัน",
+    "bestDailyTitle": "เพิ่มรายวันสูงสุด",
+    "recordDate": "วันที่บันทึก {{date}}",
+    "noData": "ไม่มีข้อมูล",
+    "chartGain7d": "เพิ่ม EXP รายวัน 7 วันล่าสุด",
+    "chartRank7d": "อันดับเพิ่มรายวัน 7 วันล่าสุด",
+    "gainAmount": "ปริมาณเพิ่ม",
+    "rankUp": "↑ ขึ้น {{count}} อันดับ",
+    "rankDown": "↓ ลง {{count}} อันดับ",
+    "rankSame": "เท่ากับวันก่อน",
+    "rankTooltip": "อันดับ #{{rank}}"
+  },
+  "jobRanking": {
+    "title": "เพิ่ม EXP {{period}} — ตามอาชีพ",
+    "subtitle": "Adventurer / Hero / Cygnus (TOP {{count}} ต่ออาชีพ)",
+    "members": "{{count}} คน",
+    "backToList": "กลับไปรายการอาชีพ",
+    "jobRank": "อันดับในอาชีพ",
+    "character": "ตัวละคร",
+    "gain": "เพิ่ม {{period}}",
+    "levelRank": "อันดับเลเวล",
+    "showAll": "ทั้งหมด",
+    "noMembers": "ไม่มีตัวละครในอันดับสำหรับอาชีพนี้",
+    "noSearchMatch": "ไม่พบอาชีพที่ตรงกับการค้นหา",
+    "otherJobs": "อาชีพอื่นๆ"
+  },
+  "alliance": {
+    "冒険家": "Adventurer",
+    "英雄": "Hero",
+    "シグナス": "Cygnus"
+  },
+  "branch": {
+    "戦士": "Warrior",
+    "魔法使い": "Magician",
+    "弓使い": "Bowman",
+    "盗賊": "Thief",
+    "海賊": "Pirate"
+  },
+  "date": {
+    "monthDay": "{{day}}/{{month}}"
+  }
+}

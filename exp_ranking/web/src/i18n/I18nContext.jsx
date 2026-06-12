@@ -1,11 +1,21 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { detectLanguage, STORAGE_KEY } from "./detectLanguage.js";
 import en from "./locales/en.json";
+import es from "./locales/es.json";
 import ja from "./locales/ja.json";
+import th from "./locales/th.json";
+import vi from "./locales/vi.json";
+import zhTW from "./locales/zh-TW.json";
+import { SUPPORTED_LANGUAGE_CODES } from "./languages.js";
 
-const STORAGE_KEY = "maplen-board-lang";
-const SUPPORTED = ["ja", "en"];
-
-const MESSAGES = { ja, en };
+const MESSAGES = {
+  ja,
+  en,
+  "zh-TW": zhTW,
+  th,
+  vi,
+  es,
+};
 
 function getNested(obj, path) {
   return path.split(".").reduce((current, key) => current?.[key], obj);
@@ -20,18 +30,6 @@ function interpolate(template, vars = {}) {
   );
 }
 
-function detectLanguage() {
-  if (typeof window === "undefined") {
-    return "ja";
-  }
-  const stored = window.localStorage.getItem(STORAGE_KEY);
-  if (stored && SUPPORTED.includes(stored)) {
-    return stored;
-  }
-  const browser = window.navigator.language?.toLowerCase() ?? "";
-  return browser.startsWith("ja") ? "ja" : "en";
-}
-
 const I18nContext = createContext(null);
 
 export function I18nProvider({ children }) {
@@ -42,7 +40,7 @@ export function I18nProvider({ children }) {
   }, [language]);
 
   const setLanguage = useCallback((next) => {
-    if (!SUPPORTED.includes(next)) {
+    if (!SUPPORTED_LANGUAGE_CODES.includes(next)) {
       return;
     }
     setLanguageState(next);

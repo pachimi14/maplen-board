@@ -1,0 +1,115 @@
+{
+  "lang": {
+    "switch": "語言"
+  },
+  "app": {
+    "loading": "正在載入排名資料...",
+    "noDataTitle": "沒有資料",
+    "noDataHint": "請先執行 bot 產生 rankings.json。",
+    "demoGains": "示範用假增加量資料（{{days}} 天）",
+    "fetchedCount": "取得 {{count}} 人",
+    "updatedAt": "{{date}}, {{time}} UTC"
+  },
+  "period": {
+    "daily": "日",
+    "weekly": "週",
+    "monthly": "月",
+    "dailyShort": "Daily",
+    "weeklyShort": "Weekly",
+    "monthlyShort": "Monthly",
+    "resetDaily": "每天 9:00 JST",
+    "resetWeekly": "每週四 9:00 JST",
+    "resetMonthly": "每月 1 日 9:00 JST"
+  },
+  "sort": {
+    "levelRank": "等級排名",
+    "levelRanking": "等級排名",
+    "gainRanking": "{{period}} 增加量排名",
+    "gainByJob": "{{period}} 增加量 — 依職業"
+  },
+  "view": {
+    "overall": "整體",
+    "byJob": "依職業",
+    "allServers": "所有伺服器"
+  },
+  "search": {
+    "character": "搜尋角色名、職業、伺服器",
+    "job": "依職業名稱篩選"
+  },
+  "favorite": {
+    "only": "僅我的最愛",
+    "add": "加入我的最愛",
+    "remove": "移除我的最愛",
+    "emptyList": "尚無我的最愛角色。請在列表中點擊 ☆ 加入。",
+    "emptyDetail": "尚無我的最愛角色。",
+    "emptyDetailHint": "請在列表中點擊 ☆ 加入。"
+  },
+  "pagination": {
+    "favoritesPrefix": "我的最愛 ",
+    "range": "共 {{total}} 筆，顯示 {{from}}-{{to}}",
+    "prev": "上一頁",
+    "next": "下一頁"
+  },
+  "table": {
+    "gainRank": "增加排名",
+    "levelRank": "等級排名",
+    "character": "角色",
+    "server": "伺服器",
+    "lvExp": "Lv / EXP%",
+    "daily": "Daily",
+    "weekly": "Weekly",
+    "monthly": "Monthly"
+  },
+  "highlights": {
+    "top3": "{{period}} 增加量 TOP3",
+    "levelRank": "等級排名"
+  },
+  "characterDetail": {
+    "title": "角色詳情",
+    "levelRank": "等級排名",
+    "gainLabel": "{{period}}增加",
+    "rank": "排名",
+    "lv250Title": "以今日增加量推算至 Lv250",
+    "lv250Done": "已達成",
+    "aboutDays": "約 {{days}} 天",
+    "bestDailyTitle": "單日增加歷史最高",
+    "recordDate": "紀錄日 {{date}}",
+    "noData": "無資料",
+    "chartGain7d": "近 7 日單日經驗值增加量",
+    "chartRank7d": "近 7 日單日增加量排名",
+    "gainAmount": "增加量",
+    "rankUp": "↑ 上升 {{count}} 名",
+    "rankDown": "↓ 下降 {{count}} 名",
+    "rankSame": "與前日相同",
+    "rankTooltip": "排名 #{{rank}}"
+  },
+  "jobRanking": {
+    "title": "{{period}} EXP 增加量 — 依職業",
+    "subtitle": "冒險家・英雄・皇家騎士團（各職業 TOP {{count}}）",
+    "members": "{{count}} 人",
+    "backToList": "返回職業列表",
+    "jobRank": "職業內排名",
+    "character": "角色",
+    "gain": "{{period}}增加",
+    "levelRank": "等級排名",
+    "showAll": "全部",
+    "noMembers": "此職業尚無排名角色",
+    "noSearchMatch": "找不到符合的職業。",
+    "otherJobs": "其他職業"
+  },
+  "alliance": {
+    "冒険家": "冒險家",
+    "英雄": "英雄",
+    "シグナス": "皇家騎士團"
+  },
+  "branch": {
+    "戦士": "戰士",
+    "魔法使い": "法師",
+    "弓使い": "弓箭手",
+    "盗賊": "盜賊",
+    "海賊": "海盜"
+  },
+  "date": {
+    "monthDay": "{{month}}月{{day}}日"
+  }
+}
