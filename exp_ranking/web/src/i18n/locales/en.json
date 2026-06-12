@@ -10,7 +10,7 @@
     "noDataHint": "Run the bot first to generate rankings.json.",
     "demoGains": "Demo dummy gain data ({{days}} days)",
     "fetchedCount": "Top {{count}} fetched",
-    "updatedAt": "Updated {{date}} {{time}} UTC"
+    "updatedAt": "{{date}} {{time}} updated"
   },
   "period": {
     "daily": "Daily",
