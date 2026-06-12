@@ -102,25 +102,37 @@ function GainStatCard({ label, amount, rank }) {
   );
 }
 
+function SplitDateLines({ parts }) {
+  if (!parts) {
+    return (
+      <div className="text-sm font-semibold text-cyan-300 mt-2 tabular-nums whitespace-nowrap">
+        --
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-2 space-y-0.5 leading-tight">
+      <div className="text-sm font-semibold text-cyan-300 tabular-nums whitespace-nowrap">
+        {parts.year}
+      </div>
+      <div className="text-sm font-semibold text-cyan-300 tabular-nums whitespace-nowrap">
+        {parts.monthDay}
+      </div>
+    </div>
+  );
+}
+
 function LevelEstimateColumn({ label, estimate, dateParts, t }) {
   const showPlaceholder = estimate.completed || estimate.noGain;
 
   return (
-    <div className="px-3 sm:px-5 py-1 text-center min-w-0">
-      <div className="text-slate-400 text-sm leading-snug">{label}</div>
-      <div className="text-xl font-bold mt-2 tabular-nums">
+    <div className="px-2 sm:px-4 py-1 text-center min-w-0">
+      <div className="text-slate-400 text-sm leading-snug whitespace-nowrap">{label}</div>
+      <div className="text-lg font-bold mt-2 tabular-nums whitespace-nowrap">
         {showPlaceholder ? "--" : t("characterDetail.aboutDays", { days: estimate.days })}
       </div>
-      {showPlaceholder || !dateParts ? (
-        <div className="text-base font-semibold text-cyan-300 mt-2 tabular-nums">--</div>
-      ) : (
-        <div className="mt-2 space-y-0.5">
-          <div className="text-base font-semibold text-cyan-300 tabular-nums">{dateParts.year}</div>
-          <div className="text-base font-semibold text-cyan-300 tabular-nums">
-            {dateParts.monthDay}
-          </div>
-        </div>
-      )}
+      <SplitDateLines parts={showPlaceholder ? null : dateParts} />
     </div>
   );
 }
@@ -128,7 +140,7 @@ function LevelEstimateColumn({ label, estimate, dateParts, t }) {
 function LevelEstimateCard({ daysTo250, daysTo275, dateParts250, dateParts275, t }) {
   return (
     <div className="bg-slate-950 rounded-2xl p-5 min-w-0 overflow-hidden">
-      <p className="text-slate-400 text-sm text-center leading-snug mb-4">
+      <p className="text-slate-400 text-sm text-center leading-snug mb-4 whitespace-nowrap">
         {t("characterDetail.levelEstimateHeader")}
       </p>
       <div className="grid grid-cols-2 divide-x divide-slate-800">
@@ -151,20 +163,21 @@ function LevelEstimateCard({ daysTo250, daysTo275, dateParts250, dateParts275, t
 
 function BestDailyRecordCard({ bestDaily, recordParts, t }) {
   return (
-    <div className="bg-slate-950 rounded-2xl p-5 min-w-0 overflow-hidden text-center flex flex-col justify-center">
-      <div className="text-slate-400 text-sm leading-snug">{t("characterDetail.dailyGainRecordTitle")}</div>
-      <div className="text-slate-400 text-sm leading-snug mt-1">{t("characterDetail.pastBest")}</div>
-      <div className="text-xl font-bold text-amber-300 tabular-nums mt-2">
+    <div className="bg-slate-950 rounded-2xl p-4 sm:p-5 min-w-0 overflow-hidden text-center flex flex-col justify-center">
+      <div className="text-slate-400 text-xs leading-snug whitespace-nowrap">
+        {t("characterDetail.dailyGainRecordTitle")}
+      </div>
+      <div className="text-slate-400 text-sm leading-snug mt-1 whitespace-nowrap">
+        {t("characterDetail.pastBest")}
+      </div>
+      <div className="text-xl font-bold text-amber-300 tabular-nums mt-2 whitespace-nowrap">
         +{formatExpRecord(bestDaily.bestGain)}
       </div>
-      <div className="text-slate-400 text-sm mt-4">{t("characterDetail.recordDateLabel")}</div>
+      <div className="text-slate-400 text-sm mt-4 whitespace-nowrap">
+        {t("characterDetail.recordDateLabel")}
+      </div>
       {recordParts ? (
-        <div className="mt-1 space-y-0.5">
-          <div className="text-base font-semibold text-cyan-300 tabular-nums">{recordParts.year}</div>
-          <div className="text-base font-semibold text-cyan-300 tabular-nums">
-            {recordParts.monthDay}
-          </div>
-        </div>
+        <SplitDateLines parts={recordParts} />
       ) : (
         <div className="text-slate-500 text-sm mt-1">{t("characterDetail.noData")}</div>
       )}

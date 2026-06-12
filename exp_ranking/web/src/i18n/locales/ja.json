@@ -72,7 +72,7 @@
     "levelEstimateHeader": "今日の増加量で",
     "lvTo250": "Lv250まで",
     "lvTo275": "Lv275まで",
-    "aboutDays": "約 {{days}} 日",
+    "aboutDays": "約{{days}}日",
     "dailyGainRecordTitle": "日間増加量",
     "pastBest": "過去最高",
     "recordDateLabel": "記録日",
@@ -112,8 +112,8 @@
     "海賊": "海賊"
   },
   "date": {
-    "monthDay": "{{month}}月{{day}}日",
-    "yearLine": "{{year}}年",
+    "monthDay": "{{month}}/{{day}}",
+    "yearLine": "{{year}}",
     "yearMonthDay": "{{year}}年{{month}}月{{day}}日"
   }
 }
