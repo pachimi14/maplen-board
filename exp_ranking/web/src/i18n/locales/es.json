@@ -69,11 +69,13 @@
     "levelRank": "Rango de nivel",
     "gainLabel": "EXP {{period}}",
     "rank": "Rango",
-    "lv250Title": "Días hasta Lv250 con la EXP de hoy",
-    "lv275Title": "Días hasta Lv275 con la EXP de hoy",
+    "levelEstimateHeader": "Con la EXP de hoy",
+    "lvTo250": "Hasta Lv250",
+    "lvTo275": "Hasta Lv275",
     "aboutDays": "Unos {{days}} días",
-    "bestDailyTitle": "Mejor EXP diaria",
-    "recordDate": "Registrado {{date}}",
+    "dailyGainRecordTitle": "Ganancia diaria",
+    "pastBest": "Récord histórico",
+    "recordDateLabel": "Fecha del récord",
     "noData": "Sin datos",
     "chartGain7d": "EXP diaria (últimos 7 días)",
     "chartRank7d": "Rango de EXP diaria (últimos 7 días)",
@@ -111,6 +113,7 @@
   },
   "date": {
     "monthDay": "{{day}}/{{month}}",
+    "yearLine": "{{year}}",
     "yearMonthDay": "{{day}}/{{month}}/{{year}}"
   }
 }

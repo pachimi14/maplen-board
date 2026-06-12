@@ -69,11 +69,13 @@
     "levelRank": "等級排名",
     "gainLabel": "{{period}}增加",
     "rank": "排名",
-    "lv250Title": "以今日增加量推算至 Lv250",
-    "lv275Title": "以今日增加量推算至 Lv275",
+    "levelEstimateHeader": "以今日增加量",
+    "lvTo250": "至 Lv250",
+    "lvTo275": "至 Lv275",
     "aboutDays": "約 {{days}} 天",
-    "bestDailyTitle": "單日增加歷史最高",
-    "recordDate": "紀錄日 {{date}}",
+    "dailyGainRecordTitle": "日間增加量",
+    "pastBest": "歷史最高",
+    "recordDateLabel": "紀錄日",
     "noData": "無資料",
     "chartGain7d": "近 7 日單日經驗值增加量",
     "chartRank7d": "近 7 日單日增加量排名",
@@ -111,6 +113,7 @@
   },
   "date": {
     "monthDay": "{{month}}月{{day}}日",
+    "yearLine": "{{year}}年",
     "yearMonthDay": "{{year}}年{{month}}月{{day}}日"
   }
 }

@@ -126,6 +126,20 @@ export function formatExp(value) {
   return Number(value || 0).toLocaleString();
 }
 
+/** EXP record display with 3 fractional digits (e.g. +565.407B). */
+export function formatExpRecord(value) {
+  if (value >= 1_000_000_000_000) {
+    return `${(value / 1_000_000_000_000).toFixed(3)}T`;
+  }
+  if (value >= 1_000_000_000) {
+    return `${(value / 1_000_000_000).toFixed(3)}B`;
+  }
+  if (value >= 1_000_000) {
+    return `${(value / 1_000_000).toFixed(3)}M`;
+  }
+  return Number(value || 0).toLocaleString();
+}
+
 export const LEVEL_CAP = 275;
 export const MILESTONE_LEVEL_250 = 250;
 
@@ -336,16 +350,33 @@ export function findBestDailyGain(character) {
   const history = Array.isArray(character.history) ? character.history : [];
   let bestGain = 0;
   let bestDate = null;
+  let bestSnapshotDate = null;
 
   for (const point of history) {
     const gain = point.dailyGain ?? 0;
     if (gain > bestGain) {
       bestGain = gain;
       bestDate = point.date;
+      bestSnapshotDate = point.snapshotDate ?? null;
     }
   }
 
-  return { bestGain, bestDate };
+  return { bestGain, bestDate, bestSnapshotDate };
+}
+
+/** Split ISO date (YYYY-MM-DD) into localized year line and month/day line. */
+export function datePartsFromIsoDate(isoDate, t) {
+  const match = String(isoDate || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) {
+    return null;
+  }
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  return {
+    year: t("date.yearLine", { year }),
+    monthDay: t("date.monthDay", { month, day }),
+  };
 }
 
 export function remainingExpToLevel(character, expTable, targetLevel) {
@@ -440,13 +471,34 @@ export function formatScheduledUpdateLabel(meta, t) {
 
 /** Target calendar date label (JST) for level-cap estimates. */
 export function formatTargetDateAfterDays(daysFromToday, t, reference = new Date()) {
+  const parts = targetDatePartsAfterDays(daysFromToday, t, reference);
+  if (!parts) {
+    return null;
+  }
+  return t("date.yearMonthDay", {
+    year: parts.rawYear,
+    month: parts.rawMonth,
+    day: parts.rawDay,
+  });
+}
+
+/** Target date as separate year and month/day lines (JST). */
+export function targetDatePartsAfterDays(daysFromToday, t, reference = new Date()) {
+  if (daysFromToday == null) {
+    return null;
+  }
   const { year, month, day } = todayPartsInJst(reference);
   const target = new Date(Date.UTC(year, month - 1, day + daysFromToday));
-  return t("date.yearMonthDay", {
-    year: target.getUTCFullYear(),
-    month: target.getUTCMonth() + 1,
-    day: target.getUTCDate(),
-  });
+  const rawYear = target.getUTCFullYear();
+  const rawMonth = target.getUTCMonth() + 1;
+  const rawDay = target.getUTCDate();
+  return {
+    rawYear,
+    rawMonth,
+    rawDay,
+    year: t("date.yearLine", { year: rawYear }),
+    monthDay: t("date.monthDay", { month: rawMonth, day: rawDay }),
+  };
 }
 
 /** Today’s calendar date in JST (year/month/day). */

@@ -69,11 +69,13 @@
     "levelRank": "อันดับเลเวล",
     "gainLabel": "เพิ่ม {{period}}",
     "rank": "อันดับ",
-    "lv250Title": "ถึง Lv250 ด้วยการเพิ่มวันนี้",
-    "lv275Title": "ถึง Lv275 ด้วยการเพิ่มวันนี้",
+    "levelEstimateHeader": "ด้วยการเพิ่มวันนี้",
+    "lvTo250": "ถึง Lv250",
+    "lvTo275": "ถึง Lv275",
     "aboutDays": "ประมาณ {{days}} วัน",
-    "bestDailyTitle": "เพิ่มรายวันสูงสุด",
-    "recordDate": "วันที่บันทึก {{date}}",
+    "dailyGainRecordTitle": "การเพิ่มรายวัน",
+    "pastBest": "สูงสุดตลอดกาล",
+    "recordDateLabel": "วันที่บันทึก",
     "noData": "ไม่มีข้อมูล",
     "chartGain7d": "เพิ่ม EXP รายวัน 7 วันล่าสุด",
     "chartRank7d": "อันดับเพิ่มรายวัน 7 วันล่าสุด",
@@ -111,6 +113,7 @@
   },
   "date": {
     "monthDay": "{{day}}/{{month}}",
+    "yearLine": "{{year}}",
     "yearMonthDay": "{{day}}/{{month}}/{{year}}"
   }
 }

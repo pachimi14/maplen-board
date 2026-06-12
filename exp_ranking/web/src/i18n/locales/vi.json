@@ -69,11 +69,13 @@
     "levelRank": "Hạng level",
     "gainLabel": "Tăng {{period}}",
     "rank": "Hạng",
-    "lv250Title": "Đến Lv250 với mức tăng hôm nay",
-    "lv275Title": "Đến Lv275 với mức tăng hôm nay",
+    "levelEstimateHeader": "Với mức tăng hôm nay",
+    "lvTo250": "Đến Lv250",
+    "lvTo275": "Đến Lv275",
     "aboutDays": "Khoảng {{days}} ngày",
-    "bestDailyTitle": "Tăng ngày cao nhất",
-    "recordDate": "Ngày ghi nhận {{date}}",
+    "dailyGainRecordTitle": "Tăng theo ngày",
+    "pastBest": "Cao nhất mọi thời",
+    "recordDateLabel": "Ngày ghi nhận",
     "noData": "Không có dữ liệu",
     "chartGain7d": "EXP tăng theo ngày (7 ngày gần nhất)",
     "chartRank7d": "Hạng tăng theo ngày (7 ngày gần nhất)",
@@ -111,6 +113,7 @@
   },
   "date": {
     "monthDay": "{{day}}/{{month}}",
+    "yearLine": "{{year}}",
     "yearMonthDay": "{{day}}/{{month}}/{{year}}"
   }
 }

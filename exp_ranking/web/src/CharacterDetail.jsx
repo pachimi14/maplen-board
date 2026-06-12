@@ -26,8 +26,10 @@ import {
   currentLevelExp,
   formatExp,
   formatExpExact,
-  formatTargetDateAfterDays,
+  formatExpRecord,
+  datePartsFromIsoDate,
   getGainRank,
+  targetDatePartsAfterDays,
   formatJobName,
   getGainAmount,
   getNavigatorUrl,
@@ -86,19 +88,86 @@ function RankChartTooltip({ active, payload, label }) {
   );
 }
 
-function GainStatCard({ label, amount, rank, hint }) {
+function GainStatCard({ label, amount, rank }) {
   const { t } = useTranslation();
   return (
     <div className="bg-slate-950 rounded-2xl p-4 min-w-0">
       <div className="text-slate-400 text-xs sm:text-sm truncate">{label}</div>
-      {hint ? (
-        <div className="text-[10px] sm:text-xs text-slate-500 truncate mt-0.5">{hint}</div>
-      ) : null}
       <div className="text-lg font-bold text-emerald-400 mt-1 truncate">+{formatExp(amount)}</div>
       <div className="text-xs sm:text-sm text-slate-400 mt-1">
         {t("characterDetail.rank")}{" "}
         <span className="text-slate-100 font-semibold">{rank != null ? `#${rank}` : "-"}</span>
       </div>
+    </div>
+  );
+}
+
+function LevelEstimateColumn({ label, estimate, dateParts, t }) {
+  const showPlaceholder = estimate.completed || estimate.noGain;
+
+  return (
+    <div className="px-3 sm:px-5 py-1 text-center min-w-0">
+      <div className="text-slate-400 text-sm leading-snug">{label}</div>
+      <div className="text-xl font-bold mt-2 tabular-nums">
+        {showPlaceholder ? "--" : t("characterDetail.aboutDays", { days: estimate.days })}
+      </div>
+      {showPlaceholder || !dateParts ? (
+        <div className="text-base font-semibold text-cyan-300 mt-2 tabular-nums">--</div>
+      ) : (
+        <div className="mt-2 space-y-0.5">
+          <div className="text-base font-semibold text-cyan-300 tabular-nums">{dateParts.year}</div>
+          <div className="text-base font-semibold text-cyan-300 tabular-nums">
+            {dateParts.monthDay}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LevelEstimateCard({ daysTo250, daysTo275, dateParts250, dateParts275, t }) {
+  return (
+    <div className="bg-slate-950 rounded-2xl p-5 min-w-0 overflow-hidden">
+      <p className="text-slate-400 text-sm text-center leading-snug mb-4">
+        {t("characterDetail.levelEstimateHeader")}
+      </p>
+      <div className="grid grid-cols-2 divide-x divide-slate-800">
+        <LevelEstimateColumn
+          label={t("characterDetail.lvTo250")}
+          estimate={daysTo250}
+          dateParts={dateParts250}
+          t={t}
+        />
+        <LevelEstimateColumn
+          label={t("characterDetail.lvTo275")}
+          estimate={daysTo275}
+          dateParts={dateParts275}
+          t={t}
+        />
+      </div>
+    </div>
+  );
+}
+
+function BestDailyRecordCard({ bestDaily, recordParts, t }) {
+  return (
+    <div className="bg-slate-950 rounded-2xl p-5 min-w-0 overflow-hidden text-center flex flex-col justify-center">
+      <div className="text-slate-400 text-sm leading-snug">{t("characterDetail.dailyGainRecordTitle")}</div>
+      <div className="text-slate-400 text-sm leading-snug mt-1">{t("characterDetail.pastBest")}</div>
+      <div className="text-xl font-bold text-amber-300 tabular-nums mt-2">
+        +{formatExpRecord(bestDaily.bestGain)}
+      </div>
+      <div className="text-slate-400 text-sm mt-4">{t("characterDetail.recordDateLabel")}</div>
+      {recordParts ? (
+        <div className="mt-1 space-y-0.5">
+          <div className="text-base font-semibold text-cyan-300 tabular-nums">{recordParts.year}</div>
+          <div className="text-base font-semibold text-cyan-300 tabular-nums">
+            {recordParts.monthDay}
+          </div>
+        </div>
+      ) : (
+        <div className="text-slate-500 text-sm mt-1">{t("characterDetail.noData")}</div>
+      )}
     </div>
   );
 }
@@ -153,19 +222,26 @@ export default function CharacterDetail({
     [character, expTable]
   );
 
-  const targetDateLabel250 = useMemo(() => {
+  const dateParts250 = useMemo(() => {
     if (!daysTo250.days) {
       return null;
     }
-    return formatTargetDateAfterDays(daysTo250.days, t);
+    return targetDatePartsAfterDays(daysTo250.days, t);
   }, [daysTo250.days, t]);
 
-  const targetDateLabel275 = useMemo(() => {
+  const dateParts275 = useMemo(() => {
     if (!daysTo275.days) {
       return null;
     }
-    return formatTargetDateAfterDays(daysTo275.days, t);
+    return targetDatePartsAfterDays(daysTo275.days, t);
   }, [daysTo275.days, t]);
+
+  const recordParts = useMemo(() => {
+    if (!bestDaily.bestSnapshotDate) {
+      return null;
+    }
+    return datePartsFromIsoDate(bestDaily.bestSnapshotDate, t);
+  }, [bestDaily.bestSnapshotDate, t]);
 
   const level = character.level ?? 0;
   const expPercent = levelExpPercent(character);
@@ -239,75 +315,28 @@ export default function CharacterDetail({
             label={t("characterDetail.gainLabel", { period: dailyPeriod })}
             amount={dailyGain}
             rank={dailyRank}
-            hint={t("period.resetDaily")}
           />
           <GainStatCard
             label={t("characterDetail.gainLabel", { period: weeklyPeriod })}
             amount={weeklyGain}
             rank={weeklyRank}
-            hint={t("period.resetWeekly")}
           />
           <GainStatCard
             label={t("characterDetail.gainLabel", { period: monthlyPeriod })}
             amount={monthlyGain}
             rank={monthlyRank}
-            hint={t("period.resetMonthly")}
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 min-w-0">
-          <div className="bg-slate-950 rounded-2xl p-5 min-w-0 overflow-hidden">
-            <div className="text-slate-400 text-sm leading-snug">
-              {t("characterDetail.lv250Title")}
-            </div>
-            {daysTo250.completed || daysTo250.noGain ? (
-              <div className="text-xl font-bold mt-1 tabular-nums">--</div>
-            ) : (
-              <>
-                <div className="text-xl font-bold mt-1">
-                  {t("characterDetail.aboutDays", { days: daysTo250.days })}
-                </div>
-                <div className="text-base font-semibold text-cyan-300 mt-1 break-words">
-                  {targetDateLabel250}
-                </div>
-              </>
-            )}
-          </div>
-          <div className="bg-slate-950 rounded-2xl p-5 min-w-0 overflow-hidden">
-            <div className="text-slate-400 text-sm leading-snug">
-              {t("characterDetail.lv275Title")}
-            </div>
-            {daysTo275.completed || daysTo275.noGain ? (
-              <div className="text-xl font-bold mt-1 tabular-nums">--</div>
-            ) : (
-              <>
-                <div className="text-xl font-bold mt-1">
-                  {t("characterDetail.aboutDays", { days: daysTo275.days })}
-                </div>
-                <div className="text-base font-semibold text-cyan-300 mt-1 break-words">
-                  {targetDateLabel275}
-                </div>
-              </>
-            )}
-          </div>
-          <div className="bg-slate-950 rounded-2xl p-5 min-w-0 overflow-hidden">
-            <div className="text-slate-400 text-sm leading-snug">
-              {t("characterDetail.bestDailyTitle")}
-            </div>
-            <div
-              className="mt-1 max-w-full overflow-x-auto [scrollbar-width:thin]"
-              title={`+${formatExpExact(bestDaily.bestGain)}`}
-            >
-              <div className="text-base font-bold text-amber-300 tabular-nums leading-tight whitespace-nowrap">
-                +{formatExpExact(bestDaily.bestGain)}
-              </div>
-            </div>
-            <p className="text-sm text-slate-500 mt-2 break-words">
-              {bestDaily.bestDate
-                ? t("characterDetail.recordDate", { date: bestDaily.bestDate })
-                : t("characterDetail.noData")}
-            </p>
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 min-w-0">
+          <LevelEstimateCard
+            daysTo250={daysTo250}
+            daysTo275={daysTo275}
+            dateParts250={dateParts250}
+            dateParts275={dateParts275}
+            t={t}
+          />
+          <BestDailyRecordCard bestDaily={bestDaily} recordParts={recordParts} t={t} />
         </div>
 
         <div>

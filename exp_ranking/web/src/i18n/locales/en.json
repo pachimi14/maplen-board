@@ -69,11 +69,13 @@
     "levelRank": "Level rank",
     "gainLabel": "{{period}} gain",
     "rank": "Rank",
-    "lv250Title": "Days to Lv250 at today's gain",
-    "lv275Title": "Days to Lv275 at today's gain",
+    "levelEstimateHeader": "At today's gain",
+    "lvTo250": "To Lv250",
+    "lvTo275": "To Lv275",
     "aboutDays": "About {{days}} days",
-    "bestDailyTitle": "Best daily gain",
-    "recordDate": "Recorded {{date}}",
+    "dailyGainRecordTitle": "Daily gain",
+    "pastBest": "All-time best",
+    "recordDateLabel": "Record date",
     "noData": "No data",
     "chartGain7d": "Daily EXP gain (last 7 days)",
     "chartRank7d": "Daily gain rank (last 7 days)",
@@ -111,6 +113,7 @@
   },
   "date": {
     "monthDay": "{{month}}/{{day}}",
+    "yearLine": "{{year}}",
     "yearMonthDay": "{{month}}/{{day}}/{{year}}"
   }
 }
