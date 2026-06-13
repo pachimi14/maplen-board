@@ -410,6 +410,8 @@ def run() -> int:
                 db_path,
                 asset_keys,
                 request_delay_sec=config.navigator_request_delay_sec(),
+                rotation_enabled=config.navigator_rotation_enabled(),
+                rotation_epoch=config.navigator_rotation_epoch(),
             )
         else:
             logger.info("Navigator world sync skipped (NAVIGATOR_FETCH_ENABLED=false)")

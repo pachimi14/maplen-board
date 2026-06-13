@@ -105,6 +105,11 @@ def main() -> int:
         default=0,
         help="Navigator: only process this many pending keys (0 = all)",
     )
+    parser.add_argument(
+        "--full-refresh",
+        action="store_true",
+        help="Refresh every asset key (ignore server rotation)",
+    )
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -154,20 +159,23 @@ def main() -> int:
     )
 
     if not args.skip_navigator and asset_keys:
-        pending_keys = asset_keys
+        keys_to_sync = asset_keys
         if args.limit > 0:
             existing = load_character_meta(db_path)
-            pending_keys = [
+            keys_to_sync = [
                 key
                 for key in asset_keys
                 if key and not str(existing.get(key, "")).strip()
             ][: args.limit]
-            logger.info("Navigator limit: processing %s keys", len(pending_keys))
+            logger.info("Navigator limit: processing %s keys", len(keys_to_sync))
         sync_world_ids(
             db_path,
-            pending_keys,
+            keys_to_sync,
             request_delay_sec=config.navigator_request_delay_sec(),
-            skip_existing=True,
+            rotation_enabled=config.navigator_rotation_enabled() and not args.limit,
+            rotation_epoch=config.navigator_rotation_epoch(),
+            full_refresh=args.full_refresh,
+            skip_existing=bool(args.limit),
         )
     elif not asset_keys:
         logger.warning("No characterAssetKey values to fetch Navigator for")

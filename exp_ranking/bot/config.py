@@ -53,6 +53,18 @@ def navigator_request_delay_sec() -> float:
     return max(0.0, float(os.environ.get("NAVIGATOR_REQUEST_DELAY_SEC", "0.35")))
 
 
+def navigator_rotation_enabled() -> bool:
+    raw = os.environ.get("NAVIGATOR_ROTATION_ENABLED", "true").strip().lower()
+    return raw not in ("0", "false", "no", "off")
+
+
+def navigator_rotation_epoch():
+    from datetime import date
+
+    raw = os.environ.get("NAVIGATOR_ROTATION_EPOCH", "2026-06-12").strip()
+    return date.fromisoformat(raw)
+
+
 def navigator_fetch_enabled() -> bool:
     raw = os.environ.get("NAVIGATOR_FETCH_ENABLED", "true").strip().lower()
     return raw not in ("0", "false", "no", "off")

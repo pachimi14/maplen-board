@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import time
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -18,6 +18,9 @@ NAVIGATOR_INFO_API = (
 NAVIGATOR_CHARACTER_URL = "https://msu.io/navigator/character/{asset_key}"
 
 KNOWN_WORLD_IDS = ("Ain", "Errai", "Fang")
+# Daily refresh order: one server cohort per run (3-day full cycle).
+WORLD_REFRESH_ROTATION = ("Fang", "Errai", "Ain")
+DEFAULT_ROTATION_EPOCH = date(2026, 6, 12)
 
 REQUEST_TIMEOUT_SEC = 30
 MAX_RETRIES = 3
@@ -84,34 +87,115 @@ def fetch_world_id(session: requests.Session, asset_key: str) -> str:
     raise RuntimeError(f"navigator info failed for {asset_key}: {last_error}")
 
 
+def rotation_target_world(
+    reference_date: date | None = None,
+    *,
+    epoch: date = DEFAULT_ROTATION_EPOCH,
+) -> str:
+    ref = reference_date or datetime.now(UTC).date()
+    day_index = (ref - epoch).days
+    return WORLD_REFRESH_ROTATION[day_index % len(WORLD_REFRESH_ROTATION)]
+
+
+def select_world_sync_keys(
+    asset_keys: list[str],
+    existing: dict[str, str],
+    *,
+    reference_date: date | None = None,
+    epoch: date = DEFAULT_ROTATION_EPOCH,
+    always_refresh_missing: bool = True,
+) -> tuple[list[str], str]:
+    """Pick keys to refresh: missing worldId + today's rotation server cohort."""
+    target_world = rotation_target_world(reference_date, epoch=epoch)
+    pending: list[str] = []
+    for key in asset_keys:
+        if not key:
+            continue
+        cached = str(existing.get(key, "")).strip()
+        if always_refresh_missing and not cached:
+            pending.append(key)
+            continue
+        if cached == target_world:
+            pending.append(key)
+    return pending, target_world
+
+
 def sync_world_ids(
     db_path,
     asset_keys: list[str],
     *,
     request_delay_sec: float,
-    skip_existing: bool = True,
+    rotation_enabled: bool = True,
+    rotation_epoch: date | None = None,
+    reference_date: date | None = None,
+    full_refresh: bool = False,
+    skip_existing: bool = False,
 ) -> tuple[int, int, int]:
-    """Return (fetched, skipped, failed)."""
+    """Return (fetched, skipped, failed).
+
+    Default: refresh missing worldIds plus one server cohort per day (Fang/Errai/Ain).
+    full_refresh=True refreshes every key. skip_existing=True (rotation off) only
+    fetches keys without a cached worldId.
+    """
     from sqlite_storage import load_character_meta, upsert_character_meta
 
     logger = logging.getLogger(__name__)
     if not asset_keys:
         return 0, 0, 0
 
-    existing = load_character_meta(db_path) if skip_existing else {}
-    pending = [
-        key
-        for key in asset_keys
-        if key
-        and (
-            not skip_existing
-            or not str(existing.get(key, "")).strip()
+    epoch = rotation_epoch or DEFAULT_ROTATION_EPOCH
+    existing = load_character_meta(db_path)
+
+    if full_refresh:
+        pending = [key for key in asset_keys if key]
+        target_world = ""
+        logger.info("Navigator world sync: full refresh for %s keys", len(pending))
+    elif rotation_enabled:
+        pending, target_world = select_world_sync_keys(
+            asset_keys,
+            existing,
+            reference_date=reference_date,
+            epoch=epoch,
         )
-    ]
+        cohort_count = sum(
+            1
+            for key in asset_keys
+            if key and str(existing.get(key, "")).strip() == target_world
+        )
+        missing_count = sum(
+            1 for key in asset_keys if key and not str(existing.get(key, "")).strip()
+        )
+        logger.info(
+            "Navigator world sync: rotation target=%s (cohort=%s, missing=%s, pending=%s)",
+            target_world,
+            cohort_count,
+            missing_count,
+            len(pending),
+        )
+    else:
+        target_world = ""
+        pending = [
+            key
+            for key in asset_keys
+            if key
+            and (not skip_existing or not str(existing.get(key, "")).strip())
+        ]
+        logger.info(
+            "Navigator world sync: legacy mode pending=%s (skip_existing=%s)",
+            len(pending),
+            skip_existing,
+        )
+
     skipped = len(asset_keys) - len(pending)
 
     if not pending:
-        logger.info("Navigator world sync: all %s keys already cached", len(asset_keys))
+        if rotation_enabled and not full_refresh:
+            logger.info(
+                "Navigator world sync: nothing to refresh for target=%s",
+                target_world or rotation_target_world(reference_date, epoch=epoch),
+            )
+        else:
+            logger.info("Navigator world sync: all %s keys already cached", len(asset_keys))
         return 0, skipped, 0
 
     session = requests.Session()
