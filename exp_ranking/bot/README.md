@@ -44,6 +44,7 @@ python main.py
 
 ## サーバー（worldId）
 
-ランキング API の `characterAssetKey` から Navigator API で `Ain` / `Errai` / `Fang` を取得し、`character_meta` テーブルにキャッシュします（初回のみ約 5500 リクエスト、2 回目以降は未登録分のみ）。
+ランキング API の `characterAssetKey` から Navigator API で `Ain` / `Errai` / `Fang` を取得し、`character_meta` テーブルにキャッシュします。初回は未登録分を一括取得し、以降は **サーバー名ローテ**（Fang → Errai → Ain、1日1サーバー）で再確認します。`worldId` 未設定のキャラは毎日取得対象です。
 
 - 環境変数: `NAVIGATOR_FETCH_ENABLED`（既定 `true`）、`NAVIGATOR_REQUEST_DELAY_SEC`（既定 `0.35`）
+- ローテ: `NAVIGATOR_ROTATION_ENABLED`（既定 `true`）、`NAVIGATOR_ROTATION_EPOCH`（既定 `2026-06-12`）
