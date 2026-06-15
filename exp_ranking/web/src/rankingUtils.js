@@ -374,9 +374,30 @@ export function datePartsFromIsoDate(isoDate, t) {
   const month = Number(match[2]);
   const day = Number(match[3]);
   return {
+    rawYear: year,
+    rawMonth: month,
+    rawDay: day,
     year: t("date.yearLine", { year }),
     monthDay: t("date.monthDay", { month, day }),
   };
+}
+
+/** Calendar date as `2026/7/25`. */
+export function formatDateSlash(rawYear, rawMonth, rawDay) {
+  if (rawYear == null || rawMonth == null || rawDay == null) {
+    return null;
+  }
+  return `${rawYear}/${rawMonth}/${rawDay}`;
+}
+
+export function slashDateFromParts(parts) {
+  if (!parts) {
+    return null;
+  }
+  if (parts.rawYear != null) {
+    return formatDateSlash(parts.rawYear, parts.rawMonth, parts.rawDay);
+  }
+  return null;
 }
 
 export function remainingExpToLevel(character, expTable, targetLevel) {
@@ -560,13 +581,168 @@ export function estimateDaysTo275FromToday(character, expTable) {
   return estimateDaysToLevelFromToday(character, expTable, LEVEL_CAP);
 }
 
-export function topGainersForPeriod(characters, period, limit = 3) {
+export const MIN_PLANNER_LEVEL = 225;
+export const GAIN_PERIOD_DAYS = { daily: 1, weekly: 7, monthly: 30 };
+
+/** Parse user input like `10B`, `1.5T`, or plain numbers. */
+export function parseExpInput(raw) {
+  if (raw == null || raw === "") {
+    return null;
+  }
+  const normalized = String(raw).trim().replace(/,/g, "");
+  const match = normalized.match(/^(-?[\d.]+)\s*([kmbt])?$/i);
+  if (!match) {
+    return null;
+  }
+  const num = Number(match[1]);
+  if (!Number.isFinite(num) || num < 0) {
+    return null;
+  }
+  const suffix = (match[2] || "").toLowerCase();
+  const multipliers = { k: 1_000, m: 1_000_000, b: 1_000_000_000, t: 1_000_000_000_000 };
+  return num * (multipliers[suffix] ?? 1);
+}
+
+/** Parse a plain number as billions (465 → 465B EXP). Optional trailing `B` is ignored. */
+export function parseExpInputBillions(raw) {
+  if (raw == null || raw === "") {
+    return null;
+  }
+  const normalized = String(raw).trim().replace(/,/g, "").replace(/\s*[bB]$/, "");
+  const num = Number(normalized);
+  if (!Number.isFinite(num) || num < 0) {
+    return null;
+  }
+  return num * 1_000_000_000;
+}
+
+export function toDailyGain(amount, period) {
+  const days = GAIN_PERIOD_DAYS[period] ?? 1;
+  return amount / days;
+}
+
+export function fromDailyGain(daily, period) {
+  const days = GAIN_PERIOD_DAYS[period] ?? 1;
+  return daily * days;
+}
+
+/** Mean daily gain from the last N history points (positive gains only). */
+export function averageDailyGainFromHistory(character, count = 7) {
+  const points = lastHistoryPoints(character, count);
+  const gains = points.map((point) => point.dailyGain ?? 0).filter((gain) => gain > 0);
+  if (!gains.length) {
+    return null;
+  }
+  return Math.round(gains.reduce((sum, gain) => sum + gain, 0) / gains.length);
+}
+
+export function computeGainAverages(character) {
+  const points7 = lastHistoryPoints(character, 7);
+  const points30 = lastHistoryPoints(character, 30);
+  const daily7 = averageDailyGainFromHistory(character, 7);
+  const daily30 = averageDailyGainFromHistory(character, 30);
+  const days7 = points7.filter((point) => (point.dailyGain ?? 0) > 0).length;
+  const days30 = points30.filter((point) => (point.dailyGain ?? 0) > 0).length;
+
+  return {
+    daily7,
+    daily30,
+    weekly7: daily7 != null ? daily7 * 7 : null,
+    monthly30: daily30 != null ? daily30 * 30 : null,
+    days7,
+    days30,
+  };
+}
+
+export function estimateDaysToLevelWithGain(character, expTable, targetLevel, dailyGain) {
+  if (character.level >= targetLevel) {
+    return { days: 0, completed: true, noGain: false };
+  }
+
+  const gain = Number(dailyGain);
+  if (!gain || gain <= 0) {
+    return { days: null, completed: false, noGain: true };
+  }
+
+  const remaining = remainingExpToLevel(character, expTable, targetLevel);
+  return {
+    days: Math.ceil(remaining / gain),
+    completed: false,
+    noGain: false,
+  };
+}
+
+/** Calendar days from today (JST) until target ISO date (YYYY-MM-DD). */
+export function daysUntilJstDate(targetIso, reference = new Date()) {
+  const match = String(targetIso).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) {
+    return null;
+  }
+  const { year, month, day } = todayPartsInJst(reference);
+  const start = Date.UTC(year, month - 1, day);
+  const end = Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  return Math.round((end - start) / (24 * 60 * 60 * 1000));
+}
+
+export function defaultTargetDateIso(daysAhead = 30, reference = new Date()) {
+  const parts = targetDatePartsAfterDays(daysAhead, (key) => key, reference);
+  if (!parts) {
+    return "";
+  }
+  const month = String(parts.rawMonth).padStart(2, "0");
+  const day = String(parts.rawDay).padStart(2, "0");
+  return `${parts.rawYear}-${month}-${day}`;
+}
+
+export function requiredGainForLevelByDate(
+  character,
+  expTable,
+  targetLevel,
+  targetDateIso,
+  reference = new Date()
+) {
+  if (character.level >= targetLevel) {
+    return { completed: true, invalid: false };
+  }
+
+  const days = daysUntilJstDate(targetDateIso, reference);
+  if (days == null || days <= 0) {
+    return { completed: false, invalid: true, days };
+  }
+
+  const remaining = remainingExpToLevel(character, expTable, targetLevel);
+  const daily = Math.ceil(remaining / days);
+  return {
+    completed: false,
+    invalid: false,
+    days,
+    remaining,
+    daily,
+    weekly: daily * 7,
+    monthly: daily * 30,
+  };
+}
+
+export function compareGainWith(character, other, period) {
+  const selfGain = getGainAmount(character, period);
+  const otherGain = getGainAmount(other, period);
+  return {
+    self: selfGain,
+    other: otherGain,
+    diff: selfGain - otherGain,
+    ratio: otherGain > 0 ? selfGain / otherGain : null,
+  };
+}
+
+export function topGainersForPeriod(characters, period, limit = 3, gainRankMaps = null) {
   return [...characters]
     .sort((a, b) => getGainAmount(b, period) - getGainAmount(a, period))
     .slice(0, limit)
-    .map((character, index) => ({
+    .map((character) => ({
       ...character,
-      gainRank: index + 1,
+      gainRank: gainRankMaps
+        ? getGainRank(gainRankMaps, character.id, period)
+        : null,
     }));
 }
 

@@ -38,9 +38,8 @@ python main.py
 
 | 用途 | bat |
 |------|-----|
-| データ取得 | `run_exp_ranking_fetch.bat` |
-| Web | `run_exp_ranking_web.bat` |
-| UIテスト用ダミー増加量 | `run_inject_dummy_gains.bat`（`rankings.json.bak` を作成） |
+| データ取得 | ルートの `run_fetch.bat` |
+| ローカル UI | ルートの `run_local_dev.bat` |
 
 ## サーバー（worldId）
 
