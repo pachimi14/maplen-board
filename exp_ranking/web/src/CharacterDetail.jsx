@@ -1,8 +1,11 @@
 import React, { useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { UserRound } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ChevronDown, ChevronUp, UserRound } from "lucide-react";
 import FavoriteStar from "./FavoriteStar";
 import NavigatorLink from "./NavigatorLink";
+import CharacterPlannerTools, { GainAveragesSection } from "./CharacterPlannerTools";
+import CharacterSearchPicker from "./CharacterSearchPicker";
 import { useGainPeriodLabel, useTranslation } from "./i18n/I18nContext";
 import {
   BarChart,
@@ -29,6 +32,7 @@ import {
   formatExpRecord,
   datePartsFromIsoDate,
   getGainRank,
+  slashDateFromParts,
   targetDatePartsAfterDays,
   formatJobName,
   getGainAmount,
@@ -39,24 +43,27 @@ import {
 } from "./rankingUtils";
 
 const RECENT_CHART_DAYS = 7;
+const RECENT_CHART_DAYS_30 = 30;
 
-function RankChartDot({ cx, cy, payload }) {
+function RankChartDot({ cx, cy, payload, showRankLabel = true }) {
   if (cx == null || cy == null || !payload) {
     return null;
   }
   return (
     <g>
-      <circle cx={cx} cy={cy} r={5} fill="#0ea5e9" stroke="#e0f2fe" strokeWidth={2} />
-      <text
-        x={cx}
-        y={cy - 12}
-        textAnchor="middle"
-        fill="#f8fafc"
-        fontSize={12}
-        fontWeight={600}
-      >
-        #{payload.dailyRank}
-      </text>
+      <circle cx={cx} cy={cy} r={showRankLabel ? 5 : 3} fill="#0ea5e9" stroke="#e0f2fe" strokeWidth={2} />
+      {showRankLabel ? (
+        <text
+          x={cx}
+          y={cy - 12}
+          textAnchor="middle"
+          fill="#f8fafc"
+          fontSize={12}
+          fontWeight={600}
+        >
+          #{payload.dailyRank}
+        </text>
+      ) : null}
     </g>
   );
 }
@@ -88,16 +95,28 @@ function RankChartTooltip({ active, payload, label }) {
   );
 }
 
-function GainStatCard({ label, amount, rank }) {
+function GainStatCard({ label, amount, rank, compact = false }) {
   const { t } = useTranslation();
   return (
-    <div className="bg-slate-950 rounded-2xl p-4 min-w-0">
+    <div
+      className={`bg-slate-950 rounded-2xl min-w-0 ${compact ? "p-3 text-center" : "p-4"}`}
+    >
       <div className="text-slate-400 text-xs sm:text-sm truncate">{label}</div>
-      <div className="text-lg font-bold text-emerald-400 mt-1 truncate">+{formatExp(amount)}</div>
-      <div className="text-xs sm:text-sm text-slate-400 mt-1">
-        {t("characterDetail.rank")}{" "}
-        <span className="text-slate-100 font-semibold">{rank != null ? `#${rank}` : "-"}</span>
-      </div>
+      {compact ? (
+        <div className="mt-1 text-sm sm:text-base tabular-nums whitespace-nowrap">
+          <span className="font-bold text-emerald-400">+{formatExp(amount)}</span>
+          <span className="text-slate-500 mx-1.5">{t("characterDetail.rank")}</span>
+          <span className="font-semibold text-slate-100">{rank != null ? `#${rank}` : "-"}</span>
+        </div>
+      ) : (
+        <>
+          <div className="text-lg font-bold text-emerald-400 mt-1 truncate">+{formatExp(amount)}</div>
+          <div className="text-xs sm:text-sm text-slate-400 mt-1">
+            {t("characterDetail.rank")}{" "}
+            <span className="text-slate-100 font-semibold">{rank != null ? `#${rank}` : "-"}</span>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -138,8 +157,27 @@ function AboutDaysDisplay({ days, showPlaceholder, t }) {
   );
 }
 
-function LevelEstimateColumn({ label, estimate, dateParts, t }) {
+function LevelEstimateColumn({ label, estimate, dateParts, t, compact = false }) {
   const showPlaceholder = estimate.completed || estimate.noGain;
+  const slashDate = slashDateFromParts(dateParts);
+
+  if (compact) {
+    return (
+      <div className="px-2 sm:px-3 py-1 text-center min-w-0">
+        <div className="text-slate-400 text-sm leading-snug">{label}</div>
+        {showPlaceholder ? (
+          <div className="text-lg font-bold mt-1 tabular-nums">--</div>
+        ) : (
+          <>
+            <div className="text-lg font-bold mt-1 tabular-nums">
+              {t("characterDetail.aboutDaysInline", { days: estimate.days })}
+            </div>
+            <div className="text-sm font-semibold text-cyan-300 mt-1 tabular-nums">{slashDate}</div>
+          </>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="px-2 sm:px-4 py-1 text-center min-w-0">
@@ -150,10 +188,14 @@ function LevelEstimateColumn({ label, estimate, dateParts, t }) {
   );
 }
 
-function LevelEstimateCard({ daysTo250, daysTo275, dateParts250, dateParts275, t }) {
+function LevelEstimateCard({ daysTo250, daysTo275, dateParts250, dateParts275, t, compact = false }) {
   return (
-    <div className="bg-slate-950 rounded-2xl p-5 min-w-0 overflow-hidden">
-      <p className="text-slate-400 text-sm text-center leading-snug mb-4 whitespace-nowrap">
+    <div className={`bg-slate-950 rounded-2xl min-w-0 overflow-hidden ${compact ? "p-4" : "p-5"}`}>
+      <p
+        className={`text-slate-400 text-sm text-center leading-snug whitespace-nowrap ${
+          compact ? "mb-3" : "mb-4"
+        }`}
+      >
         {t("characterDetail.levelEstimateHeader")}
       </p>
       <div className="grid grid-cols-2 divide-x divide-slate-800">
@@ -162,21 +204,143 @@ function LevelEstimateCard({ daysTo250, daysTo275, dateParts250, dateParts275, t
           estimate={daysTo250}
           dateParts={dateParts250}
           t={t}
+          compact={compact}
         />
         <LevelEstimateColumn
           label={t("characterDetail.lvTo275")}
           estimate={daysTo275}
           dateParts={dateParts275}
           t={t}
+          compact={compact}
         />
       </div>
     </div>
   );
 }
 
-function BestDailyRecordCard({ bestDaily, recordParts, t }) {
+function HistoryChartRow({
+  gainTitle,
+  rankTitle,
+  gainSeries,
+  rankSeries,
+  rankChartScale,
+  t,
+  dense = false,
+}) {
+  const xTick = dense
+    ? { fill: "#94a3b8", fontSize: 9 }
+    : { fill: "#94a3b8", fontSize: 13 };
+
   return (
-    <div className="bg-slate-950 rounded-2xl p-4 sm:p-5 min-w-0 overflow-hidden text-center flex flex-col justify-center">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div>
+        <h3 className="font-bold mb-3">{gainTitle}</h3>
+        <div className="h-64 md:h-72">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={gainSeries}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+              <XAxis dataKey="date" tick={xTick} minTickGap={dense ? 4 : 8} />
+              <YAxis
+                tickFormatter={formatExp}
+                tick={{ fill: "#94a3b8", fontSize: 12 }}
+                width={58}
+              />
+              <Tooltip
+                formatter={(value) => [formatExp(value), t("characterDetail.gainAmount")]}
+              />
+              <Bar dataKey="dailyGain" fill="#34d399" radius={[6, 6, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      <div>
+        <h3 className="font-bold mb-3">{rankTitle}</h3>
+        <div className="h-64 md:h-72">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart
+              data={rankSeries}
+              margin={{ top: dense ? 12 : 28, right: 12, left: 4, bottom: 4 }}
+            >
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="#334155"
+                horizontal
+                vertical={false}
+              />
+              <XAxis
+                dataKey="date"
+                tick={xTick}
+                minTickGap={dense ? 4 : 8}
+                axisLine={{ stroke: "#475569" }}
+              />
+              <YAxis
+                reversed
+                allowDecimals={false}
+                domain={rankChartScale.domain}
+                ticks={rankChartScale.ticks}
+                tickFormatter={(value) => `#${value}`}
+                tick={{ fill: "#94a3b8", fontSize: 12 }}
+                width={44}
+                axisLine={{ stroke: "#475569" }}
+              />
+              {rankChartScale.domain[0] <= 1 && rankChartScale.domain[1] >= 1 ? (
+                <ReferenceLine
+                  y={1}
+                  stroke="#fbbf24"
+                  strokeDasharray="4 4"
+                  strokeOpacity={0.7}
+                />
+              ) : null}
+              <Tooltip content={<RankChartTooltip />} />
+              <Line
+                type="monotone"
+                dataKey="dailyRank"
+                stroke="#38bdf8"
+                strokeWidth={dense ? 2 : 2.5}
+                dot={<RankChartDot showRankLabel={!dense} />}
+                activeDot={{ r: 6, fill: "#0ea5e9", stroke: "#e0f2fe", strokeWidth: 2 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BestDailyRecordCard({ bestDaily, recordParts, t, compact = false }) {
+  const slashDate = slashDateFromParts(recordParts);
+
+  if (compact) {
+    return (
+      <div className="bg-slate-950 rounded-2xl min-w-0 overflow-hidden text-center flex flex-col justify-center p-3 sm:p-4">
+        <div className="text-slate-400 text-sm leading-snug">
+          {t("characterDetail.dailyGainRecordCombined")}
+        </div>
+        <div className="text-xl font-bold text-amber-300 tabular-nums mt-1 whitespace-nowrap">
+          +{formatExpRecord(bestDaily.bestGain)}
+        </div>
+        {bestDaily.bestGain > 0 ? (
+          <div className="text-xs text-slate-500 tabular-nums mt-0.5 whitespace-nowrap">
+            +{formatExpExact(bestDaily.bestGain)}
+          </div>
+        ) : null}
+        <div className="text-sm text-slate-400 mt-1 whitespace-nowrap">
+          {slashDate
+            ? t("characterDetail.recordDateInline", { date: slashDate })
+            : t("characterDetail.noData")}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`bg-slate-950 rounded-2xl min-w-0 overflow-hidden text-center flex flex-col justify-center ${
+        compact ? "p-3 sm:p-4" : "p-4 sm:p-5"
+      }`}
+    >
       <div className="text-slate-400 text-xs leading-snug whitespace-nowrap">
         {t("characterDetail.dailyGainRecordTitle")}
       </div>
@@ -201,10 +365,15 @@ function BestDailyRecordCard({ bestDaily, recordParts, t }) {
 export default function CharacterDetail({
   character,
   characters,
+  allCharacters,
   gainRankMaps,
   expTable,
   isFavorite = false,
   onToggleFavorite,
+  mode = "compact",
+  onExpand,
+  onCollapse,
+  onSelectCharacter,
 }) {
   const { t } = useTranslation();
   const dailyPeriod = useGainPeriodLabel("daily");
@@ -224,17 +393,37 @@ export default function CharacterDetail({
     [character],
   );
 
+  const monthGainSeries = useMemo(
+    () => lastHistoryPoints(character, RECENT_CHART_DAYS_30),
+    [character],
+  );
+
+  const rankPool = allCharacters ?? characters;
+
   const weekRankSeries = useMemo(
     () =>
       enrichRankSeries(
-        buildWeekDailyRankSeries(characters, character.id, RECENT_CHART_DAYS),
+        buildWeekDailyRankSeries(rankPool, character.id, RECENT_CHART_DAYS),
       ),
-    [characters, character.id],
+    [rankPool, character.id],
+  );
+
+  const monthRankSeries = useMemo(
+    () =>
+      enrichRankSeries(
+        buildWeekDailyRankSeries(rankPool, character.id, RECENT_CHART_DAYS_30),
+      ),
+    [rankPool, character.id],
   );
 
   const rankChartScale = useMemo(
     () => buildRankChartScale(weekRankSeries.map((point) => point.dailyRank)),
     [weekRankSeries]
+  );
+
+  const rankChartScale30 = useMemo(
+    () => buildRankChartScale(monthRankSeries.map((point) => point.dailyRank)),
+    [monthRankSeries]
   );
 
   const bestDaily = useMemo(() => findBestDailyGain(character), [character]);
@@ -273,25 +462,99 @@ export default function CharacterDetail({
   const expPercent = levelExpPercent(character);
   const levelExp = currentLevelExp(character, expTable);
   const navigatorUrl = getNavigatorUrl(character);
+  const isExpanded = mode === "expanded";
+
+  const gainStatsRow = (
+    <div className={`grid grid-cols-3 ${isExpanded ? "gap-3" : "gap-3"}`}>
+      <GainStatCard
+        label={t("characterDetail.gainLabel", { period: dailyPeriod })}
+        amount={dailyGain}
+        rank={dailyRank}
+        compact={isExpanded}
+      />
+      <GainStatCard
+        label={t("characterDetail.gainLabel", { period: weeklyPeriod })}
+        amount={weeklyGain}
+        rank={weeklyRank}
+        compact={isExpanded}
+      />
+      <GainStatCard
+        label={t("characterDetail.gainLabel", { period: monthlyPeriod })}
+        amount={monthlyGain}
+        rank={monthlyRank}
+        compact={isExpanded}
+      />
+    </div>
+  );
+
+  const estimateRow = (
+    <div className={`grid grid-cols-1 sm:grid-cols-3 min-w-0 ${isExpanded ? "gap-3" : "gap-4"}`}>
+      <div className="sm:col-span-2 min-w-0">
+        <LevelEstimateCard
+          daysTo250={daysTo250}
+          daysTo275={daysTo275}
+          dateParts250={dateParts250}
+          dateParts275={dateParts275}
+          t={t}
+          compact={isExpanded}
+        />
+      </div>
+      <BestDailyRecordCard
+        bestDaily={bestDaily}
+        recordParts={recordParts}
+        t={t}
+        compact={isExpanded}
+      />
+    </div>
+  );
 
   return (
     <Card className="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl w-full">
       <CardContent className="p-6 md:p-7 space-y-6">
+        {isExpanded && onSelectCharacter ? (
+          <CharacterSearchPicker
+            characters={characters}
+            selectedId={character.id}
+            onSelect={onSelectCharacter}
+          />
+        ) : null}
+
         <div className="flex items-start gap-4">
           <img
             src={character.imageUrl}
             alt=""
-            className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-slate-800 object-cover shrink-0"
+            className={`rounded-2xl bg-slate-800 object-cover shrink-0 ${
+              isExpanded ? "w-24 h-24 md:w-28 md:h-28" : "w-20 h-20 md:w-24 md:h-24"
+            }`}
           />
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 text-slate-400 text-sm">
                 <UserRound size={16} />
                 {t("characterDetail.title")}
+                {isExpanded ? (
+                  <span className="text-cyan-400/90 text-xs font-medium">
+                    {t("characterDetail.expandedBadge")}
+                  </span>
+                ) : null}
               </div>
-              {onToggleFavorite ? (
-                <FavoriteStar active={isFavorite} onToggle={onToggleFavorite} size={22} />
-              ) : null}
+              <div className="flex items-center gap-2 shrink-0">
+                {isExpanded && onCollapse ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="border-slate-700 bg-slate-950 text-xs"
+                    onClick={onCollapse}
+                  >
+                    <ChevronUp size={14} className="mr-1" />
+                    {t("characterDetail.collapseDetail")}
+                  </Button>
+                ) : null}
+                {onToggleFavorite ? (
+                  <FavoriteStar active={isFavorite} onToggle={onToggleFavorite} size={22} />
+                ) : null}
+              </div>
             </div>
             <h2 className="text-2xl font-bold break-words leading-tight mt-1">
               <NavigatorLink href={navigatorUrl} className="text-inherit hover:text-sky-300">
@@ -336,108 +599,65 @@ export default function CharacterDetail({
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
-          <GainStatCard
-            label={t("characterDetail.gainLabel", { period: dailyPeriod })}
-            amount={dailyGain}
-            rank={dailyRank}
-          />
-          <GainStatCard
-            label={t("characterDetail.gainLabel", { period: weeklyPeriod })}
-            amount={weeklyGain}
-            rank={weeklyRank}
-          />
-          <GainStatCard
-            label={t("characterDetail.gainLabel", { period: monthlyPeriod })}
-            amount={monthlyGain}
-            rank={monthlyRank}
-          />
-        </div>
+        {isExpanded ? (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch min-w-0">
+            <div className="lg:col-span-2 space-y-3 min-w-0">
+              {gainStatsRow}
+              {estimateRow}
+            </div>
+            <div className="lg:col-span-1 min-w-0 flex">
+              <GainAveragesSection character={character} t={t} variant="stack" className="w-full" />
+            </div>
+          </div>
+        ) : (
+          <>
+            {gainStatsRow}
+            {estimateRow}
+          </>
+        )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 min-w-0">
-          <div className="sm:col-span-2 min-w-0">
-            <LevelEstimateCard
-              daysTo250={daysTo250}
-              daysTo275={daysTo275}
-              dateParts250={dateParts250}
-              dateParts275={dateParts275}
-              t={t}
+        {!isExpanded && onExpand ? (
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full border-slate-700 bg-slate-950 hover:bg-slate-800"
+            onClick={onExpand}
+          >
+            <ChevronDown size={16} className="mr-2" />
+            {t("characterDetail.expandDetail")}
+          </Button>
+        ) : null}
+
+        {isExpanded ? (
+          <>
+            <CharacterPlannerTools
+              character={character}
+              characters={characters}
+              expTable={expTable}
+              showAverages={false}
             />
-          </div>
-          <BestDailyRecordCard bestDaily={bestDaily} recordParts={recordParts} t={t} />
-        </div>
 
-        <div>
-          <h3 className="font-bold mb-3">{t("characterDetail.chartGain7d")}</h3>
-          <div className="h-64 md:h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={weekGainSeries}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                <XAxis dataKey="date" tick={{ fill: "#94a3b8", fontSize: 13 }} />
-                <YAxis
-                  tickFormatter={formatExp}
-                  tick={{ fill: "#94a3b8", fontSize: 12 }}
-                  width={58}
-                />
-                <Tooltip
-                  formatter={(value) => [formatExp(value), t("characterDetail.gainAmount")]}
-                />
-                <Bar dataKey="dailyGain" fill="#34d399" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div>
-          <h3 className="font-bold mb-3">{t("characterDetail.chartRank7d")}</h3>
-          <div className="h-72 md:h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={weekRankSeries}
-                margin={{ top: 28, right: 12, left: 4, bottom: 4 }}
-              >
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="#334155"
-                  horizontal
-                  vertical={false}
-                />
-                <XAxis
-                  dataKey="date"
-                  tick={{ fill: "#94a3b8", fontSize: 13 }}
-                  axisLine={{ stroke: "#475569" }}
-                />
-                <YAxis
-                  reversed
-                  allowDecimals={false}
-                  domain={rankChartScale.domain}
-                  ticks={rankChartScale.ticks}
-                  tickFormatter={(value) => `#${value}`}
-                  tick={{ fill: "#94a3b8", fontSize: 12 }}
-                  width={44}
-                  axisLine={{ stroke: "#475569" }}
-                />
-                {rankChartScale.domain[0] <= 1 && rankChartScale.domain[1] >= 1 ? (
-                  <ReferenceLine
-                    y={1}
-                    stroke="#fbbf24"
-                    strokeDasharray="4 4"
-                    strokeOpacity={0.7}
-                  />
-                ) : null}
-                <Tooltip content={<RankChartTooltip />} />
-                <Line
-                  type="monotone"
-                  dataKey="dailyRank"
-                  stroke="#38bdf8"
-                  strokeWidth={2.5}
-                  dot={<RankChartDot />}
-                  activeDot={{ r: 6, fill: "#0ea5e9", stroke: "#e0f2fe", strokeWidth: 2 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+            <div className="space-y-8">
+              <HistoryChartRow
+                gainTitle={t("characterDetail.chartGain7d")}
+                rankTitle={t("characterDetail.chartRank7d")}
+                gainSeries={weekGainSeries}
+                rankSeries={weekRankSeries}
+                rankChartScale={rankChartScale}
+                t={t}
+              />
+              <HistoryChartRow
+                gainTitle={t("characterDetail.chartGain30d")}
+                rankTitle={t("characterDetail.chartRank30d")}
+                gainSeries={monthGainSeries}
+                rankSeries={monthRankSeries}
+                rankChartScale={rankChartScale30}
+                t={t}
+                dense
+              />
+            </div>
+          </>
+        ) : null}
       </CardContent>
     </Card>
   );

@@ -13,10 +13,10 @@ import {
 
 const PERIODS = ["daily", "weekly", "monthly"];
 
-function PeriodTop3({ period, characters, selectedId, onSelect, isFavorite, onToggleFavorite }) {
+function PeriodTop3({ period, characters, gainRankMaps, selectedId, onSelect, isFavorite, onToggleFavorite }) {
   const { t } = useTranslation();
   const periodLabel = useGainPeriodLabel(period);
-  const top = topGainersForPeriod(characters, period, 3);
+  const top = topGainersForPeriod(characters, period, 3, gainRankMaps);
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-2">
@@ -81,6 +81,7 @@ function PeriodTop3({ period, characters, selectedId, onSelect, isFavorite, onTo
 
 export default function TopGainHighlights({
   characters,
+  gainRankMaps,
   selectedId,
   onSelect,
   isFavorite,
@@ -93,6 +94,7 @@ export default function TopGainHighlights({
           key={period}
           period={period}
           characters={characters}
+          gainRankMaps={gainRankMaps}
           selectedId={selectedId}
           onSelect={onSelect}
           isFavorite={isFavorite}

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,7 @@ import {
   formatScheduledUpdateLabel,
   gainRankClass,
   getGainAmount,
+  getGainRank,
   getNavigatorUrl,
   matchesWorldFilter,
   WORLD_IDS,
@@ -118,6 +119,9 @@ export default function App() {
   const [loadError, setLoadError] = useState("");
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [worldFilter, setWorldFilter] = useState("all");
+  const [detailView, setDetailView] = useState("compact");
+  const [showListWhenExpanded, setShowListWhenExpanded] = useState(false);
+  const detailTopRef = useRef(null);
   const { favoriteCount, isFavorite, toggleFavorite } = useFavorites();
 
   const worldOptions = useMemo(() => {
@@ -191,7 +195,7 @@ export default function App() {
     return pool.filter((character) => isFavorite(character));
   }, [characters, favoritesOnly, isFavorite, worldFilter]);
 
-  const gainRankMaps = useMemo(() => computeGainRankMaps(rankingPool), [rankingPool]);
+  const gainRankMaps = useMemo(() => computeGainRankMaps(characters), [characters]);
 
   const isLevelSort = sortKey === "rank";
   const showGainRank = !isLevelSort;
@@ -219,10 +223,7 @@ export default function App() {
       return sorted;
     }
 
-    return sorted.map((character, index) => ({
-      ...character,
-      gainRank: index + 1,
-    }));
+    return sorted;
   }, [filteredCharacters, isLevelSort, sortKey]);
 
   useEffect(() => {
@@ -250,6 +251,29 @@ export default function App() {
     return pool.find((character) => character.id === selectedId) || pool[0];
   }, [characters, rankingPool, favoritesOnly, selectedId]);
 
+  const isExpandedDetail = detailView === "expanded";
+  const showRankingList = !isExpandedDetail || showListWhenExpanded;
+
+  const expandDetail = () => {
+    setDetailView("expanded");
+    setShowListWhenExpanded(false);
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  };
+
+  const collapseDetail = () => {
+    setDetailView("compact");
+    setShowListWhenExpanded(false);
+  };
+
+  useEffect(() => {
+    if (!isExpandedDetail || !detailTopRef.current) {
+      return;
+    }
+    detailTopRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [selectedId, isExpandedDetail]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center">
@@ -265,7 +289,7 @@ export default function App() {
         <p className="text-slate-400 mb-4">{t("app.noDataHint")}</p>
         {loadError ? <p className="text-red-400">{loadError}</p> : null}
         <pre className="bg-slate-900 p-4 rounded-xl text-sm text-slate-300">
-          run_exp_ranking_fetch.bat
+          run_local_dev.bat
         </pre>
       </div>
     );
@@ -303,7 +327,8 @@ export default function App() {
         </div>
 
         <TopGainHighlights
-          characters={rankingPool}
+          characters={characters}
+          gainRankMaps={gainRankMaps}
           selectedId={selectedId}
           onSelect={setSelectedId}
           isFavorite={isFavorite}
@@ -363,8 +388,49 @@ export default function App() {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 xl:items-start">
-          <Card className="xl:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl shadow-xl">
+        <div className="space-y-6">
+          {isExpandedDetail && selectedCharacter ? (
+            <div ref={detailTopRef} className="space-y-4">
+              <CharacterDetail
+                character={selectedCharacter}
+                characters={rankingPool.length ? rankingPool : characters}
+                allCharacters={characters}
+                gainRankMaps={gainRankMaps}
+                expTable={expTable}
+                isFavorite={isFavorite(selectedCharacter)}
+                onToggleFavorite={() => toggleFavorite(selectedCharacter)}
+                mode="expanded"
+                onCollapse={collapseDetail}
+                onSelectCharacter={setSelectedId}
+              />
+              <div className="flex justify-center">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="border-slate-700 bg-slate-950"
+                  onClick={() => setShowListWhenExpanded((current) => !current)}
+                >
+                  {showListWhenExpanded
+                    ? t("characterDetail.hideList")
+                    : t("characterDetail.showList")}
+                </Button>
+              </div>
+            </div>
+          ) : null}
+
+          {showRankingList ? (
+            <div
+              className={
+                isExpandedDetail
+                  ? "space-y-6"
+                  : "grid grid-cols-1 xl:grid-cols-3 gap-6 xl:items-start"
+              }
+            >
+          <Card
+            className={`bg-slate-900 border border-slate-800 rounded-2xl shadow-xl ${
+              isExpandedDetail ? "" : "xl:col-span-2"
+            }`}
+          >
             <CardContent className="p-5 space-y-4">
               <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
                 <h2 className="text-xl font-bold">{rankingListTitle}</h2>
@@ -493,8 +559,12 @@ export default function App() {
                           />
                         </td>
                         {showGainRank ? (
-                          <td className={`p-3 font-bold ${gainRankClass(character.gainRank)}`}>
-                            #{character.gainRank}
+                          <td
+                            className={`p-3 font-bold ${gainRankClass(
+                              getGainRank(gainRankMaps, character.id, sortKey)
+                            )}`}
+                          >
+                            #{getGainRank(gainRankMaps, character.id, sortKey) ?? "-"}
                           </td>
                         ) : null}
                         <td className="p-3 font-bold text-slate-400">#{character.rank}</td>
@@ -559,26 +629,33 @@ export default function App() {
             </CardContent>
           </Card>
 
-          {selectedCharacter ? (
-            <div className="xl:col-span-1 min-w-0">
-              <CharacterDetail
-                character={selectedCharacter}
-                characters={rankingPool.length ? rankingPool : characters}
-                gainRankMaps={gainRankMaps}
-                expTable={expTable}
-                isFavorite={isFavorite(selectedCharacter)}
-                onToggleFavorite={() => toggleFavorite(selectedCharacter)}
-              />
+          {!isExpandedDetail ? (
+            selectedCharacter ? (
+              <div className="xl:col-span-1 min-w-0">
+                <CharacterDetail
+                  character={selectedCharacter}
+                  characters={rankingPool.length ? rankingPool : characters}
+                  allCharacters={characters}
+                  gainRankMaps={gainRankMaps}
+                  expTable={expTable}
+                  isFavorite={isFavorite(selectedCharacter)}
+                  onToggleFavorite={() => toggleFavorite(selectedCharacter)}
+                  mode="compact"
+                  onExpand={expandDetail}
+                />
+              </div>
+            ) : (
+              <Card className="xl:col-span-1 bg-slate-900 border border-slate-800 rounded-2xl shadow-xl">
+                <CardContent className="p-8 text-center text-slate-400">
+                  <Star size={32} className="mx-auto mb-3 text-amber-400/60" />
+                  <p>{t("favorite.emptyDetail")}</p>
+                  <p className="text-sm mt-2">{t("favorite.emptyDetailHint")}</p>
+                </CardContent>
+              </Card>
+            )
+          ) : null}
             </div>
-          ) : (
-            <Card className="xl:col-span-1 bg-slate-900 border border-slate-800 rounded-2xl shadow-xl">
-              <CardContent className="p-8 text-center text-slate-400">
-                <Star size={32} className="mx-auto mb-3 text-amber-400/60" />
-                <p>{t("favorite.emptyDetail")}</p>
-                <p className="text-sm mt-2">{t("favorite.emptyDetailHint")}</p>
-              </CardContent>
-            </Card>
-          )}
+          ) : null}
         </div>
       </div>
     </div>

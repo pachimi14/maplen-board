@@ -9,14 +9,17 @@ exp_ranking/
 └── web/   … React / Vite
 ```
 
-## よく使う
+## よく使う（ルートの .bat は3つだけ）
 
 | 用途 | 操作 |
 |------|------|
-| **本番と同じ JSON**（推奨） | `run_sync_rankings_from_pages.bat` |
-| API から再取得（CI と同設定） | `run_exp_ranking_fetch.bat` |
-| UI 開発 | `run_exp_ranking_web.bat` → http://localhost:5173/ |
-| ダミー増加量（UI テストのみ） | `run_inject_dummy_gains.bat` |
+| **UI 開発**（本番データ + ホットリロード） | `run_local_dev.bat` → http://localhost:5173/ |
+| **push 前確認**（本番ビルド） | `run_local_preview.bat` → http://localhost:4173/ |
+| **API から再取得** | `run_fetch.bat` |
+
+`--no-sync` … データ再取得をスキップ（コードだけ直すとき）
+
+旧バッチは `scripts/archive/bat/` に退避済み。
 
 ### スナップショット履歴のシード（本番復旧用）
 
@@ -25,11 +28,7 @@ exp_ranking/
 ### ローカルと GitHub Pages でデータが違うとき
 
 `exp_ranking/bot/data/ranking.db` は **Git に毎日コミット**されます（`git pull` でローカルも追従可能）。  
-`exp_ranking/web/public/data/rankings.json` は Git に含めません（日次生成物）。ローカルに古い JSON や `run_inject_dummy_gains.bat` 適用後のダミーが残っていると、本番と表示がずれます。
-
-1. **本番と揃える** … `run_sync_rankings_from_pages.bat`（Pages の `rankings.json` をそのままコピー）
-2. **API から作り直す** … `run_exp_ranking_fetch.bat`（Actions と同じ Lv225+・35日設定）
-3. ダミーを戻す … `rankings.json.bak` があれば復元、または上記 1
+`exp_ranking/web/public/data/rankings.json` は Git に含めません。本番と揃えるには `run_local_dev.bat`（自動同期）を使ってください。API から作り直す場合は `run_fetch.bat`。
 
 ## 公開まわり
 

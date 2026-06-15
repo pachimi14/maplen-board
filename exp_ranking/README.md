@@ -4,4 +4,12 @@
 - Pages / Actions: [DEPLOY.md](DEPLOY.md)
 - web: [web/README.md](web/README.md)
 
-ルートの `run_exp_ranking_fetch.bat` / `run_exp_ranking_web.bat` から起動。
+## ローカル（ルートの .bat は3つ）
+
+| バッチ | 用途 |
+|--------|------|
+| `run_local_dev.bat` | 本番 JSON 同期 + 開発サーバー |
+| `run_local_preview.bat` | 本番 JSON 同期 + 本番ビルド確認 |
+| `run_fetch.bat` | API → SQLite → JSON |
+
+詳細は [web/README.md](web/README.md)。
