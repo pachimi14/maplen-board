@@ -238,8 +238,8 @@ export default function JobGainRankings({
               {t("jobRanking.backToList")}
             </Button>
           </div>
-          <div className="overflow-hidden rounded-xl border border-slate-800">
-            <table className="w-full text-base">
+          <div className="overflow-x-auto rounded-xl border border-slate-800">
+            <table className="w-full min-w-[640px] text-base">
               <thead className="bg-slate-900 text-slate-400">
                 <tr>
                   <th className="text-left p-3 w-12" />
