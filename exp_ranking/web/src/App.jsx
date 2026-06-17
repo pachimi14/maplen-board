@@ -524,8 +524,8 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="overflow-hidden rounded-2xl border border-slate-800">
-                <table className="w-full text-base">
+              <div className="overflow-x-auto rounded-2xl border border-slate-800">
+                <table className="w-full min-w-[720px] text-base">
                   <thead className="bg-slate-950 text-slate-400">
                     <tr>
                       <th className="text-center p-3 w-12">
