@@ -6,6 +6,7 @@ Fetches ranking characters at or above min level (default 225+), stores in SQLit
 
 from __future__ import annotations
 
+import json
 import logging
 import sys
 import time
@@ -44,6 +45,7 @@ from sqlite_storage import (
     init_db,
     import_missing_snapshots_from_url,
     import_snapshots_from_mvp_json,
+    latest_snapshot_date,
     list_snapshot_dates,
     load_all_snapshots,
     load_character_meta,
@@ -267,45 +269,7 @@ def fetch_ranking_min_level(
     )
 
 
-def build_snapshot_rows(
-    ranking: list[dict[str, Any]], fetched: datetime
-) -> list[SnapshotRow]:
-    snap_date = snapshot_date_ranking(fetched)
-    rows: list[SnapshotRow] = []
-
-    for entry in ranking:
-        if not isinstance(entry, dict):
-            continue
-        rows.append(
-            SnapshotRow(
-                snapshot_date=snap_date,
-                rank=normalize_int(entry.get("rank")),
-                rank_fluctuation=normalize_int(entry.get("rankFluctuation")),
-                character_name=str(entry.get("characterName", "")).strip(),
-                class_code=str(entry.get("classCode", "")).strip(),
-                job_code=str(entry.get("jobCode", "")).strip(),
-                level=normalize_int(entry.get("level")),
-                exp=normalize_int(entry.get("exp")),
-                image_url=str(entry.get("imageUrl", "")).strip(),
-                character_asset_key=extract_asset_key(entry),
-            )
-        )
-    return rows
-
-
-def run() -> int:
-    config.load_env_file()
-    logger = logging.getLogger(__name__)
-    clear_ranking_day_skip_marker()
-
-    fetched = now_utc()
-    snap_date = snapshot_date_ranking(fetched)
-    min_level = config.ranking_min_level()
-    max_pages = config.ranking_max_pages()
-
-    db_path = config.sqlite_db_path()
-    json_path = config.mvp_json_output_path()
-    meta_json_path = config.character_meta_json_path()
+def bootstrap_database(db_path: Path, json_path: Path, logger: logging.Logger) -> None:
     init_db(db_path)
     if apply_ranking_day_label_migration(db_path):
         logger.info("Applied one-time ranking-day label migration (UTC gain day)")
@@ -348,6 +312,213 @@ def run() -> int:
                 count_snapshot_dates(db_path),
                 pages_imported,
             )
+
+    if json_path.exists():
+        hydrated = hydrate_character_meta_from_json(db_path, json_path)
+        if hydrated:
+            logger.info(
+                "character_meta after local rankings.json: %s",
+                count_character_meta(db_path),
+            )
+
+
+def collect_asset_keys_from_db(db_path: Path) -> list[str]:
+    snapshots = load_all_snapshots(db_path)
+    if not snapshots:
+        return []
+
+    latest_date = latest_snapshot_date(db_path) or max(
+        row.snapshot_date for row in snapshots
+    )
+    keys: list[str] = []
+    seen: set[str] = set()
+    for row in snapshots:
+        if row.snapshot_date != latest_date:
+            continue
+        asset_key = str(row.character_asset_key or "").strip()
+        if not asset_key or asset_key in seen:
+            continue
+        seen.add(asset_key)
+        keys.append(asset_key)
+    return keys
+
+
+def read_json_updated_at(json_path: Path) -> datetime | None:
+    if not json_path.exists():
+        return None
+    try:
+        payload = json.loads(json_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    meta = payload.get("meta")
+    if not isinstance(meta, dict):
+        return None
+    raw = str(meta.get("updatedAt") or "").strip()
+    if not raw:
+        return None
+    try:
+        parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=UTC)
+    return parsed.astimezone(UTC)
+
+
+def export_rankings_from_db(
+    db_path: Path,
+    logger: logging.Logger,
+    *,
+    updated_at: datetime | None = None,
+) -> Path:
+    exported_at = updated_at or now_utc()
+    min_level = config.ranking_min_level()
+    meta_json_path = config.character_meta_json_path()
+
+    snapshots = load_all_snapshots(db_path)
+    if not snapshots:
+        raise RuntimeError("No snapshot rows loaded from SQLite")
+
+    ranking_day = latest_snapshot_date(db_path) or max(
+        row.snapshot_date for row in snapshots
+    )
+    ranking_top_n = count_snapshots_for_date(db_path, ranking_day)
+    retention_days = config.snapshot_retention_days()
+    history_days = config.mvp_history_days()
+    export_top_n = config.mvp_export_top_n()
+
+    analysis_rows = build_analysis_rows(
+        snapshots,
+        benchmark_character=config.benchmark_character_name(),
+    )
+    export_snapshots = filter_snapshots_for_history(
+        snapshots,
+        latest_date=ranking_day,
+        history_days=history_days,
+    )
+    character_meta = load_character_meta(db_path)
+
+    mvp_path = export_mvp_json(
+        export_snapshots,
+        analysis_rows,
+        config.mvp_json_output_path(),
+        updated_at=exported_at,
+        export_top_n=export_top_n,
+        ranking_top_n=ranking_top_n,
+        latest_snapshot_date=ranking_day,
+        history_days=history_days,
+        snapshot_retention_days=retention_days,
+        ranking_min_level=min_level,
+        character_meta=character_meta,
+    )
+
+    meta_exported = export_character_meta_file(db_path, meta_json_path)
+    checkpoint_db(db_path)
+    logger.info(
+        "character_meta after export: %s in DB, %s in character_meta.json",
+        count_character_meta(db_path),
+        meta_exported,
+    )
+    logger.info(
+        "Exported rankings: ranking_day=%s ranking_top_n=%s analysis_rows=%s mvp_json=%s",
+        ranking_day,
+        ranking_top_n,
+        len(analysis_rows),
+        mvp_path,
+    )
+    return mvp_path
+
+
+def run_navigator_only() -> int:
+    logger = logging.getLogger(__name__)
+    db_path = config.sqlite_db_path()
+    json_path = config.mvp_json_output_path()
+    meta_json_path = config.character_meta_json_path()
+
+    bootstrap_database(db_path, json_path, logger)
+    import_character_meta_file(db_path, meta_json_path)
+
+    if config.hydrate_meta_from_pages():
+        pages_hydrated = hydrate_character_meta_from_url(
+            db_path, config.pages_rankings_url()
+        )
+        if pages_hydrated:
+            logger.info(
+                "character_meta after Pages hydrate: %s (imported %s)",
+                count_character_meta(db_path),
+                pages_hydrated,
+            )
+
+    asset_keys = collect_asset_keys_from_db(db_path)
+    logger.info(
+        "Navigator-only run: %s asset keys from latest snapshot in DB",
+        len(asset_keys),
+    )
+    if not asset_keys:
+        raise RuntimeError(
+            "No character_asset_key values in latest snapshot; run ranking fetch first"
+        )
+
+    sync_world_ids(
+        db_path,
+        asset_keys,
+        request_delay_sec=config.navigator_request_delay_sec(),
+        rotation_enabled=config.navigator_rotation_enabled(),
+        rotation_epoch=config.navigator_rotation_epoch(),
+    )
+
+    export_rankings_from_db(
+        db_path,
+        logger,
+        updated_at=read_json_updated_at(json_path),
+    )
+    return 0
+
+
+def build_snapshot_rows(
+    ranking: list[dict[str, Any]], fetched: datetime
+) -> list[SnapshotRow]:
+    snap_date = snapshot_date_ranking(fetched)
+    rows: list[SnapshotRow] = []
+
+    for entry in ranking:
+        if not isinstance(entry, dict):
+            continue
+        rows.append(
+            SnapshotRow(
+                snapshot_date=snap_date,
+                rank=normalize_int(entry.get("rank")),
+                rank_fluctuation=normalize_int(entry.get("rankFluctuation")),
+                character_name=str(entry.get("characterName", "")).strip(),
+                class_code=str(entry.get("classCode", "")).strip(),
+                job_code=str(entry.get("jobCode", "")).strip(),
+                level=normalize_int(entry.get("level")),
+                exp=normalize_int(entry.get("exp")),
+                image_url=str(entry.get("imageUrl", "")).strip(),
+                character_asset_key=extract_asset_key(entry),
+            )
+        )
+    return rows
+
+
+def run() -> int:
+    config.load_env_file()
+    logger = logging.getLogger(__name__)
+    if config.navigator_only():
+        return run_navigator_only()
+
+    clear_ranking_day_skip_marker()
+
+    fetched = now_utc()
+    snap_date = snapshot_date_ranking(fetched)
+    min_level = config.ranking_min_level()
+    max_pages = config.ranking_max_pages()
+
+    db_path = config.sqlite_db_path()
+    json_path = config.mvp_json_output_path()
+    meta_json_path = config.character_meta_json_path()
+    ranking_data_fetched_at = read_json_updated_at(json_path)
+    bootstrap_database(db_path, json_path, logger)
 
     if config.enforce_jst_fetch_window():
         wait_until_jst_fetch_window(logger)
@@ -417,6 +588,7 @@ def run() -> int:
             logger.info("Navigator world sync skipped (NAVIGATOR_FETCH_ENABLED=false)")
 
         fetched = now_utc()
+        ranking_data_fetched_at = fetched
         snap_date = snapshot_date_ranking(fetched)
         snapshot_rows = build_snapshot_rows(ranking, fetched)
         if not snapshot_rows:
@@ -452,9 +624,6 @@ def run() -> int:
     deleted_rows = delete_snapshots_before(db_path, retention_cutoff)
 
     snapshots = load_all_snapshots(db_path)
-    if not snapshots:
-        raise RuntimeError("No snapshot rows loaded from SQLite")
-
     snapshot_days = count_snapshot_dates(db_path)
     logger.info("Ranking snapshot days in DB: %s", snapshot_days)
     if snapshot_days < 2:
@@ -463,9 +632,6 @@ def run() -> int:
             "until another ranking day is stored."
         )
 
-    # MVP は今回保存したランキング日（UTC）を表示
-    latest_date = ranking_day
-
     logger.info(
         "Loaded %s snapshot rows (retention=%s days, deleted_old=%s)",
         len(snapshots),
@@ -473,51 +639,20 @@ def run() -> int:
         deleted_rows,
     )
 
-    analysis_rows = build_analysis_rows(
-        snapshots,
-        benchmark_character=config.benchmark_character_name(),
-    )
-    history_days = config.mvp_history_days()
-    export_snapshots = filter_snapshots_for_history(
-        snapshots,
-        latest_date=latest_date,
-        history_days=history_days,
-    )
-    export_top_n = config.mvp_export_top_n()
-
-    character_meta = load_character_meta(db_path)
-
-    mvp_path = export_mvp_json(
-        export_snapshots,
-        analysis_rows,
-        config.mvp_json_output_path(),
-        updated_at=fetched,
-        export_top_n=export_top_n,
-        ranking_top_n=ranking_top_n,
-        latest_snapshot_date=latest_date,
-        history_days=history_days,
-        snapshot_retention_days=retention_days,
-        ranking_min_level=min_level,
-        character_meta=character_meta,
-    )
-
-    meta_exported = export_character_meta_file(db_path, meta_json_path)
-    checkpoint_db(db_path)
-    logger.info(
-        "character_meta after run: %s in DB, %s in character_meta.json",
-        count_character_meta(db_path),
-        meta_exported,
+    mvp_path = export_rankings_from_db(
+        db_path,
+        logger,
+        updated_at=ranking_data_fetched_at,
     )
 
     logger.info(
         "Completed: ranking_top_n=%s sqlite_saved=%s sqlite_skipped=%s "
-        "retention_days=%s deleted_old=%s analysis_rows=%s mvp_json=%s",
+        "retention_days=%s deleted_old=%s mvp_json=%s",
         ranking_top_n,
         sqlite_saved,
         sqlite_skipped,
         retention_days,
         deleted_rows,
-        len(analysis_rows),
         mvp_path,
     )
     return 0

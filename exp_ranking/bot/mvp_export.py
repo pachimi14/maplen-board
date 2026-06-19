@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import logging
 from collections import defaultdict
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -222,7 +222,9 @@ def build_mvp_payload(
 
     return {
         "meta": {
-            "updatedAt": (updated_at or datetime.now()).isoformat(timespec="seconds"),
+            "updatedAt": (
+                updated_at or datetime.now(timezone.utc)
+            ).isoformat(timespec="seconds"),
             "source": "msu_ranking_bot",
             "characterCount": len(characters),
             "snapshotCount": len(snapshots),

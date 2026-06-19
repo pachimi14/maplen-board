@@ -45,5 +45,8 @@ python main.py
 
 ランキング API の `characterAssetKey` から Navigator API で `Ain` / `Errai` / `Fang` を取得し、`character_meta` テーブルにキャッシュします。初回は未登録分を一括取得し、以降は **サーバー名ローテ**（Fang → Errai → Ain、1日1サーバー）で再確認します。`worldId` 未設定のキャラは毎日取得対象です。
 
+**CI**: 毎日の経験値取得（`MapleN Board Pages`）と Navigator 同期（`MapleN Board Navigator`）は **別ワークフロー** です。経験値を先に公開し、約20分後にサーバー名を反映します。
+
 - 環境変数: `NAVIGATOR_FETCH_ENABLED`（既定 `true`）、`NAVIGATOR_REQUEST_DELAY_SEC`（既定 `0.35`）
+- CI 専用: `NAVIGATOR_ONLY=true`（ランキング API をスキップして Navigator のみ）
 - ローテ: `NAVIGATOR_ROTATION_ENABLED`（既定 `true`）、`NAVIGATOR_ROTATION_EPOCH`（既定 `2026-06-12`）

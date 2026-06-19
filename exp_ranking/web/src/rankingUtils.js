@@ -433,9 +433,6 @@ export function remainingExpTo275(character, expTable) {
 
 const JST_TIME_ZONE = "Asia/Tokyo";
 
-/** Fixed label for the daily scheduled fetch slot (same value in JA/EN). */
-const SCHEDULED_UPDATE_TIME = "00:20";
-
 function formatUpdateDateLabel(isoDate) {
   const parsed = new Date(`${isoDate}T00:00:00Z`);
   if (Number.isNaN(parsed.getTime())) {
@@ -449,45 +446,55 @@ function formatUpdateDateLabel(isoDate) {
   }).format(parsed);
 }
 
-/** 「12 Jun 2026, 00:20 UTC」形式（取得 UTC 日 + 固定 00:20、全言語共通）。 */
+/** 「12 Jun 2026, 00:35 UTC」形式（meta.updatedAt の取得時刻を UTC 表示）。 */
 export function formatScheduledUpdateLabel(meta, t) {
   const updatedAtRaw = String(meta?.updatedAt || "").trim();
-  let updateDateIso = "";
-
   if (updatedAtRaw) {
     const parsed = new Date(updatedAtRaw);
     if (!Number.isNaN(parsed.getTime())) {
-      updateDateIso = new Intl.DateTimeFormat("en-CA", {
+      const updateDateIso = new Intl.DateTimeFormat("en-CA", {
         timeZone: "UTC",
         year: "numeric",
         month: "2-digit",
         day: "2-digit",
       }).format(parsed);
+      const updateDate = formatUpdateDateLabel(updateDateIso);
+      const updateTime = new Intl.DateTimeFormat("en-GB", {
+        timeZone: "UTC",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      }).format(parsed);
+
+      if (t) {
+        return t("app.updatedAt", {
+          date: updateDate,
+          time: updateTime,
+        });
+      }
+      return `${updateDate}, ${updateTime} UTC`;
     }
   }
 
-  if (!updateDateIso) {
-    const snapshotDate = String(meta?.latestSnapshotDate || "").trim();
-    if (!snapshotDate) {
-      return null;
-    }
-    const rankingDay = new Date(`${snapshotDate}T00:00:00Z`);
-    if (Number.isNaN(rankingDay.getTime())) {
-      return null;
-    }
-    rankingDay.setUTCDate(rankingDay.getUTCDate() + 1);
-    updateDateIso = rankingDay.toISOString().slice(0, 10);
+  const snapshotDate = String(meta?.latestSnapshotDate || "").trim();
+  if (!snapshotDate) {
+    return null;
   }
-
+  const rankingDay = new Date(`${snapshotDate}T00:00:00Z`);
+  if (Number.isNaN(rankingDay.getTime())) {
+    return null;
+  }
+  rankingDay.setUTCDate(rankingDay.getUTCDate() + 1);
+  const updateDateIso = rankingDay.toISOString().slice(0, 10);
   const updateDate = formatUpdateDateLabel(updateDateIso);
 
   if (t) {
     return t("app.updatedAt", {
       date: updateDate,
-      time: SCHEDULED_UPDATE_TIME,
+      time: "—",
     });
   }
-  return `${updateDate}, ${SCHEDULED_UPDATE_TIME} UTC`;
+  return `${updateDate}, — UTC`;
 }
 
 /** Target calendar date label (JST) for level-cap estimates. */
