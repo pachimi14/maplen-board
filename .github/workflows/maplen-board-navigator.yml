@@ -1,27 +1,19 @@
-# Build rankings.json, static web, deploy to GitHub Pages (MapleN Board).
-# Discord notifications: planned separately.
+# Sync Navigator worldId (server) separately from ranking fetch for faster daily exp updates.
 
-name: MapleN Board Pages
+name: MapleN Board Navigator
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 on:
-  push:
+  workflow_run:
+    workflows: ["MapleN Board Pages"]
+    types: [completed]
     branches: [main, master]
-    paths:
-      - "exp_ranking/**"
-      - ".github/workflows/maplen-board-pages.yml"
-      - "README.md"
   schedule:
-    # キューは JST 8:00 のみ（空きが多いと遅延→9:20 まで待機して取得）。実行時は 9:20 まで待機。
-    - cron: "0 23 * * *"
+    # Backup if Pages workflow_run did not fire (JST 10:00)
+    - cron: "0 1 * * *"
   workflow_dispatch:
-    inputs:
-      force_fetch:
-        description: "ランキング API を再取得する（手動実行時はオン推奨）"
-        type: boolean
-        default: true
 
 concurrency:
   group: maplen-board-pages
@@ -35,9 +27,15 @@ permissions:
 
 jobs:
   build:
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'schedule' ||
+      (
+        github.event_name == 'workflow_run' &&
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event != 'push'
+      )
     runs-on: ubuntu-latest
-    outputs:
-      deploy: ${{ steps.deploy_gate.outputs.deploy }}
 
     steps:
       - name: Checkout
@@ -52,14 +50,11 @@ jobs:
           if [ -f exp_ranking/bot/data/ranking.db ]; then
             cp exp_ranking/bot/data/ranking.db /tmp/ranking.db.from_git
             echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "git-db-bytes=$(wc -c < /tmp/ranking.db.from_git)"
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
-            echo "No ranking.db in git yet"
           fi
 
-      - name: Restore legacy ranking database cache (v2 path)
-        id: legacy_db_cache
+      - name: Restore legacy ranking.db cache (v2 path)
         uses: actions/cache/restore@v4
         with:
           path: exp_ranking/bot/data/ranking.db
@@ -67,18 +62,16 @@ jobs:
           restore-keys: |
             exp-ranking-db-v2-${{ github.repository }}
             exp-ranking-db-v2-pachimi14/msu-exp-ranking
-            exp-ranking-db-${{ github.repository }}
+            exp-ranking-db-v2-${{ github.repository }}
 
       - name: Preserve legacy DB before v3 restore
         run: |
           mkdir -p exp_ranking/bot/data
           if [ -f exp_ranking/bot/data/ranking.db ]; then
             cp exp_ranking/bot/data/ranking.db exp_ranking/bot/data/ranking.legacy.db
-            echo "legacy-db-bytes=$(wc -c < exp_ranking/bot/data/ranking.legacy.db)"
           fi
 
       - name: Restore ranking data cache
-        id: ranking_db_cache
         uses: actions/cache/restore@v4
         with:
           path: exp_ranking/bot/data
@@ -87,14 +80,6 @@ jobs:
             maplen-board-data-v4-${{ github.repository }}-meta
             exp-ranking-data-v3-${{ github.repository }}-meta
             exp-ranking-data-v3-pachimi14/msu-exp-ranking-meta
-
-      - name: Log cache restore
-        run: |
-          echo "legacy-cache-hit=${{ steps.legacy_db_cache.outputs.cache-hit }}"
-          echo "v3-cache-hit=${{ steps.ranking_db_cache.outputs.cache-hit }}"
-          echo "git-db=${{ steps.git_db.outputs.exists }}"
-          echo "schedule=${{ github.event.schedule }}"
-          ls -la exp_ranking/bot/data/ || true
 
       - name: Merge ranking.db from git into working copy
         if: steps.git_db.outputs.exists == 'true'
@@ -127,68 +112,37 @@ jobs:
         working-directory: exp_ranking/bot
         run: pip install -r requirements.txt
 
-      - name: Fetch ranking and export JSON
-        id: fetch_ranking
+      - name: Sync Navigator and export JSON
         working-directory: exp_ranking/bot
         env:
-          RANKING_MIN_LEVEL: "225"
-          RANKING_MAX_PAGES: "800"
-          RANKING_REQUEST_DELAY_SEC: "0.35"
-          SNAPSHOT_RETENTION_DAYS: "35"
-          MVP_HISTORY_DAYS: "35"
-          MVP_EXPORT_TOP_N: "0"
+          NAVIGATOR_ONLY: "true"
+          NAVIGATOR_REQUEST_DELAY_SEC: "0.35"
+          NAVIGATOR_ROTATION_ENABLED: "true"
+          NAVIGATOR_ROTATION_EPOCH: "2026-06-12"
           SQLITE_DB_PATH: data/ranking.db
           MVP_JSON_OUTPUT_PATH: ../web/public/data/rankings.json
           CHARACTER_META_JSON_PATH: data/character_meta.json
-          NAVIGATOR_REQUEST_DELAY_SEC: "0.35"
-          SKIP_MSU_RANKING_FETCH: ${{ contains(github.event.head_commit.message, '[web-only]') && 'true' || '' }}
-          NAVIGATOR_FETCH_ENABLED: "false"
-          HYDRATE_META_FROM_PAGES: ${{ contains(github.event.head_commit.message, '[web-only]') && 'false' || 'true' }}
-          SNAPSHOT_IMPORT_FROM_PAGES: ${{ contains(github.event.head_commit.message, '[web-only]') && 'false' || 'true' }}
           PAGES_SITE_URL: https://lulumi-tools.com
           MVP_PAGES_RANKINGS_URL: https://lulumi-tools.com/data/rankings.json
-          IMPORT_SNAPSHOTS_JSON: data/seed/rankings_seed.json
-          ENFORCE_JST_FETCH_WINDOW: ${{ github.event_name == 'schedule' && 'true' || '' }}
-          SKIP_RUN_IF_RANKING_DAY_EXISTS: "true"
-          SKIP_DEPLOY_IF_DAY_CAPTURED: ${{ github.event_name == 'schedule' && 'true' || 'false' }}
-          FORCE_RANKING_FETCH: ${{ github.event_name == 'workflow_dispatch' && inputs.force_fetch && 'true' || '' }}
-          SKIP_RUN_MIN_SNAPSHOT_ROWS: "1000"
+          HYDRATE_META_FROM_PAGES: "true"
+          SNAPSHOT_IMPORT_FROM_PAGES: "false"
         run: python main.py
-
-      - name: Check if today's ranking day is already complete
-        id: deploy_gate
-        run: |
-          if [ "${{ contains(github.event.head_commit.message, '[web-only]') }}" = "true" ]; then
-            echo "deploy=true" >> "$GITHUB_OUTPUT"
-            echo "Web-only redeploy: deploy enabled"
-          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "deploy=true" >> "$GITHUB_OUTPUT"
-            echo "Manual run: deploy enabled"
-          elif [ -f exp_ranking/bot/data/.ranking_day_complete ]; then
-            echo "deploy=false" >> "$GITHUB_OUTPUT"
-            echo "Skip deploy: $(cat exp_ranking/bot/data/.ranking_day_complete)"
-          else
-            echo "deploy=true" >> "$GITHUB_OUTPUT"
-          fi
 
       - name: Count navigator meta for cache key
         id: meta_count
-        if: steps.deploy_gate.outputs.deploy == 'true'
         working-directory: exp_ranking/bot
         run: |
           COUNT=$(python -c "from config import sqlite_db_path; from sqlite_storage import count_character_meta; print(count_character_meta(sqlite_db_path()))")
           echo "count=$COUNT" >> "$GITHUB_OUTPUT"
-          echo "character_meta count=$COUNT"
 
       - name: Save ranking data cache
-        if: success() && steps.deploy_gate.outputs.deploy == 'true' && steps.meta_count.outputs.count != '0'
+        if: success() && steps.meta_count.outputs.count != '0'
         uses: actions/cache/save@v4
         with:
           path: exp_ranking/bot/data
           key: maplen-board-data-v4-${{ github.repository }}-meta${{ steps.meta_count.outputs.count }}
 
       - name: Set up Node.js
-        if: steps.deploy_gate.outputs.deploy == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -196,12 +150,10 @@ jobs:
           cache-dependency-path: exp_ranking/web/package-lock.json
 
       - name: Install web dependencies
-        if: steps.deploy_gate.outputs.deploy == 'true'
         working-directory: exp_ranking/web
         run: npm ci
 
       - name: Build web
-        if: steps.deploy_gate.outputs.deploy == 'true'
         working-directory: exp_ranking/web
         env:
           GITHUB_PAGES: "true"
@@ -209,11 +161,9 @@ jobs:
         run: npm run build
 
       - name: Setup Pages
-        if: steps.deploy_gate.outputs.deploy == 'true'
         uses: actions/configure-pages@v5
 
       - name: Upload Pages artifact
-        if: steps.deploy_gate.outputs.deploy == 'true'
         uses: actions/upload-pages-artifact@v3
         with:
           path: exp_ranking/web/dist
@@ -222,14 +172,13 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: ranking-db
+          name: ranking-db-navigator
           path: exp_ranking/bot/data/ranking.db
           if-no-files-found: ignore
           retention-days: 1
 
   deploy:
     needs: build
-    if: needs.build.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -264,7 +213,7 @@ jobs:
     if: |
       always() &&
       needs.build.result == 'success' &&
-      (needs.deploy.result == 'success' || needs.deploy.result == 'skipped' || needs.deploy.result == 'failure')
+      (needs.deploy.result == 'success' || needs.deploy.result == 'failure')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -277,7 +226,7 @@ jobs:
       - name: Download ranking.db artifact
         uses: actions/download-artifact@v4
         with:
-          name: ranking-db
+          name: ranking-db-navigator
           path: exp_ranking/bot/data
         continue-on-error: true
 
@@ -297,14 +246,5 @@ jobs:
             echo "No ranking.db changes to commit"
             exit 0
           fi
-          SNAPSHOT_DATE=""
-          if [ -f exp_ranking/bot/data/.ranking_day_complete ]; then
-            SNAPSHOT_DATE="$(tr -d '\r\n' < exp_ranking/bot/data/.ranking_day_complete)"
-          fi
-          if [ -n "$SNAPSHOT_DATE" ]; then
-            MSG="chore: update ranking.db (${SNAPSHOT_DATE}) [skip ci]"
-          else
-            MSG="chore: update ranking.db [skip ci]"
-          fi
-          git commit -m "$MSG"
+          git commit -m "chore: update ranking.db (navigator) [skip ci]"
           git push origin "HEAD:${{ github.ref_name }}"

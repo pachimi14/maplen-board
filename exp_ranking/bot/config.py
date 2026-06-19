@@ -70,6 +70,12 @@ def navigator_fetch_enabled() -> bool:
     return raw not in ("0", "false", "no", "off")
 
 
+def navigator_only() -> bool:
+    """When true, skip ranking fetch and only sync Navigator worldIds + re-export JSON."""
+    raw = os.environ.get("NAVIGATOR_ONLY", "").strip().lower()
+    return raw in ("1", "true", "yes", "on")
+
+
 def sqlite_db_path() -> Path:
     default = str(BASE_DIR / "data" / "ranking.db")
     return env_path("SQLITE_DB_PATH", default)
