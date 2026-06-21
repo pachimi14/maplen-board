@@ -309,11 +309,11 @@ function hslToHex(h, s, l) {
 }
 
 /**
- * 15 colors spaced ~90° on the hue wheel so consecutive members stay in
+ * 20 colors spaced ~90° on the hue wheel so consecutive members stay in
  * different families (red → yellow → cyan → blue → orange → …).
  */
 const GROUP_HUE_SEQUENCE = [
-  0, 90, 180, 270, 45, 135, 225, 315, 20, 110, 200, 290, 55, 145, 235,
+  0, 90, 180, 270, 45, 135, 225, 315, 20, 110, 200, 290, 55, 145, 235, 75, 165, 255, 345, 125,
 ];
 
 export const GROUP_LINE_COLORS = GROUP_HUE_SEQUENCE.map((hue) => hslToHex(hue, 82, 56));
