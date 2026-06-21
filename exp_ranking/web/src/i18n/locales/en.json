@@ -129,7 +129,7 @@
   },
   "jobRanking": {
     "title": "{{period}} EXP gain — by job",
-    "subtitle": "Adventurer / Hero / Cygnus (TOP {{count}} per job)",
+    "subtitle": "By alliance (TOP {{count}} per job)",
     "members": "{{count}} players",
     "backToList": "Back to job list",
     "jobRank": "Job rank",
@@ -144,7 +144,9 @@
   "alliance": {
     "冒険家": "Adventurer",
     "英雄": "Hero",
-    "シグナス": "Cygnus"
+    "シグナス": "Cygnus",
+    "レフ": "Flora",
+    "アニマ": "Anima"
   },
   "branch": {
     "戦士": "Warrior",

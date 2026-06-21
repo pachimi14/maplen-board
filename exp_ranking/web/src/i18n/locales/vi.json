@@ -129,7 +129,7 @@
   },
   "jobRanking": {
     "title": "Tăng EXP {{period}} — theo nghề",
-    "subtitle": "Adventurer / Hero / Cygnus (TOP {{count}} mỗi nghề)",
+    "subtitle": "Theo liên minh (TOP {{count}} mỗi nghề)",
     "members": "{{count}} người",
     "backToList": "Quay lại danh sách nghề",
     "jobRank": "Hạng trong nghề",
@@ -144,7 +144,9 @@
   "alliance": {
     "冒険家": "Adventurer",
     "英雄": "Hero",
-    "シグナス": "Cygnus"
+    "シグナス": "Cygnus",
+    "レフ": "Flora",
+    "アニマ": "Anima"
   },
   "branch": {
     "戦士": "Warrior",
