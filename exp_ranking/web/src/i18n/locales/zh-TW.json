@@ -32,6 +32,30 @@
     "byJob": "依職業",
     "allServers": "所有伺服器"
   },
+  "group": {
+    "view": "群組",
+    "title": "群組比較",
+    "subtitle": "最多 {{max}} 人，以折線圖比較日間增加量",
+    "newGroup": "新增群組",
+    "rename": "儲存名稱",
+    "delete": "刪除",
+    "members": "成員 {{count}} / {{max}}",
+    "addMember": "新增角色",
+    "memberLimit": "每組最多 6 人",
+    "emptyMembers": "新增成員後會顯示圖表",
+    "emptyGroups": "請按「新增群組」建立比較用群組",
+    "removeMember": "移除成員",
+    "addToGroup": "加入群組",
+    "removeFromGroup": "從群組移除",
+    "notFound": "不在排名中",
+    "chartTitle7d": "近 7 日日間增加量",
+    "chartTitle30d": "近 30 日日間增加量",
+    "days7": "7 日",
+    "days30": "30 日",
+    "noDataPoint": "此日無資料",
+    "expandGroup": "顯示群組",
+    "collapseGroup": "返回簡易檢視"
+  },
   "search": {
     "character": "搜尋角色名、職業、伺服器",
     "job": "依職業名稱篩選"

@@ -32,6 +32,30 @@
     "byJob": "職業別",
     "allServers": "全サーバー"
   },
+  "group": {
+    "view": "グループ",
+    "title": "グループ比較",
+    "subtitle": "最大 {{max}} 人まで登録し、日間増加量を折れ線グラフで比較できます",
+    "newGroup": "新規グループ",
+    "rename": "名前を保存",
+    "delete": "削除",
+    "members": "メンバー {{count}} / {{max}}",
+    "addMember": "キャラを追加",
+    "memberLimit": "6人まで登録できます",
+    "emptyMembers": "メンバーを追加するとグラフが表示されます",
+    "emptyGroups": "「新規グループ」で比較用のグループを作成してください",
+    "removeMember": "メンバーを外す",
+    "addToGroup": "グループに追加",
+    "removeFromGroup": "グループから外す",
+    "notFound": "ランキングに未登録",
+    "chartTitle7d": "直近7日間の日間増加量",
+    "chartTitle30d": "直近30日間の日間増加量",
+    "days7": "7日",
+    "days30": "30日",
+    "noDataPoint": "この日のデータなし",
+    "expandGroup": "グループを表示",
+    "collapseGroup": "簡易表示に戻る"
+  },
   "search": {
     "character": "キャラ名・職業・サーバーで検索",
     "job": "職業名で絞り込み"

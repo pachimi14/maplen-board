@@ -238,6 +238,77 @@ export function lastHistoryPoints(character, count = 7) {
   return history.slice(-count);
 }
 
+export const GROUP_LINE_COLORS = [
+  "#34d399",
+  "#38bdf8",
+  "#fbbf24",
+  "#f472b6",
+  "#a78bfa",
+  "#fb923c",
+];
+
+/** Resolve a stored group member key (character name) to a ranking row. */
+export function findCharacterByMemberKey(characters, memberKey) {
+  const key = String(memberKey || "").trim();
+  if (!key) {
+    return null;
+  }
+  return characters.find((character) => String(character.name || "").trim() === key) ?? null;
+}
+
+/**
+ * Merge daily gain history for multiple characters into chart rows.
+ * Returns { series, members } where each member has { key, name, color, character }.
+ */
+export function buildGroupGainSeries(characters, memberKeys, days = 7) {
+  const members = memberKeys
+    .map((key) => {
+      const character = findCharacterByMemberKey(characters, key);
+      if (!character) {
+        return null;
+      }
+      return {
+        key,
+        name: character.name,
+        character,
+        color: GROUP_LINE_COLORS[0],
+        points: lastHistoryPoints(character, days),
+      };
+    })
+    .filter(Boolean);
+
+  members.forEach((member, index) => {
+    member.color = GROUP_LINE_COLORS[index % GROUP_LINE_COLORS.length];
+  });
+
+  const snapshotDates = new Set();
+  for (const member of members) {
+    for (const point of member.points) {
+      if (point.snapshotDate) {
+        snapshotDates.add(point.snapshotDate);
+      }
+    }
+  }
+
+  const sortedSnapshotDates = [...snapshotDates].sort();
+  const series = sortedSnapshotDates.map((snapshotDate) => {
+    const row = { snapshotDate };
+    for (const member of members) {
+      const point = member.points.find((item) => item.snapshotDate === snapshotDate);
+      row[member.key] = point?.dailyGain ?? null;
+      if (point?.date) {
+        row.date = point.date;
+      }
+    }
+    if (!row.date) {
+      row.date = snapshotDate;
+    }
+    return row;
+  });
+
+  return { series, members };
+}
+
 /** History points whose snapshotDate falls in [start, end] (ISO dates). */
 export function historyPointsInPeriod(character, periodStart, periodEnd) {
   const history = Array.isArray(character.history) ? character.history : [];
@@ -738,16 +809,6 @@ export function requiredGainForLevelByDate(
   };
 }
 
-export function compareGainWith(character, other, period) {
-  const selfGain = getGainAmount(character, period);
-  const otherGain = getGainAmount(other, period);
-  return {
-    self: selfGain,
-    other: otherGain,
-    diff: selfGain - otherGain,
-    ratio: otherGain > 0 ? selfGain / otherGain : null,
-  };
-}
 
 export function topGainersForPeriod(characters, period, limit = 3, gainRankMaps = null) {
   return [...characters]
