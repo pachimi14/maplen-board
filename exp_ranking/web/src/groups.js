@@ -1,6 +1,6 @@
 import { favoriteKey } from "./favorites";
 
-export const MAX_GROUP_MEMBERS = 15;
+export const MAX_GROUP_MEMBERS = 20;
 const STORAGE_KEY = "msu_exp_ranking_groups";
 const ACTIVE_KEY = "msu_exp_ranking_active_group";
 const FAVORITES_PANEL_KEY = "msu_exp_ranking_group_favorites_open";
