@@ -50,6 +50,11 @@
     "notFound": "Không có trong bảng xếp hạng",
     "chartTitle7d": "EXP ngày — 7 ngày gần nhất",
     "chartTitle30d": "EXP ngày — 30 ngày gần nhất",
+    "chartTitleCustom": "EXP ngày — {{from}} đến {{to}}",
+    "chartTitleCustomRange": "EXP ngày — khoảng tùy chọn",
+    "chartPeriodCustom": "Tùy chọn",
+    "chartDateFrom": "Từ",
+    "chartDateTo": "Đến",
     "days7": "7 ngày",
     "days30": "30 ngày",
     "chartHeight": {

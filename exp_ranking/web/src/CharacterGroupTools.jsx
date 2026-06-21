@@ -7,13 +7,16 @@ import {
   groupMemberKey,
   groupChartHeightPx,
   loadChartHeightLevel,
+  loadChartPeriodState,
   loadFavoritesPanelOpen,
   saveChartHeightLevel,
+  saveChartPeriodState,
   saveFavoritesPanelOpen,
 } from "./groups";
 import { useTranslation } from "./i18n/I18nContext";
 import {
   buildGroupGainSeries,
+  defaultGroupChartCustomRange,
   findCharacterByMemberKey,
   formatExp,
   formatJobName,
@@ -265,7 +268,7 @@ export default function CharacterGroupTools({
   variant = "full",
 }) {
   const { t } = useTranslation();
-  const [chartDays, setChartDays] = useState(7);
+  const [chartPeriod, setChartPeriod] = useState(() => loadChartPeriodState());
   const [chartHeightLevel, setChartHeightLevel] = useState(() => loadChartHeightLevel());
   const [renameDraft, setRenameDraft] = useState("");
   const [highlightedMemberKey, setHighlightedMemberKey] = useState(null);
@@ -274,14 +277,67 @@ export default function CharacterGroupTools({
   const inGroup = isInActiveGroup(character);
   const memberFull = memberKeys.length >= maxMembers && !inGroup;
 
+  const chartRange = useMemo(() => {
+    if (chartPeriod.mode === "custom") {
+      const defaults = defaultGroupChartCustomRange(characters, memberKeys, 7);
+      let start = chartPeriod.start || defaults.start;
+      let end = chartPeriod.end || defaults.end;
+      if (start && end && start > end) {
+        [start, end] = [end, start];
+      }
+      return { start, end };
+    }
+    return { days: Number(chartPeriod.mode) || 7 };
+  }, [chartPeriod, characters, memberKeys]);
+
   const { series, members } = useMemo(
-    () => buildGroupGainSeries(characters, memberKeys, chartDays),
-    [characters, memberKeys, chartDays],
+    () => buildGroupGainSeries(characters, memberKeys, chartRange),
+    [characters, memberKeys, chartRange],
   );
+
+  const chartTitle = useMemo(() => {
+    if (chartPeriod.mode === "7") {
+      return t("group.chartTitle7d");
+    }
+    if (chartPeriod.mode === "30") {
+      return t("group.chartTitle30d");
+    }
+    if (chartRange.start && chartRange.end) {
+      return t("group.chartTitleCustom", { from: chartRange.start, to: chartRange.end });
+    }
+    return t("group.chartTitleCustomRange");
+  }, [chartPeriod.mode, chartRange, t]);
 
   useEffect(() => {
     setHighlightedMemberKey(null);
-  }, [chartDays, memberKeys.join("|")]);
+  }, [chartPeriod.mode, chartPeriod.start, chartPeriod.end, memberKeys.join("|")]);
+
+  const setPeriodMode = (mode) => {
+    if (mode === "custom") {
+      const defaults = defaultGroupChartCustomRange(characters, memberKeys, 7);
+      const next = {
+        mode: "custom",
+        start: chartPeriod.start || defaults.start,
+        end: chartPeriod.end || defaults.end,
+      };
+      setChartPeriod(next);
+      saveChartPeriodState(next);
+      return;
+    }
+    const next = { mode, start: "", end: "" };
+    setChartPeriod(next);
+    saveChartPeriodState(next);
+  };
+
+  const updateCustomRange = (field, value) => {
+    const next = {
+      mode: "custom",
+      start: field === "start" ? value : chartPeriod.start,
+      end: field === "end" ? value : chartPeriod.end,
+    };
+    setChartPeriod(next);
+    saveChartPeriodState(next);
+  };
 
   const handleAddCharacter = (characterId) => {
     if (!activeGroup || memberKeys.length >= maxMembers) {
@@ -496,44 +552,76 @@ export default function CharacterGroupTools({
 
       {memberKeys.length > 0 ? (
         <div className="space-y-3 pt-2 border-t border-slate-800">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <h4 className="font-semibold text-sm">
-              {chartDays === 7 ? t("group.chartTitle7d") : t("group.chartTitle30d")}
-            </h4>
-            <div className="flex flex-wrap gap-2 justify-end">
-              <div className="flex gap-1">
-                {(["normal", "large", "xlarge"]).map((level) => (
-                  <Button
-                    key={level}
-                    type="button"
-                    size="sm"
-                    variant={chartHeightLevel === level ? "default" : "outline"}
-                    className={chartHeightLevel === level ? "" : "border-slate-700"}
-                    onClick={() => setChartHeight(level)}
-                  >
-                    {t(`group.chartHeight.${level}`)}
-                  </Button>
-                ))}
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <h4 className="font-semibold text-sm">{chartTitle}</h4>
+              <div className="flex flex-wrap gap-2 justify-end">
+                <div className="flex gap-1">
+                  {(["normal", "large", "xlarge"]).map((level) => (
+                    <Button
+                      key={level}
+                      type="button"
+                      size="sm"
+                      variant={chartHeightLevel === level ? "default" : "outline"}
+                      className={chartHeightLevel === level ? "" : "border-slate-700"}
+                      onClick={() => setChartHeight(level)}
+                    >
+                      {t(`group.chartHeight.${level}`)}
+                    </Button>
+                  ))}
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={chartPeriod.mode === "7" ? "default" : "outline"}
+                  className={chartPeriod.mode === "7" ? "" : "border-slate-700"}
+                  onClick={() => setPeriodMode("7")}
+                >
+                  {t("group.days7")}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={chartPeriod.mode === "30" ? "default" : "outline"}
+                  className={chartPeriod.mode === "30" ? "" : "border-slate-700"}
+                  onClick={() => setPeriodMode("30")}
+                >
+                  {t("group.days30")}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={chartPeriod.mode === "custom" ? "default" : "outline"}
+                  className={chartPeriod.mode === "custom" ? "" : "border-slate-700"}
+                  onClick={() => setPeriodMode("custom")}
+                >
+                  {t("group.chartPeriodCustom")}
+                </Button>
               </div>
-              <Button
-                type="button"
-                size="sm"
-                variant={chartDays === 7 ? "default" : "outline"}
-                className={chartDays === 7 ? "" : "border-slate-700"}
-                onClick={() => setChartDays(7)}
-              >
-                {t("group.days7")}
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={chartDays === 30 ? "default" : "outline"}
-                className={chartDays === 30 ? "" : "border-slate-700"}
-                onClick={() => setChartDays(30)}
-              >
-                {t("group.days30")}
-              </Button>
             </div>
+
+            {chartPeriod.mode === "custom" ? (
+              <div className="flex flex-col sm:flex-row sm:items-end gap-2">
+                <div className="flex-1 min-w-0">
+                  <label className="block text-xs text-slate-400 mb-1">{t("group.chartDateFrom")}</label>
+                  <Input
+                    type="date"
+                    value={chartRange.start || ""}
+                    onChange={(event) => updateCustomRange("start", event.target.value)}
+                    className="bg-slate-900 border-slate-700 text-slate-100"
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <label className="block text-xs text-slate-400 mb-1">{t("group.chartDateTo")}</label>
+                  <Input
+                    type="date"
+                    value={chartRange.end || ""}
+                    onChange={(event) => updateCustomRange("end", event.target.value)}
+                    className="bg-slate-900 border-slate-700 text-slate-100"
+                  />
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <div style={{ height: chartHeightPx }}>
@@ -547,7 +635,7 @@ export default function CharacterGroupTools({
                 <XAxis
                   dataKey="date"
                   tick={{ fill: "#94a3b8", fontSize: 12 }}
-                  minTickGap={chartDays > 7 ? 4 : 8}
+                  minTickGap={series.length > 14 ? 4 : 8}
                 />
                 <YAxis
                   tickFormatter={formatExp}

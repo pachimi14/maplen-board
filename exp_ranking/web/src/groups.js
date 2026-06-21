@@ -5,7 +5,11 @@ const STORAGE_KEY = "msu_exp_ranking_groups";
 const ACTIVE_KEY = "msu_exp_ranking_active_group";
 const FAVORITES_PANEL_KEY = "msu_exp_ranking_group_favorites_open";
 const CHART_HEIGHT_KEY = "msu_exp_ranking_group_chart_height";
+const CHART_PERIOD_KEY = "msu_exp_ranking_group_chart_period";
+const CHART_START_KEY = "msu_exp_ranking_group_chart_start";
+const CHART_END_KEY = "msu_exp_ranking_group_chart_end";
 
+export const GROUP_CHART_PERIOD_MODES = ["7", "30", "custom"];
 export const GROUP_CHART_HEIGHT_LEVELS = ["normal", "large", "xlarge"];
 
 export { favoriteKey as groupMemberKey };
@@ -85,4 +89,29 @@ export function groupChartHeightPx(variant, level) {
   const full = { normal: 320, large: 480, xlarge: 640 };
   const table = variant === "compact" ? compact : full;
   return table[level] ?? table.normal;
+}
+
+export function loadChartPeriodState() {
+  try {
+    const mode = localStorage.getItem(CHART_PERIOD_KEY);
+    const start = localStorage.getItem(CHART_START_KEY) || "";
+    const end = localStorage.getItem(CHART_END_KEY) || "";
+    if (GROUP_CHART_PERIOD_MODES.includes(mode)) {
+      return { mode, start, end };
+    }
+    return { mode: "7", start: "", end: "" };
+  } catch {
+    return { mode: "7", start: "", end: "" };
+  }
+}
+
+export function saveChartPeriodState({ mode, start, end }) {
+  if (!GROUP_CHART_PERIOD_MODES.includes(mode)) {
+    return;
+  }
+  localStorage.setItem(CHART_PERIOD_KEY, mode);
+  if (mode === "custom") {
+    localStorage.setItem(CHART_START_KEY, start || "");
+    localStorage.setItem(CHART_END_KEY, end || "");
+  }
 }
