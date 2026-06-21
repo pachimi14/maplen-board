@@ -50,6 +50,11 @@
     "notFound": "ランキングに未登録",
     "chartTitle7d": "直近7日間の日間増加量",
     "chartTitle30d": "直近30日間の日間増加量",
+    "chartTitleCustom": "{{from}} ～ {{to}} の日間増加量",
+    "chartTitleCustomRange": "期間指定の日間増加量",
+    "chartPeriodCustom": "期間指定",
+    "chartDateFrom": "開始日",
+    "chartDateTo": "終了日",
     "days7": "7日",
     "days30": "30日",
     "chartHeight": {

@@ -50,6 +50,11 @@
     "notFound": "ไม่อยู่ในอันดับ",
     "chartTitle7d": "EXP รายวัน — 7 วันล่าสุด",
     "chartTitle30d": "EXP รายวัน — 30 วันล่าสุด",
+    "chartTitleCustom": "EXP รายวัน — {{from}} ถึง {{to}}",
+    "chartTitleCustomRange": "EXP รายวัน — ช่วงที่กำหนด",
+    "chartPeriodCustom": "กำหนดเอง",
+    "chartDateFrom": "เริ่ม",
+    "chartDateTo": "สิ้นสุด",
     "days7": "7 วัน",
     "days30": "30 วัน",
     "chartHeight": {

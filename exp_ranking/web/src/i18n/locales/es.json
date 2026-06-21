@@ -50,6 +50,11 @@
     "notFound": "No está en el ranking",
     "chartTitle7d": "Ganancia diaria — últimos 7 días",
     "chartTitle30d": "Ganancia diaria — últimos 30 días",
+    "chartTitleCustom": "Ganancia diaria — {{from}} a {{to}}",
+    "chartTitleCustomRange": "Ganancia diaria — rango personalizado",
+    "chartPeriodCustom": "Personalizado",
+    "chartDateFrom": "Desde",
+    "chartDateTo": "Hasta",
     "days7": "7 d",
     "days30": "30 d",
     "chartHeight": {

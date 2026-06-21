@@ -238,6 +238,41 @@ export function lastHistoryPoints(character, count = 7) {
   return history.slice(-count);
 }
 
+export function addDaysToIsoDate(isoDate, days) {
+  const match = String(isoDate || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) {
+    return "";
+  }
+  const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+/** Latest snapshotDate among group members (ISO yyyy-mm-dd). */
+export function latestSnapshotDateAmong(characters, memberKeys) {
+  let latest = "";
+  for (const key of memberKeys) {
+    const character = findCharacterByMemberKey(characters, key);
+    const history = Array.isArray(character?.history) ? character.history : [];
+    for (const point of history) {
+      const snapshotDate = String(point.snapshotDate || "").trim();
+      if (snapshotDate && snapshotDate > latest) {
+        latest = snapshotDate;
+      }
+    }
+  }
+  return latest;
+}
+
+export function defaultGroupChartCustomRange(characters, memberKeys, spanDays = 7) {
+  const end = latestSnapshotDateAmong(characters, memberKeys);
+  if (!end) {
+    return { start: "", end: "" };
+  }
+  const start = addDaysToIsoDate(end, -(spanDays - 1));
+  return { start, end };
+}
+
 function hslToHex(h, s, l) {
   s /= 100;
   l /= 100;
@@ -294,9 +329,16 @@ export function findCharacterByMemberKey(characters, memberKey) {
 
 /**
  * Merge daily gain history for multiple characters into chart rows.
- * Returns { series, members } where each member has { key, name, color, character }.
+ * range: { days: number } or { start: "yyyy-mm-dd", end: "yyyy-mm-dd" }
  */
-export function buildGroupGainSeries(characters, memberKeys, days = 7) {
+export function buildGroupGainSeries(characters, memberKeys, range = { days: 7 }) {
+  const resolvePoints = (character) => {
+    if (range.start && range.end) {
+      return historyPointsInPeriod(character, range.start, range.end);
+    }
+    return lastHistoryPoints(character, range.days ?? 7);
+  };
+
   const members = memberKeys
     .map((key) => {
       const character = findCharacterByMemberKey(characters, key);
@@ -308,7 +350,7 @@ export function buildGroupGainSeries(characters, memberKeys, days = 7) {
         name: character.name,
         character,
         color: GROUP_LINE_COLORS[0],
-        points: lastHistoryPoints(character, days),
+        points: resolvePoints(character),
       };
     })
     .filter(Boolean);

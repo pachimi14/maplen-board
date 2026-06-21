@@ -50,6 +50,11 @@
     "notFound": "不在排名中",
     "chartTitle7d": "近 7 日日間增加量",
     "chartTitle30d": "近 30 日日間增加量",
+    "chartTitleCustom": "{{from}} ～ {{to}} 日間增加量",
+    "chartTitleCustomRange": "自訂期間日間增加量",
+    "chartPeriodCustom": "自訂期間",
+    "chartDateFrom": "開始日",
+    "chartDateTo": "結束日",
     "days7": "7 日",
     "days30": "30 日",
     "chartHeight": {

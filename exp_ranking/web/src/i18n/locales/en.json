@@ -50,6 +50,11 @@
     "notFound": "Not in ranking",
     "chartTitle7d": "Daily gain — last 7 days",
     "chartTitle30d": "Daily gain — last 30 days",
+    "chartTitleCustom": "Daily gain — {{from}} to {{to}}",
+    "chartTitleCustomRange": "Daily gain — custom range",
+    "chartPeriodCustom": "Custom",
+    "chartDateFrom": "From",
+    "chartDateTo": "To",
     "days7": "7d",
     "days30": "30d",
     "chartHeight": {
