@@ -129,7 +129,7 @@
   },
   "jobRanking": {
     "title": "เพิ่ม EXP {{period}} — ตามอาชีพ",
-    "subtitle": "Adventurer / Hero / Cygnus (TOP {{count}} ต่ออาชีพ)",
+    "subtitle": "ตามพันธมิตร (TOP {{count}} ต่ออาชีพ)",
     "members": "{{count}} คน",
     "backToList": "กลับไปรายการอาชีพ",
     "jobRank": "อันดับในอาชีพ",
@@ -144,7 +144,9 @@
   "alliance": {
     "冒険家": "Adventurer",
     "英雄": "Hero",
-    "シグナス": "Cygnus"
+    "シグナス": "Cygnus",
+    "レフ": "Flora",
+    "アニマ": "Anima"
   },
   "branch": {
     "戦士": "Warrior",

@@ -43,6 +43,14 @@ JOB_DISPLAY_BY_BASE: dict[str, str] = {
     "MIKHAEL": "Mihile",
     "MIKAEL": "Mihile",
     "MICHAEL": "Mihile",
+    "ARK": "Ark",
+    "ADELE": "Adele",
+    "LEF_PIRATE": "Ark",
+    "LEFPIRATE": "Ark",
+    "LEF_WARRIOR": "Adele",
+    "LEFWARRIOR": "Adele",
+    "HOYOUNG": "Ho Young",
+    "HO_YOUNG": "Ho Young",
 }
 
 JOB_LITERAL_ALIASES: dict[str, str] = {
@@ -52,6 +60,12 @@ JOB_LITERAL_ALIASES: dict[str, str] = {
     "Mikhail": "Mihile",
     "Michael": "Mihile",
     "Mihael": "Mihile",
+    "アーク": "Ark",
+    "アデル": "Adele",
+    "ホヨン": "Ho Young",
+    "虎影": "Ho Young",
+    "Lef Pirate": "Ark",
+    "Lef Warrior": "Adele",
 }
 
 

@@ -18,6 +18,12 @@ const JOB_LITERAL_ALIASES = {
   Mikhail: MIHILE,
   Michael: MIHILE,
   Mihael: MIHILE,
+  アーク: "Ark",
+  アデル: "Adele",
+  ホヨン: "Ho Young",
+  虎影: "Ho Young",
+  "Lef Pirate": "Ark",
+  "Lef Warrior": "Adele",
 };
 
 function lookupLiteralJob(name) {
@@ -72,6 +78,10 @@ const CYGNUS_JOBS = [
   MIHILE,
 ];
 
+const LEF_JOBS = ["Ark", "Adele"];
+
+const ANIMA_JOBS = ["Ho Young"];
+
 /** API / formatJobName variants → canonical job name */
 const JOB_KEY_ALIASES = {
   hero: "Hero",
@@ -124,6 +134,12 @@ const JOB_KEY_ALIASES = {
   mikhail: MIHILE,
   michael: MIHILE,
   mihael: MIHILE,
+  ark: "Ark",
+  adele: "Adele",
+  lefpirate: "Ark",
+  lefwarrior: "Adele",
+  hoyoung: "Ho Young",
+  hoyoungmage: "Ho Young",
 };
 
 const JOB_CATEGORY_LOOKUP = new Map();
@@ -150,6 +166,14 @@ for (const job of CYGNUS_JOBS) {
   registerJob("シグナス", null, job);
 }
 
+for (const job of LEF_JOBS) {
+  registerJob("レフ", null, job);
+}
+
+for (const job of ANIMA_JOBS) {
+  registerJob("アニマ", null, job);
+}
+
 for (const [key, canonical] of Object.entries(JOB_KEY_ALIASES)) {
   const category = JOB_CATEGORY_LOOKUP.get(normalizeJobKey(canonical));
   if (category) {
@@ -161,6 +185,8 @@ export const JOB_TAXONOMY = [
   { alliance: "冒険家", branches: ADVENTURER_BRANCHES },
   { alliance: "英雄", branches: [{ branch: null, jobs: HERO_JOBS }] },
   { alliance: "シグナス", branches: [{ branch: null, jobs: CYGNUS_JOBS }] },
+  { alliance: "レフ", branches: [{ branch: null, jobs: LEF_JOBS }] },
+  { alliance: "アニマ", branches: [{ branch: null, jobs: ANIMA_JOBS }] },
 ];
 
 export const JOB_ALLIANCES = JOB_TAXONOMY.map((entry) => entry.alliance);

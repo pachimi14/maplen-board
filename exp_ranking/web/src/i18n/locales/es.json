@@ -129,7 +129,7 @@
   },
   "jobRanking": {
     "title": "EXP {{period}} — por clase",
-    "subtitle": "Adventurer / Hero / Cygnus (TOP {{count}} por clase)",
+    "subtitle": "Por alianza (TOP {{count}} por clase)",
     "members": "{{count}} jugadores",
     "backToList": "Volver a clases",
     "jobRank": "Rango en clase",
@@ -144,7 +144,9 @@
   "alliance": {
     "冒険家": "Aventurero",
     "英雄": "Héroe",
-    "シグナス": "Cygnus"
+    "シグナス": "Cygnus",
+    "レフ": "Flora",
+    "アニマ": "Anima"
   },
   "branch": {
     "戦士": "Guerrero",

@@ -83,6 +83,14 @@ const JOB_DISPLAY_BY_BASE = {
   MIKHAEL: "Mihile",
   MIKAEL: "Mihile",
   MICHAEL: "Mihile",
+  ARK: "Ark",
+  ADELE: "Adele",
+  LEF_PIRATE: "Ark",
+  LEFPIRATE: "Ark",
+  LEF_WARRIOR: "Adele",
+  LEFWARRIOR: "Adele",
+  HOYOUNG: "Ho Young",
+  HO_YOUNG: "Ho Young",
 };
 
 /** Normalize API / JSON job label to display name (e.g. Eunwol4 → Shade). */
