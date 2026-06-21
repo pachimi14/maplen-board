@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import sqlite3
+from datetime import datetime, timezone
 from pathlib import Path
 
 from models import SnapshotRow
@@ -38,6 +40,11 @@ CREATE TABLE IF NOT EXISTS character_meta (
     world_id TEXT NOT NULL DEFAULT '',
     updated_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS app_meta (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
 """
 
 
@@ -63,6 +70,95 @@ def init_db(db_path: Path) -> None:
         conn.executescript(_SCHEMA)
         _migrate_schema(conn)
         conn.commit()
+
+
+def get_app_meta(db_path: Path, key: str) -> str | None:
+    init_db(db_path)
+    with sqlite3.connect(db_path) as conn:
+        row = conn.execute(
+            "SELECT value FROM app_meta WHERE key = ?",
+            (key,),
+        ).fetchone()
+    if not row:
+        return None
+    value = str(row[0] or "").strip()
+    return value or None
+
+
+def set_app_meta(db_path: Path, key: str, value: str) -> None:
+    init_db(db_path)
+    with sqlite3.connect(db_path) as conn:
+        conn.execute(
+            """
+            INSERT INTO app_meta (key, value) VALUES (?, ?)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value
+            """,
+            (key, value),
+        )
+        conn.commit()
+
+
+LAST_RANKING_FETCHED_AT_KEY = "last_ranking_fetched_at"
+
+
+def parse_iso_datetime(raw: str) -> datetime | None:
+    text = str(raw or "").strip()
+    if not text:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def latest_snapshot_fetched_at(db_path: Path) -> datetime | None:
+    init_db(db_path)
+    with sqlite3.connect(db_path) as conn:
+        row = conn.execute(
+            """
+            SELECT fetched_at
+            FROM ranking_snapshot
+            WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM ranking_snapshot)
+            ORDER BY fetched_at DESC
+            LIMIT 1
+            """
+        ).fetchone()
+    if not row:
+        return None
+    return parse_iso_datetime(str(row[0]))
+
+
+def ensure_ranking_fetched_at_meta(db_path: Path, json_path: Path) -> None:
+    if get_app_meta(db_path, LAST_RANKING_FETCHED_AT_KEY):
+        return
+
+    if json_path.exists():
+        try:
+            payload = json.loads(json_path.read_text(encoding="utf-8"))
+            meta = payload.get("meta")
+            if isinstance(meta, dict):
+                raw = str(meta.get("updatedAt") or "").strip()
+                parsed = parse_iso_datetime(raw)
+                if parsed:
+                    set_app_meta(
+                        db_path,
+                        LAST_RANKING_FETCHED_AT_KEY,
+                        parsed.isoformat(timespec="seconds"),
+                    )
+                    return
+        except (OSError, json.JSONDecodeError):
+            pass
+
+    from_db = latest_snapshot_fetched_at(db_path)
+    if from_db:
+        set_app_meta(
+            db_path,
+            LAST_RANKING_FETCHED_AT_KEY,
+            from_db.isoformat(timespec="seconds"),
+        )
 
 
 def append_snapshots(
