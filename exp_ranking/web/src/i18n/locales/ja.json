@@ -41,7 +41,7 @@
     "delete": "削除",
     "members": "メンバー {{count}} / {{max}}",
     "addMember": "キャラを追加",
-    "memberLimit": "6人まで登録できます",
+    "memberLimit": "{{max}}人まで登録できます",
     "emptyMembers": "メンバーを追加するとグラフが表示されます",
     "emptyGroups": "「新規グループ」で比較用のグループを作成してください",
     "removeMember": "メンバーを外す",
@@ -52,9 +52,19 @@
     "chartTitle30d": "直近30日間の日間増加量",
     "days7": "7日",
     "days30": "30日",
+    "chartHeight": {
+      "normal": "標準",
+      "large": "大",
+      "xlarge": "特大"
+    },
     "noDataPoint": "この日のデータなし",
-    "expandGroup": "グループを表示",
-    "collapseGroup": "簡易表示に戻る"
+    "expandGroup": "拡大表示",
+    "collapseGroup": "簡易表示に戻る",
+    "addFromFavorites": "お気に入りから追加",
+    "showFavoritesPanel": "お気に入りから追加を表示",
+    "hideFavoritesPanel": "お気に入りから追加を非表示",
+    "addAllFavorites": "お気に入り {{count}} 人を追加",
+    "allFavoritesInGroup": "お気に入りはすべてグループに入っています"
   },
   "search": {
     "character": "キャラ名・職業・サーバーで検索",

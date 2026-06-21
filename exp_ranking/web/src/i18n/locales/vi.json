@@ -41,7 +41,7 @@
     "delete": "Xóa",
     "members": "Thành viên {{count}} / {{max}}",
     "addMember": "Thêm nhân vật",
-    "memberLimit": "Tối đa 6 thành viên mỗi nhóm",
+    "memberLimit": "Tối đa {{max}} thành viên mỗi nhóm",
     "emptyMembers": "Thêm thành viên để hiển thị biểu đồ",
     "emptyGroups": "Tạo nhóm bằng “Nhóm mới”",
     "removeMember": "Xóa thành viên",
@@ -52,9 +52,19 @@
     "chartTitle30d": "EXP ngày — 30 ngày gần nhất",
     "days7": "7 ngày",
     "days30": "30 ngày",
+    "chartHeight": {
+      "normal": "Vừa",
+      "large": "Lớn",
+      "xlarge": "XL"
+    },
     "noDataPoint": "Không có dữ liệu ngày này",
-    "expandGroup": "Hiển thị nhóm",
-    "collapseGroup": "Quay lại dạng gọn"
+    "expandGroup": "Mở rộng",
+    "collapseGroup": "Quay lại dạng gọn",
+    "addFromFavorites": "Thêm từ yêu thích",
+    "showFavoritesPanel": "Hiển thị yêu thích để thêm",
+    "hideFavoritesPanel": "Ẩn yêu thích để thêm",
+    "addAllFavorites": "Thêm {{count}} yêu thích",
+    "allFavoritesInGroup": "Tất cả yêu thích đã có trong nhóm"
   },
   "search": {
     "character": "Tìm tên, nghề, máy chủ",

@@ -238,14 +238,50 @@ export function lastHistoryPoints(character, count = 7) {
   return history.slice(-count);
 }
 
-export const GROUP_LINE_COLORS = [
-  "#34d399",
-  "#38bdf8",
-  "#fbbf24",
-  "#f472b6",
-  "#a78bfa",
-  "#fb923c",
+function hslToHex(h, s, l) {
+  s /= 100;
+  l /= 100;
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = l - c / 2;
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  if (h < 60) {
+    r = c;
+    g = x;
+  } else if (h < 120) {
+    r = x;
+    g = c;
+  } else if (h < 180) {
+    g = c;
+    b = x;
+  } else if (h < 240) {
+    g = x;
+    b = c;
+  } else if (h < 300) {
+    r = x;
+    b = c;
+  } else {
+    r = c;
+    b = x;
+  }
+  const toHex = (channel) =>
+    Math.round((channel + m) * 255)
+      .toString(16)
+      .padStart(2, "0");
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+/**
+ * 15 colors spaced ~90° on the hue wheel so consecutive members stay in
+ * different families (red → yellow → cyan → blue → orange → …).
+ */
+const GROUP_HUE_SEQUENCE = [
+  0, 90, 180, 270, 45, 135, 225, 315, 20, 110, 200, 290, 55, 145, 235,
 ];
+
+export const GROUP_LINE_COLORS = GROUP_HUE_SEQUENCE.map((hue) => hslToHex(hue, 82, 56));
 
 /** Resolve a stored group member key (character name) to a ranking row. */
 export function findCharacterByMemberKey(characters, memberKey) {

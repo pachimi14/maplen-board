@@ -41,7 +41,7 @@
     "delete": "Delete",
     "members": "Members {{count}} / {{max}}",
     "addMember": "Add character",
-    "memberLimit": "Up to 6 members per group",
+    "memberLimit": "Up to {{max}} members per group",
     "emptyMembers": "Add members to show the chart",
     "emptyGroups": "Create a group with “New group” to start comparing",
     "removeMember": "Remove member",
@@ -52,9 +52,19 @@
     "chartTitle30d": "Daily gain — last 30 days",
     "days7": "7d",
     "days30": "30d",
+    "chartHeight": {
+      "normal": "Normal",
+      "large": "Large",
+      "xlarge": "XL"
+    },
     "noDataPoint": "No data for this day",
-    "expandGroup": "Show group",
-    "collapseGroup": "Back to compact view"
+    "expandGroup": "Expand",
+    "collapseGroup": "Back to compact view",
+    "addFromFavorites": "Add from favorites",
+    "showFavoritesPanel": "Show favorites to add",
+    "hideFavoritesPanel": "Hide favorites to add",
+    "addAllFavorites": "Add {{count}} favorites",
+    "allFavoritesInGroup": "All favorites are already in the group"
   },
   "search": {
     "character": "Search name, job, or server",
