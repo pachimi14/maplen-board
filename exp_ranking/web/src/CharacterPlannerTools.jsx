@@ -4,7 +4,6 @@ import { useGainPeriodLabel, useTranslation } from "./i18n/I18nContext";
 import {
   LEVEL_CAP,
   MIN_PLANNER_LEVEL,
-  compareGainWith,
   computeGainAverages,
   defaultTargetDateIso,
   estimateDaysToLevelWithGain,
@@ -16,7 +15,6 @@ import {
   targetDatePartsAfterDays,
   toDailyGain,
 } from "./rankingUtils";
-
 const GAIN_PERIODS = ["daily", "weekly", "monthly"];
 const GAIN_SOURCES = ["daily", "weekly", "monthly", "custom"];
 
@@ -357,110 +355,6 @@ function RequiredGainSection({ character, expTable, t }) {
   );
 }
 
-function CompareSection({ character, characters, t }) {
-  const [query, setQuery] = useState("");
-  const [compareChar, setCompareChar] = useState(null);
-
-  const dailyPeriod = useGainPeriodLabel("daily");
-  const weeklyPeriod = useGainPeriodLabel("weekly");
-  const monthlyPeriod = useGainPeriodLabel("monthly");
-  const periodLabels = { daily: dailyPeriod, weekly: weeklyPeriod, monthly: monthlyPeriod };
-
-  const candidates = useMemo(() => {
-    const trimmed = query.trim().toLowerCase();
-    if (!trimmed) {
-      return [];
-    }
-    return characters
-      .filter(
-        (item) => item.id !== character.id && item.name.toLowerCase().includes(trimmed)
-      )
-      .slice(0, 20);
-  }, [characters, character.id, query]);
-
-  const rows = useMemo(() => {
-    if (!compareChar) {
-      return [];
-    }
-    return GAIN_PERIODS.map((period) => ({
-      period,
-      ...compareGainWith(character, compareChar, period),
-    }));
-  }, [character, compareChar]);
-
-  return (
-    <PlannerCard title={t("characterDetail.planner.compareTitle")}>
-      <div>
-        <FieldLabel>{t("characterDetail.planner.compareSearch")}</FieldLabel>
-        <Input
-          type="text"
-          value={query}
-          onChange={(event) => {
-            setQuery(event.target.value);
-            setCompareChar(null);
-          }}
-          className="w-full bg-slate-900 border-slate-700 text-slate-100"
-        />
-        {candidates.length > 0 && !compareChar ? (
-          <ul className="mt-2 max-h-40 overflow-y-auto rounded-lg border border-slate-800 divide-y divide-slate-800">
-            {candidates.map((item) => (
-              <li key={item.id}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCompareChar(item);
-                    setQuery(item.name);
-                  }}
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-slate-800 text-slate-200"
-                >
-                  {item.name}
-                  <span className="text-slate-500 ml-2">
-                    Lv.{item.level} #{item.rank}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-      </div>
-
-      {!compareChar ? (
-        <div className="text-sm text-slate-500">{t("characterDetail.planner.noCompareSelected")}</div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-slate-400 text-left">
-                <th className="pb-2 pr-3 font-medium">{t("characterDetail.planner.period")}</th>
-                <th className="pb-2 pr-3 font-medium">{t("characterDetail.planner.compareSelf")}</th>
-                <th className="pb-2 pr-3 font-medium">{compareChar.name}</th>
-                <th className="pb-2 font-medium">{t("characterDetail.planner.compareDiff")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.period} className="border-t border-slate-800">
-                  <td className="py-2 pr-3 text-slate-300">{periodLabels[row.period]}</td>
-                  <td className="py-2 pr-3 text-emerald-400 tabular-nums">+{formatExp(row.self)}</td>
-                  <td className="py-2 pr-3 text-sky-300 tabular-nums">+{formatExp(row.other)}</td>
-                  <td
-                    className={`py-2 tabular-nums font-semibold ${
-                      row.diff > 0 ? "text-emerald-400" : row.diff < 0 ? "text-rose-400" : "text-slate-400"
-                    }`}
-                  >
-                    {row.diff > 0 ? "+" : ""}
-                    {formatExp(row.diff)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </PlannerCard>
-  );
-}
-
 export default function CharacterPlannerTools({
   character,
   characters,
@@ -477,7 +371,6 @@ export default function CharacterPlannerTools({
         <DaysToLevelSection character={character} expTable={expTable} t={t} />
         <RequiredGainSection character={character} expTable={expTable} t={t} />
       </div>
-      <CompareSection character={character} characters={characters} t={t} />
     </div>
   );
 }

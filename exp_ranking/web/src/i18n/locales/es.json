@@ -32,6 +32,30 @@
     "byJob": "Por clase",
     "allServers": "Todos los servidores"
   },
+  "group": {
+    "view": "Grupo",
+    "title": "Comparación de grupo",
+    "subtitle": "Hasta {{max}} personajes; compara ganancia diaria en un gráfico de líneas",
+    "newGroup": "Nuevo grupo",
+    "rename": "Guardar nombre",
+    "delete": "Eliminar",
+    "members": "Miembros {{count}} / {{max}}",
+    "addMember": "Añadir personaje",
+    "memberLimit": "Máximo 6 miembros por grupo",
+    "emptyMembers": "Añade miembros para ver el gráfico",
+    "emptyGroups": "Crea un grupo con “Nuevo grupo”",
+    "removeMember": "Quitar miembro",
+    "addToGroup": "Añadir al grupo",
+    "removeFromGroup": "Quitar del grupo",
+    "notFound": "No está en el ranking",
+    "chartTitle7d": "Ganancia diaria — últimos 7 días",
+    "chartTitle30d": "Ganancia diaria — últimos 30 días",
+    "days7": "7 d",
+    "days30": "30 d",
+    "noDataPoint": "Sin datos este día",
+    "expandGroup": "Mostrar grupo",
+    "collapseGroup": "Volver a vista compacta"
+  },
   "search": {
     "character": "Buscar nombre, clase o servidor",
     "job": "Filtrar por clase"

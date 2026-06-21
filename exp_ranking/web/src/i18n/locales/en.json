@@ -32,6 +32,30 @@
     "byJob": "By job",
     "allServers": "All servers"
   },
+  "group": {
+    "view": "Group",
+    "title": "Group comparison",
+    "subtitle": "Add up to {{max}} characters and compare daily gains on a line chart",
+    "newGroup": "New group",
+    "rename": "Save name",
+    "delete": "Delete",
+    "members": "Members {{count}} / {{max}}",
+    "addMember": "Add character",
+    "memberLimit": "Up to 6 members per group",
+    "emptyMembers": "Add members to show the chart",
+    "emptyGroups": "Create a group with “New group” to start comparing",
+    "removeMember": "Remove member",
+    "addToGroup": "Add to group",
+    "removeFromGroup": "Remove from group",
+    "notFound": "Not in ranking",
+    "chartTitle7d": "Daily gain — last 7 days",
+    "chartTitle30d": "Daily gain — last 30 days",
+    "days7": "7d",
+    "days30": "30d",
+    "noDataPoint": "No data for this day",
+    "expandGroup": "Show group",
+    "collapseGroup": "Back to compact view"
+  },
   "search": {
     "character": "Search name, job, or server",
     "job": "Filter by job name"

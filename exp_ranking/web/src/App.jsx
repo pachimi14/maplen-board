@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Star } from "lucide-react";
 import CharacterDetail from "./CharacterDetail";
+import GroupPanel from "./GroupPanel";
 import FavoriteStar from "./FavoriteStar";
 import TopGainHighlights from "./TopGainHighlights";
 import JobGainRankings from "./JobGainRankings";
 import LanguageSwitcher from "./LanguageSwitcher";
 import { useGainPeriodLabel, useTranslation } from "./i18n/I18nContext";
 import { useFavorites } from "./useFavorites";
+import { useGroups } from "./useGroups";
 import NavigatorLink from "./NavigatorLink";
 import {
   computeGainRankMaps,
@@ -120,14 +122,45 @@ export default function App() {
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [worldFilter, setWorldFilter] = useState("all");
   const [detailView, setDetailView] = useState("compact");
+  const [groupView, setGroupView] = useState("compact");
   const [showListWhenExpanded, setShowListWhenExpanded] = useState(false);
   const detailTopRef = useRef(null);
+  const groupTopRef = useRef(null);
   const { favoriteCount, isFavorite, toggleFavorite } = useFavorites();
+  const {
+    groups,
+    activeGroup,
+    activeGroupId,
+    setActiveGroupId,
+    createGroup,
+    deleteGroup,
+    renameGroup,
+    addMember,
+    removeMember,
+    isInActiveGroup,
+    toggleMemberInActiveGroup,
+    maxMembers: maxGroupMembers,
+  } = useGroups();
 
   const worldOptions = useMemo(() => {
     const fromMeta = Array.isArray(meta.worldIds) ? meta.worldIds : WORLD_IDS;
     return ["all", ...fromMeta];
   }, [meta.worldIds]);
+
+  const groupDetailProps = {
+    groups,
+    activeGroup,
+    activeGroupId,
+    setActiveGroupId,
+    createGroup,
+    deleteGroup,
+    renameGroup,
+    addMember,
+    removeMember,
+    isInActiveGroup,
+    toggleMemberInActiveGroup,
+    maxGroupMembers,
+  };
 
   const scheduledUpdateLabel = useMemo(
     () => formatScheduledUpdateLabel(meta, t),
@@ -252,6 +285,7 @@ export default function App() {
   }, [characters, rankingPool, favoritesOnly, selectedId]);
 
   const isExpandedDetail = detailView === "expanded";
+  const isExpandedGroup = groupView === "expanded";
   const showRankingList = !isExpandedDetail || showListWhenExpanded;
 
   const expandDetail = () => {
@@ -267,12 +301,30 @@ export default function App() {
     setShowListWhenExpanded(false);
   };
 
+  const expandGroup = () => {
+    setGroupView("expanded");
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  };
+
+  const collapseGroup = () => {
+    setGroupView("compact");
+  };
+
   useEffect(() => {
     if (!isExpandedDetail || !detailTopRef.current) {
       return;
     }
     detailTopRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [selectedId, isExpandedDetail]);
+
+  useEffect(() => {
+    if (!isExpandedGroup || !groupTopRef.current) {
+      return;
+    }
+    groupTopRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [selectedId, isExpandedGroup]);
 
   if (loading) {
     return (
@@ -415,6 +467,19 @@ export default function App() {
                     : t("characterDetail.showList")}
                 </Button>
               </div>
+            </div>
+          ) : null}
+
+          {isExpandedGroup && selectedCharacter ? (
+            <div ref={groupTopRef} className="space-y-4">
+              <GroupPanel
+                character={selectedCharacter}
+                characters={characters}
+                mode="expanded"
+                onCollapse={collapseGroup}
+                onSelectCharacter={setSelectedId}
+                {...groupDetailProps}
+              />
             </div>
           ) : null}
 
@@ -631,7 +696,7 @@ export default function App() {
 
           {!isExpandedDetail ? (
             selectedCharacter ? (
-              <div className="xl:col-span-1 min-w-0">
+              <div className="xl:col-span-1 min-w-0 space-y-6">
                 <CharacterDetail
                   character={selectedCharacter}
                   characters={rankingPool.length ? rankingPool : characters}
@@ -642,7 +707,18 @@ export default function App() {
                   onToggleFavorite={() => toggleFavorite(selectedCharacter)}
                   mode="compact"
                   onExpand={expandDetail}
+                  onSelectCharacter={setSelectedId}
                 />
+                {!isExpandedGroup ? (
+                  <GroupPanel
+                    character={selectedCharacter}
+                    characters={characters}
+                    mode="compact"
+                    onExpand={expandGroup}
+                    onSelectCharacter={setSelectedId}
+                    {...groupDetailProps}
+                  />
+                ) : null}
               </div>
             ) : (
               <Card className="xl:col-span-1 bg-slate-900 border border-slate-800 rounded-2xl shadow-xl">
