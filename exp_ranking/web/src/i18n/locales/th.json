@@ -41,7 +41,7 @@
     "delete": "ลบ",
     "members": "สมาชิก {{count}} / {{max}}",
     "addMember": "เพิ่มตัวละคร",
-    "memberLimit": "สูงสุด 6 คนต่อกลุ่ม",
+    "memberLimit": "สูงสุด {{max}} คนต่อกลุ่ม",
     "emptyMembers": "เพิ่มสมาชิกเพื่อแสดงกราฟ",
     "emptyGroups": "สร้างกลุ่มด้วยปุ่ม “กลุ่มใหม่”",
     "removeMember": "ลบสมาชิก",
@@ -52,9 +52,19 @@
     "chartTitle30d": "EXP รายวัน — 30 วันล่าสุด",
     "days7": "7 วัน",
     "days30": "30 วัน",
+    "chartHeight": {
+      "normal": "ปกติ",
+      "large": "ใหญ่",
+      "xlarge": "XL"
+    },
     "noDataPoint": "ไม่มีข้อมูลวันนี้",
-    "expandGroup": "แสดงกลุ่ม",
-    "collapseGroup": "กลับไปมุมมองย่อ"
+    "expandGroup": "ขยาย",
+    "collapseGroup": "กลับไปมุมมองย่อ",
+    "addFromFavorites": "เพิ่มจากรายการโปรด",
+    "showFavoritesPanel": "แสดงรายการโปรดเพื่อเพิ่ม",
+    "hideFavoritesPanel": "ซ่อนรายการโปรดเพื่อเพิ่ม",
+    "addAllFavorites": "เพิ่มรายการโปรด {{count}} คน",
+    "allFavoritesInGroup": "รายการโปรดอยู่ในกลุ่มครบแล้ว"
   },
   "search": {
     "character": "ค้นหาชื่อ อาชีพ เซิร์ฟเวอร์",

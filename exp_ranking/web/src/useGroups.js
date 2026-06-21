@@ -103,6 +103,62 @@ export function useGroups() {
     });
   }, []);
 
+  const addFavoritesToGroup = useCallback((favoriteKeys) => {
+    const keys = [
+      ...new Set(
+        [...favoriteKeys]
+          .map((key) => String(key || "").trim())
+          .filter(Boolean),
+      ),
+    ];
+    if (!keys.length) {
+      return 0;
+    }
+
+    let added = 0;
+    setState((previous) => {
+      let groups = [...previous.groups];
+      let activeGroupId = previous.activeGroupId;
+      let groupIndex = groups.findIndex((group) => group.id === activeGroupId);
+
+      if (groupIndex < 0) {
+        const members = [];
+        for (const key of keys) {
+          if (members.length >= MAX_GROUP_MEMBERS) {
+            break;
+          }
+          members.push(key);
+          added++;
+        }
+        const created = {
+          id: createGroupId(),
+          name: defaultGroupName(groups.length + 1),
+          members,
+        };
+        groups = [...groups, created];
+        activeGroupId = created.id;
+      } else {
+        const group = groups[groupIndex];
+        const members = [...group.members];
+        for (const key of keys) {
+          if (members.length >= MAX_GROUP_MEMBERS) {
+            break;
+          }
+          if (!members.includes(key)) {
+            members.push(key);
+            added++;
+          }
+        }
+        groups[groupIndex] = { ...group, members };
+      }
+
+      const next = { groups, activeGroupId };
+      persist(groups, activeGroupId);
+      return next;
+    });
+    return added;
+  }, []);
+
   const isInActiveGroup = useCallback(
     (character) => {
       if (!activeGroup) {
@@ -163,6 +219,7 @@ export function useGroups() {
     renameGroup,
     addMember,
     removeMember,
+    addFavoritesToGroup,
     isInActiveGroup,
     toggleMemberInActiveGroup,
     maxMembers: MAX_GROUP_MEMBERS,

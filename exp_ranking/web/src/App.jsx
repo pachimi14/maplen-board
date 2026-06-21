@@ -126,7 +126,7 @@ export default function App() {
   const [showListWhenExpanded, setShowListWhenExpanded] = useState(false);
   const detailTopRef = useRef(null);
   const groupTopRef = useRef(null);
-  const { favoriteCount, isFavorite, toggleFavorite } = useFavorites();
+  const { favoriteCount, favorites, isFavorite, toggleFavorite } = useFavorites();
   const {
     groups,
     activeGroup,
@@ -137,6 +137,7 @@ export default function App() {
     renameGroup,
     addMember,
     removeMember,
+    addFavoritesToGroup,
     isInActiveGroup,
     toggleMemberInActiveGroup,
     maxMembers: maxGroupMembers,
@@ -157,9 +158,11 @@ export default function App() {
     renameGroup,
     addMember,
     removeMember,
+    addFavoritesToGroup,
     isInActiveGroup,
     toggleMemberInActiveGroup,
     maxGroupMembers,
+    favorites,
   };
 
   const scheduledUpdateLabel = useMemo(
@@ -324,7 +327,7 @@ export default function App() {
       return;
     }
     groupTopRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, [selectedId, isExpandedGroup]);
+  }, [isExpandedGroup]);
 
   if (loading) {
     return (

@@ -1,9 +1,16 @@
-import React, { useMemo, useState } from "react";
-import { Plus, Trash2, Users, X } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import { Plus, Star, Trash2, Users, X, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import CharacterSearchPicker from "./CharacterSearchPicker";
-import { groupMemberKey } from "./groups";
+import {
+  groupMemberKey,
+  groupChartHeightPx,
+  loadChartHeightLevel,
+  loadFavoritesPanelOpen,
+  saveChartHeightLevel,
+  saveFavoritesPanelOpen,
+} from "./groups";
 import { useTranslation } from "./i18n/I18nContext";
 import {
   buildGroupGainSeries,
@@ -13,7 +20,6 @@ import {
 } from "./rankingUtils";
 import {
   CartesianGrid,
-  Legend,
   Line,
   LineChart,
   ResponsiveContainer,
@@ -51,6 +57,34 @@ function GroupGainTooltip({ active, payload, label, members, t }) {
   );
 }
 
+function GroupChartLegend({ members, highlightedKey, onHighlight }) {
+  return (
+    <ul className="flex flex-wrap justify-center gap-x-4 gap-y-2 pt-3 text-xs text-slate-300">
+      {members.map((member) => {
+        const active = highlightedKey === member.key;
+        return (
+          <li key={member.key}>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 hover:bg-slate-800/70"
+              onMouseEnter={() => onHighlight(member.key)}
+              onMouseLeave={() => onHighlight(null)}
+              onFocus={() => onHighlight(member.key)}
+              onBlur={() => onHighlight(null)}
+            >
+              <span
+                className="w-2.5 h-2.5 rounded-full shrink-0"
+                style={{ backgroundColor: member.color }}
+              />
+              <span className={active ? "font-semibold" : ""}>{member.name}</span>
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 export function GroupToggleButton({
   active,
   onToggle,
@@ -81,6 +115,135 @@ export function GroupToggleButton({
   );
 }
 
+function FavoriteAddSection({
+  favorites,
+  characters,
+  activeGroup,
+  memberKeys,
+  maxMembers,
+  addMember,
+  addFavoritesToGroup,
+  t,
+}) {
+  const [open, setOpen] = useState(() => loadFavoritesPanelOpen());
+  const slotsLeft = maxMembers - memberKeys.length;
+  const favoriteRows = useMemo(() => {
+    return [...favorites]
+      .map((key) => {
+        const character = findCharacterByMemberKey(characters, key);
+        return { key, character, inGroup: memberKeys.includes(key) };
+      })
+      .sort((a, b) => a.key.localeCompare(b.key, "ja"));
+  }, [favorites, characters, memberKeys]);
+
+  const pendingRows = favoriteRows.filter((row) => !row.inGroup);
+  const pendingCount = Math.min(pendingRows.length, slotsLeft);
+
+  if (favorites.size === 0) {
+    return null;
+  }
+
+  const handleAddFavorite = (row) => {
+    if (row.inGroup || slotsLeft <= 0) {
+      return;
+    }
+    if (activeGroup && row.character) {
+      addMember(activeGroup.id, row.character);
+      return;
+    }
+    addFavoritesToGroup([row.key]);
+  };
+
+  const toggleOpen = () => {
+    setOpen((previous) => {
+      const next = !previous;
+      saveFavoritesPanelOpen(next);
+      return next;
+    });
+  };
+
+  const handleAddAll = () => {
+    if (pendingCount <= 0) {
+      return;
+    }
+    addFavoritesToGroup(pendingRows.map((row) => row.key));
+  };
+
+  return (
+    <div className="space-y-2 pt-2 border-t border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <button
+          type="button"
+          className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-200"
+          aria-expanded={open}
+          aria-label={open ? t("group.hideFavoritesPanel") : t("group.showFavoritesPanel")}
+          onClick={toggleOpen}
+        >
+          <Star size={14} className="text-amber-400/90 shrink-0" />
+          {t("group.addFromFavorites")}
+          {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+        </button>
+        {open && pendingCount > 0 ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="border-amber-700/60 text-amber-200 hover:bg-amber-950/40 shrink-0"
+            onClick={handleAddAll}
+          >
+            {t("group.addAllFavorites", { count: pendingCount })}
+          </Button>
+        ) : null}
+      </div>
+
+      {open ? (
+        <>
+          <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+        {favoriteRows.map((row) => {
+          const disabled = row.inGroup || slotsLeft <= 0;
+          return (
+            <button
+              key={row.key}
+              type="button"
+              disabled={row.inGroup || slotsLeft <= 0}
+              onClick={() => handleAddFavorite(row)}
+              className={`flex items-center gap-1 rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                row.inGroup
+                  ? "border-sky-500/60 bg-sky-950/40 text-sky-100 cursor-default"
+                  : disabled
+                    ? "border-slate-800 bg-slate-900/60 text-slate-500 cursor-not-allowed"
+                    : "border-amber-700/50 bg-amber-950/20 text-amber-100 hover:bg-amber-950/40"
+              }`}
+            >
+              <Star
+                size={12}
+                className={row.inGroup ? "text-sky-400" : "text-amber-400/90 shrink-0"}
+              />
+              <span className="font-medium">{row.key}</span>
+              {row.character ? (
+                <span className="text-slate-500 text-xs hidden sm:inline">
+                  {formatJobName(row.character.job)}
+                </span>
+              ) : (
+                <span className="text-amber-400/80 text-xs">{t("group.notFound")}</span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+          {pendingRows.length === 0 ? (
+            <p className="text-sm text-slate-500">{t("group.allFavoritesInGroup")}</p>
+          ) : null}
+          {pendingRows.length > 0 && slotsLeft <= 0 ? (
+            <p className="text-sm text-amber-300/90">{t("group.memberLimit", { max: maxMembers })}</p>
+          ) : null}
+        </>
+      ) : null}
+    </div>
+  );
+}
+
 export default function CharacterGroupTools({
   character,
   characters,
@@ -95,24 +258,30 @@ export default function CharacterGroupTools({
   removeMember,
   isInActiveGroup,
   toggleMemberInActiveGroup,
+  addFavoritesToGroup,
+  favorites,
   maxMembers,
   onSelectCharacter,
   variant = "full",
 }) {
   const { t } = useTranslation();
   const [chartDays, setChartDays] = useState(7);
+  const [chartHeightLevel, setChartHeightLevel] = useState(() => loadChartHeightLevel());
   const [renameDraft, setRenameDraft] = useState("");
+  const [highlightedMemberKey, setHighlightedMemberKey] = useState(null);
 
   const memberKeys = activeGroup?.members ?? [];
   const inGroup = isInActiveGroup(character);
-  const canAddCurrent =
-    !inGroup && memberKeys.length < maxMembers && Boolean(groupMemberKey(character));
   const memberFull = memberKeys.length >= maxMembers && !inGroup;
 
   const { series, members } = useMemo(
     () => buildGroupGainSeries(characters, memberKeys, chartDays),
     [characters, memberKeys, chartDays],
   );
+
+  useEffect(() => {
+    setHighlightedMemberKey(null);
+  }, [chartDays, memberKeys.join("|")]);
 
   const handleAddCharacter = (characterId) => {
     if (!activeGroup || memberKeys.length >= maxMembers) {
@@ -122,10 +291,7 @@ export default function CharacterGroupTools({
     if (!target) {
       return;
     }
-    const added = addMember(activeGroup.id, target);
-    if (added && onSelectCharacter) {
-      onSelectCharacter(target.id);
-    }
+    addMember(activeGroup.id, target);
   };
 
   const handleRenameSubmit = (event) => {
@@ -137,7 +303,12 @@ export default function CharacterGroupTools({
     setRenameDraft("");
   };
 
-  const chartHeight = variant === "compact" ? "h-52" : "h-72 md:h-80";
+  const chartHeightPx = groupChartHeightPx(variant, chartHeightLevel);
+
+  const setChartHeight = (level) => {
+    setChartHeightLevel(level);
+    saveChartHeightLevel(level);
+  };
 
   return (
     <div className="space-y-4 rounded-2xl border border-slate-800 bg-slate-950 p-4">
@@ -178,7 +349,23 @@ export default function CharacterGroupTools({
       </div>
 
       {groups.length === 0 ? (
-        <p className="text-sm text-slate-500">{t("group.emptyGroups")}</p>
+        <>
+          {favorites?.size > 0 ? (
+            <FavoriteAddSection
+              favorites={favorites}
+              characters={characters}
+              activeGroup={activeGroup}
+              memberKeys={memberKeys}
+              maxMembers={maxMembers}
+              addMember={addMember}
+              addFavoritesToGroup={addFavoritesToGroup}
+              t={t}
+            />
+          ) : null}
+          {favorites?.size === 0 ? (
+            <p className="text-sm text-slate-500">{t("group.emptyGroups")}</p>
+          ) : null}
+        </>
       ) : (
         <>
           <div className="flex flex-wrap gap-2">
@@ -289,7 +476,20 @@ export default function CharacterGroupTools({
           ) : null}
 
           {memberFull && !inGroup ? (
-            <p className="text-sm text-amber-300/90">{t("group.memberLimit")}</p>
+            <p className="text-sm text-amber-300/90">{t("group.memberLimit", { max: maxMembers })}</p>
+          ) : null}
+
+          {favorites?.size > 0 ? (
+            <FavoriteAddSection
+              favorites={favorites}
+              characters={characters}
+              activeGroup={activeGroup}
+              memberKeys={memberKeys}
+              maxMembers={maxMembers}
+              addMember={addMember}
+              addFavoritesToGroup={addFavoritesToGroup}
+              t={t}
+            />
           ) : null}
         </>
       )}
@@ -300,7 +500,21 @@ export default function CharacterGroupTools({
             <h4 className="font-semibold text-sm">
               {chartDays === 7 ? t("group.chartTitle7d") : t("group.chartTitle30d")}
             </h4>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2 justify-end">
+              <div className="flex gap-1">
+                {(["normal", "large", "xlarge"]).map((level) => (
+                  <Button
+                    key={level}
+                    type="button"
+                    size="sm"
+                    variant={chartHeightLevel === level ? "default" : "outline"}
+                    className={chartHeightLevel === level ? "" : "border-slate-700"}
+                    onClick={() => setChartHeight(level)}
+                  >
+                    {t(`group.chartHeight.${level}`)}
+                  </Button>
+                ))}
+              </div>
               <Button
                 type="button"
                 size="sm"
@@ -322,9 +536,13 @@ export default function CharacterGroupTools({
             </div>
           </div>
 
-          <div className={chartHeight}>
+          <div style={{ height: chartHeightPx }}>
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={series} margin={{ top: 8, right: 12, left: 4, bottom: 4 }}>
+              <LineChart
+                data={series}
+                margin={{ top: 8, right: 12, left: 4, bottom: 4 }}
+                isAnimationActive={false}
+              >
                 <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
                 <XAxis
                   dataKey="date"
@@ -337,28 +555,32 @@ export default function CharacterGroupTools({
                   width={58}
                 />
                 <Tooltip content={<GroupGainTooltip members={members} t={t} />} />
-                <Legend
-                  formatter={(value) => {
-                    const member = members.find((item) => item.key === value);
-                    return member?.name ?? value;
-                  }}
-                />
-                {members.map((member) => (
-                  <Line
-                    key={member.key}
-                    type="monotone"
-                    dataKey={member.key}
-                    name={member.key}
-                    stroke={member.color}
-                    strokeWidth={2.5}
-                    dot={{ r: 3, fill: member.color, strokeWidth: 0 }}
-                    activeDot={{ r: 5 }}
-                    connectNulls
-                  />
-                ))}
+                {members.map((member) => {
+                  const isHighlighted = highlightedMemberKey === member.key;
+                  const isOther = Boolean(highlightedMemberKey && !isHighlighted);
+                  return (
+                    <Line
+                      key={member.key}
+                      type="monotone"
+                      dataKey={member.key}
+                      name={member.key}
+                      stroke={member.color}
+                      strokeWidth={isHighlighted ? 6 : isOther ? 1.5 : 2.5}
+                      dot={{ r: isHighlighted ? 4 : 3, fill: member.color, strokeWidth: 0 }}
+                      activeDot={{ r: isHighlighted ? 7 : 5 }}
+                      connectNulls
+                      isAnimationActive={false}
+                    />
+                  );
+                })}
               </LineChart>
             </ResponsiveContainer>
           </div>
+          <GroupChartLegend
+            members={members}
+            highlightedKey={highlightedMemberKey}
+            onHighlight={setHighlightedMemberKey}
+          />
         </div>
       ) : null}
     </div>

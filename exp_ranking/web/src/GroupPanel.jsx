@@ -23,6 +23,8 @@ export default function GroupPanel({
   isInActiveGroup,
   toggleMemberInActiveGroup,
   maxGroupMembers,
+  favorites,
+  addFavoritesToGroup,
 }) {
   const { t } = useTranslation();
   const isExpanded = mode === "expanded";
@@ -62,6 +64,8 @@ export default function GroupPanel({
         removeMember={removeMember}
         isInActiveGroup={isInActiveGroup}
         toggleMemberInActiveGroup={toggleMemberInActiveGroup}
+        addFavoritesToGroup={addFavoritesToGroup}
+        favorites={favorites}
         maxMembers={maxGroupMembers}
         onSelectCharacter={onSelectCharacter}
         variant={isExpanded ? "full" : "compact"}

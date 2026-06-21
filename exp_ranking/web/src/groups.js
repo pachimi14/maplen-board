@@ -1,8 +1,12 @@
 import { favoriteKey } from "./favorites";
 
-export const MAX_GROUP_MEMBERS = 6;
+export const MAX_GROUP_MEMBERS = 15;
 const STORAGE_KEY = "msu_exp_ranking_groups";
 const ACTIVE_KEY = "msu_exp_ranking_active_group";
+const FAVORITES_PANEL_KEY = "msu_exp_ranking_group_favorites_open";
+const CHART_HEIGHT_KEY = "msu_exp_ranking_group_chart_height";
+
+export const GROUP_CHART_HEIGHT_LEVELS = ["normal", "large", "xlarge"];
 
 export { favoriteKey as groupMemberKey };
 
@@ -46,4 +50,39 @@ export function saveGroupsState(groups, activeGroupId) {
 
 export function defaultGroupName(index) {
   return `Group ${index}`;
+}
+
+export function loadFavoritesPanelOpen() {
+  try {
+    return localStorage.getItem(FAVORITES_PANEL_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+export function saveFavoritesPanelOpen(open) {
+  localStorage.setItem(FAVORITES_PANEL_KEY, open ? "true" : "false");
+}
+
+export function loadChartHeightLevel() {
+  try {
+    const value = localStorage.getItem(CHART_HEIGHT_KEY);
+    return GROUP_CHART_HEIGHT_LEVELS.includes(value) ? value : "normal";
+  } catch {
+    return "normal";
+  }
+}
+
+export function saveChartHeightLevel(level) {
+  if (GROUP_CHART_HEIGHT_LEVELS.includes(level)) {
+    localStorage.setItem(CHART_HEIGHT_KEY, level);
+  }
+}
+
+/** Chart area height in px (variant × level). */
+export function groupChartHeightPx(variant, level) {
+  const compact = { normal: 208, large: 320, xlarge: 448 };
+  const full = { normal: 320, large: 480, xlarge: 640 };
+  const table = variant === "compact" ? compact : full;
+  return table[level] ?? table.normal;
 }
