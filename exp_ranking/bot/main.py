@@ -39,6 +39,8 @@ from sqlite_storage import (
     count_snapshots_for_date,
     delete_snapshots_before,
     export_character_meta_file,
+    ensure_ranking_fetched_at_meta,
+    get_app_meta,
     hydrate_character_meta_from_json,
     hydrate_character_meta_from_url,
     import_character_meta_file,
@@ -46,11 +48,15 @@ from sqlite_storage import (
     import_missing_snapshots_from_url,
     import_snapshots_from_mvp_json,
     latest_snapshot_date,
+    latest_snapshot_fetched_at,
     list_snapshot_dates,
     load_all_snapshots,
     load_character_meta,
     merge_ranking_databases,
+    parse_iso_datetime,
+    set_app_meta,
     snapshot_dates_in_mvp_json,
+    LAST_RANKING_FETCHED_AT_KEY,
 )
 from utils import normalize_int
 
@@ -321,6 +327,8 @@ def bootstrap_database(db_path: Path, json_path: Path, logger: logging.Logger) -
                 count_character_meta(db_path),
             )
 
+    ensure_ranking_fetched_at_meta(db_path, json_path)
+
 
 def collect_asset_keys_from_db(db_path: Path) -> list[str]:
     snapshots = load_all_snapshots(db_path)
@@ -356,13 +364,75 @@ def read_json_updated_at(json_path: Path) -> datetime | None:
     raw = str(meta.get("updatedAt") or "").strip()
     if not raw:
         return None
-    try:
-        parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
-    except ValueError:
+    return parse_iso_datetime(raw)
+
+
+def read_json_updated_at_from_url(url: str, timeout: float = REQUEST_TIMEOUT_SEC) -> datetime | None:
+    if not url.strip():
         return None
-    if parsed.tzinfo is None:
-        return parsed.replace(tzinfo=UTC)
-    return parsed.astimezone(UTC)
+    try:
+        response = requests.get(url, timeout=timeout)
+        response.raise_for_status()
+        payload = response.json()
+    except (requests.RequestException, json.JSONDecodeError, ValueError):
+        return None
+    meta = payload.get("meta")
+    if not isinstance(meta, dict):
+        return None
+    raw = str(meta.get("updatedAt") or "").strip()
+    if not raw:
+        return None
+    return parse_iso_datetime(raw)
+
+
+def resolve_ranking_updated_at(
+    db_path: Path,
+    json_path: Path,
+    logger: logging.Logger,
+    *,
+    prefer: datetime | None = None,
+) -> datetime:
+    if prefer is not None:
+        resolved = prefer.astimezone(UTC) if prefer.tzinfo else prefer.replace(tzinfo=UTC)
+        logger.info("Using ranking updatedAt from current fetch: %s", resolved.isoformat())
+        return resolved
+
+    stored = get_app_meta(db_path, LAST_RANKING_FETCHED_AT_KEY)
+    if stored:
+        parsed = parse_iso_datetime(stored)
+        if parsed:
+            logger.info("Using ranking updatedAt from SQLite app_meta: %s", parsed.isoformat())
+            return parsed
+
+    local = read_json_updated_at(json_path)
+    if local:
+        logger.info("Using ranking updatedAt from local rankings.json: %s", local.isoformat())
+        return local
+
+    pages_url = config.pages_rankings_url().strip()
+    if pages_url:
+        remote = read_json_updated_at_from_url(pages_url)
+        if remote:
+            logger.info(
+                "Using ranking updatedAt from Pages rankings.json: %s",
+                remote.isoformat(),
+            )
+            return remote
+
+    from_db = latest_snapshot_fetched_at(db_path)
+    if from_db:
+        logger.info(
+            "Using ranking updatedAt from latest snapshot fetched_at: %s",
+            from_db.isoformat(),
+        )
+        return from_db
+
+    fallback = now_utc()
+    logger.warning(
+        "No prior ranking updatedAt found; falling back to export time: %s",
+        fallback.isoformat(),
+    )
+    return fallback
 
 
 def export_rankings_from_db(
@@ -470,7 +540,7 @@ def run_navigator_only() -> int:
     export_rankings_from_db(
         db_path,
         logger,
-        updated_at=read_json_updated_at(json_path),
+        updated_at=resolve_ranking_updated_at(db_path, json_path, logger),
     )
     return 0
 
@@ -517,7 +587,7 @@ def run() -> int:
     db_path = config.sqlite_db_path()
     json_path = config.mvp_json_output_path()
     meta_json_path = config.character_meta_json_path()
-    ranking_data_fetched_at = read_json_updated_at(json_path)
+    ranking_data_fetched_at: datetime | None = None
     bootstrap_database(db_path, json_path, logger)
 
     if config.enforce_jst_fetch_window():
@@ -589,6 +659,11 @@ def run() -> int:
 
         fetched = now_utc()
         ranking_data_fetched_at = fetched
+        set_app_meta(
+            db_path,
+            LAST_RANKING_FETCHED_AT_KEY,
+            fetched.isoformat(timespec="seconds"),
+        )
         snap_date = snapshot_date_ranking(fetched)
         snapshot_rows = build_snapshot_rows(ranking, fetched)
         if not snapshot_rows:
@@ -642,7 +717,12 @@ def run() -> int:
     mvp_path = export_rankings_from_db(
         db_path,
         logger,
-        updated_at=ranking_data_fetched_at,
+        updated_at=resolve_ranking_updated_at(
+            db_path,
+            json_path,
+            logger,
+            prefer=ranking_data_fetched_at,
+        ),
     )
 
     logger.info(
