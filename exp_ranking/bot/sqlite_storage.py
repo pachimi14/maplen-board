@@ -161,6 +161,25 @@ def ensure_ranking_fetched_at_meta(db_path: Path, json_path: Path) -> None:
         )
 
 
+def reconcile_ranking_fetched_at_meta(db_path: Path) -> bool:
+    """Raise app_meta last_ranking_fetched_at when snapshots have a newer fetched_at."""
+    from_db = latest_snapshot_fetched_at(db_path)
+    if not from_db:
+        return False
+
+    stored = get_app_meta(db_path, LAST_RANKING_FETCHED_AT_KEY)
+    stored_dt = parse_iso_datetime(stored) if stored else None
+    if stored_dt is not None and stored_dt >= from_db:
+        return False
+
+    set_app_meta(
+        db_path,
+        LAST_RANKING_FETCHED_AT_KEY,
+        from_db.isoformat(timespec="seconds"),
+    )
+    return True
+
+
 def append_snapshots(
     db_path: Path,
     rows: list[SnapshotRow],
@@ -821,6 +840,21 @@ def merge_ranking_databases(primary_path: Path, secondary_path: Path) -> int:
             if cursor.rowcount > 0:
                 merged += 1
         conn.commit()
+
+    secondary_meta = get_app_meta(secondary_path, LAST_RANKING_FETCHED_AT_KEY)
+    if secondary_meta:
+        secondary_dt = parse_iso_datetime(secondary_meta)
+        if secondary_dt:
+            primary_meta = get_app_meta(primary_path, LAST_RANKING_FETCHED_AT_KEY)
+            primary_dt = parse_iso_datetime(primary_meta) if primary_meta else None
+            if primary_dt is None or secondary_dt > primary_dt:
+                set_app_meta(
+                    primary_path,
+                    LAST_RANKING_FETCHED_AT_KEY,
+                    secondary_dt.isoformat(timespec="seconds"),
+                )
+
+    reconcile_ranking_fetched_at_meta(primary_path)
 
     after = count_snapshot_dates(primary_path)
 

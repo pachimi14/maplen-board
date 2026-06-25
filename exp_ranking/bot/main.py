@@ -54,6 +54,7 @@ from sqlite_storage import (
     load_character_meta,
     merge_ranking_databases,
     parse_iso_datetime,
+    reconcile_ranking_fetched_at_meta,
     set_app_meta,
     snapshot_dates_in_mvp_json,
     LAST_RANKING_FETCHED_AT_KEY,
@@ -328,6 +329,10 @@ def bootstrap_database(db_path: Path, json_path: Path, logger: logging.Logger) -
             )
 
     ensure_ranking_fetched_at_meta(db_path, json_path)
+    if reconcile_ranking_fetched_at_meta(db_path):
+        logger.info(
+            "Raised last_ranking_fetched_at from latest snapshot fetched_at in DB"
+        )
 
 
 def collect_asset_keys_from_db(db_path: Path) -> list[str]:
@@ -397,12 +402,22 @@ def resolve_ranking_updated_at(
         logger.info("Using ranking updatedAt from current fetch: %s", resolved.isoformat())
         return resolved
 
+    reconcile_ranking_fetched_at_meta(db_path)
+
     stored = get_app_meta(db_path, LAST_RANKING_FETCHED_AT_KEY)
     if stored:
         parsed = parse_iso_datetime(stored)
         if parsed:
             logger.info("Using ranking updatedAt from SQLite app_meta: %s", parsed.isoformat())
             return parsed
+
+    from_db = latest_snapshot_fetched_at(db_path)
+    if from_db:
+        logger.info(
+            "Using ranking updatedAt from latest snapshot fetched_at: %s",
+            from_db.isoformat(),
+        )
+        return from_db
 
     local = read_json_updated_at(json_path)
     if local:
@@ -418,14 +433,6 @@ def resolve_ranking_updated_at(
                 remote.isoformat(),
             )
             return remote
-
-    from_db = latest_snapshot_fetched_at(db_path)
-    if from_db:
-        logger.info(
-            "Using ranking updatedAt from latest snapshot fetched_at: %s",
-            from_db.isoformat(),
-        )
-        return from_db
 
     fallback = now_utc()
     logger.warning(
