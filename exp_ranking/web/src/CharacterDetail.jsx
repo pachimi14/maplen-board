@@ -26,6 +26,7 @@ import {
   estimateDaysTo250FromToday,
   estimateDaysTo275FromToday,
   findBestDailyGain,
+  addDaysToIsoDate,
   currentLevelExp,
   formatExp,
   formatExpExact,
@@ -437,19 +438,28 @@ export default function CharacterDetail({
     [character, expTable]
   );
 
+  const latestGainSnapshotDate =
+    character.history?.at(-1)?.snapshotDate ?? character.history?.at(-1)?.date ?? null;
+
   const dateParts250 = useMemo(() => {
     if (!daysTo250.days) {
       return null;
     }
+    if (latestGainSnapshotDate) {
+      return datePartsFromIsoDate(addDaysToIsoDate(latestGainSnapshotDate, daysTo250.days), t);
+    }
     return targetDatePartsAfterDays(daysTo250.days, t);
-  }, [daysTo250.days, t]);
+  }, [daysTo250.days, latestGainSnapshotDate, t]);
 
   const dateParts275 = useMemo(() => {
     if (!daysTo275.days) {
       return null;
     }
+    if (latestGainSnapshotDate) {
+      return datePartsFromIsoDate(addDaysToIsoDate(latestGainSnapshotDate, daysTo275.days), t);
+    }
     return targetDatePartsAfterDays(daysTo275.days, t);
-  }, [daysTo275.days, t]);
+  }, [daysTo275.days, latestGainSnapshotDate, t]);
 
   const recordParts = useMemo(() => {
     if (!bestDaily.bestSnapshotDate) {
