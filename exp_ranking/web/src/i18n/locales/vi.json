@@ -3,6 +3,9 @@
     "switch": "Ngôn ngữ"
   },
   "app": {
+    "pageTitle": "Bảng xếp hạng EXP MSU",
+    "pageDescription": "Xếp hạng cấp độ và lượng EXP tăng hằng ngày, tuần và tháng cho các nhân vật cấp 225 trở lên, dựa trên bảng xếp hạng MSU chính thức.",
+    "updateNotice": "Dữ liệu bảng xếp hạng được cập nhật hằng ngày.",
     "loading": "Đang tải dữ liệu xếp hạng...",
     "noDataTitle": "Không có dữ liệu",
     "noDataHint": "Chưa có dữ liệu bảng xếp hạng được công bố.",

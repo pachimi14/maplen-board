@@ -3,6 +3,9 @@
     "switch": "語言"
   },
   "app": {
+    "pageTitle": "MSU 經驗值排行榜",
+    "pageDescription": "依據 MSU 官方排行榜，提供 Lv.225 以上角色的等級排名與每日、每週及每月經驗值增加量。",
+    "updateNotice": "排行榜資料每日更新。",
     "loading": "正在載入排名資料...",
     "noDataTitle": "沒有資料",
     "noDataHint": "目前尚未發布排名資料。",

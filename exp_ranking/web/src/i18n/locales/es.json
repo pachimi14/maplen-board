@@ -3,6 +3,9 @@
     "switch": "Idioma"
   },
   "app": {
+    "pageTitle": "Clasificación de EXP de MSU",
+    "pageDescription": "Clasificación de nivel y ganancias de EXP diarias, semanales y mensuales de personajes de nivel 225 o superior, basada en la clasificación oficial de MSU.",
+    "updateNotice": "Los datos de clasificación se actualizan diariamente.",
     "loading": "Cargando datos del ranking...",
     "noDataTitle": "No hay datos",
     "noDataHint": "Aún no se han publicado datos de clasificación.",
