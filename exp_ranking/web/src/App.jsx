@@ -340,14 +340,23 @@ export default function App() {
 
   if (!characters.length) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-8 text-center">
-        <h1 className="text-2xl font-bold mb-3">
-          {t(loadError ? "app.loadErrorTitle" : "app.noDataTitle")}
-        </h1>
-        <p className="text-slate-400">
-          {t(loadError ? "app.loadErrorHint" : "app.noDataHint")}
-        </p>
-      </div>
+      <main className="min-h-screen bg-slate-950 text-slate-100 p-6 md:p-10">
+        <div className="max-w-4xl mx-auto pt-12 md:pt-20">
+          <p className="text-sm text-slate-400 mb-2">Lulumi Tools</p>
+          <h1 className="text-3xl md:text-5xl font-bold mb-5">{t("app.pageTitle")}</h1>
+          <p className="max-w-2xl text-slate-300 leading-7">{t("app.pageDescription")}</p>
+          <div className="mt-10 border-t border-slate-800 pt-6">
+            {loadError ? (
+              <p className="text-sm text-slate-400">{t("app.updateNotice")}</p>
+            ) : (
+              <>
+                <p className="font-semibold">{t("app.noDataTitle")}</p>
+                <p className="text-sm text-slate-400 mt-1">{t("app.noDataHint")}</p>
+              </>
+            )}
+          </div>
+        </div>
+      </main>
     );
   }
 

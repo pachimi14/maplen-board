@@ -3,6 +3,9 @@
     "switch": "Language"
   },
   "app": {
+    "pageTitle": "MSU EXP Rankings",
+    "pageDescription": "Level rankings and daily, weekly, and monthly EXP gains for Lv.225+ characters, based on the official MSU rankings.",
+    "updateNotice": "Ranking data is updated daily.",
     "loading": "Loading ranking data...",
     "noDataTitle": "No data available",
     "noDataHint": "No ranking data has been published yet.",
