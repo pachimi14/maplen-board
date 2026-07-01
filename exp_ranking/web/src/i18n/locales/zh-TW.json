@@ -5,7 +5,9 @@
   "app": {
     "loading": "正在載入排名資料...",
     "noDataTitle": "沒有資料",
-    "noDataHint": "請先執行 bot 產生 rankings.json。",
+    "noDataHint": "目前尚未發布排名資料。",
+    "loadErrorTitle": "無法載入排名資料",
+    "loadErrorHint": "請稍後再試。",
     "demoGains": "示範用假增加量資料（{{days}} 天）",
     "fetchedCount": "取得 {{count}} 人",
     "updatedAt": "{{date}}, {{time}} UTC"

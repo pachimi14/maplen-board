@@ -202,7 +202,8 @@ export default function App() {
         setLoadError("");
       } catch (error) {
         if (!cancelled) {
-          setLoadError(String(error));
+          console.error("Failed to load ranking data", error);
+          setLoadError("unavailable");
           setCharacters([]);
         }
       } finally {
@@ -339,13 +340,13 @@ export default function App() {
 
   if (!characters.length) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 p-8">
-        <h1 className="text-2xl font-bold mb-4">{t("app.noDataTitle")}</h1>
-        <p className="text-slate-400 mb-4">{t("app.noDataHint")}</p>
-        {loadError ? <p className="text-red-400">{loadError}</p> : null}
-        <pre className="bg-slate-900 p-4 rounded-xl text-sm text-slate-300">
-          run_local_dev.bat
-        </pre>
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-8 text-center">
+        <h1 className="text-2xl font-bold mb-3">
+          {t(loadError ? "app.loadErrorTitle" : "app.noDataTitle")}
+        </h1>
+        <p className="text-slate-400">
+          {t(loadError ? "app.loadErrorHint" : "app.noDataHint")}
+        </p>
       </div>
     );
   }
