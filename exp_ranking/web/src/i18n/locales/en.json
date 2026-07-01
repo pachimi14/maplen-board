@@ -5,7 +5,9 @@
   "app": {
     "loading": "Loading ranking data...",
     "noDataTitle": "No data available",
-    "noDataHint": "Run the bot first to generate rankings.json.",
+    "noDataHint": "No ranking data has been published yet.",
+    "loadErrorTitle": "Unable to load ranking data",
+    "loadErrorHint": "Please try again later.",
     "demoGains": "Demo dummy gain data ({{days}} days)",
     "fetchedCount": "Top {{count}} fetched",
     "updatedAt": "{{date}}, {{time}} UTC"

@@ -5,7 +5,9 @@
   "app": {
     "loading": "Đang tải dữ liệu xếp hạng...",
     "noDataTitle": "Không có dữ liệu",
-    "noDataHint": "Hãy chạy bot để tạo rankings.json trước.",
+    "noDataHint": "Chưa có dữ liệu bảng xếp hạng được công bố.",
+    "loadErrorTitle": "Không thể tải dữ liệu bảng xếp hạng",
+    "loadErrorHint": "Vui lòng thử lại sau.",
     "demoGains": "Dữ liệu EXP tăng giả ({{days}} ngày)",
     "fetchedCount": "Lấy {{count}} nhân vật",
     "updatedAt": "{{date}}, {{time}} UTC"

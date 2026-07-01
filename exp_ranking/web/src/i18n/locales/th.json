@@ -5,7 +5,9 @@
   "app": {
     "loading": "กำลังโหลดข้อมูลอันดับ...",
     "noDataTitle": "ไม่มีข้อมูล",
-    "noDataHint": "รัน bot เพื่อสร้าง rankings.json ก่อน",
+    "noDataHint": "ยังไม่มีข้อมูลอันดับที่เผยแพร่",
+    "loadErrorTitle": "ไม่สามารถโหลดข้อมูลอันดับได้",
+    "loadErrorHint": "โปรดลองอีกครั้งในภายหลัง",
     "demoGains": "ข้อมูลเพิ่ม EXP จำลอง ({{days}} วัน)",
     "fetchedCount": "ดึงข้อมูล {{count}} คน",
     "updatedAt": "{{date}}, {{time}} UTC"

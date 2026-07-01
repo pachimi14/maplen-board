@@ -5,7 +5,9 @@
   "app": {
     "loading": "Cargando datos del ranking...",
     "noDataTitle": "No hay datos",
-    "noDataHint": "Ejecuta el bot para generar rankings.json primero.",
+    "noDataHint": "Aún no se han publicado datos de clasificación.",
+    "loadErrorTitle": "No se pueden cargar los datos de clasificación",
+    "loadErrorHint": "Inténtalo de nuevo más tarde.",
     "demoGains": "Datos de EXP de demostración ({{days}} días)",
     "fetchedCount": "Top {{count}} obtenidos",
     "updatedAt": "{{date}}, {{time}} UTC"
