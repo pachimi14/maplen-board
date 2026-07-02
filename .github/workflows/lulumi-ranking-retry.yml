@@ -1,0 +1,76 @@
+name: Lulumi Tools Ranking Retry
+
+on:
+  schedule:
+    # Retry checks at JST 12:20, 18:20, and 02:20 the following morning.
+    - cron: "20 3,9,17 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: lulumi-ranking-retry
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  check-and-retry:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check target ranking day
+        id: ranking_day
+        env:
+          DB_PATH: exp_ranking/bot/data/ranking.db
+          MIN_SNAPSHOT_ROWS: "1000"
+        run: |
+          python - <<'PY'
+          import os
+          import sqlite3
+          from datetime import datetime, timedelta, timezone
+          from pathlib import Path
+
+          db_path = Path(os.environ["DB_PATH"])
+          min_rows = int(os.environ["MIN_SNAPSHOT_ROWS"])
+          target_day = (
+              datetime.now(timezone.utc).date() - timedelta(days=1)
+          ).isoformat()
+          row_count = 0
+
+          if db_path.exists():
+              with sqlite3.connect(db_path) as conn:
+                  row = conn.execute(
+                      "SELECT COUNT(*) FROM ranking_snapshot WHERE snapshot_date = ?",
+                      (target_day,),
+                  ).fetchone()
+                  row_count = int(row[0]) if row else 0
+
+          should_retry = row_count < min_rows
+          print(
+              f"target_day={target_day} rows={row_count} "
+              f"minimum={min_rows} retry={should_retry}"
+          )
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"target_day={target_day}\n")
+              output.write(f"row_count={row_count}\n")
+              output.write(f"should_retry={'true' if should_retry else 'false'}\n")
+          PY
+
+      - name: Dispatch ranking retry
+        if: steps.ranking_day.outputs.should_retry == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run maplen-board-pages.yml \
+            --repo "${GITHUB_REPOSITORY}" \
+            --ref main \
+            -f force_fetch=true
+          echo "Dispatched retry for ${{ steps.ranking_day.outputs.target_day }}"
+
+      - name: Report completed day
+        if: steps.ranking_day.outputs.should_retry != 'true'
+        run: |
+          echo "No retry needed: ${{ steps.ranking_day.outputs.target_day }} has ${{ steps.ranking_day.outputs.row_count }} rows"
