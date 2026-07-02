@@ -307,4 +307,9 @@ jobs:
             MSG="chore: update ranking.db [skip ci]"
           fi
           git commit -m "$MSG"
-          git push origin "HEAD:${{ github.ref_name }}"
+          if ! git push origin "HEAD:${{ github.ref_name }}"; then
+            echo "main advanced while this workflow was running; rebasing once"
+            git fetch origin "${{ github.ref_name }}"
+            git rebase "origin/${{ github.ref_name }}"
+            git push origin "HEAD:${{ github.ref_name }}"
+          fi
