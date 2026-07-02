@@ -260,11 +260,10 @@ jobs:
           exit 1
 
   commit-db:
-    needs: [build, deploy]
+    needs: build
     if: |
       always() &&
-      needs.build.result == 'success' &&
-      (needs.deploy.result == 'success' || needs.deploy.result == 'skipped' || needs.deploy.result == 'failure')
+      needs.build.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: write
