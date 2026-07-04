@@ -12,6 +12,7 @@ exp_ranking/bot/credentials/*.json
 exp_ranking/bot/logs/
 exp_ranking/web/public/data/rankings.json
 exp_ranking/web/public/data/rankings.json.bak
+exp_ranking/web/public/data/v2/
 
 # EXP ranking web
 exp_ranking/web/node_modules/

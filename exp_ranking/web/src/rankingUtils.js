@@ -422,6 +422,13 @@ export function buildWeekDailyRankSeries(
 
   return points.map((point) => {
     const date = point.date;
+    if (point.dailyRank != null) {
+      return {
+        date,
+        dailyGain: point.dailyGain ?? 0,
+        dailyRank: point.dailyRank,
+      };
+    }
     const ranked = characters
       .map((character) => {
         const dayPoint = character.history?.find((item) => item.date === date);

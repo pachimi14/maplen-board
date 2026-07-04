@@ -96,6 +96,21 @@ function RankChartTooltip({ active, payload, label }) {
   );
 }
 
+function GainChartTooltip({ active, payload, label }) {
+  const { t } = useTranslation();
+  if (!active || !payload?.length) {
+    return null;
+  }
+  return (
+    <div className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm shadow-lg">
+      <div className="text-slate-400">{label}</div>
+      <div className="font-bold text-emerald-400 mt-0.5">
+        {t("characterDetail.gainAmount")}: +{formatExp(payload[0].value)}
+      </div>
+    </div>
+  );
+}
+
 function GainStatCard({ label, amount, rank, compact = false }) {
   const { t } = useTranslation();
   return (
@@ -246,9 +261,7 @@ function HistoryChartRow({
                 tick={{ fill: "#94a3b8", fontSize: 12 }}
                 width={58}
               />
-              <Tooltip
-                formatter={(value) => [formatExp(value), t("characterDetail.gainAmount")]}
-              />
+              <Tooltip content={<GainChartTooltip />} />
               <Bar dataKey="dailyGain" fill="#34d399" radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
