@@ -45,17 +45,23 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Preserve ranking.db from git
+      - name: Preserve ranking database from git
         id: git_db
         run: |
           mkdir -p exp_ranking/bot/data
-          if [ -f exp_ranking/bot/data/ranking.db ]; then
+          if [ -f exp_ranking/bot/data/ranking.db.gz ]; then
+            gzip -dc exp_ranking/bot/data/ranking.db.gz > /tmp/ranking.db.from_git
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "git-db-source=ranking.db.gz"
+            echo "git-db-bytes=$(wc -c < /tmp/ranking.db.from_git)"
+          elif [ -f exp_ranking/bot/data/ranking.db ]; then
             cp exp_ranking/bot/data/ranking.db /tmp/ranking.db.from_git
             echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "git-db-source=ranking.db (legacy)"
             echo "git-db-bytes=$(wc -c < /tmp/ranking.db.from_git)"
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
-            echo "No ranking.db in git yet"
+            echo "No ranking database in git yet"
           fi
 
       - name: Restore legacy ranking database cache (v2 path)
@@ -291,9 +297,12 @@ jobs:
             echo "No ranking.db artifact to commit"
             exit 0
           fi
-          git add exp_ranking/bot/data/ranking.db
+          gzip -n -c exp_ranking/bot/data/ranking.db > exp_ranking/bot/data/ranking.db.gz.tmp
+          mv exp_ranking/bot/data/ranking.db.gz.tmp exp_ranking/bot/data/ranking.db.gz
+          git rm --cached --ignore-unmatch exp_ranking/bot/data/ranking.db
+          git add exp_ranking/bot/data/ranking.db.gz
           if git diff --staged --quiet; then
-            echo "No ranking.db changes to commit"
+            echo "No ranking database changes to commit"
             exit 0
           fi
           SNAPSHOT_DATE=""
