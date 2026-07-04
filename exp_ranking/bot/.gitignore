@@ -1,6 +1,6 @@
 logs/
 data/*.db
-!data/ranking.db
+!data/ranking.db.gz
 data/*.sqlite3
 data/ranking.legacy.db
 data/character_meta.json

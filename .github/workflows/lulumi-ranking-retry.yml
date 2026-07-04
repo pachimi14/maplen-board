@@ -21,6 +21,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Restore ranking database
+        run: |
+          if [ ! -f exp_ranking/bot/data/ranking.db ] && [ -f exp_ranking/bot/data/ranking.db.gz ]; then
+            gzip -dc exp_ranking/bot/data/ranking.db.gz > exp_ranking/bot/data/ranking.db
+          fi
+
       - name: Check target ranking day
         id: ranking_day
         env:
