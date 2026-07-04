@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import logging
+import shutil
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -30,6 +32,8 @@ from ranking_periods import (
 )
 
 logger = logging.getLogger(__name__)
+
+HISTORY_SHARD_COUNT = 64
 
 
 def _format_chart_date(snapshot_date: str) -> str:
@@ -191,7 +195,114 @@ def build_mvp_characters(
     for index, character in enumerate(characters, start=1):
         character["id"] = index
 
+    history_dates = sorted(
+        {
+            point["snapshotDate"]
+            for character in characters
+            for point in character.get("history", [])
+            if point.get("snapshotDate")
+        }
+    )
+    for snapshot_date in history_dates:
+        ranked = sorted(
+            characters,
+            key=lambda character: -next(
+                (
+                    point.get("dailyGain") or 0
+                    for point in character.get("history", [])
+                    if point.get("snapshotDate") == snapshot_date
+                ),
+                0,
+            ),
+        )
+        for daily_rank, character in enumerate(ranked, start=1):
+            for point in character.get("history", []):
+                if point.get("snapshotDate") == snapshot_date:
+                    point["dailyRank"] = daily_rank
+                    break
+
     return characters
+
+
+def _history_key(character: dict[str, Any]) -> str:
+    asset_key = str(character.get("characterAssetKey") or "").strip()
+    if asset_key:
+        return f"asset:{asset_key}"
+    return f"name:{str(character.get('name') or '').strip().casefold()}"
+
+
+def _history_shard(history_key: str, shard_count: int) -> int:
+    digest = hashlib.sha256(history_key.encode("utf-8")).digest()
+    return int.from_bytes(digest[:4], "big") % shard_count
+
+
+def build_v2_payloads(
+    payload: dict[str, Any],
+    *,
+    shard_count: int = HISTORY_SHARD_COUNT,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    latest_date = str(payload.get("meta", {}).get("latestSnapshotDate") or "")
+    history_base_path = f"history/{latest_date}" if latest_date else "history/current"
+    shards: list[dict[str, Any]] = [dict() for _ in range(shard_count)]
+    summary_characters: list[dict[str, Any]] = []
+
+    for character in payload.get("characters", []):
+        history_key = _history_key(character)
+        shard = _history_shard(history_key, shard_count)
+        summary = {key: value for key, value in character.items() if key != "history"}
+        summary["historyKey"] = history_key
+        summary["historyShard"] = shard
+        summary_characters.append(summary)
+        shards[shard][history_key] = character.get("history", [])
+
+    meta = {
+        **payload.get("meta", {}),
+        "dataFormatVersion": 2,
+        "historyBasePath": history_base_path,
+        "historyShardCount": shard_count,
+    }
+    return {"meta": meta, "characters": summary_characters}, shards
+
+
+def export_mvp_v2_json(
+    payload: dict[str, Any],
+    output_path: Path,
+    *,
+    shard_count: int = HISTORY_SHARD_COUNT,
+) -> Path:
+    v2_root = output_path.parent / "v2"
+    if v2_root.exists():
+        shutil.rmtree(v2_root)
+    summary, shards = build_v2_payloads(payload, shard_count=shard_count)
+    summary_path = v2_root / "rankings.json"
+    summary_path.parent.mkdir(parents=True, exist_ok=True)
+    summary_path.write_text(
+        json.dumps(summary, ensure_ascii=False, separators=(",", ":")),
+        encoding="utf-8",
+    )
+
+    history_root = v2_root / summary["meta"]["historyBasePath"]
+    history_root.mkdir(parents=True, exist_ok=True)
+    for shard, histories in enumerate(shards):
+        shard_payload = {
+            "meta": {
+                "dataFormatVersion": 2,
+                "latestSnapshotDate": summary["meta"]["latestSnapshotDate"],
+                "shard": shard,
+            },
+            "histories": histories,
+        }
+        (history_root / f"shard-{shard:02d}.json").write_text(
+            json.dumps(shard_payload, ensure_ascii=False, separators=(",", ":")),
+            encoding="utf-8",
+        )
+
+    logger.info(
+        "MVP v2 JSON exported: %s (shards=%s)",
+        summary_path,
+        shard_count,
+    )
+    return summary_path
 
 
 def build_mvp_payload(
@@ -286,6 +397,7 @@ def export_mvp_json(
         json.dumps(payload, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
+    export_mvp_v2_json(payload, output_path)
     logger.info(
         "MVP JSON exported: %s (characters=%s snapshot_days=%s)",
         output_path,

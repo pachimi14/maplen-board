@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import { useGainPeriodLabel, useTranslation } from "./i18n/I18nContext";
 import { useFavorites } from "./useFavorites";
 import { useGroups } from "./useGroups";
 import NavigatorLink from "./NavigatorLink";
+import { loadCharacterHistories } from "./historyData";
 import {
   computeGainRankMaps,
   formatExp,
@@ -185,11 +186,28 @@ export default function App() {
 
     async function loadRankings() {
       try {
-        const response = await fetch(`${import.meta.env.BASE_URL}data/rankings.json`);
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
+        const candidates = ["data/v2/rankings.json", "data/rankings.json"];
+        let payload = null;
+        let lastError = null;
+        for (const candidate of candidates) {
+          try {
+            const response = await fetch(`${import.meta.env.BASE_URL}${candidate}`);
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}`);
+            }
+            const parsed = await response.json();
+            if (!Array.isArray(parsed?.characters)) {
+              throw new Error("Invalid rankings payload");
+            }
+            payload = parsed;
+            break;
+          } catch (error) {
+            lastError = error;
+          }
         }
-        const payload = await response.json();
+        if (!payload) {
+          throw lastError || new Error("No ranking data available");
+        }
         if (cancelled) {
           return;
         }
@@ -218,6 +236,33 @@ export default function App() {
       cancelled = true;
     };
   }, []);
+
+  const ensureHistories = useCallback(
+    async (targets) => {
+      const pending = targets.filter(
+        (character) => character?.historyKey && !Array.isArray(character.history),
+      );
+      if (!pending.length) {
+        return;
+      }
+      try {
+        const loaded = await loadCharacterHistories(import.meta.env.BASE_URL, meta, pending);
+        if (!loaded.size) {
+          return;
+        }
+        setCharacters((current) =>
+          current.map((character) =>
+            loaded.has(character.historyKey)
+              ? { ...character, history: loaded.get(character.historyKey) }
+              : character,
+          ),
+        );
+      } catch (error) {
+        console.error("Failed to load character history", error);
+      }
+    },
+    [meta],
+  );
 
   const expTable = useMemo(() => parseExpTable(meta), [meta]);
 
@@ -287,6 +332,23 @@ export default function App() {
     }
     return pool.find((character) => character.id === selectedId) || pool[0];
   }, [characters, rankingPool, favoritesOnly, selectedId]);
+
+  useEffect(() => {
+    if (selectedCharacter) {
+      ensureHistories([selectedCharacter]);
+    }
+  }, [ensureHistories, selectedCharacter]);
+
+  useEffect(() => {
+    if (!activeGroup?.members?.length) {
+      return;
+    }
+    const memberKeys = new Set(activeGroup.members);
+    ensureHistories(characters.filter((character) => memberKeys.has(character.name)));
+  }, [activeGroup, characters, ensureHistories]);
+
+  const selectedHistoryReady =
+    !selectedCharacter?.historyKey || Array.isArray(selectedCharacter.history);
 
   const isExpandedDetail = detailView === "expanded";
   const isExpandedGroup = groupView === "expanded";
@@ -456,7 +518,7 @@ export default function App() {
         <div className="space-y-6">
           {isExpandedDetail && selectedCharacter ? (
             <div ref={detailTopRef} className="space-y-4">
-              <CharacterDetail
+              {selectedHistoryReady ? <CharacterDetail
                 character={selectedCharacter}
                 characters={rankingPool.length ? rankingPool : characters}
                 allCharacters={characters}
@@ -467,7 +529,11 @@ export default function App() {
                 mode="expanded"
                 onCollapse={collapseDetail}
                 onSelectCharacter={setSelectedId}
-              />
+              /> : (
+                <div className="min-h-48 flex items-center justify-center text-slate-400">
+                  {t("app.loading")}
+                </div>
+              )}
               <div className="flex justify-center">
                 <Button
                   type="button"
@@ -710,7 +776,7 @@ export default function App() {
           {!isExpandedDetail ? (
             selectedCharacter ? (
               <div className="xl:col-span-1 min-w-0 space-y-6">
-                <CharacterDetail
+                {selectedHistoryReady ? <CharacterDetail
                   character={selectedCharacter}
                   characters={rankingPool.length ? rankingPool : characters}
                   allCharacters={characters}
@@ -721,7 +787,11 @@ export default function App() {
                   mode="compact"
                   onExpand={expandDetail}
                   onSelectCharacter={setSelectedId}
-                />
+                /> : (
+                  <div className="min-h-48 flex items-center justify-center text-slate-400">
+                    {t("app.loading")}
+                  </div>
+                )}
                 {!isExpandedGroup ? (
                   <GroupPanel
                     character={selectedCharacter}
