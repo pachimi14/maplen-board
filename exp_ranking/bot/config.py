@@ -46,7 +46,7 @@ def ranking_max_pages() -> int:
 
 
 def ranking_request_delay_sec() -> float:
-    return max(0.0, float(os.environ.get("RANKING_REQUEST_DELAY_SEC", "0.35")))
+    return max(0.0, float(os.environ.get("RANKING_REQUEST_DELAY_SEC", "0.8")))
 
 
 def navigator_request_delay_sec() -> float:

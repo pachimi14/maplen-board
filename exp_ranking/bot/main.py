@@ -79,6 +79,7 @@ RANKING_QUERY = (
 API_MAX_PAGE_SIZE = 10
 MAX_RETRIES = 10
 RETRY_WAIT_SEC = 60
+RATE_LIMIT_RETRY_WAIT_SEC = 600
 REQUEST_TIMEOUT_SEC = 30
 
 
@@ -164,24 +165,27 @@ def fetch_ranking_min_level(
     session = _make_session()
     last_status = 0
     last_body = ""
+    collected: list[dict[str, Any]] = []
+    next_page = 1
+    last_page = 0
 
     for attempt in range(1, MAX_RETRIES + 1):
         logger.info(
-            "Fetching ranking API (attempt %s/%s, min_level=%s, max_pages=%s)",
+            "Fetching ranking API (attempt %s/%s, start_page=%s, min_level=%s, max_pages=%s)",
             attempt,
             MAX_RETRIES,
+            next_page,
             min_level,
             max_pages,
         )
         try:
-            collected: list[dict[str, Any]] = []
             failed = False
-            last_page = 0
 
-            for page_no in range(1, max_pages + 1):
+            for page_no in range(next_page, max_pages + 1):
                 if page_no > 1 and request_delay_sec > 0:
                     time.sleep(request_delay_sec)
 
+                last_status = 0
                 status, ranking, body_text = _fetch_ranking_page(session, page_no)
                 last_status = status
                 last_body = body_text
@@ -207,6 +211,7 @@ def fetch_ranking_min_level(
                     entry for entry in ranking if _entry_level(entry) >= min_level
                 ]
                 collected.extend(matched)
+                next_page = page_no + 1
 
                 if page_levels and max(page_levels) < min_level:
                     logger.info(
@@ -267,8 +272,15 @@ def fetch_ranking_min_level(
             )
 
         if attempt < MAX_RETRIES:
-            logger.info("Retrying in %s seconds...", RETRY_WAIT_SEC)
-            time.sleep(RETRY_WAIT_SEC)
+            wait_sec = (
+                RATE_LIMIT_RETRY_WAIT_SEC if last_status == 429 else RETRY_WAIT_SEC
+            )
+            logger.info(
+                "Retrying from page %s in %s seconds...",
+                next_page,
+                wait_sec,
+            )
+            time.sleep(wait_sec)
 
     raise RuntimeError(
         f"Failed to fetch valid ranking after {MAX_RETRIES} attempts "
