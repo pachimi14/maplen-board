@@ -297,6 +297,17 @@ jobs:
             echo "No ranking.db artifact to commit"
             exit 0
           fi
+          cp exp_ranking/bot/data/ranking.db /tmp/ranking.db.pages-artifact
+          git fetch origin "${{ github.ref_name }}"
+          git rebase "origin/${{ github.ref_name }}"
+          if [ -f exp_ranking/bot/data/ranking.db.gz ]; then
+            gzip -dc exp_ranking/bot/data/ranking.db.gz > exp_ranking/bot/data/ranking.db
+            python exp_ranking/bot/merge_db_for_commit.py \
+              exp_ranking/bot/data/ranking.db \
+              /tmp/ranking.db.pages-artifact
+          else
+            cp /tmp/ranking.db.pages-artifact exp_ranking/bot/data/ranking.db
+          fi
           gzip -n -c exp_ranking/bot/data/ranking.db > exp_ranking/bot/data/ranking.db.gz.tmp
           mv exp_ranking/bot/data/ranking.db.gz.tmp exp_ranking/bot/data/ranking.db.gz
           git rm --cached --ignore-unmatch exp_ranking/bot/data/ranking.db
@@ -315,9 +326,4 @@ jobs:
             MSG="chore: update ranking.db [skip ci]"
           fi
           git commit -m "$MSG"
-          if ! git push origin "HEAD:${{ github.ref_name }}"; then
-            echo "main advanced while this workflow was running; rebasing once"
-            git fetch origin "${{ github.ref_name }}"
-            git rebase "origin/${{ github.ref_name }}"
-            git push origin "HEAD:${{ github.ref_name }}"
-          fi
+          git push origin "HEAD:${{ github.ref_name }}"
