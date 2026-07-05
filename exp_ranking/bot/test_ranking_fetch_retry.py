@@ -42,8 +42,63 @@ def test_429_waits_ten_minutes_and_resumes_failed_page(monkeypatch) -> None:
     assert [row["rank"] for row in ranking] == list(range(1, 21))
     assert main.RATE_LIMIT_RETRY_WAIT_SEC in sleep_calls
     assert sleep_calls.count(main.RATE_LIMIT_RETRY_WAIT_SEC) == 1
+    assert 1.5 in sleep_calls
 
 
 def test_ranking_request_delay_defaults_to_point_eight(monkeypatch) -> None:
     monkeypatch.delenv("RANKING_REQUEST_DELAY_SEC", raising=False)
     assert config.ranking_request_delay_sec() == 0.8
+
+
+def test_update_probe_waits_for_changed_first_page(monkeypatch) -> None:
+    baseline = [
+        (rank, f"Character{rank}", 250, rank * 100)
+        for rank in range(1, main.API_MAX_PAGE_SIZE + 1)
+    ]
+    unchanged = [
+        {
+            "rank": rank,
+            "characterName": f"Character{rank}",
+            "level": 250,
+            "exp": rank * 100,
+        }
+        for rank in range(1, main.API_MAX_PAGE_SIZE + 1)
+    ]
+    changed = [dict(entry) for entry in unchanged]
+    changed[0]["exp"] += 1
+    responses = iter([(200, unchanged, ""), (200, changed, "")])
+    sleep_calls: list[float] = []
+
+    monkeypatch.setattr(main, "_make_session", object)
+    monkeypatch.setattr(main, "_fetch_ranking_page", lambda *_args: next(responses))
+    monkeypatch.setattr(main.time, "sleep", sleep_calls.append)
+    monkeypatch.setattr(main.time, "monotonic", lambda: 0.0)
+
+    detected = main.wait_for_ranking_update(
+        baseline,
+        poll_interval_sec=45,
+        timeout_sec=1200,
+        settle_sec=45,
+    )
+
+    assert detected is True
+    assert sleep_calls == [45, 45]
+
+
+def test_freshness_rejects_unchanged_previous_snapshot() -> None:
+    baseline = [(1, "Same", 250, 123)]
+    ranking = [{"rank": 1, "characterName": "Same", "level": 250, "exp": 123}]
+
+    try:
+        main.validate_ranking_freshness(ranking, baseline, min_changed=1)
+    except RuntimeError as exc:
+        assert "appears stale" in str(exc)
+    else:
+        raise AssertionError("stale ranking was accepted")
+
+
+def test_freshness_accepts_changed_snapshot() -> None:
+    baseline = [(1, "Same", 250, 123)]
+    ranking = [{"rank": 1, "characterName": "Same", "level": 250, "exp": 124}]
+
+    assert main.validate_ranking_freshness(ranking, baseline, min_changed=1) == 1

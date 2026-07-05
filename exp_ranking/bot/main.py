@@ -52,6 +52,7 @@ from sqlite_storage import (
     list_snapshot_dates,
     load_all_snapshots,
     load_character_meta,
+    load_snapshot_state_before,
     merge_ranking_databases,
     parse_iso_datetime,
     reconcile_ranking_fetched_at_meta,
@@ -155,6 +156,106 @@ def _entry_level(entry: dict[str, Any]) -> int:
     return normalize_int(entry.get("level"))
 
 
+def _api_ranking_signature(entries: list[dict[str, Any]]) -> tuple[tuple[Any, ...], ...]:
+    return tuple(
+        (
+            normalize_int(entry.get("rank")),
+            str(entry.get("characterName", "")).strip().casefold(),
+            normalize_int(entry.get("level")),
+            normalize_int(entry.get("exp")),
+        )
+        for entry in entries
+    )
+
+
+def _snapshot_signature(
+    rows: list[tuple[int, str, int, int]],
+) -> tuple[tuple[Any, ...], ...]:
+    return tuple(
+        (rank, name.strip().casefold(), level, exp)
+        for rank, name, level, exp in rows
+    )
+
+
+def wait_for_ranking_update(
+    baseline_rows: list[tuple[int, str, int, int]],
+    *,
+    poll_interval_sec: float,
+    timeout_sec: float,
+    settle_sec: float,
+) -> bool:
+    """Poll one lightweight page until the official ranking changes."""
+    logger = logging.getLogger(__name__)
+    baseline = _snapshot_signature(baseline_rows[:API_MAX_PAGE_SIZE])
+    if not baseline or timeout_sec <= 0:
+        logger.info("Ranking update probe skipped: no baseline or timeout disabled")
+        return False
+
+    session = _make_session()
+    deadline = time.monotonic() + timeout_sec
+    probe_count = 0
+    while True:
+        probe_count += 1
+        try:
+            status, ranking, _ = _fetch_ranking_page(session, 1)
+        except requests.RequestException as exc:
+            logger.warning("Ranking update probe %s failed: %s", probe_count, exc)
+        else:
+            if status == 200 and ranking:
+                if _api_ranking_signature(ranking[:API_MAX_PAGE_SIZE]) != baseline:
+                    logger.info(
+                        "Official ranking update detected after %s probes; settling for %ss",
+                        probe_count,
+                        settle_sec,
+                    )
+                    if settle_sec > 0:
+                        time.sleep(settle_sec)
+                    return True
+                logger.info("Official ranking not updated yet (probe %s)", probe_count)
+            else:
+                logger.warning(
+                    "Ranking update probe %s returned HTTP %s", probe_count, status
+                )
+
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            logger.warning(
+                "Ranking update was not detected within %ss; continuing to full fetch",
+                timeout_sec,
+            )
+            return False
+        time.sleep(min(poll_interval_sec, remaining))
+
+
+def validate_ranking_freshness(
+    ranking: list[dict[str, Any]],
+    baseline_rows: list[tuple[int, str, int, int]],
+    min_changed: int,
+) -> int:
+    """Reject a stale full fetch that still matches the previous ranking day."""
+    if not baseline_rows:
+        return len(ranking)
+
+    baseline = {
+        name.strip().casefold(): (level, exp)
+        for _, name, level, exp in baseline_rows
+    }
+    changed = 0
+    for entry in ranking:
+        name = str(entry.get("characterName", "")).strip().casefold()
+        previous = baseline.get(name)
+        current = (normalize_int(entry.get("level")), normalize_int(entry.get("exp")))
+        if previous is None or previous != current:
+            changed += 1
+
+    if changed < min_changed:
+        raise RuntimeError(
+            "Fetched ranking appears stale: "
+            f"changed={changed}, required={min_changed}, baseline={len(baseline_rows)}"
+        )
+    return changed
+
+
 def fetch_ranking_min_level(
     min_level: int,
     request_delay_sec: float,
@@ -168,6 +269,7 @@ def fetch_ranking_min_level(
     collected: list[dict[str, Any]] = []
     next_page = 1
     last_page = 0
+    current_delay_sec = request_delay_sec
 
     for attempt in range(1, MAX_RETRIES + 1):
         logger.info(
@@ -182,8 +284,8 @@ def fetch_ranking_min_level(
             failed = False
 
             for page_no in range(next_page, max_pages + 1):
-                if page_no > 1 and request_delay_sec > 0:
-                    time.sleep(request_delay_sec)
+                if page_no > 1 and current_delay_sec > 0:
+                    time.sleep(current_delay_sec)
 
                 last_status = 0
                 status, ranking, body_text = _fetch_ranking_page(session, page_no)
@@ -272,6 +374,12 @@ def fetch_ranking_min_level(
             )
 
         if attempt < MAX_RETRIES:
+            if last_status == 429:
+                current_delay_sec = max(current_delay_sec, 1.5)
+                logger.warning(
+                    "Rate limit detected; subsequent request delay increased to %ss",
+                    current_delay_sec,
+                )
             wait_sec = (
                 RATE_LIMIT_RETRY_WAIT_SEC if last_status == 429 else RETRY_WAIT_SEC
             )
@@ -624,12 +732,26 @@ def run() -> int:
         sqlite_saved = 0
         sqlite_skipped = 0
     else:
+        baseline_date, baseline_rows = load_snapshot_state_before(db_path, snap_date)
         logger.info(
             "MapleN Board bot started (ranking_day=%s UTC, local=%s JST, min_level=%s)",
             snap_date,
             fetched.astimezone(JST).strftime("%Y-%m-%d %H:%M:%S"),
             min_level,
         )
+        logger.info(
+            "Freshness baseline: date=%s rows=%s",
+            baseline_date or "none",
+            len(baseline_rows),
+        )
+
+        if config.enforce_jst_fetch_window():
+            wait_for_ranking_update(
+                baseline_rows,
+                poll_interval_sec=config.ranking_update_poll_interval_sec(),
+                timeout_sec=config.ranking_update_poll_timeout_sec(),
+                settle_sec=config.ranking_update_settle_sec(),
+            )
 
         import_character_meta_file(db_path, meta_json_path)
         cached_meta = count_character_meta(db_path)
@@ -657,6 +779,16 @@ def run() -> int:
             min_level,
             config.ranking_request_delay_sec(),
             max_pages,
+        )
+        changed_count = validate_ranking_freshness(
+            ranking,
+            baseline_rows,
+            config.ranking_freshness_min_changed(),
+        )
+        logger.info(
+            "Ranking freshness validated: changed=%s required=%s",
+            changed_count,
+            config.ranking_freshness_min_changed(),
         )
 
         if config.navigator_fetch_enabled():
