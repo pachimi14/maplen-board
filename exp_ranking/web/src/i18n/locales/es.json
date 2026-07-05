@@ -37,6 +37,12 @@
     "byJob": "Por clase",
     "allServers": "Todos los servidores"
   },
+  "filter": {
+    "title": "Filtros", "reset": "Restablecer", "job": "Clase", "allJobs": "Todas las clases",
+    "server": "Servidor", "minLevel": "Nivel mínimo", "maxLevel": "Nivel máximo",
+    "minGain": "Ganancia mínima", "sort": "Vista",
+    "clickToCollapse": "Haz clic para contraer", "clickToExpand": "Haz clic para expandir"
+  },
   "group": {
     "view": "Grupo",
     "title": "Comparación de grupo",
@@ -129,6 +135,10 @@
     "chartGain30d": "EXP diaria (últimos 30 días)",
     "chartRank30d": "Rango diario (últimos 30 días)",
     "chartRank7d": "Rango de EXP diaria (últimos 7 días)",
+    "chartGain": "Ganancia diaria de EXP", "chartRank": "Rango de ganancia diaria",
+    "chartRankMode": "Rango de ganancia", "chartLevelMode": "Progreso de nivel", "chartLevelProgress": "Progreso de nivel",
+    "levelProgressTooltip": "Nv.{{level}} {{percent}}%",
+    "chartDays": "{{days}} días", "chartCustom": "Período personalizado", "chartStart": "Fecha inicial", "chartEnd": "Fecha final",
     "gainAmount": "EXP",
     "rankUp": "↑ {{count}} puestos",
     "rankDown": "↓ {{count}} puestos",
@@ -150,6 +160,8 @@
       "basedOnDays": "({{count}} días de datos)",
       "daysToLevelTitle": "Días para alcanzar nivel",
       "targetLevel": "Nivel objetivo",
+      "dailyExp": "EXP diario", "levelColumn": "Nivel",
+      "daysColumn": "Días necesarios", "dateColumn": "Fecha estimada",
       "gainRate": "Ganancia promedio",
       "gainCustom": "Personalizado",
       "gainHint": "ej. 465",

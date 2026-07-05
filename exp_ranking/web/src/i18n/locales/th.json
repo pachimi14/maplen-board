@@ -37,6 +37,12 @@
     "byJob": "ตามอาชีพ",
     "allServers": "ทุกเซิร์ฟเวอร์"
   },
+  "filter": {
+    "title": "ตัวกรอง", "reset": "รีเซ็ต", "job": "อาชีพ", "allJobs": "ทุกอาชีพ",
+    "server": "เซิร์ฟเวอร์", "minLevel": "เลเวลต่ำสุด", "maxLevel": "เลเวลสูงสุด",
+    "minGain": "การเพิ่มขั้นต่ำ", "sort": "การแสดงผล",
+    "clickToCollapse": "คลิกเพื่อย่อ", "clickToExpand": "คลิกเพื่อขยาย"
+  },
   "group": {
     "view": "กลุ่ม",
     "title": "เปรียบเทียบกลุ่ม",
@@ -129,6 +135,10 @@
     "chartGain30d": "เพิ่ม EXP รายวัน 30 วันล่าสุด",
     "chartRank30d": "อันดับเพิ่มรายวัน 30 วันล่าสุด",
     "chartRank7d": "อันดับเพิ่มรายวัน 7 วันล่าสุด",
+    "chartGain": "EXP ที่เพิ่มรายวัน", "chartRank": "อันดับการเพิ่มรายวัน",
+    "chartRankMode": "อันดับการเพิ่ม", "chartLevelMode": "ความคืบหน้าเลเวล", "chartLevelProgress": "ความคืบหน้าเลเวล",
+    "levelProgressTooltip": "เลเวล {{level}} {{percent}}%",
+    "chartDays": "{{days}} วัน", "chartCustom": "ช่วงกำหนดเอง", "chartStart": "วันที่เริ่ม", "chartEnd": "วันที่สิ้นสุด",
     "gainAmount": "ปริมาณเพิ่ม",
     "rankUp": "↑ ขึ้น {{count}} อันดับ",
     "rankDown": "↓ ลง {{count}} อันดับ",
@@ -150,6 +160,8 @@
       "basedOnDays": "({{count}} วันของข้อมูล)",
       "daysToLevelTitle": "วันที่ถึงเลเวลเป้าหมาย",
       "targetLevel": "เลเวลเป้าหมาย",
+      "dailyExp": "EXP รายวัน", "levelColumn": "เลเวล",
+      "daysColumn": "จำนวนวันที่ต้องใช้", "dateColumn": "วันที่คาดการณ์",
       "gainRate": "การเพิ่มเฉลี่ย",
       "gainCustom": "กำหนดเอง",
       "gainHint": "เช่น 465",

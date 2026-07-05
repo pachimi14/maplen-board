@@ -204,22 +204,23 @@ def build_mvp_characters(
         }
     )
     for snapshot_date in history_dates:
-        ranked = sorted(
-            characters,
-            key=lambda character: -next(
+        ranked_points = []
+        for character in characters:
+            point = next(
                 (
-                    point.get("dailyGain") or 0
-                    for point in character.get("history", [])
-                    if point.get("snapshotDate") == snapshot_date
+                    item
+                    for item in character.get("history", [])
+                    if item.get("snapshotDate") == snapshot_date
                 ),
-                0,
-            ),
-        )
-        for daily_rank, character in enumerate(ranked, start=1):
-            for point in character.get("history", []):
-                if point.get("snapshotDate") == snapshot_date:
-                    point["dailyRank"] = daily_rank
-                    break
+                None,
+            )
+            gain = point.get("dailyGain") if point else None
+            if gain is not None and gain > 0:
+                ranked_points.append((gain, point))
+
+        ranked_points.sort(key=lambda item: -item[0])
+        for daily_rank, (_, point) in enumerate(ranked_points, start=1):
+            point["dailyRank"] = daily_rank
 
     return characters
 

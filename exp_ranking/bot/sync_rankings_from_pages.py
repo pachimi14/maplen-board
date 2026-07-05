@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import sys
 from pathlib import Path
 
@@ -56,6 +57,13 @@ def main() -> int:
         json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
+
+    if args.output.resolve() == DEFAULT_OUTPUT.resolve():
+        v2_dir = (args.output.parent / "v2").resolve()
+        expected_v2_dir = (DEFAULT_OUTPUT.parent / "v2").resolve()
+        if v2_dir == expected_v2_dir and v2_dir.exists():
+            shutil.rmtree(v2_dir)
+            print("[OK] Removed stale local v2 data")
 
     print("[OK] Synced production rankings.json")
     print(f"     characters: {meta.get('characterCount', '?')}")

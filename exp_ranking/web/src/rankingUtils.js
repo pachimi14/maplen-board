@@ -422,24 +422,35 @@ export function buildWeekDailyRankSeries(
 
   return points.map((point) => {
     const date = point.date;
+    if (point.dailyGain == null || point.dailyGain <= 0) {
+      return {
+        date,
+        dailyGain: null,
+        dailyRank: null,
+      };
+    }
     if (point.dailyRank != null) {
       return {
         date,
-        dailyGain: point.dailyGain ?? 0,
+        dailyGain: point.dailyGain,
         dailyRank: point.dailyRank,
       };
     }
     const ranked = characters
       .map((character) => {
         const dayPoint = character.history?.find((item) => item.date === date);
+        if (dayPoint?.dailyGain == null || dayPoint.dailyGain <= 0) {
+          return null;
+        }
         return {
           id: character.id,
-          gain: dayPoint?.dailyGain ?? 0,
+          gain: dayPoint.dailyGain,
         };
       })
+      .filter(Boolean)
       .sort((a, b) => b.gain - a.gain);
 
-    let dailyRank = ranked.length;
+    let dailyRank = null;
     for (let index = 0; index < ranked.length; index += 1) {
       if (ranked[index].id === characterId) {
         dailyRank = index + 1;
@@ -449,7 +460,7 @@ export function buildWeekDailyRankSeries(
 
     return {
       date,
-      dailyGain: point.dailyGain ?? 0,
+      dailyGain: point.dailyGain,
       dailyRank,
     };
   });
@@ -458,7 +469,9 @@ export function buildWeekDailyRankSeries(
 export function enrichRankSeries(series) {
   return series.map((point, index, all) => {
     const previousRank = index > 0 ? all[index - 1].dailyRank : null;
-    const rankDelta = previousRank != null ? previousRank - point.dailyRank : null;
+    const rankDelta = previousRank != null && point.dailyRank != null
+      ? previousRank - point.dailyRank
+      : null;
     return { ...point, rankDelta };
   });
 }

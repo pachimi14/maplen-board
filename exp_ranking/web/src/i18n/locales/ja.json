@@ -37,6 +37,12 @@
     "byJob": "職業別",
     "allServers": "全サーバー"
   },
+  "filter": {
+    "title": "絞り込み", "reset": "リセット", "job": "職業", "allJobs": "全職業",
+    "server": "サーバー", "minLevel": "最低レベル", "maxLevel": "最高レベル",
+    "minGain": "最低増加量", "sort": "表示順",
+    "clickToCollapse": "クリックで折り畳む", "clickToExpand": "クリックで展開"
+  },
   "group": {
     "view": "グループ",
     "title": "グループ比較",
@@ -129,6 +135,10 @@
     "chartGain30d": "直近30日間のデイリー経験値増加量",
     "chartRank30d": "直近30日間のデイリー増加量順位",
     "chartRank7d": "直近7日間のデイリー増加量順位",
+    "chartGain": "デイリー経験値増加量", "chartRank": "デイリー増加量順位",
+    "chartRankMode": "増加量順位", "chartLevelMode": "レベル進捗", "chartLevelProgress": "レベル進捗",
+    "levelProgressTooltip": "Lv.{{level}} {{percent}}%",
+    "chartDays": "{{days}}日", "chartCustom": "任意期間", "chartStart": "開始日", "chartEnd": "終了日",
     "gainAmount": "増加量",
     "rankUp": "↑ {{count}} 位上昇",
     "rankDown": "↓ {{count}} 位下降",
@@ -150,6 +160,8 @@
       "basedOnDays": "（{{count}}日分のデータ）",
       "daysToLevelTitle": "目標レベルまでの日数",
       "targetLevel": "目標レベル",
+      "dailyExp": "デイリーEXP", "levelColumn": "到達レベル",
+      "daysColumn": "必要日数", "dateColumn": "到達予定日",
       "gainRate": "平均増加量",
       "gainCustom": "任意",
       "gainHint": "例: 465",

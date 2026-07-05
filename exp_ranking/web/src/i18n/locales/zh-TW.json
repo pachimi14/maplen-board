@@ -37,6 +37,12 @@
     "byJob": "依職業",
     "allServers": "所有伺服器"
   },
+  "filter": {
+    "title": "篩選", "reset": "重設", "job": "職業", "allJobs": "所有職業",
+    "server": "伺服器", "minLevel": "最低等級", "maxLevel": "最高等級",
+    "minGain": "最低增加量", "sort": "顯示順序",
+    "clickToCollapse": "點擊收合", "clickToExpand": "點擊展開"
+  },
   "group": {
     "view": "群組",
     "title": "群組比較",
@@ -129,6 +135,10 @@
     "chartGain30d": "近 30 日單日經驗值增加量",
     "chartRank30d": "近 30 日單日增加量排名",
     "chartRank7d": "近 7 日單日增加量排名",
+    "chartGain": "每日經驗值增加量", "chartRank": "每日增加量排名",
+    "chartRankMode": "增加量排名", "chartLevelMode": "等級進度", "chartLevelProgress": "等級進度",
+    "levelProgressTooltip": "Lv.{{level}} {{percent}}%",
+    "chartDays": "{{days}} 日", "chartCustom": "自訂期間", "chartStart": "開始日期", "chartEnd": "結束日期",
     "gainAmount": "增加量",
     "rankUp": "↑ 上升 {{count}} 名",
     "rankDown": "↓ 下降 {{count}} 名",
@@ -150,6 +160,8 @@
       "basedOnDays": "（{{count}} 日資料）",
       "daysToLevelTitle": "到達目標等級所需天數",
       "targetLevel": "目標等級",
+      "dailyExp": "每日 EXP", "levelColumn": "到達等級",
+      "daysColumn": "所需天數", "dateColumn": "預計日期",
       "gainRate": "平均增加量",
       "gainCustom": "自訂",
       "gainHint": "例：465",
