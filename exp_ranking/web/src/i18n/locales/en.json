@@ -37,6 +37,12 @@
     "byJob": "By job",
     "allServers": "All servers"
   },
+  "filter": {
+    "title": "Filters", "reset": "Reset", "job": "Job", "allJobs": "All jobs",
+    "server": "Server", "minLevel": "Minimum level", "maxLevel": "Maximum level",
+    "minGain": "Minimum gain", "sort": "View",
+    "clickToCollapse": "Click to collapse", "clickToExpand": "Click to expand"
+  },
   "group": {
     "view": "Group",
     "title": "Group comparison",
@@ -129,6 +135,10 @@
     "chartGain30d": "Daily EXP gain (last 30 days)",
     "chartRank30d": "Daily gain rank (last 30 days)",
     "chartRank7d": "Daily gain rank (last 7 days)",
+    "chartGain": "Daily EXP gain", "chartRank": "Daily gain rank",
+    "chartRankMode": "Gain rank", "chartLevelMode": "Level progress", "chartLevelProgress": "Level progress",
+    "levelProgressTooltip": "Lv.{{level}} {{percent}}%",
+    "chartDays": "{{days}} days", "chartCustom": "Custom range", "chartStart": "Start date", "chartEnd": "End date",
     "gainAmount": "Gain",
     "rankUp": "↑ {{count}} places",
     "rankDown": "↓ {{count}} places",
@@ -150,6 +160,8 @@
       "basedOnDays": "({{count}} days of data)",
       "daysToLevelTitle": "Days to reach level",
       "targetLevel": "Target level",
+      "dailyExp": "Daily EXP", "levelColumn": "Level",
+      "daysColumn": "Days required", "dateColumn": "Estimated date",
       "gainRate": "Average gain",
       "gainCustom": "Custom",
       "gainHint": "e.g. 465",

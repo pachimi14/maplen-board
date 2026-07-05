@@ -1,6 +1,6 @@
 import React from "react";
 import FavoriteStar from "./FavoriteStar";
-import { useGainPeriodLabel, useTranslation } from "./i18n/I18nContext";
+import { useTranslation } from "./i18n/I18nContext";
 import {
   formatExp,
   formatJobName,
@@ -15,13 +15,13 @@ const PERIODS = ["daily", "weekly", "monthly"];
 
 function PeriodTop3({ period, characters, gainRankMaps, selectedId, onSelect, isFavorite, onToggleFavorite }) {
   const { t } = useTranslation();
-  const periodLabel = useGainPeriodLabel(period);
+  const periodLabel = t(`period.${period}Short`);
   const top = topGainersForPeriod(characters, period, 3, gainRankMaps);
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-2">
       <h3 className="font-semibold text-base text-slate-400 mb-1.5">
-        {t("highlights.top3", { period: periodLabel })}
+        {periodLabel}
       </h3>
       <ul className="space-y-1">
         {top.map((character) => (

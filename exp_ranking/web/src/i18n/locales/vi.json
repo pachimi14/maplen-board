@@ -37,6 +37,12 @@
     "byJob": "Theo nghề",
     "allServers": "Tất cả máy chủ"
   },
+  "filter": {
+    "title": "Bộ lọc", "reset": "Đặt lại", "job": "Nghề", "allJobs": "Tất cả nghề",
+    "server": "Máy chủ", "minLevel": "Level tối thiểu", "maxLevel": "Level tối đa",
+    "minGain": "Mức tăng tối thiểu", "sort": "Hiển thị",
+    "clickToCollapse": "Nhấp để thu gọn", "clickToExpand": "Nhấp để mở rộng"
+  },
   "group": {
     "view": "Nhóm",
     "title": "So sánh nhóm",
@@ -129,6 +135,10 @@
     "chartGain30d": "EXP tăng theo ngày (30 ngày gần nhất)",
     "chartRank30d": "Hạng tăng theo ngày (30 ngày gần nhất)",
     "chartRank7d": "Hạng tăng theo ngày (7 ngày gần nhất)",
+    "chartGain": "Tăng EXP hàng ngày", "chartRank": "Hạng tăng hàng ngày",
+    "chartRankMode": "Hạng tăng", "chartLevelMode": "Tiến độ cấp", "chartLevelProgress": "Tiến độ cấp",
+    "levelProgressTooltip": "Cấp {{level}} {{percent}}%",
+    "chartDays": "{{days}} ngày", "chartCustom": "Khoảng tùy chỉnh", "chartStart": "Ngày bắt đầu", "chartEnd": "Ngày kết thúc",
     "gainAmount": "Lượng tăng",
     "rankUp": "↑ Tăng {{count}} hạng",
     "rankDown": "↓ Giảm {{count}} hạng",
@@ -150,6 +160,8 @@
       "basedOnDays": "({{count}} ngày dữ liệu)",
       "daysToLevelTitle": "Số ngày đến level mục tiêu",
       "targetLevel": "Level mục tiêu",
+      "dailyExp": "EXP hàng ngày", "levelColumn": "Level",
+      "daysColumn": "Số ngày cần", "dateColumn": "Ngày dự kiến",
       "gainRate": "Tăng trung bình",
       "gainCustom": "Tùy chỉnh",
       "gainHint": "vd. 465",

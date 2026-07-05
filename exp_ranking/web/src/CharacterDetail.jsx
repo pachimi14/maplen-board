@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronUp, UserRound } from "lucide-react";
@@ -10,6 +10,8 @@ import { useGainPeriodLabel, useTranslation } from "./i18n/I18nContext";
 import {
   BarChart,
   Bar,
+  Area,
+  AreaChart,
   CartesianGrid,
   Line,
   LineChart,
@@ -38,13 +40,14 @@ import {
   formatJobName,
   getGainAmount,
   getNavigatorUrl,
+  historyPointsInPeriod,
   lastHistoryPoints,
   LEVEL_CAP,
   levelExpPercent,
 } from "./rankingUtils";
 
 const RECENT_CHART_DAYS = 7;
-const RECENT_CHART_DAYS_30 = 30;
+const MAX_CHART_DAYS = 90;
 
 function RankChartDot({ cx, cy, payload, showRankLabel = true }) {
   if (cx == null || cy == null || !payload) {
@@ -109,6 +112,31 @@ function GainChartTooltip({ active, payload, label }) {
       </div>
     </div>
   );
+}
+
+function LevelProgressTooltip({ active, payload, label }) {
+  const { t } = useTranslation();
+  if (!active || !payload?.length) {
+    return null;
+  }
+  const row = payload[0].payload;
+  return (
+    <div className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm shadow-lg">
+      <div className="text-slate-400">{label}</div>
+      <div className="mt-0.5 font-bold text-emerald-400">
+        {t("characterDetail.levelProgressTooltip", {
+          level: row.level,
+          percent: row.levelExpPercent.toFixed(3),
+        })}
+      </div>
+    </div>
+  );
+}
+
+function formatLevelProgressTick(value) {
+  const level = Math.floor(value);
+  const percent = Math.max(0, Math.min(99.999, (value - level) * 100));
+  return `Lv.${level} ${percent.toFixed(0)}%`;
 }
 
 function GainStatCard({ label, amount, rank, compact = false }) {
@@ -239,7 +267,10 @@ function HistoryChartRow({
   rankTitle,
   gainSeries,
   rankSeries,
+  levelSeries,
   rankChartScale,
+  rightChartMode,
+  onRightChartModeChange,
   t,
   dense = false,
 }) {
@@ -269,10 +300,22 @@ function HistoryChartRow({
       </div>
 
       <div>
-        <h3 className="font-bold mb-3">{rankTitle}</h3>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h3 className="font-bold">
+            {rightChartMode === "rank" ? rankTitle : t("characterDetail.chartLevelProgress")}
+          </h3>
+          <div className="flex gap-1 rounded-md bg-slate-950 p-1">
+            <Button type="button" size="sm" variant={rightChartMode === "rank" ? "default" : "outline"} className="h-8 border-slate-700" onClick={() => onRightChartModeChange("rank")}>
+              {t("characterDetail.chartRankMode")}
+            </Button>
+            <Button type="button" size="sm" variant={rightChartMode === "level" ? "default" : "outline"} className="h-8 border-slate-700" onClick={() => onRightChartModeChange("level")}>
+              {t("characterDetail.chartLevelMode")}
+            </Button>
+          </div>
+        </div>
         <div className="h-64 md:h-72">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart
+            {rightChartMode === "rank" ? <LineChart
               data={rankSeries}
               margin={{ top: dense ? 12 : 28, right: 12, left: 4, bottom: 4 }}
             >
@@ -315,7 +358,19 @@ function HistoryChartRow({
                 dot={<RankChartDot showRankLabel={!dense} />}
                 activeDot={{ r: 6, fill: "#0ea5e9", stroke: "#e0f2fe", strokeWidth: 2 }}
               />
-            </LineChart>
+            </LineChart> : <AreaChart data={levelSeries} margin={{ top: 12, right: 12, left: 8, bottom: 4 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+              <XAxis dataKey="date" tick={xTick} minTickGap={dense ? 4 : 8} axisLine={{ stroke: "#475569" }} />
+              <YAxis
+                dataKey="levelProgress"
+                domain={["dataMin", "dataMax"]}
+                tickFormatter={formatLevelProgressTick}
+                tick={{ fill: "#94a3b8", fontSize: 11 }}
+                width={82}
+              />
+              <Tooltip content={<LevelProgressTooltip />} />
+              <Area type="monotone" dataKey="levelProgress" stroke="#34d399" fill="#34d399" fillOpacity={0.16} strokeWidth={2.5} dot={{ r: dense ? 2 : 3, fill: "#34d399", strokeWidth: 0 }} activeDot={{ r: 5, fill: "#34d399", stroke: "#d1fae5", strokeWidth: 2 }} />
+            </AreaChart>}
           </ResponsiveContainer>
         </div>
       </div>
@@ -402,42 +457,64 @@ export default function CharacterDetail({
   const weeklyRank = getGainRank(gainRankMaps, character.id, "weekly");
   const monthlyRank = getGainRank(gainRankMaps, character.id, "monthly");
 
-  const weekGainSeries = useMemo(
-    () => lastHistoryPoints(character, RECENT_CHART_DAYS),
-    [character],
-  );
-
-  const monthGainSeries = useMemo(
-    () => lastHistoryPoints(character, RECENT_CHART_DAYS_30),
-    [character],
-  );
-
   const rankPool = allCharacters ?? characters;
+  const history = Array.isArray(character.history) ? character.history : [];
+  const firstHistoryDate = history[0]?.snapshotDate ?? "";
+  const lastHistoryDate = history.at(-1)?.snapshotDate ?? "";
+  const [chartPeriod, setChartPeriod] = useState("7");
+  const [rightChartMode, setRightChartMode] = useState("rank");
+  const [customStartDate, setCustomStartDate] = useState(firstHistoryDate);
+  const [customEndDate, setCustomEndDate] = useState(lastHistoryDate);
 
-  const weekRankSeries = useMemo(
+  useEffect(() => {
+    setChartPeriod("7");
+    setRightChartMode("rank");
+    setCustomStartDate(firstHistoryDate);
+    setCustomEndDate(lastHistoryDate);
+  }, [character.id, firstHistoryDate, lastHistoryDate]);
+
+  const chartGainSeries = useMemo(
     () =>
-      enrichRankSeries(
-        buildWeekDailyRankSeries(rankPool, character.id, RECENT_CHART_DAYS),
-      ),
-    [rankPool, character.id],
+      chartPeriod === "custom"
+        ? historyPointsInPeriod(character, customStartDate, customEndDate)
+        : lastHistoryPoints(character, Number(chartPeriod)),
+    [character, chartPeriod, customEndDate, customStartDate],
   );
 
-  const monthRankSeries = useMemo(
+  const chartRankSeries = useMemo(
     () =>
       enrichRankSeries(
-        buildWeekDailyRankSeries(rankPool, character.id, RECENT_CHART_DAYS_30),
+        buildWeekDailyRankSeries(
+          rankPool,
+          character.id,
+          chartPeriod === "custom" ? MAX_CHART_DAYS : Number(chartPeriod),
+          chartPeriod === "custom" ? customStartDate : null,
+          chartPeriod === "custom" ? customEndDate : null,
+        ),
       ),
-    [rankPool, character.id],
+    [rankPool, character.id, chartPeriod, customEndDate, customStartDate],
+  );
+
+  const chartLevelSeries = useMemo(
+    () =>
+      chartGainSeries
+        .filter((point) => Number.isFinite(Number(point.level)))
+        .map((point) => {
+          const percent = Number(point.levelExpPercent ?? point.expPercent ?? 0);
+          return {
+            ...point,
+            levelExpPercent: percent,
+            levelProgress: Number(point.level) + percent / 100,
+          };
+        }),
+    [chartGainSeries],
   );
 
   const rankChartScale = useMemo(
-    () => buildRankChartScale(weekRankSeries.map((point) => point.dailyRank)),
-    [weekRankSeries]
-  );
-
-  const rankChartScale30 = useMemo(
-    () => buildRankChartScale(monthRankSeries.map((point) => point.dailyRank)),
-    [monthRankSeries]
+    () => buildRankChartScale(
+      chartRankSeries.map((point) => point.dailyRank).filter(Number.isFinite),
+    ),
+    [chartRankSeries],
   );
 
   const bestDaily = useMemo(() => findBestDailyGain(character), [character]);
@@ -660,23 +737,47 @@ export default function CharacterDetail({
               showAverages={false}
             />
 
-            <div className="space-y-8">
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-end gap-3 border-y border-slate-800 py-3">
+                <div className="flex flex-wrap gap-2">
+                  {["7", "30", "90", "custom"].map((period) => (
+                    <Button
+                      key={period}
+                      type="button"
+                      variant={chartPeriod === period ? "default" : "outline"}
+                      className="border-slate-700"
+                      onClick={() => setChartPeriod(period)}
+                    >
+                      {period === "custom"
+                        ? t("characterDetail.chartCustom")
+                        : t("characterDetail.chartDays", { days: period })}
+                    </Button>
+                  ))}
+                </div>
+                {chartPeriod === "custom" ? (
+                  <div className="flex flex-wrap items-end gap-2">
+                    <label className="text-xs text-slate-400 space-y-1">
+                      <span className="block">{t("characterDetail.chartStart")}</span>
+                      <input type="date" min={firstHistoryDate} max={customEndDate || lastHistoryDate} value={customStartDate} onChange={(event) => setCustomStartDate(event.target.value)} className="h-10 rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-100" />
+                    </label>
+                    <label className="text-xs text-slate-400 space-y-1">
+                      <span className="block">{t("characterDetail.chartEnd")}</span>
+                      <input type="date" min={customStartDate || firstHistoryDate} max={lastHistoryDate} value={customEndDate} onChange={(event) => setCustomEndDate(event.target.value)} className="h-10 rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-100" />
+                    </label>
+                  </div>
+                ) : null}
+              </div>
               <HistoryChartRow
-                gainTitle={t("characterDetail.chartGain7d")}
-                rankTitle={t("characterDetail.chartRank7d")}
-                gainSeries={weekGainSeries}
-                rankSeries={weekRankSeries}
+                gainTitle={t("characterDetail.chartGain")}
+                rankTitle={t("characterDetail.chartRank")}
+                gainSeries={chartGainSeries}
+                rankSeries={chartRankSeries}
+                levelSeries={chartLevelSeries}
                 rankChartScale={rankChartScale}
+                rightChartMode={rightChartMode}
+                onRightChartModeChange={setRightChartMode}
                 t={t}
-              />
-              <HistoryChartRow
-                gainTitle={t("characterDetail.chartGain30d")}
-                rankTitle={t("characterDetail.chartRank30d")}
-                gainSeries={monthGainSeries}
-                rankSeries={monthRankSeries}
-                rankChartScale={rankChartScale30}
-                t={t}
-                dense
+                dense={chartPeriod !== "7"}
               />
             </div>
           </>

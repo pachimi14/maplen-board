@@ -1,19 +1,20 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Star } from "lucide-react";
+import { ChevronDown, ChevronUp, RotateCcw, Search, Star } from "lucide-react";
 import CharacterDetail from "./CharacterDetail";
 import GroupPanel from "./GroupPanel";
 import FavoriteStar from "./FavoriteStar";
 import TopGainHighlights from "./TopGainHighlights";
-import JobGainRankings from "./JobGainRankings";
 import LanguageSwitcher from "./LanguageSwitcher";
 import { useGainPeriodLabel, useTranslation } from "./i18n/I18nContext";
 import { useFavorites } from "./useFavorites";
 import { useGroups } from "./useGroups";
 import NavigatorLink from "./NavigatorLink";
 import { loadCharacterHistories } from "./historyData";
+import { classifyJob, JOB_TAXONOMY } from "./jobCategories";
 import {
   computeGainRankMaps,
   formatExp,
@@ -22,7 +23,6 @@ import {
   formatScheduledUpdateLabel,
   gainRankClass,
   getGainAmount,
-  getGainRank,
   getNavigatorUrl,
   matchesWorldFilter,
   WORLD_IDS,
@@ -100,7 +100,7 @@ function parseExpTable(meta) {
 }
 
 export default function App() {
-  const { t } = useTranslation();
+  const { t, translateAlliance, translateBranch } = useTranslation();
   const dailyPeriod = useGainPeriodLabel("daily");
   const weeklyPeriod = useGainPeriodLabel("weekly");
   const monthlyPeriod = useGainPeriodLabel("monthly");
@@ -111,8 +111,6 @@ export default function App() {
   };
 
   const [query, setQuery] = useState("");
-  const [gainRankView, setGainRankView] = useState("overall");
-  const [expandedJob, setExpandedJob] = useState(null);
   const [sortKey, setSortKey] = useState("daily");
   const [page, setPage] = useState(1);
   const [selectedId, setSelectedId] = useState(1);
@@ -122,9 +120,18 @@ export default function App() {
   const [loadError, setLoadError] = useState("");
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [worldFilter, setWorldFilter] = useState("all");
+  const [jobFilter, setJobFilter] = useState("all");
+  const [jobAlliance, setJobAlliance] = useState("all");
+  const [jobBranch, setJobBranch] = useState("all");
+  const [minLevel, setMinLevel] = useState("225");
+  const [gainFilterPeriod, setGainFilterPeriod] = useState("daily");
+  const [minGainBillions, setMinGainBillions] = useState("");
   const [detailView, setDetailView] = useState("compact");
   const [groupView, setGroupView] = useState("compact");
   const [showListWhenExpanded, setShowListWhenExpanded] = useState(false);
+  const [showHighlights, setShowHighlights] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
+  const [rankingControlsTarget, setRankingControlsTarget] = useState(null);
   const detailTopRef = useRef(null);
   const groupTopRef = useRef(null);
   const { favoriteCount, favorites, isFavorite, toggleFavorite } = useFavorites();
@@ -149,6 +156,34 @@ export default function App() {
     return ["all", ...fromMeta];
   }, [meta.worldIds]);
 
+  const jobOptions = useMemo(
+    () =>
+      [...new Set(characters.map((character) => formatJobName(character.job)).filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b)),
+    [characters],
+  );
+
+  const selectedJobAlliance = useMemo(
+    () => JOB_TAXONOMY.find((entry) => entry.alliance === jobAlliance) ?? null,
+    [jobAlliance],
+  );
+
+  const visibleJobBranches = jobAlliance === "冒険家"
+    ? selectedJobAlliance?.branches ?? []
+    : [];
+
+  const visibleJobOptions = useMemo(() => {
+    if (!selectedJobAlliance) {
+      return [];
+    }
+    const jobs = jobAlliance === "冒険家"
+      ? jobBranch === "all"
+        ? selectedJobAlliance.branches.flatMap((entry) => entry.jobs)
+        : selectedJobAlliance.branches.find((entry) => entry.branch === jobBranch)?.jobs ?? []
+      : selectedJobAlliance.branches.flatMap((entry) => entry.jobs);
+    return jobs.filter((job) => jobOptions.includes(job));
+  }, [jobAlliance, jobBranch, jobOptions, selectedJobAlliance]);
+
   const groupDetailProps = {
     groups,
     activeGroup,
@@ -172,14 +207,11 @@ export default function App() {
   );
 
   const rankingListTitle = useMemo(() => {
-    if (gainRankView === "byJob" && sortKey !== "rank") {
-      return t("sort.gainByJob", { period: periodLabels[sortKey] });
-    }
     if (sortKey === "rank") {
       return t("sort.levelRanking");
     }
     return t("sort.gainRanking", { period: periodLabels[sortKey] });
-  }, [gainRankView, sortKey, t, periodLabels]);
+  }, [sortKey, t, periodLabels]);
 
   useEffect(() => {
     let cancelled = false;
@@ -271,17 +303,47 @@ export default function App() {
     if (worldFilter !== "all") {
       pool = pool.filter((character) => matchesWorldFilter(character, worldFilter));
     }
+    if (jobAlliance !== "all") {
+      pool = pool.filter((character) => {
+        const category = classifyJob(formatJobName(character.job));
+        return category?.alliance === jobAlliance
+          && (jobAlliance !== "冒険家" || jobBranch === "all" || category.branch === jobBranch);
+      });
+    }
+    if (jobFilter !== "all") {
+      pool = pool.filter((character) => formatJobName(character.job) === jobFilter);
+    }
+    const parsedMinLevel = Number(minLevel || 225);
+    if (Number.isFinite(parsedMinLevel)) {
+      pool = pool.filter((character) => character.level >= parsedMinLevel);
+    }
+    const parsedMinGain = Number(String(minGainBillions).replace(/,/g, ""));
+    if (minGainBillions !== "" && Number.isFinite(parsedMinGain) && parsedMinGain > 0) {
+      pool = pool.filter(
+        (character) => getGainAmount(character, gainFilterPeriod) >= parsedMinGain * 1_000_000_000,
+      );
+    }
     if (!favoritesOnly) {
       return pool;
     }
     return pool.filter((character) => isFavorite(character));
-  }, [characters, favoritesOnly, isFavorite, worldFilter]);
+  }, [
+    characters,
+    favoritesOnly,
+    gainFilterPeriod,
+    isFavorite,
+    jobAlliance,
+    jobBranch,
+    jobFilter,
+    minGainBillions,
+    minLevel,
+    worldFilter,
+  ]);
 
   const gainRankMaps = useMemo(() => computeGainRankMaps(characters), [characters]);
 
   const isLevelSort = sortKey === "rank";
   const showGainRank = !isLevelSort;
-  const showJobRanking = !isLevelSort && gainRankView === "byJob";
 
   const filteredCharacters = useMemo(() => {
     const lowerQuery = query.toLowerCase();
@@ -295,22 +357,32 @@ export default function App() {
   }, [rankingPool, query]);
 
   const displayCharacters = useMemo(() => {
-    const sorted = isLevelSort
+    return isLevelSort
       ? [...filteredCharacters].sort((a, b) => a.rank - b.rank)
       : [...filteredCharacters].sort(
-          (a, b) => getGainAmount(b, sortKey) - getGainAmount(a, sortKey)
+          (a, b) => getGainAmount(b, sortKey) - getGainAmount(a, sortKey),
         );
-
-    if (isLevelSort) {
-      return sorted;
-    }
-
-    return sorted;
   }, [filteredCharacters, isLevelSort, sortKey]);
+
+  const filteredGainRanks = useMemo(
+    () => new Map(displayCharacters.map((character, index) => [character.id, index + 1])),
+    [displayCharacters],
+  );
 
   useEffect(() => {
     setPage(1);
-  }, [query, sortKey, favoritesOnly, gainRankView, expandedJob, worldFilter]);
+  }, [
+    favoritesOnly,
+    gainFilterPeriod,
+    jobAlliance,
+    jobBranch,
+    jobFilter,
+    minGainBillions,
+    minLevel,
+    query,
+    sortKey,
+    worldFilter,
+  ]);
 
   useEffect(() => {
     if (favoritesOnly && selectedId && !rankingPool.some((c) => c.id === selectedId)) {
@@ -423,7 +495,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8">
+    <div className="min-h-screen overflow-x-hidden bg-slate-950 text-slate-100 p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
@@ -453,67 +525,151 @@ export default function App() {
           </div>
         </div>
 
-        <TopGainHighlights
-          characters={characters}
-          gainRankMaps={gainRankMaps}
-          selectedId={selectedId}
-          onSelect={setSelectedId}
-          isFavorite={isFavorite}
-          onToggleFavorite={toggleFavorite}
-        />
-
-        <div className="flex flex-wrap gap-2">
-          {SORT_OPTIONS.map((option) => (
-            <Button
-              key={option.key}
-              variant={sortKey === option.key ? "default" : "outline"}
-              onClick={() => {
-                setSortKey(option.key);
-                if (option.key === "rank") {
-                  setGainRankView("overall");
-                  setExpandedJob(null);
-                }
-              }}
+        {!isExpandedDetail && !isExpandedGroup ? (
+          <section className="overflow-hidden rounded-md border border-slate-800">
+            <button
+              type="button"
+              aria-expanded={showHighlights}
+              onClick={() => setShowHighlights((current) => !current)}
+              className="flex w-full items-center justify-between bg-slate-900/70 px-3 py-2 text-left transition hover:bg-slate-900"
             >
-              {t(option.labelKey)}
-            </Button>
-          ))}
-        </div>
-
-        {!isLevelSort ? (
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant={gainRankView === "overall" ? "default" : "outline"}
-              onClick={() => {
-                setGainRankView("overall");
-                setExpandedJob(null);
-              }}
-            >
-              {t("view.overall")}
-            </Button>
-            <Button
-              variant={gainRankView === "byJob" ? "default" : "outline"}
-              onClick={() => {
-                setGainRankView("byJob");
-                setExpandedJob(null);
-              }}
-            >
-              {t("view.byJob")}
-            </Button>
-          </div>
+              <h2 className="text-sm font-semibold text-slate-200">TOP3</h2>
+              <span className="flex items-center gap-2 text-xs text-slate-500">
+                <span className="hidden sm:inline">{t(showHighlights ? "filter.clickToCollapse" : "filter.clickToExpand")}</span>
+                {showHighlights ? <ChevronUp size={18} className="text-slate-400" /> : <ChevronDown size={18} className="text-slate-400" />}
+              </span>
+            </button>
+            {showHighlights ? (
+              <div className="border-t border-slate-800 p-2">
+                <TopGainHighlights
+                  characters={characters}
+                  gainRankMaps={gainRankMaps}
+                  selectedId={selectedId}
+                  onSelect={setSelectedId}
+                  isFavorite={isFavorite}
+                  onToggleFavorite={toggleFavorite}
+                />
+              </div>
+            ) : null}
+          </section>
         ) : null}
 
-        <div className="flex flex-wrap gap-2">
-          {worldOptions.map((world) => (
-            <Button
-              key={world}
-              variant={worldFilter === world ? "default" : "outline"}
-              onClick={() => setWorldFilter(world)}
-            >
-              {world === "all" ? t("view.allServers") : world}
-            </Button>
-          ))}
+        {rankingControlsTarget ? createPortal((<>
+        <div className="flex items-center gap-2 rounded-md border border-slate-800 bg-slate-900/30 p-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+            <span className="mr-1 text-xs text-slate-500">{t("filter.sort")}</span>
+            {SORT_OPTIONS.map((option) => (
+              <Button key={option.key} type="button" size="sm" variant={sortKey === option.key ? "default" : "outline"} className="h-8 border-slate-700" onClick={() => setSortKey(option.key)}>
+                {t(option.labelKey)}
+              </Button>
+            ))}
+          </div>
         </div>
+
+        {!isExpandedDetail ? (
+        <div className="overflow-hidden rounded-md border border-slate-800">
+          <button
+            type="button"
+            aria-expanded={showFilters}
+            onClick={() => setShowFilters((current) => !current)}
+            className="flex w-full items-center justify-between bg-slate-900/70 px-3 py-2 text-left transition hover:bg-slate-900"
+          >
+            <h2 className="text-sm font-semibold text-slate-200">{t("filter.title")}</h2>
+            <span className="flex items-center gap-2 text-xs text-slate-500">
+              <span className="hidden sm:inline">{t(showFilters ? "filter.clickToCollapse" : "filter.clickToExpand")}</span>
+              {showFilters ? <ChevronUp size={18} className="text-slate-400" /> : <ChevronDown size={18} className="text-slate-400" />}
+            </span>
+          </button>
+          {showFilters ? (
+          <div className="divide-y divide-slate-800 border-t border-slate-800">
+            <div className="bg-slate-900/20 p-2">
+              <div className="space-y-1.5">
+                <span className="block text-xs text-slate-400">{t("filter.server")}</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {worldOptions.map((world) => (
+                    <Button key={world} type="button" size="sm" variant={worldFilter === world ? "default" : "outline"} className="h-8 border-slate-700" onClick={() => setWorldFilter(world)}>
+                      {world === "all" ? t("view.allServers") : world}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="space-y-1.5 p-2">
+              <span className="text-xs text-slate-400">{t("filter.job")}</span>
+              <div className="flex flex-wrap gap-1.5">
+                <Button type="button" size="sm" variant={jobAlliance === "all" ? "default" : "outline"} className="border-slate-700" onClick={() => { setJobAlliance("all"); setJobFilter("all"); }}>
+                  {t("filter.allJobs")}
+                </Button>
+                {JOB_TAXONOMY.map(({ alliance }) => (
+                  <Button key={alliance} type="button" size="sm" variant={jobAlliance === alliance ? "default" : "outline"} className="border-slate-700" onClick={() => { setJobAlliance(alliance); setJobFilter("all"); if (alliance === "冒険家") setJobBranch("all"); }}>
+                    {translateAlliance(alliance)}
+                  </Button>
+                ))}
+              </div>
+              {visibleJobBranches.length ? (
+                <div className="flex flex-wrap gap-1.5 border-l-2 border-slate-700 pl-2">
+                  <Button type="button" size="sm" variant={jobBranch === "all" ? "secondary" : "outline"} className="border-slate-700" onClick={() => { setJobBranch("all"); setJobFilter("all"); }}>
+                    {t("filter.allJobs")}
+                  </Button>
+                  {visibleJobBranches.map(({ branch }) => (
+                    <Button key={branch} type="button" size="sm" variant={jobBranch === branch ? "secondary" : "outline"} className="border-slate-700" onClick={() => { setJobBranch(branch); setJobFilter("all"); }}>
+                      {translateBranch(branch)}
+                    </Button>
+                  ))}
+                </div>
+              ) : null}
+              {visibleJobOptions.length && !(jobAlliance === "冒険家" && jobBranch === "all") ? (
+                <div className="flex flex-wrap gap-1.5 border-l-2 border-cyan-700/60 pl-2">
+                  {visibleJobOptions.map((job) => (
+                    <Button key={job} type="button" size="sm" variant={jobFilter === job ? "default" : "outline"} className="border-slate-700" onClick={() => setJobFilter(job)}>
+                      {job}
+                    </Button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap items-end gap-x-8 gap-y-2 bg-slate-900/30 p-2">
+              <label className="mr-2 block w-48 text-xs text-slate-400">
+                <span className="mb-1 block">{t("filter.minLevel")}</span>
+                <Input type="number" min="225" value={minLevel} onChange={(event) => setMinLevel(event.target.value)} onBlur={() => { if (minLevel === "") setMinLevel("225"); }} className="h-8 bg-slate-900 border-slate-700" />
+              </label>
+              <div className="space-y-1">
+                <span className="block text-xs text-slate-400">{t("filter.minGain")}</span>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {["daily", "weekly", "monthly"].map((period) => (
+                    <Button key={period} type="button" size="sm" variant={gainFilterPeriod === period ? "default" : "outline"} className="border-slate-700" onClick={() => setGainFilterPeriod(period)}>
+                      {periodLabels[period]}
+                    </Button>
+                  ))}
+                  <Input inputMode="decimal" value={minGainBillions} onChange={(event) => setMinGainBillions(event.target.value)} placeholder="0 B" className="h-8 w-32 bg-slate-900 border-slate-700" />
+                </div>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="ml-auto flex h-8 shrink-0 flex-row items-center gap-1.5 whitespace-nowrap border-slate-700 bg-transparent px-3 text-slate-300 hover:bg-slate-800 hover:text-white"
+                aria-label={t("filter.reset")}
+                title={t("filter.reset")}
+                onClick={() => {
+                  setWorldFilter("all");
+                  setJobFilter("all");
+                  setJobAlliance("all");
+                  setJobBranch("all");
+                  setMinLevel("225");
+                  setGainFilterPeriod("daily");
+                  setMinGainBillions("");
+                }}
+              >
+                <RotateCcw size={15} className="shrink-0" />
+                {t("filter.reset")}
+              </Button>
+            </div>
+          </div>
+          ) : null}
+        </div>
+        ) : null}
+        </>), rankingControlsTarget) : null}
 
         <div className="space-y-6">
           {isExpandedDetail && selectedCharacter ? (
@@ -609,27 +765,14 @@ export default function App() {
                 </div>
               </div>
 
-              {showJobRanking ? (
-                <JobGainRankings
-                  characters={rankingPool}
-                  period={sortKey}
-                  selectedId={selectedId}
-                  onSelect={setSelectedId}
-                  isFavorite={isFavorite}
-                  onToggleFavorite={toggleFavorite}
-                  expandedJob={expandedJob}
-                  onExpandJob={setExpandedJob}
-                />
-              ) : null}
+              <div ref={setRankingControlsTarget} className="space-y-2" />
 
-              {favoritesOnly && displayCharacters.length === 0 && !showJobRanking ? (
+              {favoritesOnly && displayCharacters.length === 0 ? (
                 <p className="text-sm text-amber-300/90 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3">
                   {t("favorite.emptyList")}
                 </p>
               ) : null}
 
-              {!showJobRanking ? (
-                <>
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-sm text-slate-400">
                 <span>
                   {favoritesOnly ? t("pagination.favoritesPrefix") : ""}
@@ -705,10 +848,10 @@ export default function App() {
                         {showGainRank ? (
                           <td
                             className={`p-3 font-bold ${gainRankClass(
-                              getGainRank(gainRankMaps, character.id, sortKey)
+                              filteredGainRanks.get(character.id)
                             )}`}
                           >
-                            #{getGainRank(gainRankMaps, character.id, sortKey) ?? "-"}
+                            #{filteredGainRanks.get(character.id) ?? "-"}
                           </td>
                         ) : null}
                         <td className="p-3 font-bold text-slate-400">#{character.rank}</td>
@@ -768,8 +911,6 @@ export default function App() {
                   </tbody>
                 </table>
               </div>
-                </>
-              ) : null}
             </CardContent>
           </Card>
 

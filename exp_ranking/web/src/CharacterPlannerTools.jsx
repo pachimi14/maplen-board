@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { useGainPeriodLabel, useTranslation } from "./i18n/I18nContext";
 import {
@@ -13,10 +13,7 @@ import {
   requiredGainForLevelByDate,
   slashDateFromParts,
   targetDatePartsAfterDays,
-  toDailyGain,
 } from "./rankingUtils";
-const GAIN_PERIODS = ["daily", "weekly", "monthly"];
-const GAIN_SOURCES = ["daily", "weekly", "monthly", "custom"];
 
 function PlannerCard({ title, children, className = "" }) {
   return (
@@ -39,7 +36,7 @@ function ResultLine({ children, accent = "text-emerald-400" }) {
   return <div className={`text-sm font-semibold tabular-nums ${accent}`}>{children}</div>;
 }
 
-function GhostZeroInput({ value, onChange, className = "", type = "text", inputMode, suffix = null }) {
+function GhostZeroInput({ value, onChange, className = "", type = "text", inputMode, suffix = null, ...inputProps }) {
   return (
     <div className="relative flex-1 min-w-0">
       {value === "" ? (
@@ -54,6 +51,7 @@ function GhostZeroInput({ value, onChange, className = "", type = "text", inputM
         onChange={onChange}
         placeholder=""
         className={className}
+        {...inputProps}
       />
       {suffix}
     </div>
@@ -147,43 +145,44 @@ function DaysToLevelSection({ character, expTable, t }) {
     LEVEL_CAP
   );
   const [targetLevelInput, setTargetLevelInput] = useState(String(defaultLevel));
-  const [gainSource, setGainSource] = useState("daily");
-  const [customGainInput, setCustomGainInput] = useState("");
-  const [customGainPeriod, setCustomGainPeriod] = useState("daily");
+  const actualDailyGain = getGainAmount(character, "daily");
+  const defaultDailyGainInput = String(
+    Math.round((actualDailyGain / 1_000_000_000) * 1000) / 1000,
+  );
+  const [dailyGainInput, setDailyGainInput] = useState(defaultDailyGainInput);
+
+  useEffect(() => {
+    setTargetLevelInput(String(defaultLevel));
+    setDailyGainInput(defaultDailyGainInput);
+  }, [character.id, defaultDailyGainInput, defaultLevel]);
 
   const parsedTargetLevel = useMemo(
     () => parseTargetLevelInput(targetLevelInput),
     [targetLevelInput]
   );
 
-  const autoGain = useMemo(
-    () => ({
-      daily: getGainAmount(character, "daily"),
-      weekly: getGainAmount(character, "weekly"),
-      monthly: getGainAmount(character, "monthly"),
-    }),
-    [character]
-  );
+  const dailyGain = parseExpInputBillions(dailyGainInput) ?? 0;
+  const targetLevel =
+    parsedTargetLevel != null && Number.isInteger(parsedTargetLevel)
+      ? Math.min(LEVEL_CAP, Math.max(MIN_PLANNER_LEVEL, parsedTargetLevel))
+      : null;
+  const targetReached = targetLevel != null && targetLevel <= character.level;
 
-  const periodGain =
-    gainSource === "custom" ? parseExpInputBillions(customGainInput) : autoGain[gainSource];
-  const gainPeriodForConversion = gainSource === "custom" ? customGainPeriod : gainSource;
-  const dailyGain =
-    periodGain != null && periodGain > 0 ? toDailyGain(periodGain, gainPeriodForConversion) : 0;
-
-  const estimate = useMemo(() => {
-    if (parsedTargetLevel == null) {
-      return { days: null, completed: false, noGain: false, empty: true };
+  const estimates = useMemo(() => {
+    if (targetLevel == null || targetReached || dailyGain <= 0) {
+      return [];
     }
-    return estimateDaysToLevelWithGain(character, expTable, parsedTargetLevel, dailyGain);
-  }, [character, expTable, parsedTargetLevel, dailyGain]);
-
-  const dateParts = useMemo(() => {
-    if (!estimate.days || estimate.completed || estimate.noGain) {
-      return null;
+    const rows = [];
+    for (let level = character.level + 1; level <= targetLevel; level += 1) {
+      const estimate = estimateDaysToLevelWithGain(character, expTable, level, dailyGain);
+      rows.push({
+        level,
+        days: estimate.days,
+        date: estimate.days ? slashDateFromParts(targetDatePartsAfterDays(estimate.days, t)) : "-",
+      });
     }
-    return targetDatePartsAfterDays(estimate.days, t);
-  }, [estimate, t]);
+    return rows;
+  }, [character, dailyGain, expTable, t, targetLevel, targetReached]);
 
   return (
     <PlannerCard title={t("characterDetail.planner.daysToLevelTitle")}>
@@ -193,85 +192,56 @@ function DaysToLevelSection({ character, expTable, t }) {
           <GhostZeroInput
             type="number"
             inputMode="numeric"
+            min={MIN_PLANNER_LEVEL}
+            max={LEVEL_CAP}
             value={targetLevelInput}
             onChange={(event) => setTargetLevelInput(event.target.value)}
             className="w-full bg-slate-900 border-slate-700 text-slate-100"
           />
         </div>
         <div>
-          <FieldLabel>{t("characterDetail.planner.gainRate")}</FieldLabel>
-          <div className="flex flex-wrap gap-1.5">
-            {GAIN_SOURCES.map((source) => (
-              <button
-                key={source}
-                type="button"
-                onClick={() => setGainSource(source)}
-                className={`rounded-lg border px-2.5 py-1.5 text-xs sm:text-sm transition-colors ${
-                  gainSource === source
-                    ? "border-sky-500 bg-sky-950/60 text-sky-200"
-                    : "border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800"
-                }`}
-              >
-                {source === "custom"
-                  ? t("characterDetail.planner.gainCustom")
-                  : t(`period.${source}`)}
-              </button>
-            ))}
-          </div>
-          {gainSource === "custom" ? (
-            <div className="flex gap-2 mt-2">
-              <GhostZeroInput
-                type="text"
-                inputMode="decimal"
-                value={customGainInput}
-                onChange={(event) => setCustomGainInput(event.target.value)}
-                className="w-full bg-slate-900 border-slate-700 text-slate-100 pr-8"
-                suffix={
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">
-                    B
-                  </span>
-                }
-              />
-              <select
-                value={customGainPeriod}
-                onChange={(event) => setCustomGainPeriod(event.target.value)}
-                className="rounded-lg border border-slate-700 bg-slate-900 px-2 text-sm text-slate-100"
-              >
-                {GAIN_PERIODS.map((period) => (
-                  <option key={period} value={period}>
-                    {t(`period.${period}`)}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : (
-            <div className="mt-2 text-lg font-bold text-emerald-400 tabular-nums text-center">
-              +{formatExp(autoGain[gainSource])}
-            </div>
-          )}
+          <FieldLabel>{t("characterDetail.planner.dailyExp")}</FieldLabel>
+          <GhostZeroInput
+            type="text"
+            inputMode="decimal"
+            value={dailyGainInput}
+            onChange={(event) => setDailyGainInput(event.target.value)}
+            className="w-full bg-slate-900 border-slate-700 text-slate-100 pr-8"
+            suffix={
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">
+                B
+              </span>
+            }
+          />
         </div>
       </div>
 
-      <div className="pt-2 text-center">
-        {estimate.empty ? null : estimate.completed ? (
-          <ResultLine accent="text-cyan-300">
-            {t("characterDetail.planner.levelReached")}
-          </ResultLine>
-        ) : estimate.noGain ? (
-          <ResultLine accent="text-slate-500">{t("characterDetail.planner.noGain")}</ResultLine>
-        ) : (
-          <div className="space-y-1">
-            <div className="text-lg font-bold tabular-nums">
-              {t("characterDetail.aboutDaysInline", { days: estimate.days })}
-            </div>
-            {dateParts ? (
-              <div className="text-sm font-semibold text-cyan-300 tabular-nums">
-                {slashDateFromParts(dateParts)}
-              </div>
-            ) : null}
-          </div>
-        )}
-      </div>
+      {targetReached ? (
+        <ResultLine accent="text-cyan-300">{t("characterDetail.planner.levelReached")}</ResultLine>
+      ) : dailyGain <= 0 ? (
+        <ResultLine accent="text-slate-500">{t("characterDetail.planner.noGain")}</ResultLine>
+      ) : estimates.length ? (
+        <div className="overflow-x-auto rounded-lg border border-slate-800">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-900 text-slate-400">
+              <tr>
+                <th className="p-2 text-left">{t("characterDetail.planner.levelColumn")}</th>
+                <th className="p-2 text-right">{t("characterDetail.planner.daysColumn")}</th>
+                <th className="p-2 text-right">{t("characterDetail.planner.dateColumn")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {estimates.map((row) => (
+                <tr key={row.level} className="border-t border-slate-800">
+                  <td className="p-2 font-semibold">Lv.{row.level}</td>
+                  <td className="p-2 text-right tabular-nums">{t("characterDetail.aboutDaysInline", { days: row.days })}</td>
+                  <td className="p-2 text-right text-cyan-300 tabular-nums">{row.date}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
     </PlannerCard>
   );
 }
