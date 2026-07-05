@@ -2,8 +2,12 @@ name: Lulumi Tools Ranking Retry
 
 on:
   schedule:
-    # Retry checks at JST 12:20, 18:20, and 02:20 the following morning.
-    - cron: "20 3,9,17 * * *"
+    # Retry checks at JST 09:40, 10:20, and 11:20.
+    - cron: "40 0 * * *"
+    - cron: "20 1,2 * * *"
+  workflow_run:
+    workflows: ["MapleN Board Pages"]
+    types: [completed]
   workflow_dispatch:
 
 concurrency:
@@ -16,6 +20,14 @@ permissions:
 
 jobs:
   check-and-retry:
+    if: |
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event_name == 'workflow_run' &&
+        github.event.workflow_run.conclusion == 'failure' &&
+        github.event.workflow_run.event == 'schedule'
+      )
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -26,6 +38,10 @@ jobs:
           if [ ! -f exp_ranking/bot/data/ranking.db ] && [ -f exp_ranking/bot/data/ranking.db.gz ]; then
             gzip -dc exp_ranking/bot/data/ranking.db.gz > exp_ranking/bot/data/ranking.db
           fi
+
+      - name: Wait before immediate failure retry
+        if: github.event_name == 'workflow_run'
+        run: sleep 1200
 
       - name: Check target ranking day
         id: ranking_day

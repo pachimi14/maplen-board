@@ -49,6 +49,22 @@ def ranking_request_delay_sec() -> float:
     return max(0.0, float(os.environ.get("RANKING_REQUEST_DELAY_SEC", "0.8")))
 
 
+def ranking_update_poll_interval_sec() -> float:
+    return max(5.0, float(os.environ.get("RANKING_UPDATE_POLL_INTERVAL_SEC", "45")))
+
+
+def ranking_update_poll_timeout_sec() -> float:
+    return max(0.0, float(os.environ.get("RANKING_UPDATE_POLL_TIMEOUT_SEC", "1200")))
+
+
+def ranking_update_settle_sec() -> float:
+    return max(0.0, float(os.environ.get("RANKING_UPDATE_SETTLE_SEC", "45")))
+
+
+def ranking_freshness_min_changed() -> int:
+    return max(1, int(os.environ.get("RANKING_FRESHNESS_MIN_CHANGED", "100")))
+
+
 def navigator_request_delay_sec() -> float:
     return max(0.0, float(os.environ.get("NAVIGATOR_REQUEST_DELAY_SEC", "0.35")))
 

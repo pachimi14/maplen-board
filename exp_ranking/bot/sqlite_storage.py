@@ -510,6 +510,37 @@ def latest_snapshot_date(db_path: Path) -> str | None:
     return str(row[0]) if row and row[0] else None
 
 
+def load_snapshot_state_before(
+    db_path: Path,
+    before_date: str,
+) -> tuple[str | None, list[tuple[int, str, int, int]]]:
+    """Load the newest complete comparison snapshot before ``before_date``."""
+    if not db_path.exists():
+        return None, []
+    init_db(db_path)
+    with sqlite3.connect(db_path) as conn:
+        row = conn.execute(
+            "SELECT MAX(snapshot_date) FROM ranking_snapshot WHERE snapshot_date < ?",
+            (before_date,),
+        ).fetchone()
+        snapshot_date = str(row[0]) if row and row[0] else None
+        if not snapshot_date:
+            return None, []
+        rows = conn.execute(
+            """
+            SELECT rank, character_name, level, exp
+            FROM ranking_snapshot
+            WHERE snapshot_date = ?
+            ORDER BY rank ASC
+            """,
+            (snapshot_date,),
+        ).fetchall()
+    return snapshot_date, [
+        (int(rank), str(name), int(level), int(exp))
+        for rank, name, level, exp in rows
+    ]
+
+
 def has_snapshots_for_date(db_path: Path, snapshot_date: str) -> bool:
     if not snapshot_date or not db_path.exists():
         return False

@@ -14,7 +14,7 @@ on:
       - ".github/workflows/maplen-board-pages.yml"
       - "README.md"
   schedule:
-    # キューは JST 8:00 のみ（空きが多いと遅延→9:20 まで待機して取得）。実行時は 9:20 まで待機。
+    # JST 8:00 に先行起動し、セットアップ後は9:00から公式更新を検知して取得する。
     - cron: "0 23 * * *"
   workflow_dispatch:
     inputs:
@@ -140,6 +140,10 @@ jobs:
           RANKING_MIN_LEVEL: "225"
           RANKING_MAX_PAGES: "800"
           RANKING_REQUEST_DELAY_SEC: "0.8"
+          RANKING_UPDATE_POLL_INTERVAL_SEC: "45"
+          RANKING_UPDATE_POLL_TIMEOUT_SEC: "1200"
+          RANKING_UPDATE_SETTLE_SEC: "45"
+          RANKING_FRESHNESS_MIN_CHANGED: "100"
           SNAPSHOT_RETENTION_DAYS: "90"
           MVP_HISTORY_DAYS: "90"
           MVP_EXPORT_TOP_N: "0"
