@@ -9,11 +9,11 @@ from zoneinfo import ZoneInfo
 
 JST = ZoneInfo("Asia/Tokyo")
 
-# Ranking day rolls at JST 09:00; fetch after API has the new day.
+# Ranking day rolls at JST 09:00; fetch a few minutes after reset.
 JST_RESET_HOUR = 9
 JST_RESET_MINUTE = 0
 JST_FETCH_HOUR = 9
-JST_FETCH_MINUTE = 0
+JST_FETCH_MINUTE = 5
 
 MAX_WAIT_SEC = 6 * 60 * 60
 
@@ -37,7 +37,7 @@ def jst_fetch_window_start(
 
 
 def wait_until_jst_fetch_window(logger: logging.Logger | None = None) -> None:
-    """Block until the official JST 09:00 ranking reset."""
+    """Block until the scheduled post-reset fetch window."""
     log = logger or logging.getLogger(__name__)
     waited = 0
     while True:
