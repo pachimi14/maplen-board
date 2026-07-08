@@ -14,7 +14,7 @@ on:
       - ".github/workflows/maplen-board-pages.yml"
       - "README.md"
   schedule:
-    # JST 8:00 に先行起動し、セットアップ後は9:00から公式更新を検知して取得する。
+    # JST 8:00 に先行起動し、セットアップ後は9:05から公式更新を検知して取得する。
     - cron: "0 23 * * *"
   workflow_dispatch:
     inputs:
