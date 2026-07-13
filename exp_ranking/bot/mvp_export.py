@@ -9,7 +9,7 @@ import shutil
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from analysis import build_analysis_rows
 from identity import build_name_to_asset_key, resolve_snapshot_identity
@@ -69,6 +69,47 @@ def filter_snapshots_for_history(
     if not cutoff:
         return snapshots
     return [row for row in snapshots if row.snapshot_date >= cutoff]
+
+
+def _assign_group_ranks(
+    characters: list[dict[str, Any]],
+    *,
+    key_fn: Callable[[dict[str, Any]], Any],
+    rank_field: str,
+    total_field: str,
+) -> None:
+    """Populate rank_field/total_field (1-based) within groups of `characters`.
+
+    `characters` must already be sorted in the canonical (rank, historyKey)
+    order; within each group the existing relative order is preserved, so
+    numbering reduces to a simple per-group sequential count. Characters
+    whose `key_fn` returns a falsy value (missing job/world) get None for
+    both fields instead of joining a group.
+    """
+    groups: dict[Any, list[dict[str, Any]]] = defaultdict(list)
+    for character in characters:
+        value = key_fn(character)
+        if not value:
+            character[rank_field] = None
+            character[total_field] = None
+            continue
+        groups[value].append(character)
+
+    for members in groups.values():
+        total = len(members)
+        for position, member in enumerate(members, start=1):
+            member[rank_field] = position
+            member[total_field] = total
+
+
+def _job_group_value(character: dict[str, Any]) -> str | None:
+    if character.get("_jobMissing"):
+        return None
+    return character.get("job")
+
+
+def _world_group_value(character: dict[str, Any]) -> str | None:
+    return character.get("worldId") or None
 
 
 def build_mvp_characters(
@@ -190,6 +231,7 @@ def build_mvp_characters(
                 "history": history,
                 "rankFluctuation": latest.rank_fluctuation,
                 "previousRank": previous_rank,
+                "_jobMissing": not str(latest.job_code or "").strip(),
             }
         if asset_key:
             character_payload["characterAssetKey"] = asset_key
@@ -198,7 +240,25 @@ def build_mvp_characters(
             character_payload["worldId"] = world_id
         characters.append(character_payload)
 
-    characters.sort(key=lambda item: item["rank"])
+    # Full-population ranking (job/world) happens here, before export_top_n
+    # truncation, so totals reflect everyone, not just the exported slice.
+    characters.sort(key=lambda item: (item["rank"], _history_key(item)))
+
+    _assign_group_ranks(
+        characters,
+        key_fn=_job_group_value,
+        rank_field="jobRank",
+        total_field="jobRankTotal",
+    )
+    _assign_group_ranks(
+        characters,
+        key_fn=_world_group_value,
+        rank_field="worldRank",
+        total_field="worldRankTotal",
+    )
+    for character in characters:
+        character.pop("_jobMissing", None)
+
     if export_top_n is not None:
         characters = characters[:export_top_n]
     for index, character in enumerate(characters, start=1):

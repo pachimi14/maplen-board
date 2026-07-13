@@ -1,20 +1,22 @@
 """Fixture-driven tests for T1 rank-derived fields.
 
-Covers `docs/IMPL_PLAN_T1.md` §4 acceptance tests. All fixtures are
-hand-built (no dependency on external API data or the live database) per
-PR-004.
-
-This first slice covers rankFluctuation (passthrough) and previousRank
-(1-calendar-day lookback via existing identity resolution). jobRank/
-worldRank fixtures land in a follow-up commit.
+Covers `docs/IMPL_PLAN_T1.md` §4 acceptance tests #1-#10 plus the sign /
+missing-job exception-safety checks. All fixtures are hand-built (no
+dependency on external API data or the live database) per PR-004.
 """
 
 from __future__ import annotations
 
 import copy
+import random
 
 from mvp_export import build_mvp_characters, build_mvp_payload, build_v2_payloads
 from models import SnapshotRow
+
+
+# ---------------------------------------------------------------------------
+# rankFluctuation + previousRank (IMPL_PLAN commit 1)
+# ---------------------------------------------------------------------------
 
 
 def test_rank_fluctuation_is_passed_through_verbatim() -> None:
@@ -105,6 +107,144 @@ def test_build_mvp_characters_does_not_mutate_input_snapshots() -> None:
     before = copy.deepcopy(snapshots)
     build_mvp_characters(snapshots, [], latest_snapshot_date="2026-07-02")
     assert snapshots == before
+
+
+# ---------------------------------------------------------------------------
+# jobRank/jobRankTotal + worldRank/worldRankTotal (IMPL_PLAN commit 2)
+# ---------------------------------------------------------------------------
+
+
+def _mixed_population() -> tuple[list[SnapshotRow], dict[str, str]]:
+    """6 characters, 2 job groups + 1 job-missing, 2 world groups + 1 world-missing.
+
+    rank is globally unique (1..6), mirroring the real API's daily-unique rank.
+    """
+    snapshots = [
+        SnapshotRow("2026-07-02", 1, 0, "C1", "", "HERO", 260, 900, "", "a1"),
+        SnapshotRow("2026-07-02", 3, 0, "C2", "", "HERO", 245, 400, "", "a2"),
+        SnapshotRow("2026-07-02", 2, 0, "C3", "", "PALADIN", 255, 700, "", "a3"),
+        SnapshotRow("2026-07-02", 5, 0, "C4", "", "PALADIN", 235, 100, "", "a4"),
+        SnapshotRow("2026-07-02", 4, 0, "C5", "", "PALADIN", 240, 200, "", "a5"),
+        SnapshotRow("2026-07-02", 6, 0, "C6", "", "", 225, 10, "", "a6"),
+    ]
+    character_meta = {
+        "a1": "Ain",
+        "a2": "Errai",
+        "a3": "Errai",
+        "a4": "Ain",
+        "a5": "Ain",
+        # a6 intentionally absent -> worldId missing entirely
+    }
+    return snapshots, character_meta
+
+
+def test_job_and_world_ranks_are_computed_independently() -> None:
+    """#1: job and world groupings each get their own 1-based numbering."""
+    snapshots, character_meta = _mixed_population()
+    characters = build_mvp_characters(
+        snapshots, [], latest_snapshot_date="2026-07-02", character_meta=character_meta
+    )
+    by_name = {c["name"]: c for c in characters}
+
+    # Job groups: Hero = {C1(rank1), C2(rank3)}; Paladin = {C3(2), C5(4), C4(5)}.
+    assert (by_name["C1"]["jobRank"], by_name["C1"]["jobRankTotal"]) == (1, 2)
+    assert (by_name["C2"]["jobRank"], by_name["C2"]["jobRankTotal"]) == (2, 2)
+    assert (by_name["C3"]["jobRank"], by_name["C3"]["jobRankTotal"]) == (1, 3)
+    assert (by_name["C5"]["jobRank"], by_name["C5"]["jobRankTotal"]) == (2, 3)
+    assert (by_name["C4"]["jobRank"], by_name["C4"]["jobRankTotal"]) == (3, 3)
+
+    # World groups: Ain = {C1(1), C5(4), C4(5)}; Errai = {C3(2), C2(3)}.
+    assert (by_name["C1"]["worldRank"], by_name["C1"]["worldRankTotal"]) == (1, 3)
+    assert (by_name["C5"]["worldRank"], by_name["C5"]["worldRankTotal"]) == (2, 3)
+    assert (by_name["C4"]["worldRank"], by_name["C4"]["worldRankTotal"]) == (3, 3)
+    assert (by_name["C3"]["worldRank"], by_name["C3"]["worldRankTotal"]) == (1, 2)
+    assert (by_name["C2"]["worldRank"], by_name["C2"]["worldRankTotal"]) == (2, 2)
+
+
+def test_job_missing_yields_null_without_raising() -> None:
+    """job-missing character: jobRank/jobRankTotal null, no exception raised,
+    and other characters' job ranks are unaffected."""
+    snapshots, character_meta = _mixed_population()
+    characters = build_mvp_characters(
+        snapshots, [], latest_snapshot_date="2026-07-02", character_meta=character_meta
+    )
+    by_name = {c["name"]: c for c in characters}
+    assert by_name["C6"]["job"] == "Unknown"
+    assert by_name["C6"]["jobRank"] is None
+    assert by_name["C6"]["jobRankTotal"] is None
+    # C6 must not have silently joined an "Unknown" job group with others.
+    assert by_name["C1"]["jobRankTotal"] == 2
+
+
+def test_world_rank_null_for_none_empty_or_missing_world_id() -> None:
+    """#8: worldId None/empty/missing never forms a fabricated group."""
+    snapshots, character_meta = _mixed_population()
+    # a4 explicitly maps to empty string (simulates a cleared/empty worldId).
+    character_meta = {**character_meta, "a4": ""}
+    characters = build_mvp_characters(
+        snapshots, [], latest_snapshot_date="2026-07-02", character_meta=character_meta
+    )
+    by_name = {c["name"]: c for c in characters}
+
+    # a6 has no character_meta entry at all -> worldId key absent.
+    assert "worldId" not in by_name["C6"]
+    assert by_name["C6"]["worldRank"] is None
+    assert by_name["C6"]["worldRankTotal"] is None
+
+    # a4 explicitly empty string -> also null, and does not join C6's "group".
+    assert by_name["C4"].get("worldId") in (None, "")
+    assert by_name["C4"]["worldRank"] is None
+    assert by_name["C4"]["worldRankTotal"] is None
+
+    # Ain now only has C1 and C5 (C4 dropped out) -> total shrinks to 2.
+    assert (by_name["C1"]["worldRank"], by_name["C1"]["worldRankTotal"]) == (1, 2)
+    assert (by_name["C5"]["worldRank"], by_name["C5"]["worldRankTotal"]) == (2, 2)
+
+
+def test_job_and_world_totals_reflect_full_population_before_truncation() -> None:
+    """#3: export_top_n truncates the *output*, not the ranking population."""
+    snapshots, character_meta = _mixed_population()
+    characters = build_mvp_characters(
+        snapshots,
+        [],
+        latest_snapshot_date="2026-07-02",
+        character_meta=character_meta,
+        export_top_n=3,
+    )
+    # Only rank 1..3 (C1, C3, C2) survive truncation.
+    assert [c["name"] for c in characters] == ["C1", "C3", "C2"]
+    by_name = {c["name"]: c for c in characters}
+
+    # Paladin group total is still 3 (C3, C4, C5) even though C4/C5 were
+    # truncated out of the exported list.
+    assert by_name["C3"]["jobRankTotal"] == 3
+    # Hero group total is still 2 (C1, C2).
+    assert by_name["C1"]["jobRankTotal"] == 2
+    assert by_name["C2"]["jobRankTotal"] == 2
+    # Ain world group total is still 3 (C1, C4, C5).
+    assert by_name["C1"]["worldRankTotal"] == 3
+
+
+def test_input_order_does_not_affect_output_ranking() -> None:
+    """#2: reordering the input snapshot list yields identical ranking output
+    (stable sort by (rank, historyKey))."""
+    snapshots, character_meta = _mixed_population()
+    shuffled = list(snapshots)
+    random.Random(42).shuffle(shuffled)
+    assert shuffled != snapshots  # sanity: the shuffle actually changed order
+
+    characters_a = build_mvp_characters(
+        snapshots, [], latest_snapshot_date="2026-07-02", character_meta=character_meta
+    )
+    characters_b = build_mvp_characters(
+        shuffled, [], latest_snapshot_date="2026-07-02", character_meta=character_meta
+    )
+    assert characters_a == characters_b
+
+
+# ---------------------------------------------------------------------------
+# Existing-field invariance (#10) across v1 and v2 payload shapes.
+# ---------------------------------------------------------------------------
 
 
 def test_existing_fields_unchanged_in_v1_and_v2_payloads() -> None:
