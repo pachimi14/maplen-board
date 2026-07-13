@@ -197,6 +197,11 @@
     "noSearchMatch": "找不到符合的職業。",
     "otherJobs": "其他職業"
   },
+  "route": {
+    "notFoundTitle": "找不到角色",
+    "notFoundHint": "此角色不存在，或可能已跌出排行榜。",
+    "backToList": "返回列表"
+  },
   "alliance": {
     "冒険家": "冒險家",
     "英雄": "英雄",

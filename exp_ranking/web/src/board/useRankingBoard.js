@@ -4,6 +4,7 @@ import { useFavorites } from "../useFavorites";
 import { useGroups } from "../useGroups";
 import { loadCharacterHistories } from "../historyData";
 import { classifyJob, JOB_TAXONOMY } from "../jobCategories";
+import { navigateToCharacter, navigateToList } from "./useHashRoute";
 import {
   computeGainRankMaps,
   formatJobName,
@@ -80,9 +81,16 @@ function parseExpTable(meta) {
 /**
  * Single source of truth for the ranking board: data fetch, filters, sort,
  * selection and derived values. Mirrors the previous App.jsx (lines 102-465)
- * verbatim (same hook order/deps) so behavior is unchanged (LULU-011 / T0).
+ * verbatim (same hook order/deps) so behavior is unchanged (LULU-011 / T0),
+ * except that the detail-expanded state is now derived from `route`
+ * (hash routing, LULU-011b) instead of a local `detailView` state.
+ *
+ * `groupView`/`isExpandedGroup`, `showHighlights` and `showFilters` are
+ * NOT part of this hook: per LULU-011(b) they are local UI state owned by
+ * RankingListView (routing しない), and `showListWhenExpanded` is local to
+ * CharacterDetailView.
  */
-export function useRankingBoard() {
+export function useRankingBoard(route) {
   const { t, translateAlliance, translateBranch } = useTranslation();
   const dailyPeriod = useGainPeriodLabel("daily");
   const weeklyPeriod = useGainPeriodLabel("weekly");
@@ -109,14 +117,8 @@ export function useRankingBoard() {
   const [minLevel, setMinLevel] = useState("225");
   const [gainFilterPeriod, setGainFilterPeriod] = useState("daily");
   const [minGainBillions, setMinGainBillions] = useState("");
-  const [detailView, setDetailView] = useState("compact");
-  const [groupView, setGroupView] = useState("compact");
-  const [showListWhenExpanded, setShowListWhenExpanded] = useState(false);
-  const [showHighlights, setShowHighlights] = useState(true);
-  const [showFilters, setShowFilters] = useState(false);
   const [rankingControlsTarget, setRankingControlsTarget] = useState(null);
   const detailTopRef = useRef(null);
-  const groupTopRef = useRef(null);
   const { favoriteCount, favorites, isFavorite, toggleFavorite } = useFavorites();
   const {
     groups,
@@ -409,32 +411,36 @@ export function useRankingBoard() {
   const selectedHistoryReady =
     !selectedCharacter?.historyKey || Array.isArray(selectedCharacter.history);
 
-  const isExpandedDetail = detailView === "expanded";
-  const isExpandedGroup = groupView === "expanded";
-  const showRankingList = !isExpandedDetail || showListWhenExpanded;
+  // URL is the sole source of truth for the detail-expanded state (LULU-011b).
+  const isExpandedDetail = route.name === "detail";
+
+  const routeCharacter = isExpandedDetail
+    ? characters.find((character) => character.historyKey === route.historyKey) ?? null
+    : null;
+  const notFound = isExpandedDetail && characters.length > 0 && !routeCharacter;
+
+  // Keep the (internal, non-routed) selectedId in sync with the character
+  // shown at `#/character/:historyKey`, so collapsing back to `#/` keeps
+  // the same character selected in the compact sidebar (LULU-011b).
+  useEffect(() => {
+    if (!routeCharacter) {
+      return;
+    }
+    setSelectedId((current) => (current === routeCharacter.id ? current : routeCharacter.id));
+  }, [routeCharacter]);
 
   const expandDetail = () => {
-    setDetailView("expanded");
-    setShowListWhenExpanded(false);
+    if (!selectedCharacter?.historyKey) {
+      return;
+    }
+    navigateToCharacter(selectedCharacter.historyKey);
     window.requestAnimationFrame(() => {
       window.scrollTo({ top: 0, behavior: "smooth" });
     });
   };
 
   const collapseDetail = () => {
-    setDetailView("compact");
-    setShowListWhenExpanded(false);
-  };
-
-  const expandGroup = () => {
-    setGroupView("expanded");
-    window.requestAnimationFrame(() => {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    });
-  };
-
-  const collapseGroup = () => {
-    setGroupView("compact");
+    navigateToList();
   };
 
   useEffect(() => {
@@ -443,13 +449,6 @@ export function useRankingBoard() {
     }
     detailTopRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [selectedId, isExpandedDetail]);
-
-  useEffect(() => {
-    if (!isExpandedGroup || !groupTopRef.current) {
-      return;
-    }
-    groupTopRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, [isExpandedGroup]);
 
   return {
     t,
@@ -485,17 +484,9 @@ export function useRankingBoard() {
     setGainFilterPeriod,
     minGainBillions,
     setMinGainBillions,
-    detailView,
-    showListWhenExpanded,
-    setShowListWhenExpanded,
-    showHighlights,
-    setShowHighlights,
-    showFilters,
-    setShowFilters,
     rankingControlsTarget,
     setRankingControlsTarget,
     detailTopRef,
-    groupTopRef,
 
     favoriteCount,
     favorites,
@@ -540,11 +531,9 @@ export function useRankingBoard() {
     selectedHistoryReady,
 
     isExpandedDetail,
-    isExpandedGroup,
-    showRankingList,
+    routeCharacter,
+    notFound,
     expandDetail,
     collapseDetail,
-    expandGroup,
-    collapseGroup,
   };
 }

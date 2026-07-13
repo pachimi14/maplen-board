@@ -197,6 +197,11 @@
     "noSearchMatch": "Không có nghề khớp với tìm kiếm.",
     "otherJobs": "Nghề khác"
   },
+  "route": {
+    "notFoundTitle": "Không tìm thấy nhân vật",
+    "notFoundHint": "Nhân vật này không tồn tại, hoặc có thể đã rớt khỏi bảng xếp hạng.",
+    "backToList": "Quay lại danh sách"
+  },
   "alliance": {
     "冒険家": "Adventurer",
     "英雄": "Hero",
