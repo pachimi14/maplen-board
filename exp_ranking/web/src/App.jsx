@@ -1,29 +1,23 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ChevronDown, ChevronUp, RotateCcw, Search, Star } from "lucide-react";
+import { Star } from "lucide-react";
 import CharacterDetail from "./CharacterDetail";
 import GroupPanel from "./GroupPanel";
-import FavoriteStar from "./FavoriteStar";
-import TopGainHighlights from "./TopGainHighlights";
-import LanguageSwitcher from "./LanguageSwitcher";
+import BoardHeader from "./components/BoardHeader";
+import HighlightsSection from "./components/HighlightsSection";
+import RankingControls from "./components/RankingControls";
+import RankingTable from "./components/RankingTable";
 import { useGainPeriodLabel, useTranslation } from "./i18n/I18nContext";
 import { useFavorites } from "./useFavorites";
 import { useGroups } from "./useGroups";
-import NavigatorLink from "./NavigatorLink";
 import { loadCharacterHistories } from "./historyData";
 import { classifyJob, JOB_TAXONOMY } from "./jobCategories";
 import {
   computeGainRankMaps,
-  formatExp,
   formatJobName,
-  formatLevelExp,
   formatScheduledUpdateLabel,
-  gainRankClass,
   getGainAmount,
-  getNavigatorUrl,
   matchesWorldFilter,
   WORLD_IDS,
 } from "./rankingUtils";
@@ -82,13 +76,6 @@ const FALLBACK_EXP_TABLE = {
 };
 
 const PAGE_SIZE = 20;
-
-const SORT_OPTIONS = [
-  { key: "rank", labelKey: "sort.levelRank" },
-  { key: "daily", labelKey: "period.dailyShort" },
-  { key: "weekly", labelKey: "period.weeklyShort" },
-  { key: "monthly", labelKey: "period.monthlyShort" },
-];
 
 function parseExpTable(meta) {
   const table = meta?.expTable || {};
@@ -396,6 +383,10 @@ export default function App() {
   const safePage = Math.min(page, totalPages);
   const pageStart = (safePage - 1) * PAGE_SIZE;
   const pagedCharacters = displayCharacters.slice(pageStart, pageStart + PAGE_SIZE);
+  const rangeFrom = displayCharacters.length === 0 ? 0 : pageStart + 1;
+  const rangeTo = displayCharacters.length === 0
+    ? 0
+    : Math.min(pageStart + PAGE_SIZE, displayCharacters.length);
 
   const selectedCharacter = useMemo(() => {
     const pool = favoritesOnly ? rankingPool : characters;
@@ -497,179 +488,56 @@ export default function App() {
   return (
     <div className="min-h-screen overflow-x-hidden bg-slate-950 text-slate-100 p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
-        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="text-sm text-slate-400">Lulumi Tools</p>
-            <h1 className="text-3xl md:text-5xl font-bold tracking-tight">MapleN Exp Ranking</h1>
-            {meta.demoGains ? (
-              <p className="text-amber-300 text-sm mt-1">
-                {t("app.demoGains", { days: meta.demoGainDays || "?" })}
-              </p>
-            ) : null}
-            {loadError ? <p className="text-amber-400 text-sm mt-1">{loadError}</p> : null}
-          </div>
-          <div className="text-right md:pb-1 shrink-0 space-y-2">
-            <LanguageSwitcher />
-            <div className="space-y-0.5">
-              <p className="text-xs md:text-sm text-slate-500">
-                {meta.rankingMinLevel
-                  ? `Lv.${meta.rankingMinLevel}+`
-                  : meta.rankingTopN
-                    ? t("app.fetchedCount", { count: meta.rankingTopN })
-                    : null}
-              </p>
-              {scheduledUpdateLabel ? (
-                <p className="text-slate-400 text-sm md:text-base">{scheduledUpdateLabel}</p>
-              ) : null}
-            </div>
-          </div>
-        </div>
+        <BoardHeader
+          meta={meta}
+          loadError={loadError}
+          scheduledUpdateLabel={scheduledUpdateLabel}
+          t={t}
+        />
 
         {!isExpandedDetail && !isExpandedGroup ? (
-          <section className="overflow-hidden rounded-md border border-slate-800">
-            <button
-              type="button"
-              aria-expanded={showHighlights}
-              onClick={() => setShowHighlights((current) => !current)}
-              className="flex w-full items-center justify-between bg-slate-900/70 px-3 py-2 text-left transition hover:bg-slate-900"
-            >
-              <h2 className="text-sm font-semibold text-slate-200">TOP3</h2>
-              <span className="flex items-center gap-2 text-xs text-slate-500">
-                <span className="hidden sm:inline">{t(showHighlights ? "filter.clickToCollapse" : "filter.clickToExpand")}</span>
-                {showHighlights ? <ChevronUp size={18} className="text-slate-400" /> : <ChevronDown size={18} className="text-slate-400" />}
-              </span>
-            </button>
-            {showHighlights ? (
-              <div className="border-t border-slate-800 p-2">
-                <TopGainHighlights
-                  characters={characters}
-                  gainRankMaps={gainRankMaps}
-                  selectedId={selectedId}
-                  onSelect={setSelectedId}
-                  isFavorite={isFavorite}
-                  onToggleFavorite={toggleFavorite}
-                />
-              </div>
-            ) : null}
-          </section>
+          <HighlightsSection
+            characters={characters}
+            gainRankMaps={gainRankMaps}
+            selectedId={selectedId}
+            onSelect={setSelectedId}
+            isFavorite={isFavorite}
+            onToggleFavorite={toggleFavorite}
+            showHighlights={showHighlights}
+            onToggle={() => setShowHighlights((current) => !current)}
+            t={t}
+          />
         ) : null}
 
-        {rankingControlsTarget ? createPortal((<>
-        <div className="flex items-center gap-2 rounded-md border border-slate-800 bg-slate-900/30 p-2">
-          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-            <span className="mr-1 text-xs text-slate-500">{t("filter.sort")}</span>
-            {SORT_OPTIONS.map((option) => (
-              <Button key={option.key} type="button" size="sm" variant={sortKey === option.key ? "default" : "outline"} className="h-8 border-slate-700" onClick={() => setSortKey(option.key)}>
-                {t(option.labelKey)}
-              </Button>
-            ))}
-          </div>
-        </div>
-
-        {!isExpandedDetail ? (
-        <div className="overflow-hidden rounded-md border border-slate-800">
-          <button
-            type="button"
-            aria-expanded={showFilters}
-            onClick={() => setShowFilters((current) => !current)}
-            className="flex w-full items-center justify-between bg-slate-900/70 px-3 py-2 text-left transition hover:bg-slate-900"
-          >
-            <h2 className="text-sm font-semibold text-slate-200">{t("filter.title")}</h2>
-            <span className="flex items-center gap-2 text-xs text-slate-500">
-              <span className="hidden sm:inline">{t(showFilters ? "filter.clickToCollapse" : "filter.clickToExpand")}</span>
-              {showFilters ? <ChevronUp size={18} className="text-slate-400" /> : <ChevronDown size={18} className="text-slate-400" />}
-            </span>
-          </button>
-          {showFilters ? (
-          <div className="divide-y divide-slate-800 border-t border-slate-800">
-            <div className="bg-slate-900/20 p-2">
-              <div className="space-y-1.5">
-                <span className="block text-xs text-slate-400">{t("filter.server")}</span>
-                <div className="flex flex-wrap gap-1.5">
-                  {worldOptions.map((world) => (
-                    <Button key={world} type="button" size="sm" variant={worldFilter === world ? "default" : "outline"} className="h-8 border-slate-700" onClick={() => setWorldFilter(world)}>
-                      {world === "all" ? t("view.allServers") : world}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className="space-y-1.5 p-2">
-              <span className="text-xs text-slate-400">{t("filter.job")}</span>
-              <div className="flex flex-wrap gap-1.5">
-                <Button type="button" size="sm" variant={jobAlliance === "all" ? "default" : "outline"} className="border-slate-700" onClick={() => { setJobAlliance("all"); setJobFilter("all"); }}>
-                  {t("filter.allJobs")}
-                </Button>
-                {JOB_TAXONOMY.map(({ alliance }) => (
-                  <Button key={alliance} type="button" size="sm" variant={jobAlliance === alliance ? "default" : "outline"} className="border-slate-700" onClick={() => { setJobAlliance(alliance); setJobFilter("all"); if (alliance === "冒険家") setJobBranch("all"); }}>
-                    {translateAlliance(alliance)}
-                  </Button>
-                ))}
-              </div>
-              {visibleJobBranches.length ? (
-                <div className="flex flex-wrap gap-1.5 border-l-2 border-slate-700 pl-2">
-                  <Button type="button" size="sm" variant={jobBranch === "all" ? "secondary" : "outline"} className="border-slate-700" onClick={() => { setJobBranch("all"); setJobFilter("all"); }}>
-                    {t("filter.allJobs")}
-                  </Button>
-                  {visibleJobBranches.map(({ branch }) => (
-                    <Button key={branch} type="button" size="sm" variant={jobBranch === branch ? "secondary" : "outline"} className="border-slate-700" onClick={() => { setJobBranch(branch); setJobFilter("all"); }}>
-                      {translateBranch(branch)}
-                    </Button>
-                  ))}
-                </div>
-              ) : null}
-              {visibleJobOptions.length && !(jobAlliance === "冒険家" && jobBranch === "all") ? (
-                <div className="flex flex-wrap gap-1.5 border-l-2 border-cyan-700/60 pl-2">
-                  {visibleJobOptions.map((job) => (
-                    <Button key={job} type="button" size="sm" variant={jobFilter === job ? "default" : "outline"} className="border-slate-700" onClick={() => setJobFilter(job)}>
-                      {job}
-                    </Button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-            <div className="flex flex-wrap items-end gap-x-8 gap-y-2 bg-slate-900/30 p-2">
-              <label className="mr-2 block w-48 text-xs text-slate-400">
-                <span className="mb-1 block">{t("filter.minLevel")}</span>
-                <Input type="number" min="225" value={minLevel} onChange={(event) => setMinLevel(event.target.value)} onBlur={() => { if (minLevel === "") setMinLevel("225"); }} className="h-8 bg-slate-900 border-slate-700" />
-              </label>
-              <div className="space-y-1">
-                <span className="block text-xs text-slate-400">{t("filter.minGain")}</span>
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {["daily", "weekly", "monthly"].map((period) => (
-                    <Button key={period} type="button" size="sm" variant={gainFilterPeriod === period ? "default" : "outline"} className="border-slate-700" onClick={() => setGainFilterPeriod(period)}>
-                      {periodLabels[period]}
-                    </Button>
-                  ))}
-                  <Input inputMode="decimal" value={minGainBillions} onChange={(event) => setMinGainBillions(event.target.value)} placeholder="0 B" className="h-8 w-32 bg-slate-900 border-slate-700" />
-                </div>
-              </div>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="ml-auto flex h-8 shrink-0 flex-row items-center gap-1.5 whitespace-nowrap border-slate-700 bg-transparent px-3 text-slate-300 hover:bg-slate-800 hover:text-white"
-                aria-label={t("filter.reset")}
-                title={t("filter.reset")}
-                onClick={() => {
-                  setWorldFilter("all");
-                  setJobFilter("all");
-                  setJobAlliance("all");
-                  setJobBranch("all");
-                  setMinLevel("225");
-                  setGainFilterPeriod("daily");
-                  setMinGainBillions("");
-                }}
-              >
-                <RotateCcw size={15} className="shrink-0" />
-                {t("filter.reset")}
-              </Button>
-            </div>
-          </div>
-          ) : null}
-        </div>
-        ) : null}
-        </>), rankingControlsTarget) : null}
+        <RankingControls
+          target={rankingControlsTarget}
+          sortKey={sortKey}
+          setSortKey={setSortKey}
+          showFilterSection={!isExpandedDetail}
+          showFilters={showFilters}
+          setShowFilters={setShowFilters}
+          worldOptions={worldOptions}
+          worldFilter={worldFilter}
+          setWorldFilter={setWorldFilter}
+          jobAlliance={jobAlliance}
+          setJobAlliance={setJobAlliance}
+          jobBranch={jobBranch}
+          setJobBranch={setJobBranch}
+          jobFilter={jobFilter}
+          setJobFilter={setJobFilter}
+          visibleJobBranches={visibleJobBranches}
+          visibleJobOptions={visibleJobOptions}
+          minLevel={minLevel}
+          setMinLevel={setMinLevel}
+          gainFilterPeriod={gainFilterPeriod}
+          setGainFilterPeriod={setGainFilterPeriod}
+          minGainBillions={minGainBillions}
+          setMinGainBillions={setMinGainBillions}
+          periodLabels={periodLabels}
+          t={t}
+          translateAlliance={translateAlliance}
+          translateBranch={translateBranch}
+        />
 
         <div className="space-y-6">
           {isExpandedDetail && selectedCharacter ? (
@@ -726,193 +594,32 @@ export default function App() {
                   : "grid grid-cols-1 xl:grid-cols-3 gap-6 xl:items-start"
               }
             >
-          <Card
-            className={`bg-slate-900 border border-slate-800 rounded-2xl shadow-xl ${
-              isExpandedDetail ? "" : "xl:col-span-2"
-            }`}
-          >
-            <CardContent className="p-5 space-y-4">
-              <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
-                <h2 className="text-xl font-bold">{rankingListTitle}</h2>
-                <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
-                  <Button
-                    type="button"
-                    variant={favoritesOnly ? "default" : "outline"}
-                    className={
-                      favoritesOnly
-                        ? "bg-amber-600 hover:bg-amber-500 text-white border-amber-500"
-                        : "border-slate-700 bg-slate-950"
-                    }
-                    onClick={() => setFavoritesOnly((current) => !current)}
-                    disabled={favoriteCount === 0 && !favoritesOnly}
-                  >
-                    <Star
-                      size={16}
-                      className={`mr-2 inline ${favoritesOnly ? "fill-current" : ""}`}
-                    />
-                    {t("favorite.only")}
-                    {favoriteCount > 0 ? ` (${favoriteCount})` : ""}
-                  </Button>
-                  <div className="relative w-full md:w-72">
-                    <Search className="absolute left-3 top-2.5 text-slate-500" size={18} />
-                    <Input
-                      value={query}
-                      onChange={(event) => setQuery(event.target.value)}
-                      placeholder={t("search.character")}
-                      className="pl-10 bg-slate-950 border-slate-800 text-slate-100"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div ref={setRankingControlsTarget} className="space-y-2" />
-
-              {favoritesOnly && displayCharacters.length === 0 ? (
-                <p className="text-sm text-amber-300/90 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3">
-                  {t("favorite.emptyList")}
-                </p>
-              ) : null}
-
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-sm text-slate-400">
-                <span>
-                  {favoritesOnly ? t("pagination.favoritesPrefix") : ""}
-                  {t("pagination.range", {
-                    total: displayCharacters.length.toLocaleString(),
-                    from:
-                      displayCharacters.length === 0
-                        ? 0
-                        : pageStart + 1,
-                    to:
-                      displayCharacters.length === 0
-                        ? 0
-                        : Math.min(pageStart + PAGE_SIZE, displayCharacters.length),
-                  })}
-                </span>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    className="border-slate-700 bg-slate-950"
-                    disabled={safePage <= 1}
-                    onClick={() => setPage((current) => Math.max(1, current - 1))}
-                  >
-                    {t("pagination.prev")}
-                  </Button>
-                  <span>
-                    {safePage} / {totalPages}
-                  </span>
-                  <Button
-                    variant="outline"
-                    className="border-slate-700 bg-slate-950"
-                    disabled={safePage >= totalPages}
-                    onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
-                  >
-                    {t("pagination.next")}
-                  </Button>
-                </div>
-              </div>
-
-              <div className="overflow-x-auto rounded-2xl border border-slate-800">
-                <table className="w-full min-w-[720px] text-base">
-                  <thead className="bg-slate-950 text-slate-400">
-                    <tr>
-                      <th className="text-center p-3 w-12">
-                        <Star size={14} className="inline text-amber-400/80" />
-                      </th>
-                      {showGainRank ? (
-                        <th className="text-left p-3">{t("table.gainRank")}</th>
-                      ) : null}
-                      <th className="text-left p-3">{t("table.levelRank")}</th>
-                      <th className="text-left p-3">{t("table.character")}</th>
-                      <th className="text-left p-3">{t("table.server")}</th>
-                      <th className="text-right p-3 whitespace-nowrap">{t("table.lvExp")}</th>
-                      <th className="text-right p-3">{t("table.daily")}</th>
-                      <th className="text-right p-3">{t("table.weekly")}</th>
-                      <th className="text-right p-3">{t("table.monthly")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pagedCharacters.map((character) => (
-                      <tr
-                        key={character.id}
-                        onClick={() => setSelectedId(character.id)}
-                        className={`cursor-pointer border-t border-slate-800 hover:bg-slate-800/70 ${
-                          selectedId === character.id ? "bg-slate-800" : ""
-                        }`}
-                      >
-                        <td className="p-3 text-center">
-                          <FavoriteStar
-                            active={isFavorite(character)}
-                            onToggle={() => toggleFavorite(character)}
-                          />
-                        </td>
-                        {showGainRank ? (
-                          <td
-                            className={`p-3 font-bold ${gainRankClass(
-                              filteredGainRanks.get(character.id)
-                            )}`}
-                          >
-                            #{filteredGainRanks.get(character.id) ?? "-"}
-                          </td>
-                        ) : null}
-                        <td className="p-3 font-bold text-slate-400">#{character.rank}</td>
-                        <td className="p-3">
-                          <div className="font-semibold">
-                            <NavigatorLink
-                              href={getNavigatorUrl(character)}
-                              className="text-inherit hover:text-sky-300"
-                            >
-                              {character.name}
-                            </NavigatorLink>
-                          </div>
-                          <div className="text-sm text-slate-400">{formatJobName(character.job)}</div>
-                        </td>
-                        <td className="p-3">
-                          {character.worldId ? (
-                            <NavigatorLink
-                              href={getNavigatorUrl(character)}
-                              className="text-sky-400 font-medium"
-                            >
-                              {character.worldId}
-                            </NavigatorLink>
-                          ) : (
-                            <span className="text-slate-600">-</span>
-                          )}
-                        </td>
-                        <td className="p-3 text-right font-medium whitespace-nowrap tabular-nums">
-                          {formatLevelExp(character)}
-                        </td>
-                        <td
-                          className={`p-3 text-right ${
-                            sortKey === "daily" ? "text-emerald-400 font-semibold" : ""
-                          }`}
-                        >
-                          +{formatExp(getGainAmount(character, "daily"))}
-                        </td>
-                        <td
-                          className={`p-3 text-right ${
-                            sortKey === "weekly"
-                              ? "text-emerald-400 font-semibold"
-                              : "text-slate-400"
-                          }`}
-                        >
-                          +{formatExp(character.weeklyGain)}
-                        </td>
-                        <td
-                          className={`p-3 text-right ${
-                            sortKey === "monthly"
-                              ? "text-emerald-400 font-semibold"
-                              : "text-slate-400"
-                          }`}
-                        >
-                          +{formatExp(character.monthlyGain)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
+          <RankingTable
+            cardClassName={isExpandedDetail ? "" : "xl:col-span-2"}
+            title={rankingListTitle}
+            favoritesOnly={favoritesOnly}
+            onToggleFavoritesOnly={() => setFavoritesOnly((current) => !current)}
+            favoriteCount={favoriteCount}
+            query={query}
+            onQueryChange={setQuery}
+            setRankingControlsTarget={setRankingControlsTarget}
+            total={displayCharacters.length}
+            pagedCharacters={pagedCharacters}
+            showGainRank={showGainRank}
+            filteredGainRanks={filteredGainRanks}
+            selectedId={selectedId}
+            onSelectCharacter={setSelectedId}
+            isFavorite={isFavorite}
+            onToggleFavorite={toggleFavorite}
+            sortKey={sortKey}
+            safePage={safePage}
+            totalPages={totalPages}
+            onPrevPage={() => setPage((current) => Math.max(1, current - 1))}
+            onNextPage={() => setPage((current) => Math.min(totalPages, current + 1))}
+            rangeFrom={rangeFrom}
+            rangeTo={rangeTo}
+            t={t}
+          />
 
           {!isExpandedDetail ? (
             selectedCharacter ? (
