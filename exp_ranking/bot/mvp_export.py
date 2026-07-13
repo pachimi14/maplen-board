@@ -84,6 +84,7 @@ def build_mvp_characters(
 
     latest_date = latest_snapshot_date or max(row.snapshot_date for row in snapshots)
     latest_ranking_day = date.fromisoformat(latest_date)
+    previous_date = (latest_ranking_day - timedelta(days=1)).isoformat()
     week_start = weekly_period_start(latest_ranking_day)
     month_start = monthly_period_start(latest_ranking_day)
     analysis_by_key = _analysis_lookup(analysis_rows)
@@ -164,6 +165,12 @@ def build_mvp_characters(
         asset_key = latest.character_asset_key
         world_id = meta.get(asset_key, "") if asset_key else ""
         name = latest.character_name
+
+        previous_rows = [
+            row for row in rows_sorted if row.snapshot_date == previous_date
+        ]
+        previous_rank = previous_rows[-1].rank if previous_rows else None
+
         character_payload: dict[str, Any] = {
                 "id": index,
                 "rank": latest.rank,
@@ -181,6 +188,8 @@ def build_mvp_characters(
                 "monthlyGain": monthly_gain,
                 "imageUrl": latest.image_url or f"https://placehold.co/96x96?text={index}",
                 "history": history,
+                "rankFluctuation": latest.rank_fluctuation,
+                "previousRank": previous_rank,
             }
         if asset_key:
             character_payload["characterAssetKey"] = asset_key
