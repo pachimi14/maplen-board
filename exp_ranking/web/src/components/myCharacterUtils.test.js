@@ -7,6 +7,7 @@ import {
   rankMovementDirection,
   resolveDisplayedHistoryKey,
   roundPercent,
+  shouldStartHistoryFetch,
 } from "./myCharacterUtils.js";
 
 describe("errorMessageKeyForCode", () => {
@@ -104,9 +105,9 @@ describe("roundPercent", () => {
 });
 
 describe("classifyHistoryAvailability", () => {
-  it("reports loading/failed from the caller-tracked fetch status first", () => {
+  it("reports loading/failed from the caller-tracked fetch status when there is no data yet", () => {
     expect(classifyHistoryAvailability(undefined, "loading")).toBe("loading");
-    expect(classifyHistoryAvailability([], "failed")).toBe("failed");
+    expect(classifyHistoryAvailability(undefined, "failed")).toBe("failed");
   });
 
   it("is idle when no history array exists yet and no fetch is in flight", () => {
@@ -127,6 +128,17 @@ describe("classifyHistoryAvailability", () => {
       ),
     ).toBe("ready");
   });
+
+  it("LULU-028 regression: real data always wins over a stale loading/failed status", () => {
+    // This is exactly the P0 shape: an abandoned fetch attempt's status
+    // ("loading"/"failed") never gets cleared for a key the user switched
+    // away from and back to, but the history itself *did* arrive in board
+    // state in the meantime. The UI must show it as ready, not stuck.
+    const readyHistory = [{ snapshotDate: "2026-07-01" }, { snapshotDate: "2026-07-02" }];
+    expect(classifyHistoryAvailability(readyHistory, "loading")).toBe("ready");
+    expect(classifyHistoryAvailability(readyHistory, "failed")).toBe("ready");
+    expect(classifyHistoryAvailability([{ snapshotDate: "2026-07-01" }], "failed")).toBe("insufficient");
+  });
 });
 
 describe("rankMovementDirection", () => {
@@ -143,5 +155,33 @@ describe("rankMovementDirection", () => {
   it("is same for zero or non-finite fluctuation once comparable", () => {
     expect(rankMovementDirection(10, 0)).toBe("same");
     expect(rankMovementDirection(10, NaN)).toBe("same");
+  });
+});
+
+describe("shouldStartHistoryFetch", () => {
+  const readyHistory = [{ snapshotDate: "2026-07-01" }, { snapshotDate: "2026-07-02" }];
+
+  it("is false when collapsed or there is no key to fetch for", () => {
+    expect(shouldStartHistoryFetch({ expanded: false, historyKey: "asset:a", history: undefined, status: undefined })).toBe(false);
+    expect(shouldStartHistoryFetch({ expanded: true, historyKey: null, history: undefined, status: undefined })).toBe(false);
+  });
+
+  it("is false once history has already arrived, regardless of a stale status", () => {
+    expect(shouldStartHistoryFetch({ expanded: true, historyKey: "asset:a", history: readyHistory, status: undefined })).toBe(false);
+    // LULU-028: a leftover "loading"/"failed" for a key whose data actually
+    // arrived (e.g. via an abandoned/canceled prior attempt) must not cause
+    // a redundant re-fetch either.
+    expect(shouldStartHistoryFetch({ expanded: true, historyKey: "asset:a", history: readyHistory, status: "loading" })).toBe(false);
+    expect(shouldStartHistoryFetch({ expanded: true, historyKey: "asset:a", history: readyHistory, status: "failed" })).toBe(false);
+  });
+
+  it("is false while a fetch is already loading or has already failed (only retry clears it)", () => {
+    expect(shouldStartHistoryFetch({ expanded: true, historyKey: "asset:a", history: undefined, status: "loading" })).toBe(false);
+    expect(shouldStartHistoryFetch({ expanded: true, historyKey: "asset:a", history: undefined, status: "failed" })).toBe(false);
+  });
+
+  it("is true when expanded, keyed, not yet loaded, and not already in flight/failed", () => {
+    expect(shouldStartHistoryFetch({ expanded: true, historyKey: "asset:a", history: undefined, status: undefined })).toBe(true);
+    expect(shouldStartHistoryFetch({ expanded: true, historyKey: "asset:a", history: null, status: "idle" })).toBe(true);
   });
 });
