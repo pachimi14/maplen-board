@@ -88,6 +88,11 @@
     "character": "Buscar nombre, clase o servidor",
     "job": "Filtrar por clase"
   },
+  "share": {
+    "copyLink": "Copiar enlace",
+    "copied": "Enlace copiado",
+    "copyFailed": "No se pudo copiar automáticamente. Copia este enlace manualmente:"
+  },
   "favorite": {
     "only": "Solo favoritos",
     "add": "Añadir a favoritos",
