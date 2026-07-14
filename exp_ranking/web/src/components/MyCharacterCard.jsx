@@ -402,11 +402,18 @@ export default function MyCharacterCard({
               formatters (formatJobName/levelExpPercent/formatExp/
               getGainAmount). */}
           <div className="flex items-start gap-4">
-            <img
-              src={character.imageUrl}
-              alt=""
-              className="rounded-2xl bg-slate-800 object-cover shrink-0 w-20 h-20 md:w-24 md:h-24"
-            />
+            {/* §22.15 (revised): the source portrait is a 180x180 square
+                with the character small and centered — a lot of
+                transparent margin baked into the image itself. Since the
+                box is also square, object-cover never crops that margin
+                away. Zoom the <img> past its container's edges (overflow
+                hidden on the wrapping div, never the <img> itself — a
+                transform can't be clipped by overflow on the element it's
+                applied to) to push the built-in whitespace out of frame,
+                without touching the source image. */}
+            <div className="rounded-2xl bg-slate-800 overflow-hidden shrink-0 w-20 h-20 md:w-24 md:h-24">
+              <img src={character.imageUrl} alt="" className="w-full h-full object-cover scale-[1.5] -translate-y-[8%]" />
+            </div>
             <div className="min-w-0 flex-1">
               {/* §22.11 A②: "詳細を見る" moved here (top-right of the
                   header, next to the Main/Sub badge) so it's reachable
