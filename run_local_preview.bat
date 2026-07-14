@@ -79,7 +79,7 @@ if %ERRORLEVEL% neq 0 (
 )
 
 echo.
-start "" "http://localhost:4173/"
+start "" "http://localhost:4173/#/"
 call npm run preview -- --host 127.0.0.1 --port 4173
 set "EXIT_CODE=%ERRORLEVEL%"
 echo.
