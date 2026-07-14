@@ -4,6 +4,7 @@
 // re-deriving the same rules inline.
 
 import { todayPartsInJst } from "../rankingUtils";
+import { computeGoalProgress } from "../stats";
 
 const KNOWN_ERROR_CODES = new Set([
   "saveFailed",
@@ -155,4 +156,74 @@ export function shouldStartHistoryFetch({ historyKey, history, status }) {
     return false;
   }
   return status !== "loading" && status !== "failed";
+}
+
+/**
+ * §22.3: pure view-model for the goal card's 3 sections (① target, ②
+ * today's progress, ③ arrival estimate). Calls T3 E (`computeGoalProgress`)
+ * exactly once — all math for the 3 sections is derived from that single
+ * call's result plus `todayGain`; the UI must never recompute any of it
+ * itself (only format/lay out the fields returned here).
+ *
+ * Pace source is always the caller-supplied `todayGain` (=
+ * `getGainAmount(character, "daily")` at the call site) — never a
+ * multi-day average — per T3 F's "pace source is caller-chosen" contract.
+ * A 0/missing `todayGain` is passed to `computeGoalProgress` as `null`
+ * (never `0`) so its own `averageDailyGain > 0` validity check naturally
+ * routes it to `insufficientData` → `indeterminate: true` here.
+ *
+ * `indeterminate` and `achieved` are independent flags (not mutually
+ * exclusive in the strict boolean sense): an already-achieved goal with a
+ * 0 `todayGain` reports both `achieved: true` and `indeterminate: true` —
+ * callers should treat `achieved` as taking priority for display (§22.3
+ * UI: show "achieved" first, fall back to the indeterminate/estimate
+ * wording only when not achieved).
+ *
+ * @param {{character: object, expTable: object, goal: {targetLevel:number,targetDateIso:string}|null, todayGain: number|null|undefined}} input
+ */
+export function buildGoalDisplayModel({ character, expTable, goal, todayGain }) {
+  const normalizedTodayGain = Number.isFinite(todayGain) ? todayGain : 0;
+
+  if (!goal) {
+    return {
+      hasGoal: false,
+      targetLevel: null,
+      targetDateIso: null,
+      todayGain: normalizedTodayGain,
+      requiredDailyGain: null,
+      achievementRate: null,
+      estimatedArrivalDate: null,
+      daysDelta: null,
+      indeterminate: true,
+      achieved: false,
+    };
+  }
+
+  const averageDailyGain = normalizedTodayGain > 0 ? normalizedTodayGain : null;
+  const progress = computeGoalProgress(character, expTable, goal, { averageDailyGain });
+
+  const requiredDailyGain = progress.requiredDailyGain;
+  const achievementRate =
+    Number.isFinite(requiredDailyGain) && requiredDailyGain > 0
+      ? normalizedTodayGain / requiredDailyGain
+      : null;
+
+  const achieved = progress.status === "achieved";
+  const indeterminate =
+    normalizedTodayGain <= 0 ||
+    progress.status === "insufficientData" ||
+    progress.estimatedArrivalDate == null;
+
+  return {
+    hasGoal: true,
+    targetLevel: goal.targetLevel,
+    targetDateIso: goal.targetDateIso,
+    todayGain: normalizedTodayGain,
+    requiredDailyGain,
+    achievementRate,
+    estimatedArrivalDate: progress.estimatedArrivalDate,
+    daysDelta: progress.daysDelta,
+    indeterminate,
+    achieved,
+  };
 }
