@@ -4,7 +4,7 @@ import { useGainPeriodLabel, useTranslation } from "./i18n/I18nContext";
 import {
   LEVEL_CAP,
   MIN_PLANNER_LEVEL,
-  arrivalDatePartsForDailyRuns,
+  arrivalDatePartsFromSnapshot,
   computeGainAverages,
   defaultTargetDateIso,
   estimateDaysToLevelWithGain,
@@ -168,6 +168,14 @@ function DaysToLevelSection({ character, expTable, t }) {
       : null;
   const targetReached = targetLevel != null && targetLevel <= character.level;
 
+  // §22.14: same snapshot-date basis as the 250/275 milestone estimates in
+  // CharacterDetail.jsx (`latestGainSnapshotDate`) — the arrival date must
+  // be anchored to the character's latest confirmed data point, not
+  // wall-clock "today" (which drifts a day late whenever the site's data
+  // hasn't been refreshed yet for the current calendar day).
+  const latestGainSnapshotDate =
+    character.history?.at(-1)?.snapshotDate ?? character.history?.at(-1)?.date ?? null;
+
   const estimates = useMemo(() => {
     if (targetLevel == null || targetReached || dailyGain <= 0) {
       return [];
@@ -178,14 +186,13 @@ function DaysToLevelSection({ character, expTable, t }) {
       rows.push({
         level,
         days: estimate.days,
-        // §22.11 B: "必要日数" counts today as day 1 of the run, so the
-        // arrival date is today + (days-1), not today + days (that off-by-
-        // one previously landed on the day *after* the correct date).
-        date: estimate.days ? slashDateFromParts(arrivalDatePartsForDailyRuns(estimate.days, t)) : "-",
+        date: estimate.days
+          ? slashDateFromParts(arrivalDatePartsFromSnapshot(latestGainSnapshotDate, estimate.days, t))
+          : "-",
       });
     }
     return rows;
-  }, [character, dailyGain, expTable, t, targetLevel, targetReached]);
+  }, [character, dailyGain, expTable, latestGainSnapshotDate, t, targetLevel, targetReached]);
 
   return (
     <PlannerCard title={t("characterDetail.planner.daysToLevelTitle")}>
