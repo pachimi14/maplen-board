@@ -1,12 +1,10 @@
-import { useCallback, useMemo, useRef, useState } from "react";
-import GroupPanel from "../GroupPanel";
+import { useCallback, useRef, useState } from "react";
 import HighlightsSection from "../components/HighlightsSection";
 import MyCharacterSummary from "../components/MyCharacterSummary";
 import RankingControls from "../components/RankingControls";
 import RankingTable from "../components/RankingTable";
 import { useBoard } from "../board/BoardContext";
-import { navigateToCharacter } from "../board/useHashRoute";
-import { useProfile } from "../profile/ProfileContext";
+import { navigateToCharacter, navigateToGroup } from "../board/useHashRoute";
 
 /**
  * List view (`#/`). Screen composition only; all data/derived values come
@@ -15,26 +13,30 @@ import { useProfile } from "../profile/ProfileContext";
  *
  * `active` controls whether this view is currently shown. It stays
  * mounted (rendering null while inactive) so its local UI state survives
- * a round trip through the detail route (`#/character/:historyKey`),
- * exactly like the pre-routing App.jsx never unmounted these toggles.
+ * a round trip through the detail or group-compare routes
+ * (`#/character/:historyKey`, `#/group`), exactly like the pre-routing
+ * App.jsx never unmounted these toggles.
  *
  * IMPL_PLAN_T4B §21.4: there is no more compact sidebar / row-selection
  * concept in the list — a row (table or TOP3) click navigates straight to
  * the character's detail route. `selectedId` stays in the board hook
  * (still used by the detail route), it's just not read/written here.
+ *
+ * §22.4 (decision C): the inline group panel is gone — "グループ比較"
+ * navigates to the dedicated `#/group` route instead of toggling a
+ * same-page panel (GroupPanel.jsx has been removed; see
+ * pages/GroupCompareView.jsx).
  */
 export default function RankingListView({ active }) {
   const {
     t,
     characters,
     meta,
-    rankingPool,
     gainRankMaps,
     expTable,
     ensureHistories,
     isFavorite,
     toggleFavorite,
-    groupDetailProps,
     rankingListTitle,
     favoritesOnly,
     setFavoritesOnly,
@@ -75,47 +77,9 @@ export default function RankingListView({ active }) {
     translateAlliance,
     translateBranch,
   } = useBoard();
-  const { primaryHistoryKey } = useProfile();
 
   const [showHighlights, setShowHighlights] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
-  const [groupOpen, setGroupOpen] = useState(false);
-  // §21.3: lets the user click through group-member chips to switch which
-  // character the group panel is anchored on (add/remove-from-group button,
-  // "current" highlight) without leaving the list. Reset whenever the
-  // panel closes so reopening always starts from the primary/fallback
-  // anchor rather than a stale pick from a previous session.
-  const [groupAnchorId, setGroupAnchorId] = useState(null);
-
-  const toggleGroup = useCallback(() => {
-    setGroupOpen((current) => {
-      const next = !current;
-      if (!next) {
-        setGroupAnchorId(null);
-      }
-      return next;
-    });
-  }, []);
-
-  // §21.3: GroupPanel requires a `character` anchor to render at all. Order:
-  // explicit in-panel override -> primary my-character (profile) -> top of
-  // the (filtered) ranking pool -> first loaded character -> null (panel
-  // stays hidden rather than crashing on an empty roster).
-  const groupAnchorCharacter = useMemo(() => {
-    if (groupAnchorId != null) {
-      const overridden = characters.find((character) => character.id === groupAnchorId);
-      if (overridden) {
-        return overridden;
-      }
-    }
-    if (primaryHistoryKey) {
-      const primary = characters.find((character) => character.historyKey === primaryHistoryKey);
-      if (primary) {
-        return primary;
-      }
-    }
-    return rankingPool[0] ?? characters[0] ?? null;
-  }, [groupAnchorId, primaryHistoryKey, characters, rankingPool]);
 
   // Ref owner for the search input (T4b §3/§20-6): the empty-CTA in
   // MyCharacterSummary asks this view to focus the existing search box
@@ -147,25 +111,16 @@ export default function RankingListView({ active }) {
     return null;
   }
 
-  const groupPanel = groupOpen && groupAnchorCharacter ? (
-    <GroupPanel
-      character={groupAnchorCharacter}
-      characters={characters}
-      mode="expanded"
-      onCollapse={toggleGroup}
-      onSelectCharacter={setGroupAnchorId}
-      {...groupDetailProps}
-    />
-  ) : null;
-
   return (
-    // §21.5: one CSS grid, one MyCharacterSummary instance. DOM order
-    // (TOP3 -> my character -> operations/filters/group panel/list, all
-    // inside the two blocks below) matches the required mobile stacking
-    // order unassisted (no template-areas at the default/mobile
-    // breakpoint, so items simply flow top-to-bottom in source order).
-    // From `lg:` up, named grid areas move the my-character block into a
-    // sticky right column without duplicating it.
+    // §21.5/§22.4: one CSS grid, one MyCharacterSummary instance. DOM order
+    // (TOP3 -> my character -> operations/filters/list, all inside the two
+    // blocks below) matches the required mobile stacking order unassisted
+    // (no template-areas at the default/mobile breakpoint, so items simply
+    // flow top-to-bottom in source order). From `lg:` up, named grid areas
+    // move the my-character block into a sticky right column without
+    // duplicating it. The group panel is no longer part of this grid at
+    // all (§22.4): "グループ比較" navigates to the dedicated `#/group`
+    // route instead.
     <div
       className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)] lg:items-start lg:[grid-template-areas:'top3_mychar'_'list_mychar']"
     >
@@ -201,8 +156,7 @@ export default function RankingListView({ active }) {
           showFilterSection
           showFilters={showFilters}
           setShowFilters={setShowFilters}
-          groupOpen={groupOpen}
-          onToggleGroup={toggleGroup}
+          onOpenGroup={() => navigateToGroup()}
           worldOptions={worldOptions}
           worldFilter={worldFilter}
           setWorldFilter={setWorldFilter}
@@ -250,7 +204,6 @@ export default function RankingListView({ active }) {
           rangeFrom={rangeFrom}
           rangeTo={rangeTo}
           t={t}
-          groupPanel={groupPanel}
         />
       </div>
     </div>

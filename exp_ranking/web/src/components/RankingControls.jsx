@@ -18,8 +18,7 @@ export default function RankingControls({
   showFilterSection,
   showFilters,
   setShowFilters,
-  groupOpen,
-  onToggleGroup,
+  onOpenGroup,
   worldOptions,
   worldFilter,
   setWorldFilter,
@@ -59,21 +58,18 @@ export default function RankingControls({
         </div>
         {showFilterSection ? (
           <div className="ml-auto">
+            {/* §22.4 (decision C): navigates to the dedicated `#/group`
+                route — this is no longer a same-page toggle, so there is no
+                open/closed state or chevron here. */}
             <Button
               type="button"
               size="sm"
-              variant={groupOpen ? "default" : "outline"}
+              variant="outline"
               className="h-8 border-slate-700"
-              aria-expanded={groupOpen}
-              onClick={onToggleGroup}
+              onClick={onOpenGroup}
             >
               <Users size={14} className="mr-1.5 inline" />
               {t("group.title")}
-              {groupOpen ? (
-                <ChevronUp size={14} className="ml-1.5 inline" />
-              ) : (
-                <ChevronDown size={14} className="ml-1.5 inline" />
-              )}
             </Button>
           </div>
         ) : null}
