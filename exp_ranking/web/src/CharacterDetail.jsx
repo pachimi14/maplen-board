@@ -636,7 +636,7 @@ export default function CharacterDetail({
               isExpanded ? "w-24 h-24 md:w-28 md:h-28" : "w-20 h-20 md:w-24 md:h-24"
             }`}
           >
-            <img src={character.imageUrl} alt="" className="w-full h-full object-cover scale-[1.3]" />
+            <img src={character.imageUrl} alt="" className="w-full h-full object-cover scale-[1.5] -translate-y-[8%]" />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-2">
