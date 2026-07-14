@@ -4,6 +4,7 @@ import CharacterDetail from "../CharacterDetail";
 import MyCharacterPinButton from "../components/MyCharacterPinButton";
 import RankingControls from "../components/RankingControls";
 import RankingTable from "../components/RankingTable";
+import ShareLinkButton from "../components/ShareLinkButton";
 import { useBoard } from "../board/BoardContext";
 import { navigateToCharacter } from "../board/useHashRoute";
 
@@ -130,6 +131,7 @@ export default function CharacterDetailView() {
             onCollapse={collapseDetail}
             onSelectCharacter={handleSwitchCharacter}
             pinControls={<MyCharacterPinButton character={routeCharacter} />}
+            shareControls={<ShareLinkButton t={t} />}
           />
         ) : (
           <div className="min-h-48 flex items-center justify-center text-slate-400">

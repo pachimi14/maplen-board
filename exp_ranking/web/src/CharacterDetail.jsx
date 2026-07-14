@@ -444,6 +444,7 @@ export default function CharacterDetail({
   onCollapse,
   onSelectCharacter,
   pinControls = null,
+  shareControls = null,
 }) {
   const { t } = useTranslation();
   const dailyPeriod = useGainPeriodLabel("daily");
@@ -652,6 +653,7 @@ export default function CharacterDetail({
                     {t("characterDetail.collapseDetail")}
                   </Button>
                 ) : null}
+                {shareControls}
                 {onToggleFavorite ? (
                   <FavoriteStar active={isFavorite} onToggle={onToggleFavorite} size={22} />
                 ) : null}

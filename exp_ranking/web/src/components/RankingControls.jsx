@@ -3,7 +3,6 @@ import { ChevronDown, ChevronUp, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { JOB_TAXONOMY } from "../jobCategories";
-import ShareLinkButton from "./ShareLinkButton";
 
 const SORT_OPTIONS = [
   { key: "rank", labelKey: "sort.levelRank" },
@@ -55,9 +54,6 @@ export default function RankingControls({
               {t(option.labelKey)}
             </Button>
           ))}
-        </div>
-        <div className="ml-auto">
-          <ShareLinkButton t={t} />
         </div>
       </div>
 
