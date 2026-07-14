@@ -4,6 +4,7 @@ import { useGainPeriodLabel, useTranslation } from "./i18n/I18nContext";
 import {
   LEVEL_CAP,
   MIN_PLANNER_LEVEL,
+  arrivalDatePartsForDailyRuns,
   computeGainAverages,
   defaultTargetDateIso,
   estimateDaysToLevelWithGain,
@@ -12,7 +13,6 @@ import {
   parseExpInputBillions,
   requiredGainForLevelByDate,
   slashDateFromParts,
-  targetDatePartsAfterDays,
 } from "./rankingUtils";
 
 function PlannerCard({ title, children, className = "" }) {
@@ -178,7 +178,10 @@ function DaysToLevelSection({ character, expTable, t }) {
       rows.push({
         level,
         days: estimate.days,
-        date: estimate.days ? slashDateFromParts(targetDatePartsAfterDays(estimate.days, t)) : "-",
+        // §22.11 B: "必要日数" counts today as day 1 of the run, so the
+        // arrival date is today + (days-1), not today + days (that off-by-
+        // one previously landed on the day *after* the correct date).
+        date: estimate.days ? slashDateFromParts(arrivalDatePartsForDailyRuns(estimate.days, t)) : "-",
       });
     }
     return rows;
