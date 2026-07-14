@@ -38,6 +38,7 @@ export default function RankingTable({
   rangeTo,
   t,
   searchInputRef,
+  groupPanel = null,
 }) {
   return (
     <Card className={`bg-slate-900 border border-slate-800 rounded-2xl shadow-xl ${cardClassName}`}>
@@ -77,6 +78,8 @@ export default function RankingTable({
         </div>
 
         <div ref={setRankingControlsTarget} className="space-y-2" />
+
+        {groupPanel}
 
         {favoritesOnly && total === 0 ? (
           <p className="text-sm text-amber-300/90 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3">
