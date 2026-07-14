@@ -1,9 +1,10 @@
 import { defineConfig } from "vitest/config";
 
 // T3 derived-stats + T4a profile-store + T4b (my-character summary +
-// #/group route, §22.4) pure-logic tests. Kept separate from vite.config.js
-// so the production build config (base path, Pages alias, plugins) stays
-// untouched. stats/, profile/, board/ and the components/*.test.js pure
+// #/group route §22.4 + planner arrival-date fix §22.11 B) pure-logic
+// tests. Kept separate from vite.config.js so the production build config
+// (base path, Pages alias, plugins) stays untouched. stats/, profile/,
+// board/, root-level (rankingUtils.js) and the components/*.test.js pure
 // helpers below use relative imports only (no "@/" alias dependency).
 export default defineConfig({
   test: {
@@ -13,6 +14,7 @@ export default defineConfig({
       "src/profile/**/*.test.js",
       "src/components/**/*.test.js",
       "src/board/**/*.test.js",
+      "src/*.test.js",
     ],
   },
 });
