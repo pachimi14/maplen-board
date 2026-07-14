@@ -26,8 +26,7 @@ export default function RankingTable({
   pagedCharacters,
   showGainRank,
   filteredGainRanks,
-  selectedId,
-  onSelectCharacter,
+  onRowNavigate,
   isFavorite,
   onToggleFavorite,
   sortKey,
@@ -140,10 +139,8 @@ export default function RankingTable({
               {pagedCharacters.map((character) => (
                 <tr
                   key={character.id}
-                  onClick={() => onSelectCharacter(character.id)}
-                  className={`cursor-pointer border-t border-slate-800 hover:bg-slate-800/70 ${
-                    selectedId === character.id ? "bg-slate-800" : ""
-                  }`}
+                  onClick={() => onRowNavigate(character)}
+                  className="cursor-pointer border-t border-slate-800 hover:bg-slate-800/70"
                 >
                   <td className="p-3 text-center">
                     <FavoriteStar
