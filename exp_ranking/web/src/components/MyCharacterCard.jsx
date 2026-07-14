@@ -2,15 +2,22 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import MyCharacterPinButton from "./MyCharacterPinButton";
 import {
+  classifyHistoryAvailability,
   isLatestDateToday,
   limitWithOthers,
   rankMovementDirection,
 } from "./myCharacterUtils";
 import {
   calculateTopPercent,
+  computeDailyGainSelfRank,
+  computeDailyRankStreak,
   computePassedAndOvertaken,
+  computePositiveGainStreak,
 } from "../stats";
 import { formatExp, formatJobName, getGainAmount } from "../rankingUtils";
+
+// Initial daily-rank streak window (T3 C2 `maxRank`, per IMPL_PLAN_T4B §5).
+const RANK_STREAK_MAX = 500;
 
 const MOVEMENT_DISPLAY_LIMIT = 3;
 
@@ -64,6 +71,76 @@ function MovementList({ title, entries, othersCount, t }) {
 }
 
 /**
+ * §6/§20-4: the "show more" region's content, driven purely by the shard
+ * fetch state — never triggers a fetch itself (that stays in
+ * MyCharacterSummary, the only place that calls `ensureHistories`).
+ */
+function ExpandedHistorySection({ character, historyStatus, onRetryHistory, t }) {
+  const availability = classifyHistoryAvailability(character?.history, historyStatus);
+
+  if (availability === "idle" || availability === "loading") {
+    return <p className="text-sm text-slate-400">{t("myCharacters.state.loading")}</p>;
+  }
+
+  if (availability === "failed") {
+    return (
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="text-sm text-rose-400">{t("myCharacters.state.loadFailed")}</p>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-7 border-slate-700 bg-slate-950 text-xs"
+          onClick={onRetryHistory}
+        >
+          {t("myCharacters.state.retry")}
+        </Button>
+      </div>
+    );
+  }
+
+  if (availability === "insufficient") {
+    return <p className="text-sm text-slate-500">{t("myCharacters.state.insufficientHistory")}</p>;
+  }
+
+  const history = character.history;
+  const positiveStreak = computePositiveGainStreak(history);
+  const rankStreak = computeDailyRankStreak(history, { maxRank: RANK_STREAK_MAX });
+  const selfBest = computeDailyGainSelfRank(history);
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="min-w-0">
+        <div className="text-xs text-slate-400 mb-1">{t("myCharacters.showMoreSection.streakTitle")}</div>
+        <p className="text-sm text-slate-200">
+          {positiveStreak.current > 0
+            ? t("myCharacters.showMoreSection.positive", { count: positiveStreak.current })
+            : t("myCharacters.showMoreSection.noStreak")}
+        </p>
+        <p className="text-sm text-slate-200 mt-0.5">
+          {rankStreak.current > 0
+            ? t("myCharacters.showMoreSection.rankStreak", { count: rankStreak.current, max: RANK_STREAK_MAX })
+            : t("myCharacters.showMoreSection.noStreak")}
+        </p>
+      </div>
+      <div className="min-w-0">
+        <div className="text-xs text-slate-400 mb-1">{t("myCharacters.showMoreSection.selfBestTitle")}</div>
+        {selfBest.rank != null ? (
+          <p className="text-sm text-slate-200">
+            {t("myCharacters.showMoreSection.selfBestValue", { rank: selfBest.rank })}{" "}
+            <span className="text-slate-500">
+              {t("myCharacters.showMoreSection.selfBestOf", { total: selfBest.totalComparableDays })}
+            </span>
+          </p>
+        ) : (
+          <p className="text-sm text-slate-500">{t("myCharacters.showMoreSection.selfBestNone")}</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
  * The single-character summary card (T4b §5/§20-8). Shows the currently
  * displayed pinned character's day-over-day summary immediately (no shard
  * fetch needed); the "show more" toggle reveals history-dependent stats
@@ -77,8 +154,9 @@ export default function MyCharacterCard({
   meta,
   expanded,
   onToggleExpanded,
+  historyStatus = "idle",
+  onRetryHistory,
   t,
-  expandedContent = null,
 }) {
   const latestSnapshotDate = meta?.latestSnapshotDate ?? null;
   const isToday = isLatestDateToday(latestSnapshotDate);
@@ -202,17 +280,30 @@ export default function MyCharacterCard({
           place, besides CharacterDetail, where that's possible). */}
       <MyCharacterPinButton character={character ?? { historyKey }} />
 
-      <Button
-        type="button"
-        variant="outline"
-        className="w-full border-slate-700 bg-slate-950 hover:bg-slate-800"
-        onClick={onToggleExpanded}
-      >
-        {expanded ? <ChevronUp size={16} className="mr-2" /> : <ChevronDown size={16} className="mr-2" />}
-        {expanded ? t("myCharacters.showLess") : t("myCharacters.showMore")}
-      </Button>
+      {character ? (
+        <>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full border-slate-700 bg-slate-950 hover:bg-slate-800"
+            onClick={onToggleExpanded}
+          >
+            {expanded ? <ChevronUp size={16} className="mr-2" /> : <ChevronDown size={16} className="mr-2" />}
+            {expanded ? t("myCharacters.showLess") : t("myCharacters.showMore")}
+          </Button>
 
-      {expanded ? expandedContent : null}
+          {expanded ? (
+            <div className="border-t border-slate-800 pt-4">
+              <ExpandedHistorySection
+                character={character}
+                historyStatus={historyStatus}
+                onRetryHistory={onRetryHistory}
+                t={t}
+              />
+            </div>
+          ) : null}
+        </>
+      ) : null}
     </div>
   );
 }

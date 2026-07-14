@@ -630,6 +630,7 @@ export function useRankingBoard(route) {
     expTable,
     rankingPool,
     gainRankMaps,
+    ensureHistories,
     showGainRank,
     displayCharacters,
     filteredGainRanks,
