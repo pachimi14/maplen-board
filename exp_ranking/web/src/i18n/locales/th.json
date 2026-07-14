@@ -197,6 +197,11 @@
     "noSearchMatch": "ไม่พบอาชีพที่ตรงกับการค้นหา",
     "otherJobs": "อาชีพอื่นๆ"
   },
+  "route": {
+    "notFoundTitle": "ไม่พบตัวละคร",
+    "notFoundHint": "ตัวละครนี้ไม่มีอยู่ หรืออาจหลุดออกจากอันดับไปแล้ว",
+    "backToList": "กลับไปหน้ารายการ"
+  },
   "alliance": {
     "冒険家": "Adventurer",
     "英雄": "Hero",

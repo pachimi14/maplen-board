@@ -197,6 +197,11 @@
     "noSearchMatch": "Ninguna clase coincide con la búsqueda.",
     "otherJobs": "Otras clases"
   },
+  "route": {
+    "notFoundTitle": "Personaje no encontrado",
+    "notFoundHint": "Este personaje no existe o puede haber salido del ranking.",
+    "backToList": "Volver a la lista"
+  },
   "alliance": {
     "冒険家": "Aventurero",
     "英雄": "Héroe",
