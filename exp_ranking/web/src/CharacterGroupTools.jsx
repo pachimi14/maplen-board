@@ -3,8 +3,6 @@ import { Plus, Star, Trash2, Users, X, ChevronDown, ChevronUp } from "lucide-rea
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import CharacterSearchPicker from "./CharacterSearchPicker";
-import GroupComparisonTable from "./components/GroupComparisonTable";
-import { buildGroupComparisonRows } from "./components/groupComparison";
 import {
   groupMemberKey,
   groupChartHeightPx,
@@ -274,10 +272,6 @@ export default function CharacterGroupTools({
   const [chartHeightLevel, setChartHeightLevel] = useState(() => loadChartHeightLevel());
   const [renameDraft, setRenameDraft] = useState("");
   const [highlightedMemberKey, setHighlightedMemberKey] = useState(null);
-  // §22.5: total-vs-average toggle for the comparison table's selected-
-  // period column. Local UI state only (not persisted) — independent of
-  // chartPeriod (which range) but sharing the same `series`/`chartRange`.
-  const [comparisonMode, setComparisonMode] = useState("total");
 
   const memberKeys = activeGroup?.members ?? [];
   const inGroup = isInActiveGroup(character);
@@ -313,30 +307,6 @@ export default function CharacterGroupTools({
     }
     return t("group.chartTitleCustomRange");
   }, [chartPeriod.mode, chartRange, t]);
-
-  // §22.5: compact label for the comparison table's period column header,
-  // reusing the same period concept as the chart above it (short form,
-  // unlike `chartTitle`'s full sentence).
-  const comparisonPeriodLabel = useMemo(() => {
-    if (chartPeriod.mode === "7") {
-      return t("group.days7");
-    }
-    if (chartPeriod.mode === "30") {
-      return t("group.days30");
-    }
-    if (chartRange.start && chartRange.end) {
-      return `${chartRange.start} ~ ${chartRange.end}`;
-    }
-    return null;
-  }, [chartPeriod.mode, chartRange, t]);
-
-  // §22.5: derived from the *same* `series` (same characters/memberKeys/
-  // chartRange) driving the chart above — never a second independent
-  // aggregation over history.
-  const comparisonRows = useMemo(
-    () => buildGroupComparisonRows({ characters, memberKeys, series, mode: comparisonMode }),
-    [characters, memberKeys, series, comparisonMode],
-  );
 
   useEffect(() => {
     setHighlightedMemberKey(null);
@@ -698,14 +668,6 @@ export default function CharacterGroupTools({
             members={members}
             highlightedKey={highlightedMemberKey}
             onHighlight={setHighlightedMemberKey}
-          />
-
-          <GroupComparisonTable
-            rows={comparisonRows}
-            mode={comparisonMode}
-            onModeChange={setComparisonMode}
-            periodLabel={comparisonPeriodLabel}
-            t={t}
           />
         </div>
       ) : null}
