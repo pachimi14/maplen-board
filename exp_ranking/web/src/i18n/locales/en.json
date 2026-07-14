@@ -5,6 +5,8 @@
   "app": {
     "pageTitle": "MSU EXP Rankings",
     "pageDescription": "Level rankings and daily, weekly, and monthly EXP gains for Lv.225+ characters, based on the official MSU rankings.",
+    "metaTitle": "Lulumi Tools | MapleStory N EXP Ranking",
+    "metaDescription": "Track daily, weekly, and monthly EXP rankings for MapleStory N characters, with detailed progress history and comparison tools.",
     "updateNotice": "Ranking data is updated daily.",
     "loading": "Loading ranking data...",
     "noDataTitle": "No data available",
