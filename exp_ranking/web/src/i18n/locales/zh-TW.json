@@ -88,6 +88,11 @@
     "character": "搜尋角色名、職業、伺服器",
     "job": "依職業名稱篩選"
   },
+  "share": {
+    "copyLink": "複製連結",
+    "copied": "已複製連結",
+    "copyFailed": "自動複製失敗，請手動複製以下連結:"
+  },
   "favorite": {
     "only": "僅我的最愛",
     "add": "加入我的最愛",
