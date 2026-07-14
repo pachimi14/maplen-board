@@ -11,7 +11,6 @@ export default function BoardHeader({ meta, loadError, scheduledUpdateLabel, t }
             {t("app.demoGains", { days: meta.demoGainDays || "?" })}
           </p>
         ) : null}
-        {loadError ? <p className="text-amber-400 text-sm mt-1">{loadError}</p> : null}
       </div>
       <div className="text-right md:pb-1 shrink-0 space-y-2">
         <LanguageSwitcher />
