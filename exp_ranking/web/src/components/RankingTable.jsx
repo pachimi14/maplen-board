@@ -38,6 +38,7 @@ export default function RankingTable({
   rangeFrom,
   rangeTo,
   t,
+  searchInputRef,
 }) {
   return (
     <Card className={`bg-slate-900 border border-slate-800 rounded-2xl shadow-xl ${cardClassName}`}>
@@ -66,10 +67,11 @@ export default function RankingTable({
             <div className="relative w-full md:w-72">
               <Search className="absolute left-3 top-2.5 text-slate-500" size={18} />
               <Input
+                ref={searchInputRef}
                 value={query}
                 onChange={(event) => onQueryChange(event.target.value)}
                 placeholder={t("search.character")}
-                className="pl-10 bg-slate-950 border-slate-800 text-slate-100"
+                className="pl-10 bg-slate-950 border-slate-800 text-slate-100 scroll-mt-24"
               />
             </div>
           </div>

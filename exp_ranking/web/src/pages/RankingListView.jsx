@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Star } from "lucide-react";
 import CharacterDetail from "../CharacterDetail";
 import GroupPanel from "../GroupPanel";
 import HighlightsSection from "../components/HighlightsSection";
 import MyCharacterPinButton from "../components/MyCharacterPinButton";
+import MyCharacterSummary from "../components/MyCharacterSummary";
 import RankingControls from "../components/RankingControls";
 import RankingTable from "../components/RankingTable";
 import { useBoard } from "../board/BoardContext";
@@ -26,6 +27,7 @@ export default function RankingListView({ active }) {
     selectedCharacter,
     selectedHistoryReady,
     characters,
+    meta,
     rankingPool,
     gainRankMaps,
     expTable,
@@ -82,6 +84,23 @@ export default function RankingListView({ active }) {
   const groupTopRef = useRef(null);
   const isExpandedGroup = groupView === "expanded";
 
+  // Ref owner for the search input (T4b §3/§20-6): the empty-CTA in
+  // MyCharacterSummary asks this view to focus the existing search box
+  // rather than owning any search state itself.
+  const searchInputRef = useRef(null);
+  const focusSearch = useCallback(() => {
+    const el = searchInputRef.current;
+    if (!el) {
+      return;
+    }
+    const prefersReducedMotion =
+      typeof window !== "undefined" && typeof window.matchMedia === "function"
+        ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        : false;
+    el.scrollIntoView({ behavior: prefersReducedMotion ? "auto" : "smooth", block: "center" });
+    el.focus({ preventScroll: true });
+  }, []);
+
   const expandGroup = () => {
     setGroupView("expanded");
     window.requestAnimationFrame(() => {
@@ -106,6 +125,14 @@ export default function RankingListView({ active }) {
 
   return (
     <>
+      <MyCharacterSummary
+        characters={characters}
+        meta={meta}
+        expTable={expTable}
+        onFocusSearch={focusSearch}
+        t={t}
+      />
+
       {!isExpandedGroup ? (
         <HighlightsSection
           characters={characters}
@@ -166,6 +193,7 @@ export default function RankingListView({ active }) {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 xl:items-start">
         <RankingTable
           cardClassName="xl:col-span-2"
+          searchInputRef={searchInputRef}
           title={rankingListTitle}
           favoritesOnly={favoritesOnly}
           onToggleFavoritesOnly={() => setFavoritesOnly((current) => !current)}
