@@ -707,22 +707,44 @@ export function targetDatePartsAfterDays(daysFromToday, t, reference = new Date(
 }
 
 /**
- * §22.11 B: arrival-date parts for a plan of `days` consecutive daily runs
- * *starting today* (today = day 1, per the level planner's own framing —
- * "必要日数=今日から必要なデイリー回数"). `targetDatePartsAfterDays` means
- * "N days from today" (today + N); day 1 of a run is today itself (today +
- * 0), so day N of the run is today + (N-1), not today + N. Delegates to
- * `targetDatePartsAfterDays` for the actual date arithmetic/formatting —
- * this function only supplies the day-count-to-offset conversion, it never
- * duplicates the JST/date-math itself. `days` must be >= 1 (a 0-or-fewer
- * day plan has no arrival date); anything else (including non-finite
- * input) returns null rather than a nonsensical date.
+ * §22.14: arrival-date parts for the level planner, anchored to the
+ * character's *latest snapshot date* (`character.history` tail
+ * `snapshotDate`) rather than wall-clock "today" — the same basis already
+ * used (correctly) by the 250/275 milestone estimates
+ * (`addDaysToIsoDate(latestGainSnapshotDate, days)`) and the goal card's
+ * arrival estimate (`computeGoalProgress`'s `resolveTodayIso`). §22.11 B's
+ * `today + (N-1)` was only correct when the data happened to already be
+ * updated for the current calendar day; with stale data (site not yet
+ * refreshed for "today") it drifted a day late, since wall-clock today
+ * could be a day ahead of the actual latest snapshot.
+ *
+ * `daysNeeded` = 1 means "reached the day after the snapshot" (day 1 of
+ * the plan is the day *after* the last confirmed data point, matching the
+ * milestone/goal-card convention of `snapshot + days`) — not "day 1 of the
+ * plan is the snapshot day itself". This is a deliberate change from
+ * §22.11 B's (incorrect) "today is day 1" framing.
+ *
+ * Delegates to `datePartsFromIsoDate`/`addDaysToIsoDate` (snapshot path)
+ * or `targetDatePartsAfterDays` (fallback path) for the actual date
+ * arithmetic — never duplicates it here.
+ *
+ * @param {string|null|undefined} latestSnapshotIso the character's latest confirmed data date (YYYY-MM-DD), or null/invalid if unavailable
+ * @param {number} daysNeeded must be >= 1 (finite); anything else returns null
+ * @param {(key: string, params?: object) => string} t
+ * @param {Date} [reference] only used for the no-snapshot fallback (wall-clock "today")
  */
-export function arrivalDatePartsForDailyRuns(days, t, reference = new Date()) {
-  if (!Number.isFinite(days) || days < 1) {
+export function arrivalDatePartsFromSnapshot(latestSnapshotIso, daysNeeded, t, reference = new Date()) {
+  if (!Number.isFinite(daysNeeded) || daysNeeded < 1) {
     return null;
   }
-  return targetDatePartsAfterDays(days - 1, t, reference);
+  const hasValidSnapshot = /^\d{4}-\d{2}-\d{2}$/.test(String(latestSnapshotIso || ""));
+  if (hasValidSnapshot) {
+    return datePartsFromIsoDate(addDaysToIsoDate(latestSnapshotIso, daysNeeded), t);
+  }
+  // No usable snapshot date (e.g. history not loaded yet) — same
+  // wall-clock fallback as the 250/275 milestone estimates use in the
+  // equivalent situation.
+  return targetDatePartsAfterDays(daysNeeded, t, reference);
 }
 
 /** Today’s calendar date in JST (year/month/day). */
