@@ -233,19 +233,21 @@ export function buildGoalDisplayModel({ character, expTable, goal, todayGain }) 
  * show, instead of a fixed maxRank. Evaluates each tier via the existing
  * `computeDailyRankStreak` (T3 C2) — this never reimplements the streak
  * math itself, it only chooses which of several already-computed results
- * to surface.
+ * to surface. Uses each tier's `current` (the streak ending today) —
+ * never `longest` (an all-time record is a different stat).
  *
- * Rule (prestige-first, user-adjustable per §22.11): try tiers strictest
- * first (ascending `maxRank`); the first tier whose *current* streak is at
- * least 2 days wins. A 1-day (or 0-day) current streak at every tier
- * yields no result at all — the caller hides the "rank maintained" stat
- * entirely rather than show a barely-there streak.
+ * Fixed contract (user-confirmed 2026-07-15): try tiers strictest first
+ * (ascending `maxRank`); the first tier whose `current` is >= 2 wins —
+ * `{ maxRank, days: current }`. A `current` of exactly 1 (or 0) does not
+ * qualify at any tier. If no tier qualifies, returns `null` (caller hides
+ * the "rank maintained" stat entirely rather than show a barely-there
+ * streak).
  *
  * @param {Array<object>} history
- * @param {number[]} tiers
+ * @param {number[]} [tiers] defaults to [5, 10, 50, 100, 500]
  * @returns {{maxRank: number, days: number}|null}
  */
-export function pickBestRankStreak(history, tiers) {
+export function pickBestRankStreak(history, tiers = [5, 10, 50, 100, 500]) {
   const sortedTiers = [...(Array.isArray(tiers) ? tiers : [])].sort((a, b) => a - b);
   for (const maxRank of sortedTiers) {
     const { current } = computeDailyRankStreak(history, { maxRank });
