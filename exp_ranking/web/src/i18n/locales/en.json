@@ -88,6 +88,11 @@
     "character": "Search name, job, or server",
     "job": "Filter by job name"
   },
+  "share": {
+    "copyLink": "Copy link",
+    "copied": "Link copied",
+    "copyFailed": "Couldn't copy automatically — copy this link manually:"
+  },
   "favorite": {
     "only": "Favorites only",
     "add": "Add to favorites",
