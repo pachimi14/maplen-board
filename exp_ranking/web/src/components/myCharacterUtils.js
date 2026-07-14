@@ -92,21 +92,26 @@ const MIN_HISTORY_POINTS_FOR_STATS = 2;
  * `historyStatus` is the caller-tracked fetch status (§6): "idle" (not
  * requested yet) | "loading" | "failed" — `history` is the character's
  * current `history` field from board state (the single cache, per §20-4).
+ *
+ * Actual data always wins over the caller-tracked status: if `history` is
+ * already a real array, this returns "ready"/"insufficient" even when
+ * `historyStatus` still (incorrectly, or just staleness from an abandoned
+ * fetch attempt) says "loading"/"failed". This is deliberate defense in
+ * depth against the class of bug fixed in LULU-028 (a stuck "loading" label
+ * for data that had, in fact, already arrived) — the UI must never contradict
+ * data it's already holding.
  */
 export function classifyHistoryAvailability(history, historyStatus) {
+  if (Array.isArray(history)) {
+    return history.length < MIN_HISTORY_POINTS_FOR_STATS ? "insufficient" : "ready";
+  }
   if (historyStatus === "loading") {
     return "loading";
   }
   if (historyStatus === "failed") {
     return "failed";
   }
-  if (!Array.isArray(history)) {
-    return "idle";
-  }
-  if (history.length < MIN_HISTORY_POINTS_FOR_STATS) {
-    return "insufficient";
-  }
-  return "ready";
+  return "idle";
 }
 
 /**
@@ -123,4 +128,26 @@ export function rankMovementDirection(previousRank, rankFluctuation) {
     return "same";
   }
   return rankFluctuation > 0 ? "up" : "down";
+}
+
+/**
+ * §6/§20-4: pure "should the fetch-triggering effect start a new shard
+ * request for this key right now?" decision, extracted so it's testable in
+ * isolation from React effect/dependency timing — LULU-028 (P0) was
+ * entirely a bug in *when* this got re-evaluated (a "loading" setState
+ * re-running the effect and canceling its own in-flight request), not in
+ * this decision itself. Callers must not include their own "loading"/
+ * "failed" state as a dependency that re-triggers the check; `status`
+ * should be read once per (expanded, historyKey, retry-signal) change.
+ *
+ * @param {{expanded: boolean, historyKey: string|null|undefined, history: unknown, status: "loading"|"failed"|undefined}} input
+ */
+export function shouldStartHistoryFetch({ expanded, historyKey, history, status }) {
+  if (!expanded || !historyKey) {
+    return false;
+  }
+  if (Array.isArray(history)) {
+    return false;
+  }
+  return status !== "loading" && status !== "failed";
 }

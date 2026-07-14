@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useProfile } from "../profile/ProfileContext";
-import { resolveDisplayedHistoryKey } from "./myCharacterUtils";
+import { resolveDisplayedHistoryKey, shouldStartHistoryFetch } from "./myCharacterUtils";
 import MyCharacterEmptyCta from "./MyCharacterEmptyCta";
 import MyCharacterSwitcher from "./MyCharacterSwitcher";
 import MyCharacterCard from "./MyCharacterCard";
@@ -25,7 +25,17 @@ export default function MyCharacterSummary({ characters, meta, expTable, ensureH
   // idle/not-yet-requested). Keyed by historyKey (not a single flat flag) so
   // a late-arriving result for a key the user has since switched away from
   // can never corrupt the currently-displayed key's status.
+  //
+  // LULU-028 (P0 fix): this state is for *rendering* only. It must never be
+  // a dependency of the fetch-triggering effect below — doing so previously
+  // caused every "loading" setState to immediately re-run that effect, whose
+  // cleanup canceled the very request it had just started, permanently
+  // stranding the UI on "loading" even though the shard fetch itself
+  // succeeded (real characters, not the already-loaded rank-1 default,
+  // never recovered). `retryTick` is the one explicit, user-driven signal
+  // that re-arms the effect after a failure.
   const [historyFetch, setHistoryFetch] = useState({});
+  const [retryTick, setRetryTick] = useState(0);
 
   // §7/§20-3: only recompute when the current selection is no longer
   // pinned (covers "first pin appears" via the null case, and "displayed
@@ -68,25 +78,43 @@ export default function MyCharacterSummary({ characters, meta, expTable, ensureH
   // isn't already in flight. Switching to a different character while A is
   // still loading starts a request keyed under B; A's late result can only
   // ever update `historyFetch[A]`, never B's display (§20-4).
+  //
+  // LULU-028 (P0 fix): deps are deliberately just the *user-driven* triggers
+  // — expand/collapse, switching character, `ensureHistories` itself, and
+  // the explicit retry tick. `characters` and `historyFetch` must NOT be
+  // deps here: both change as a *side effect* of this very effect running
+  // (the fetch resolving updates `characters`; starting a fetch updates
+  // `historyFetch`), so including them reran this effect on its own output,
+  // whose cleanup canceled the in-flight request before it could resolve —
+  // permanently stuck "loading" for any character not already preloaded by
+  // some other part of the board. `charactersRef` (kept fresh by the effect
+  // above) is read instead, both for the "already loaded" pre-check and for
+  // verifying the outcome once `ensureHistories` resolves.
   useEffect(() => {
     if (!expanded || !displayedHistoryKey || typeof ensureHistories !== "function") {
       return undefined;
     }
-    const target = charactersByKey.get(displayedHistoryKey);
-    if (!target || Array.isArray(target.history)) {
+    const keyAtStart = displayedHistoryKey;
+    const target = charactersRef.current.find((c) => c.historyKey === keyAtStart);
+    if (!target) {
       return undefined;
     }
-    // "failed" only clears via the explicit retry action (§6: "再試行は現在
-    // 表示中キャラのみ") — without this check the effect would immediately
-    // re-fetch on every re-render after a failure, since nothing else about
-    // its dependencies changes once marked failed.
-    const status = historyFetch[displayedHistoryKey];
-    if (status === "loading" || status === "failed") {
+    // "loading"/"failed" only clear via this effect's own resolution or the
+    // explicit retry action (§6: "再試行は現在表示中キャラのみ") — read once,
+    // from the render that (re)created this effect; never a reason on its
+    // own to re-run it (see the dependency-array note above).
+    if (
+      !shouldStartHistoryFetch({
+        expanded,
+        historyKey: keyAtStart,
+        history: target.history,
+        status: historyFetch[keyAtStart],
+      })
+    ) {
       return undefined;
     }
 
     let cancelled = false;
-    const keyAtStart = displayedHistoryKey;
     setHistoryFetch((current) => ({ ...current, [keyAtStart]: "loading" }));
 
     Promise.resolve(ensureHistories([target])).then(() => {
@@ -108,7 +136,8 @@ export default function MyCharacterSummary({ characters, meta, expTable, ensureH
     return () => {
       cancelled = true;
     };
-  }, [expanded, displayedHistoryKey, characters, historyFetch, ensureHistories, charactersByKey]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expanded, displayedHistoryKey, ensureHistories, retryTick]);
 
   const labelForKey = (key) => charactersByKey.get(key)?.name ?? key;
 
@@ -118,8 +147,10 @@ export default function MyCharacterSummary({ characters, meta, expTable, ensureH
 
   const displayedCharacter = charactersByKey.get(displayedHistoryKey);
   // Retry re-fetches only the currently displayed character (§6: "再試行は
-  // 現在表示中キャラのみ") by clearing its "failed" mark so the effect above
-  // re-attempts on the next render.
+  // 現在表示中キャラのみ"): clear its "failed" mark and bump `retryTick` —
+  // the one dependency that intentionally re-arms the fetch effect above on
+  // an explicit user action (not automatically from the effect's own state
+  // updates; see the dependency-array note there).
   const retryHistory = () => {
     setHistoryFetch((current) => {
       if (!(displayedHistoryKey in current)) {
@@ -129,6 +160,7 @@ export default function MyCharacterSummary({ characters, meta, expTable, ensureH
       delete next[displayedHistoryKey];
       return next;
     });
+    setRetryTick((current) => current + 1);
   };
 
   return (
