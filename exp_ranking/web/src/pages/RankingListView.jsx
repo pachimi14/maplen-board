@@ -147,96 +147,112 @@ export default function RankingListView({ active }) {
     return null;
   }
 
+  const groupPanel = groupOpen && groupAnchorCharacter ? (
+    <GroupPanel
+      character={groupAnchorCharacter}
+      characters={characters}
+      mode="expanded"
+      onCollapse={toggleGroup}
+      onSelectCharacter={setGroupAnchorId}
+      {...groupDetailProps}
+    />
+  ) : null;
+
   return (
-    <>
-      <MyCharacterSummary
-        characters={characters}
-        meta={meta}
-        expTable={expTable}
-        ensureHistories={ensureHistories}
-        onFocusSearch={focusSearch}
-        t={t}
-      />
-
-      <HighlightsSection
-        characters={characters}
-        gainRankMaps={gainRankMaps}
-        onSelectCharacter={handleRowNavigate}
-        isFavorite={isFavorite}
-        onToggleFavorite={toggleFavorite}
-        showHighlights={showHighlights}
-        onToggle={() => setShowHighlights((current) => !current)}
-        t={t}
-      />
-
-      <RankingControls
-        target={rankingControlsTarget}
-        sortKey={sortKey}
-        setSortKey={setSortKey}
-        showFilterSection
-        showFilters={showFilters}
-        setShowFilters={setShowFilters}
-        groupOpen={groupOpen}
-        onToggleGroup={toggleGroup}
-        worldOptions={worldOptions}
-        worldFilter={worldFilter}
-        setWorldFilter={setWorldFilter}
-        jobAlliance={jobAlliance}
-        setJobAlliance={setJobAlliance}
-        jobBranch={jobBranch}
-        setJobBranch={setJobBranch}
-        jobFilter={jobFilter}
-        setJobFilter={setJobFilter}
-        visibleJobBranches={visibleJobBranches}
-        visibleJobOptions={visibleJobOptions}
-        minLevel={minLevel}
-        setMinLevel={setMinLevel}
-        gainFilterPeriod={gainFilterPeriod}
-        setGainFilterPeriod={setGainFilterPeriod}
-        minGainBillions={minGainBillions}
-        setMinGainBillions={setMinGainBillions}
-        periodLabels={periodLabels}
-        t={t}
-        translateAlliance={translateAlliance}
-        translateBranch={translateBranch}
-      />
-
-      {groupOpen && groupAnchorCharacter ? (
-        <GroupPanel
-          character={groupAnchorCharacter}
+    // §21.5: one CSS grid, one MyCharacterSummary instance. DOM order
+    // (TOP3 -> my character -> operations/filters/group panel/list, all
+    // inside the two blocks below) matches the required mobile stacking
+    // order unassisted (no template-areas at the default/mobile
+    // breakpoint, so items simply flow top-to-bottom in source order).
+    // From `lg:` up, named grid areas move the my-character block into a
+    // sticky right column without duplicating it.
+    <div
+      className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)] lg:items-start lg:[grid-template-areas:'top3_mychar'_'list_mychar']"
+    >
+      <div className="lg:[grid-area:top3]">
+        <HighlightsSection
           characters={characters}
-          mode="expanded"
-          onCollapse={toggleGroup}
-          onSelectCharacter={setGroupAnchorId}
-          {...groupDetailProps}
+          gainRankMaps={gainRankMaps}
+          onSelectCharacter={handleRowNavigate}
+          isFavorite={isFavorite}
+          onToggleFavorite={toggleFavorite}
+          showHighlights={showHighlights}
+          onToggle={() => setShowHighlights((current) => !current)}
+          t={t}
         />
-      ) : null}
+      </div>
 
-      <RankingTable
-        searchInputRef={searchInputRef}
-        title={rankingListTitle}
-        favoritesOnly={favoritesOnly}
-        onToggleFavoritesOnly={() => setFavoritesOnly((current) => !current)}
-        favoriteCount={favoriteCount}
-        query={query}
-        onQueryChange={setQuery}
-        setRankingControlsTarget={setRankingControlsTarget}
-        total={displayCharacters.length}
-        pagedCharacters={pagedCharacters}
-        showGainRank={showGainRank}
-        filteredGainRanks={filteredGainRanks}
-        onRowNavigate={handleRowNavigate}
-        isFavorite={isFavorite}
-        onToggleFavorite={toggleFavorite}
-        sortKey={sortKey}
-        safePage={safePage}
-        totalPages={totalPages}
-        onPrevPage={() => setPage((current) => Math.max(1, current - 1))}
-        onNextPage={() => setPage((current) => Math.min(totalPages, current + 1))}
-        rangeFrom={rangeFrom}
-        rangeTo={rangeTo}
-        t={t}
-      />
-    </>
+      <div className="lg:[grid-area:mychar] lg:sticky lg:top-6 lg:self-start">
+        <MyCharacterSummary
+          characters={characters}
+          meta={meta}
+          expTable={expTable}
+          ensureHistories={ensureHistories}
+          onFocusSearch={focusSearch}
+          t={t}
+        />
+      </div>
+
+      <div className="space-y-6 lg:[grid-area:list]">
+        <RankingControls
+          target={rankingControlsTarget}
+          sortKey={sortKey}
+          setSortKey={setSortKey}
+          showFilterSection
+          showFilters={showFilters}
+          setShowFilters={setShowFilters}
+          groupOpen={groupOpen}
+          onToggleGroup={toggleGroup}
+          worldOptions={worldOptions}
+          worldFilter={worldFilter}
+          setWorldFilter={setWorldFilter}
+          jobAlliance={jobAlliance}
+          setJobAlliance={setJobAlliance}
+          jobBranch={jobBranch}
+          setJobBranch={setJobBranch}
+          jobFilter={jobFilter}
+          setJobFilter={setJobFilter}
+          visibleJobBranches={visibleJobBranches}
+          visibleJobOptions={visibleJobOptions}
+          minLevel={minLevel}
+          setMinLevel={setMinLevel}
+          gainFilterPeriod={gainFilterPeriod}
+          setGainFilterPeriod={setGainFilterPeriod}
+          minGainBillions={minGainBillions}
+          setMinGainBillions={setMinGainBillions}
+          periodLabels={periodLabels}
+          t={t}
+          translateAlliance={translateAlliance}
+          translateBranch={translateBranch}
+        />
+
+        <RankingTable
+          searchInputRef={searchInputRef}
+          title={rankingListTitle}
+          favoritesOnly={favoritesOnly}
+          onToggleFavoritesOnly={() => setFavoritesOnly((current) => !current)}
+          favoriteCount={favoriteCount}
+          query={query}
+          onQueryChange={setQuery}
+          setRankingControlsTarget={setRankingControlsTarget}
+          total={displayCharacters.length}
+          pagedCharacters={pagedCharacters}
+          showGainRank={showGainRank}
+          filteredGainRanks={filteredGainRanks}
+          onRowNavigate={handleRowNavigate}
+          isFavorite={isFavorite}
+          onToggleFavorite={toggleFavorite}
+          sortKey={sortKey}
+          safePage={safePage}
+          totalPages={totalPages}
+          onPrevPage={() => setPage((current) => Math.max(1, current - 1))}
+          onNextPage={() => setPage((current) => Math.min(totalPages, current + 1))}
+          rangeFrom={rangeFrom}
+          rangeTo={rangeTo}
+          t={t}
+          groupPanel={groupPanel}
+        />
+      </div>
+    </div>
   );
 }
