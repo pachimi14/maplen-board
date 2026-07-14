@@ -3,28 +3,23 @@ import { Button } from "@/components/ui/button";
 import GoalModal from "./GoalModal";
 import MyCharacterPinButton from "./MyCharacterPinButton";
 import {
+  buildGoalDisplayModel,
   classifyHistoryAvailability,
+  errorMessageKeyForCode,
   isLatestDateToday,
   limitWithOthers,
   rankMovementDirection,
 } from "./myCharacterUtils";
 import {
-  calculateAverageDailyGain,
   calculateTopPercent,
   computeDailyGainSelfRank,
   computeDailyRankStreak,
-  computeGoalProgress,
   computePassedAndOvertaken,
   computePositiveGainStreak,
 } from "../stats";
 import { LEVEL_CAP, formatExp, formatJobName, getGainAmount, levelExpPercent } from "../rankingUtils";
 import { navigateToCharacter } from "../board/useHashRoute";
 import { useProfile } from "../profile/ProfileContext";
-
-// Trailing window for the goal-progress pace source (T3 F), independent of
-// the 7d/30d averages shown elsewhere — a single explicit choice per T3 F's
-// contract that the pace source is always caller-chosen.
-const GOAL_PACE_WINDOW_DAYS = 7;
 
 // Initial daily-rank streak window (T3 C2 `maxRank`, per IMPL_PLAN_T4B §5).
 const RANK_STREAK_MAX = 500;
@@ -126,11 +121,11 @@ function MovementList({ title, entries, othersCount, t }) {
  * purely by the shard fetch state — never triggers a fetch itself (that
  * stays in MyCharacterSummary, the only place that calls `ensureHistories`).
  * Always rendered (no "show more" gate); only the *content* depends on
- * whether the shard has arrived yet.
+ * whether the shard has arrived yet. `availability` is computed once by the
+ * parent (`classifyHistoryAvailability`) and shared with GoalSection's ②③
+ * so the same shard status is never classified twice.
  */
-function HistoryDependentStatsSection({ character, historyStatus, onRetryHistory, t }) {
-  const availability = classifyHistoryAvailability(character?.history, historyStatus);
-
+function HistoryDependentStatsSection({ character, availability, onRetryHistory, t }) {
   if (availability === "idle" || availability === "loading") {
     return <p className="text-sm text-slate-400">{t("myCharacters.state.loading")}</p>;
   }
@@ -194,65 +189,169 @@ function HistoryDependentStatsSection({ character, historyStatus, onRetryHistory
 }
 
 /**
- * §9/§22.3: goal status + progress display, plus the trigger that opens
- * `GoalModal`. Reuses T3 E (`computeGoalProgress`) + T3 F
- * (`calculateAverageDailyGain`) for the estimate; never re-implements the
- * pace/validity logic itself. `triggerRef` lets the modal return focus here
- * on close. (§22.3's 3-section redesign — pace = today's gain,
- * `buildGoalDisplayModel` — lands in a follow-up commit; this one only
- * relocates the existing goal summary out from under the removed "show
- * more" toggle so it's always visible.)
+ * §22.3: goal status in 3 always-visible sections (① target ② today's
+ * progress ③ arrival estimate). All math is `buildGoalDisplayModel`'s
+ * (T3 E `computeGoalProgress`, called once) — this component only lays the
+ * returned fields out; it must never recompute achievement rate/arrival
+ * date/days-delta itself. Pace is always today's gain (`getGainAmount(...,
+ * "daily")`), per §22.3 (never a multi-day average). ②③ need the
+ * character's history shard (for `computeGoalProgress`'s today-date
+ * resolution) so they're gated by `historyAvailability`, same as the
+ * streak/self-best section — ① (target level/date + edit/delete) has no
+ * such dependency and is always shown regardless.
  */
-function GoalSection({ character, expTable, goal, onOpenModal, triggerRef, t }) {
-  const history = Array.isArray(character.history) ? character.history : [];
-  const averageDailyGain = history.length
-    ? calculateAverageDailyGain(history, { days: GOAL_PACE_WINDOW_DAYS })
-    : null;
-  const progress = goal ? computeGoalProgress(character, expTable, goal, { averageDailyGain }) : null;
+function GoalSection({ character, expTable, historyAvailability, goal, onOpenModal, triggerRef, t }) {
+  const { clearGoal } = useProfile();
+  const [deleteError, setDeleteError] = useState(null);
 
-  const progressLabel = (() => {
-    if (!progress) {
-      return null;
+  const handleDelete = () => {
+    const result = clearGoal(character.historyKey);
+    if (result.ok) {
+      setDeleteError(null);
+      return;
     }
-    switch (progress.status) {
-      case "achieved":
-        return t("myCharacters.goal.achieved");
-      case "ahead":
-        return t("myCharacters.goal.ahead", { days: Math.abs(progress.daysDelta) });
-      case "behind":
-        return t("myCharacters.goal.behind", { days: Math.abs(progress.daysDelta) });
-      case "onTrack":
-        return t("myCharacters.goal.onTrack");
-      default:
-        return t("myCharacters.goal.insufficientData");
-    }
-  })();
+    setDeleteError(errorMessageKeyForCode(result.code) ?? "myCharacters.error.saveFailed");
+  };
+
+  const todayGain = getGainAmount(character, "daily");
+  const progressReady = historyAvailability === "ready";
+  const model = progressReady && goal
+    ? buildGoalDisplayModel({ character, expTable, goal, todayGain })
+    : null;
 
   return (
-    <div className="border-t border-slate-800 pt-3 flex flex-wrap items-center justify-between gap-2">
-      <div className="min-w-0">
-        <div className="text-xs text-slate-400 mb-0.5">{t("myCharacters.goal.title")}</div>
-        {goal ? (
-          <p className="text-sm text-slate-200">
-            Lv.{goal.targetLevel} · {formatIsoDateLabel(goal.targetDateIso, t) ?? goal.targetDateIso}
-            {progressLabel ? <span className="text-slate-400 ml-2">{progressLabel}</span> : null}
-          </p>
-        ) : (
-          <p className="text-sm text-slate-500">{t("myCharacters.goal.none")}</p>
-        )}
+    <div className="border-t border-slate-800 pt-3 space-y-3">
+      {/* ① target: always visible, independent of the history shard. */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="min-w-0">
+          <div className="text-xs text-slate-400 mb-0.5">{t("myCharacters.goal.title")}</div>
+          {goal ? (
+            <p className="text-sm text-slate-200">
+              {t("myCharacters.goal.summary", {
+                level: goal.targetLevel,
+                date: formatIsoDateLabel(goal.targetDateIso, t) ?? goal.targetDateIso,
+              })}
+            </p>
+          ) : (
+            <p className="text-sm text-slate-500">{t("myCharacters.goal.none")}</p>
+          )}
+        </div>
+        <div className="flex gap-2 shrink-0">
+          <Button
+            ref={triggerRef}
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 border-slate-700 bg-slate-950 text-xs"
+            onClick={onOpenModal}
+          >
+            {goal ? t("myCharacters.goal.edit") : t("myCharacters.goal.set")}
+          </Button>
+          {goal ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 border-slate-700 bg-slate-950 text-xs text-rose-300"
+              onClick={handleDelete}
+            >
+              {t("myCharacters.goal.delete")}
+            </Button>
+          ) : null}
+        </div>
       </div>
-      <Button
-        ref={triggerRef}
-        type="button"
-        variant="outline"
-        size="sm"
-        className="h-7 border-slate-700 bg-slate-950 text-xs shrink-0"
-        onClick={onOpenModal}
-      >
-        {goal ? t("myCharacters.goal.edit") : t("myCharacters.goal.set")}
-      </Button>
+      {deleteError ? (
+        <p className="text-xs text-rose-400" role="alert">
+          {t(deleteError)}
+        </p>
+      ) : null}
+
+      {goal ? (
+        <>
+          {/* ② today's progress. */}
+          <div>
+            <div className="text-xs text-slate-400 mb-1">{t("myCharacters.goal.todayProgressTitle")}</div>
+            {!progressReady ? (
+              <HistoryGateMessage availability={historyAvailability} t={t} />
+            ) : (
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                <span className="text-slate-200">
+                  {t("myCharacters.goal.todayGain", { amount: formatExp(model.todayGain) })}
+                </span>
+                <span className="text-slate-400">
+                  {t("myCharacters.goal.requiredGain", {
+                    amount: model.requiredDailyGain != null ? formatExp(model.requiredDailyGain) : "-",
+                  })}
+                </span>
+                <span
+                  className={
+                    model.achievementRate == null
+                      ? "text-slate-500"
+                      : model.achievementRate >= 1
+                        ? "text-emerald-400 font-semibold"
+                        : "text-amber-400 font-semibold"
+                  }
+                >
+                  {t("myCharacters.goal.achievementRate", {
+                    percent: model.achievementRate != null ? Math.round(model.achievementRate * 100) : "-",
+                  })}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* ③ arrival estimate. */}
+          <div>
+            <div className="text-xs text-slate-400 mb-1">{t("myCharacters.goal.arrivalTitle")}</div>
+            {!progressReady ? (
+              <HistoryGateMessage availability={historyAvailability} t={t} />
+            ) : model.achieved ? (
+              <p className="text-sm text-emerald-400">{t("myCharacters.goal.achieved")}</p>
+            ) : model.indeterminate ? (
+              <p className="text-sm text-slate-500">{t("myCharacters.goal.insufficientData")}</p>
+            ) : (
+              <div className="text-sm space-y-0.5">
+                <p className="text-xs text-slate-500">{t("myCharacters.goal.arrivalPremise")}</p>
+                <p className="text-slate-200">
+                  {t("myCharacters.goal.estimatedArrival", {
+                    date: formatIsoDateLabel(model.estimatedArrivalDate, t) ?? model.estimatedArrivalDate,
+                  })}
+                </p>
+                <p
+                  className={
+                    model.daysDelta > 0
+                      ? "text-emerald-400"
+                      : model.daysDelta < 0
+                        ? "text-rose-400"
+                        : "text-slate-400"
+                  }
+                >
+                  {model.daysDelta > 0
+                    ? t("myCharacters.goal.ahead", { days: model.daysDelta })
+                    : model.daysDelta < 0
+                      ? t("myCharacters.goal.behind", { days: Math.abs(model.daysDelta) })
+                      : t("myCharacters.goal.onTrack")}
+                </p>
+              </div>
+            )}
+          </div>
+        </>
+      ) : null}
     </div>
   );
+}
+
+/** Shared "loading/failed/insufficient" wording for ②③'s history-gated
+ * content (§22.3), matching HistoryDependentStatsSection's messages so the
+ * same shard status never reads differently in two places on the card. */
+function HistoryGateMessage({ availability, t }) {
+  if (availability === "failed") {
+    return <p className="text-sm text-rose-400">{t("myCharacters.state.loadFailed")}</p>;
+  }
+  if (availability === "insufficient") {
+    return <p className="text-sm text-slate-500">{t("myCharacters.state.insufficientHistory")}</p>;
+  }
+  return <p className="text-sm text-slate-400">{t("myCharacters.state.loading")}</p>;
 }
 
 /**
@@ -279,6 +378,10 @@ export default function MyCharacterCard({
   const goalTriggerRef = useRef(null);
   const goal = getGoal(historyKey);
   const isPrimary = Boolean(historyKey) && primaryHistoryKey === historyKey;
+  // Computed once and shared by HistoryDependentStatsSection and
+  // GoalSection's ②③ (§22.3) so the same shard-fetch state is never
+  // classified twice.
+  const historyAvailability = classifyHistoryAvailability(character?.history, historyStatus);
 
   const latestSnapshotDate = meta?.latestSnapshotDate ?? null;
   const isToday = isLatestDateToday(latestSnapshotDate);
@@ -434,7 +537,7 @@ export default function MyCharacterCard({
           <div className="border-t border-slate-800 pt-3">
             <HistoryDependentStatsSection
               character={character}
-              historyStatus={historyStatus}
+              availability={historyAvailability}
               onRetryHistory={onRetryHistory}
               t={t}
             />
@@ -443,6 +546,7 @@ export default function MyCharacterCard({
           <GoalSection
             character={character}
             expTable={expTable}
+            historyAvailability={historyAvailability}
             goal={goal}
             onOpenModal={() => setGoalModalOpen(true)}
             triggerRef={goalTriggerRef}
