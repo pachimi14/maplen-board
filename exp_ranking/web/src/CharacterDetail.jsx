@@ -626,7 +626,7 @@ export default function CharacterDetail({
             src={character.imageUrl}
             alt=""
             className={`rounded-2xl bg-slate-800 object-cover shrink-0 ${
-              isExpanded ? "w-24 h-24 md:w-28 md:h-28" : "w-20 h-20 md:w-24 md:h-24"
+              isExpanded ? "w-28 h-28 md:w-32 md:h-32" : "w-20 h-20 md:w-24 md:h-24"
             }`}
           />
           <div className="min-w-0 flex-1">

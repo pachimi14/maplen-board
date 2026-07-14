@@ -405,7 +405,7 @@ export default function MyCharacterCard({
             <img
               src={character.imageUrl}
               alt=""
-              className="rounded-2xl bg-slate-800 object-cover shrink-0 w-20 h-20 md:w-24 md:h-24"
+              className="rounded-2xl bg-slate-800 object-cover shrink-0 w-28 h-28 md:w-32 md:h-32"
             />
             <div className="min-w-0 flex-1">
               {/* §22.11 A②: "詳細を見る" moved here (top-right of the
