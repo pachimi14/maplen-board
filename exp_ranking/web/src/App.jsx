@@ -31,7 +31,10 @@ function AppShell() {
           <p className="max-w-2xl text-slate-300 leading-7">{t("app.pageDescription")}</p>
           <div className="mt-10 border-t border-slate-800 pt-6">
             {loadError ? (
-              <p className="text-sm text-slate-400">{t("app.updateNotice")}</p>
+              <>
+                <p className="font-semibold">{t("app.loadErrorTitle")}</p>
+                <p className="text-sm text-slate-400 mt-1">{t("app.loadErrorHint")}</p>
+              </>
             ) : (
               <>
                 <p className="font-semibold">{t("app.noDataTitle")}</p>
