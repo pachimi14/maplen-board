@@ -7,7 +7,7 @@ title MapleN Board - Local Dev
 echo ========================================
 echo  Local Dev  (production JSON + hot reload)
 echo ========================================
-echo   URL: http://localhost:5173/
+echo   URL: http://localhost:5173/#/
 echo   Options: --no-sync
 echo.
 
@@ -64,7 +64,7 @@ if not exist "node_modules\" (
 echo [2/2] Starting Vite dev server...
 echo   Browser opens when ready. Press Ctrl+C to stop.
 echo.
-call npm run dev -- --host 127.0.0.1 --port 5173 --open
+call npm run dev -- --host 127.0.0.1 --port 5173 --open "http://localhost:5173/#/"
 set "EXIT_CODE=%ERRORLEVEL%"
 echo.
 pause
