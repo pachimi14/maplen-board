@@ -1,5 +1,7 @@
+import { useRef, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import GoalModal from "./GoalModal";
 import MyCharacterPinButton from "./MyCharacterPinButton";
 import {
   classifyHistoryAvailability,
@@ -8,13 +10,21 @@ import {
   rankMovementDirection,
 } from "./myCharacterUtils";
 import {
+  calculateAverageDailyGain,
   calculateTopPercent,
   computeDailyGainSelfRank,
   computeDailyRankStreak,
+  computeGoalProgress,
   computePassedAndOvertaken,
   computePositiveGainStreak,
 } from "../stats";
 import { formatExp, formatJobName, getGainAmount } from "../rankingUtils";
+import { useProfile } from "../profile/ProfileContext";
+
+// Trailing window for the goal-progress pace source (T3 F), independent of
+// the 7d/30d averages shown elsewhere — a single explicit choice per T3 F's
+// contract that the pace source is always caller-chosen.
+const GOAL_PACE_WINDOW_DAYS = 7;
 
 // Initial daily-rank streak window (T3 C2 `maxRank`, per IMPL_PLAN_T4B §5).
 const RANK_STREAK_MAX = 500;
@@ -141,6 +151,65 @@ function ExpandedHistorySection({ character, historyStatus, onRetryHistory, t })
 }
 
 /**
+ * §9: goal status + progress display, plus the trigger that opens
+ * `GoalModal`. Reuses T3 E (`computeGoalProgress`) + T3 F
+ * (`calculateAverageDailyGain`) for the estimate; never re-implements the
+ * pace/validity logic itself. `triggerRef` lets the modal return focus here
+ * on close.
+ */
+function GoalSection({ character, expTable, goal, onOpenModal, triggerRef, t }) {
+  const history = Array.isArray(character.history) ? character.history : [];
+  const averageDailyGain = history.length
+    ? calculateAverageDailyGain(history, { days: GOAL_PACE_WINDOW_DAYS })
+    : null;
+  const progress = goal ? computeGoalProgress(character, expTable, goal, { averageDailyGain }) : null;
+
+  const progressLabel = (() => {
+    if (!progress) {
+      return null;
+    }
+    switch (progress.status) {
+      case "achieved":
+        return t("myCharacters.goal.achieved");
+      case "ahead":
+        return t("myCharacters.goal.ahead", { days: Math.abs(progress.daysDelta) });
+      case "behind":
+        return t("myCharacters.goal.behind", { days: Math.abs(progress.daysDelta) });
+      case "onTrack":
+        return t("myCharacters.goal.onTrack");
+      default:
+        return t("myCharacters.goal.insufficientData");
+    }
+  })();
+
+  return (
+    <div className="border-t border-slate-800 pt-3 flex flex-wrap items-center justify-between gap-2">
+      <div className="min-w-0">
+        <div className="text-xs text-slate-400 mb-0.5">{t("myCharacters.goal.title")}</div>
+        {goal ? (
+          <p className="text-sm text-slate-200">
+            Lv.{goal.targetLevel} · {goal.targetDateIso}
+            {progressLabel ? <span className="text-slate-400 ml-2">{progressLabel}</span> : null}
+          </p>
+        ) : (
+          <p className="text-sm text-slate-500">{t("myCharacters.goal.none")}</p>
+        )}
+      </div>
+      <Button
+        ref={triggerRef}
+        type="button"
+        variant="outline"
+        size="sm"
+        className="h-7 border-slate-700 bg-slate-950 text-xs shrink-0"
+        onClick={onOpenModal}
+      >
+        {goal ? t("myCharacters.goal.edit") : t("myCharacters.goal.set")}
+      </Button>
+    </div>
+  );
+}
+
+/**
  * The single-character summary card (T4b §5/§20-8). Shows the currently
  * displayed pinned character's day-over-day summary immediately (no shard
  * fetch needed); the "show more" toggle reveals history-dependent stats
@@ -152,12 +221,18 @@ export default function MyCharacterCard({
   historyKey,
   allCharacters,
   meta,
+  expTable,
   expanded,
   onToggleExpanded,
   historyStatus = "idle",
   onRetryHistory,
   t,
 }) {
+  const { getGoal } = useProfile();
+  const [goalModalOpen, setGoalModalOpen] = useState(false);
+  const goalTriggerRef = useRef(null);
+  const goal = getGoal(historyKey);
+
   const latestSnapshotDate = meta?.latestSnapshotDate ?? null;
   const isToday = isLatestDateToday(latestSnapshotDate);
   const asOfDate = latestSnapshotDate
@@ -183,7 +258,7 @@ export default function MyCharacterCard({
   const worldTopPercent = character ? calculateTopPercent(character.worldRank, character.worldRankTotal) : null;
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl p-5 sm:p-6 space-y-4">
+    <div className="relative bg-slate-900 border border-slate-800 rounded-2xl shadow-xl p-5 sm:p-6 space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <h2 className="text-lg font-bold">
@@ -293,15 +368,32 @@ export default function MyCharacterCard({
           </Button>
 
           {expanded ? (
-            <div className="border-t border-slate-800 pt-4">
+            <div className="border-t border-slate-800 pt-4 space-y-3">
               <ExpandedHistorySection
                 character={character}
                 historyStatus={historyStatus}
                 onRetryHistory={onRetryHistory}
                 t={t}
               />
+              <GoalSection
+                character={character}
+                expTable={expTable}
+                goal={goal}
+                onOpenModal={() => setGoalModalOpen(true)}
+                triggerRef={goalTriggerRef}
+                t={t}
+              />
             </div>
           ) : null}
+
+          <GoalModal
+            open={goalModalOpen}
+            historyKey={historyKey}
+            character={character}
+            onClose={() => setGoalModalOpen(false)}
+            triggerRef={goalTriggerRef}
+            t={t}
+          />
         </>
       ) : null}
     </div>
