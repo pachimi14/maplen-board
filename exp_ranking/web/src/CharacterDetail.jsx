@@ -622,13 +622,22 @@ export default function CharacterDetail({
         ) : null}
 
         <div className="flex items-start gap-4">
-          <img
-            src={character.imageUrl}
-            alt=""
-            className={`rounded-2xl bg-slate-800 object-cover shrink-0 ${
-              isExpanded ? "w-28 h-28 md:w-32 md:h-32" : "w-20 h-20 md:w-24 md:h-24"
+          {/* §22.15 (revised, decision A relaxed for this display wrapper
+              only): the source portrait is a 180x180 square with the
+              character small and centered, leaving built-in transparent
+              margin that a square box's object-cover never crops away.
+              Zoom the <img> past the container's edges (overflow hidden
+              on the wrapping div — a transform can't be clipped by
+              overflow on the element it's applied to) instead of
+              enlarging the box, so the whitespace is pushed out of frame
+              without touching the source image. */}
+          <div
+            className={`rounded-2xl bg-slate-800 overflow-hidden shrink-0 ${
+              isExpanded ? "w-24 h-24 md:w-28 md:h-28" : "w-20 h-20 md:w-24 md:h-24"
             }`}
-          />
+          >
+            <img src={character.imageUrl} alt="" className="w-full h-full object-cover scale-[1.3]" />
+          </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 text-slate-400 text-sm">
