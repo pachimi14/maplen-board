@@ -4,7 +4,7 @@
 // re-deriving the same rules inline.
 
 import { todayPartsInJst } from "../rankingUtils";
-import { computeGoalProgress } from "../stats";
+import { computeDailyRankStreak, computeGoalProgress } from "../stats";
 
 const KNOWN_ERROR_CODES = new Set([
   "saveFailed",
@@ -226,4 +226,32 @@ export function buildGoalDisplayModel({ character, expTable, goal, todayGain }) 
     indeterminate,
     achieved,
   };
+}
+
+/**
+ * §22.11 A⑤: pick the single most "prestigious" daily-rank-streak tier to
+ * show, instead of a fixed maxRank. Evaluates each tier via the existing
+ * `computeDailyRankStreak` (T3 C2) — this never reimplements the streak
+ * math itself, it only chooses which of several already-computed results
+ * to surface.
+ *
+ * Rule (prestige-first, user-adjustable per §22.11): try tiers strictest
+ * first (ascending `maxRank`); the first tier whose *current* streak is at
+ * least 2 days wins. A 1-day (or 0-day) current streak at every tier
+ * yields no result at all — the caller hides the "rank maintained" stat
+ * entirely rather than show a barely-there streak.
+ *
+ * @param {Array<object>} history
+ * @param {number[]} tiers
+ * @returns {{maxRank: number, days: number}|null}
+ */
+export function pickBestRankStreak(history, tiers) {
+  const sortedTiers = [...(Array.isArray(tiers) ? tiers : [])].sort((a, b) => a - b);
+  for (const maxRank of sortedTiers) {
+    const { current } = computeDailyRankStreak(history, { maxRank });
+    if (current >= 2) {
+      return { maxRank, days: current };
+    }
+  }
+  return null;
 }

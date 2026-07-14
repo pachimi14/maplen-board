@@ -5,15 +5,13 @@ import MyCharacterPinButton from "./MyCharacterPinButton";
 import {
   buildGoalDisplayModel,
   classifyHistoryAvailability,
-  errorMessageKeyForCode,
-  isLatestDateToday,
   limitWithOthers,
+  pickBestRankStreak,
   rankMovementDirection,
 } from "./myCharacterUtils";
 import {
   calculateTopPercent,
   computeDailyGainSelfRank,
-  computeDailyRankStreak,
   computePassedAndOvertaken,
   computePositiveGainStreak,
 } from "../stats";
@@ -21,8 +19,10 @@ import { LEVEL_CAP, formatExp, formatJobName, getGainAmount, levelExpPercent } f
 import { navigateToCharacter } from "../board/useHashRoute";
 import { useProfile } from "../profile/ProfileContext";
 
-// Initial daily-rank streak window (T3 C2 `maxRank`, per IMPL_PLAN_T4B §5).
-const RANK_STREAK_MAX = 500;
+// §22.11 A⑤: daily-rank-streak tiers, strictest to loosest — the single
+// fixed "top 500" is replaced by picking whichever of these is most
+// prestigious while still qualifying (see pickBestRankStreak).
+const RANK_STREAK_TIERS = [5, 10, 50, 100, 500];
 
 const MOVEMENT_DISPLAY_LIMIT = 3;
 
@@ -40,11 +40,14 @@ function formatIsoDateLabel(isoDate, t) {
   });
 }
 
-function StatBox({ label, children }) {
+/** §22.11 A①: `valueClassName` lets callers color the value (e.g. the
+ * gain amounts, matched to CharacterDetail's `text-emerald-400`) without
+ * duplicating this box's layout — label color/size is unaffected. */
+function StatBox({ label, children, valueClassName = "text-slate-100" }) {
   return (
     <div className="bg-slate-950 rounded-xl px-3 py-2 min-w-0">
       <div className="text-slate-400 text-xs truncate">{label}</div>
-      <div className="mt-0.5 text-sm font-semibold text-slate-100 truncate">{children}</div>
+      <div className={`mt-0.5 text-sm font-semibold truncate ${valueClassName}`}>{children}</div>
     </div>
   );
 }
@@ -153,7 +156,10 @@ function HistoryDependentStatsSection({ character, availability, onRetryHistory,
 
   const history = character.history;
   const positiveStreak = computePositiveGainStreak(history);
-  const rankStreak = computeDailyRankStreak(history, { maxRank: RANK_STREAK_MAX });
+  // §22.11 A⑤: strictest-qualifying tier instead of a fixed maxRank; null
+  // means no tier reached a 2+ day current streak, so the line falls back
+  // to "no streak" wording just like the old current===0 case did.
+  const rankStreak = pickBestRankStreak(history, RANK_STREAK_TIERS);
   const selfBest = computeDailyGainSelfRank(history);
 
   return (
@@ -166,19 +172,18 @@ function HistoryDependentStatsSection({ character, availability, onRetryHistory,
             : t("myCharacters.showMoreSection.noStreak")}
         </p>
         <p className="text-sm text-slate-200 mt-0.5">
-          {rankStreak.current > 0
-            ? t("myCharacters.showMoreSection.rankStreak", { count: rankStreak.current, max: RANK_STREAK_MAX })
+          {rankStreak
+            ? t("myCharacters.showMoreSection.rankStreak", { count: rankStreak.days, max: rankStreak.maxRank })
             : t("myCharacters.showMoreSection.noStreak")}
         </p>
       </div>
       <div className="min-w-0">
         <div className="text-xs text-slate-400 mb-1">{t("myCharacters.showMoreSection.selfBestTitle")}</div>
+        {/* §22.11 A④: value only, no "(of N comparable days)" suffix — kept
+            to one line (no wrap) since it's now a single short phrase. */}
         {selfBest.rank != null ? (
-          <p className="text-sm text-slate-200">
-            {t("myCharacters.showMoreSection.selfBestValue", { rank: selfBest.rank })}{" "}
-            <span className="text-slate-500">
-              {t("myCharacters.showMoreSection.selfBestOf", { total: selfBest.totalComparableDays })}
-            </span>
+          <p className="text-sm text-slate-200 whitespace-nowrap">
+            {t("myCharacters.showMoreSection.selfBestValue", { rank: selfBest.rank })}
           </p>
         ) : (
           <p className="text-sm text-slate-500">{t("myCharacters.showMoreSection.selfBestNone")}</p>
@@ -197,22 +202,14 @@ function HistoryDependentStatsSection({ character, availability, onRetryHistory,
  * "daily")`), per §22.3 (never a multi-day average). ②③ need the
  * character's history shard (for `computeGoalProgress`'s today-date
  * resolution) so they're gated by `historyAvailability`, same as the
- * streak/self-best section — ① (target level/date + edit/delete) has no
- * such dependency and is always shown regardless.
+ * streak/self-best section — ① (target level/date + edit) has no such
+ * dependency and is always shown regardless.
+ *
+ * §22.11 A⑥: ① has no delete button — deleting is already available inside
+ * `GoalModal` (opened via "edit"), so a second delete control here would be
+ * redundant.
  */
 function GoalSection({ character, expTable, historyAvailability, goal, onOpenModal, triggerRef, t }) {
-  const { clearGoal } = useProfile();
-  const [deleteError, setDeleteError] = useState(null);
-
-  const handleDelete = () => {
-    const result = clearGoal(character.historyKey);
-    if (result.ok) {
-      setDeleteError(null);
-      return;
-    }
-    setDeleteError(errorMessageKeyForCode(result.code) ?? "myCharacters.error.saveFailed");
-  };
-
   const todayGain = getGainAmount(character, "daily");
   const progressReady = historyAvailability === "ready";
   const model = progressReady && goal
@@ -247,24 +244,8 @@ function GoalSection({ character, expTable, historyAvailability, goal, onOpenMod
           >
             {goal ? t("myCharacters.goal.edit") : t("myCharacters.goal.set")}
           </Button>
-          {goal ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-7 border-slate-700 bg-slate-950 text-xs text-rose-300"
-              onClick={handleDelete}
-            >
-              {t("myCharacters.goal.delete")}
-            </Button>
-          ) : null}
         </div>
       </div>
-      {deleteError ? (
-        <p className="text-xs text-rose-400" role="alert">
-          {t(deleteError)}
-        </p>
-      ) : null}
 
       {goal ? (
         <>
@@ -383,10 +364,6 @@ export default function MyCharacterCard({
   // classified twice.
   const historyAvailability = classifyHistoryAvailability(character?.history, historyStatus);
 
-  const latestSnapshotDate = meta?.latestSnapshotDate ?? null;
-  const isToday = isLatestDateToday(latestSnapshotDate);
-  const asOfDate = formatIsoDateLabel(latestSnapshotDate, t);
-
   const movement = character
     ? computePassedAndOvertaken(
         { historyKey: character.historyKey, rank: character.rank, previousRank: character.previousRank },
@@ -409,15 +386,8 @@ export default function MyCharacterCard({
 
   return (
     <div className="relative bg-slate-900 border border-slate-800 rounded-2xl shadow-xl p-5 sm:p-6 space-y-4">
-      {/* §22.1: no more "今日の成績"/"最新の成績" heading — just a small,
-          honest note about which date this data is as of (isLatestDateToday
-          decides the wording, never claims "today" when the latest snapshot
-          is actually stale/delayed). */}
-      <p className="text-xs text-slate-500">
-        {isToday ? t("myCharacters.todaySummary") : t("myCharacters.latestSummary")}
-        {asOfDate ? ` · ${t("myCharacters.asOf", { date: asOfDate })}` : ""}
-      </p>
-
+      {/* §22.11 A③: no title/data-as-of note at all anymore — the card
+          leads straight into the header. */}
       {!character ? (
         <p className="text-sm text-amber-300/90 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3">
           {t("myCharacters.notInRanking")}
@@ -437,13 +407,26 @@ export default function MyCharacterCard({
               className="rounded-2xl bg-slate-800 object-cover shrink-0 w-20 h-20 md:w-24 md:h-24"
             />
             <div className="min-w-0 flex-1">
-              <span
-                className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
-                  isPrimary ? "bg-cyan-500/20 text-cyan-200" : "bg-slate-700/50 text-slate-300"
-                }`}
-              >
-                {t(isPrimary ? "myCharacters.pin.primaryBadge" : "myCharacters.pin.subBadge")}
-              </span>
+              {/* §22.11 A②: "詳細を見る" moved here (top-right of the
+                  header, next to the Main/Sub badge) so it's reachable
+                  without scrolling past the whole card; the bottom-of-card
+                  button that used to hold this is gone. */}
+              <div className="flex items-start justify-between gap-2">
+                <span
+                  className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                    isPrimary ? "bg-cyan-500/20 text-cyan-200" : "bg-slate-700/50 text-slate-300"
+                  }`}
+                >
+                  {t(isPrimary ? "myCharacters.pin.primaryBadge" : "myCharacters.pin.subBadge")}
+                </span>
+                <button
+                  type="button"
+                  className="shrink-0 text-xs text-sky-400 hover:text-sky-300 hover:underline"
+                  onClick={handleNavigateToDetail}
+                >
+                  {t("myCharacters.viewDetail")}
+                </button>
+              </div>
               <h2 className="text-xl font-bold break-words leading-tight mt-1">
                 <button
                   type="button"
@@ -495,10 +478,18 @@ export default function MyCharacterCard({
             </div>
           </div>
 
+          {/* §22.11 A①: gain amounts in the same emerald as CharacterDetail's
+              gain figures (labels stay their existing slate color). */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
-            <StatBox label={t("myCharacters.stat.dailyGain")}>+{formatExp(getGainAmount(character, "daily"))}</StatBox>
-            <StatBox label={t("myCharacters.stat.weeklyGain")}>+{formatExp(getGainAmount(character, "weekly"))}</StatBox>
-            <StatBox label={t("myCharacters.stat.monthlyGain")}>+{formatExp(getGainAmount(character, "monthly"))}</StatBox>
+            <StatBox label={t("myCharacters.stat.dailyGain")} valueClassName="text-emerald-400">
+              +{formatExp(getGainAmount(character, "daily"))}
+            </StatBox>
+            <StatBox label={t("myCharacters.stat.weeklyGain")} valueClassName="text-emerald-400">
+              +{formatExp(getGainAmount(character, "weekly"))}
+            </StatBox>
+            <StatBox label={t("myCharacters.stat.monthlyGain")} valueClassName="text-emerald-400">
+              +{formatExp(getGainAmount(character, "monthly"))}
+            </StatBox>
           </div>
 
           {/* §22.1: job/world rank shown in full — no truncation, no
@@ -562,24 +553,14 @@ export default function MyCharacterCard({
       <MyCharacterPinButton character={character ?? { historyKey }} />
 
       {character ? (
-        <>
-          <button
-            type="button"
-            className="w-full text-center text-sm text-sky-400 hover:text-sky-300 hover:underline"
-            onClick={handleNavigateToDetail}
-          >
-            {t("myCharacters.viewDetail")}
-          </button>
-
-          <GoalModal
-            open={goalModalOpen}
-            historyKey={historyKey}
-            character={character}
-            onClose={() => setGoalModalOpen(false)}
-            triggerRef={goalTriggerRef}
-            t={t}
-          />
-        </>
+        <GoalModal
+          open={goalModalOpen}
+          historyKey={historyKey}
+          character={character}
+          onClose={() => setGoalModalOpen(false)}
+          triggerRef={goalTriggerRef}
+          t={t}
+        />
       ) : null}
     </div>
   );
