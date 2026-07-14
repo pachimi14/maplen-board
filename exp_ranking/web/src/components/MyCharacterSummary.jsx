@@ -76,7 +76,12 @@ export default function MyCharacterSummary({ characters, meta, expTable, ensureH
     if (!target || Array.isArray(target.history)) {
       return undefined;
     }
-    if (historyFetch[displayedHistoryKey] === "loading") {
+    // "failed" only clears via the explicit retry action (§6: "再試行は現在
+    // 表示中キャラのみ") — without this check the effect would immediately
+    // re-fetch on every re-render after a failure, since nothing else about
+    // its dependencies changes once marked failed.
+    const status = historyFetch[displayedHistoryKey];
+    if (status === "loading" || status === "failed") {
       return undefined;
     }
 

@@ -93,18 +93,22 @@ export default function GoalModal({ open, historyKey, character, onClose, trigge
 
   return (
     <div
-      className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-slate-950/80 p-4"
+      className="absolute inset-0 z-10 flex justify-center rounded-2xl bg-slate-950/80 p-4"
       onClick={(event) => {
         if (event.target === event.currentTarget) {
           closeAndReturnFocus();
         }
       }}
     >
+      {/* `sticky` (not `fixed`) keeps the dialog near the top of the
+          viewport even if the card behind it (and so this overlay, which
+          spans the card via inset-0) is taller than the screen — without
+          ever using position:fixed (§9/§20-9 mobile requirement). */}
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="w-full max-w-sm max-h-full overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900 p-5 space-y-4"
+        className="sticky top-4 w-full max-w-sm max-h-[calc(100vh-2rem)] overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900 p-5 space-y-4"
       >
         <h3 id={titleId} className="text-base font-bold">
           {t("myCharacters.goal.title")}

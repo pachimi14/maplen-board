@@ -284,7 +284,7 @@ export default function MyCharacterCard({
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
             <StatBox label={t("myCharacters.stat.dailyGain")}>+{formatExp(getGainAmount(character, "daily"))}</StatBox>
             <StatBox label={t("myCharacters.stat.weeklyGain")}>+{formatExp(getGainAmount(character, "weekly"))}</StatBox>
             <StatBox label={t("myCharacters.stat.monthlyGain")}>+{formatExp(getGainAmount(character, "monthly"))}</StatBox>
