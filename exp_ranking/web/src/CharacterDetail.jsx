@@ -443,6 +443,8 @@ export default function CharacterDetail({
   onExpand,
   onCollapse,
   onSelectCharacter,
+  pinControls = null,
+  shareControls = null,
 }) {
   const { t } = useTranslation();
   const dailyPeriod = useGainPeriodLabel("daily");
@@ -651,6 +653,7 @@ export default function CharacterDetail({
                     {t("characterDetail.collapseDetail")}
                   </Button>
                 ) : null}
+                {shareControls}
                 {onToggleFavorite ? (
                   <FavoriteStar active={isFavorite} onToggle={onToggleFavorite} size={22} />
                 ) : null}
@@ -668,9 +671,7 @@ export default function CharacterDetail({
                 {character.worldId ? (
                   <>
                     <span className="text-slate-600"> · </span>
-                    <NavigatorLink href={navigatorUrl} className="text-sky-400 font-medium">
-                      {character.worldId}
-                    </NavigatorLink>
+                    <span className="text-slate-300 font-medium">{character.worldId}</span>
                   </>
                 ) : null}
               </p>
@@ -696,6 +697,8 @@ export default function CharacterDetail({
             </div>
 
             <p className="text-sm text-slate-500 font-semibold mt-0.5">#{character.rank}</p>
+
+            {pinControls ? <div className="mt-2">{pinControls}</div> : null}
           </div>
         </div>
 

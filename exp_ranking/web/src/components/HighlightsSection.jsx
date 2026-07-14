@@ -4,8 +4,7 @@ import TopGainHighlights from "../TopGainHighlights";
 export default function HighlightsSection({
   characters,
   gainRankMaps,
-  selectedId,
-  onSelect,
+  onSelectCharacter,
   isFavorite,
   onToggleFavorite,
   showHighlights,
@@ -31,8 +30,7 @@ export default function HighlightsSection({
           <TopGainHighlights
             characters={characters}
             gainRankMaps={gainRankMaps}
-            selectedId={selectedId}
-            onSelect={onSelect}
+            onSelectCharacter={onSelectCharacter}
             isFavorite={isFavorite}
             onToggleFavorite={onToggleFavorite}
           />

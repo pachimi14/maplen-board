@@ -706,6 +706,25 @@ export function targetDatePartsAfterDays(daysFromToday, t, reference = new Date(
   };
 }
 
+/**
+ * §22.11 B: arrival-date parts for a plan of `days` consecutive daily runs
+ * *starting today* (today = day 1, per the level planner's own framing —
+ * "必要日数=今日から必要なデイリー回数"). `targetDatePartsAfterDays` means
+ * "N days from today" (today + N); day 1 of a run is today itself (today +
+ * 0), so day N of the run is today + (N-1), not today + N. Delegates to
+ * `targetDatePartsAfterDays` for the actual date arithmetic/formatting —
+ * this function only supplies the day-count-to-offset conversion, it never
+ * duplicates the JST/date-math itself. `days` must be >= 1 (a 0-or-fewer
+ * day plan has no arrival date); anything else (including non-finite
+ * input) returns null rather than a nonsensical date.
+ */
+export function arrivalDatePartsForDailyRuns(days, t, reference = new Date()) {
+  if (!Number.isFinite(days) || days < 1) {
+    return null;
+  }
+  return targetDatePartsAfterDays(days - 1, t, reference);
+}
+
 /** Today’s calendar date in JST (year/month/day). */
 export function todayPartsInJst(reference = new Date()) {
   const parts = new Intl.DateTimeFormat("en-US", {

@@ -16,7 +16,7 @@ function matchesCharacterQuery(character, query) {
   );
 }
 
-export default function CharacterSearchPicker({ characters, selectedId, onSelect }) {
+export default function CharacterSearchPicker({ characters, selectedId, onSelect, placeholder }) {
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -50,7 +50,7 @@ export default function CharacterSearchPicker({ characters, selectedId, onSelect
           onBlur={() => {
             window.setTimeout(() => setOpen(false), 150);
           }}
-          placeholder={t("characterDetail.switchCharacter")}
+          placeholder={placeholder ?? t("characterDetail.switchCharacter")}
           className="pl-10 bg-slate-950 border-slate-700 text-slate-100"
         />
       </div>

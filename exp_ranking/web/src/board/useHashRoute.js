@@ -151,6 +151,10 @@ function parseRawQuery(search) {
  * Parses `window.location.hash` into a fully-normalized route. Routes:
  *   - `#/` or empty (+ optional query)               -> { name: "list", query }
  *   - `#/character/:historyKey` (+ optional query)    -> { name: "detail", historyKey, query }
+ *   - `#/group` (+ optional query)                    -> { name: "group", query }
+ *     (T4b §22.4: group has no groupId of its own — the active group is
+ *     decision C, resolved from existing activeGroupId/localStorage, never
+ *     the URL)
  *   - anything else                                   -> falls back to list (no crash)
  */
 export function parseHash(hash) {
@@ -168,6 +172,10 @@ export function parseHash(hash) {
     return { name: "detail", historyKey, query };
   }
 
+  if (path === "/group") {
+    return { name: "group", query };
+  }
+
   return { name: "list", query };
 }
 
@@ -176,7 +184,9 @@ function buildHash(route) {
   const search = params.toString();
   const path = route?.name === "detail"
     ? `/character/${encodeURIComponent(route.historyKey)}`
-    : "/";
+    : route?.name === "group"
+      ? "/group"
+      : "/";
   return `#${path}${search ? `?${search}` : ""}`;
 }
 
@@ -333,6 +343,17 @@ export function navigateToCharacter(historyKey, partialQuery = {}, options = {})
       historyKey,
       query: normalizeQuery({ ...base.query, ...partialQuery }),
     }),
+    options,
+  );
+}
+
+/** Navigates to `#/group`, keeping (or patching) the current query (T4b
+ * §22.4). No groupId parameter — decision C keeps the active group out of
+ * the URL entirely (existing activeGroupId/localStorage stays the single
+ * source of truth for which group is shown). */
+export function navigateToGroup(partialQuery = {}, options = {}) {
+  applyRoute(
+    (base) => ({ name: "group", query: normalizeQuery({ ...base.query, ...partialQuery }) }),
     options,
   );
 }
