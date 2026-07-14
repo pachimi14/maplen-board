@@ -250,6 +250,14 @@
         "noHistoryKey": "このキャラは登録できません"
       }
     },
+    "register": {
+      "title": "キャラクターを検索して登録",
+      "searchPlaceholder": "キャラ名・職業・サーバーで検索",
+      "cancel": "キャンセル"
+    },
+    "switcher": {
+      "addSub": "＋ サブキャラ追加"
+    },
     "showMore": "もっと見る",
     "showLess": "閉じる",
     "viewDetail": "詳細を見る",

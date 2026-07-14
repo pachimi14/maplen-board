@@ -250,6 +250,14 @@
         "noHistoryKey": "此角色無法釘選"
       }
     },
+    "register": {
+      "title": "搜尋並釘選角色",
+      "searchPlaceholder": "搜尋角色名、職業、伺服器",
+      "cancel": "取消"
+    },
+    "switcher": {
+      "addSub": "＋ 新增副角色"
+    },
     "showMore": "顯示更多",
     "showLess": "收合",
     "viewDetail": "查看詳情",
