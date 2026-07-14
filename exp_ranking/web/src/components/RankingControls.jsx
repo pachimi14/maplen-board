@@ -1,5 +1,5 @@
 import { createPortal } from "react-dom";
-import { ChevronDown, ChevronUp, RotateCcw } from "lucide-react";
+import { ChevronDown, ChevronUp, RotateCcw, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { JOB_TAXONOMY } from "../jobCategories";
@@ -18,6 +18,8 @@ export default function RankingControls({
   showFilterSection,
   showFilters,
   setShowFilters,
+  groupOpen,
+  onToggleGroup,
   worldOptions,
   worldFilter,
   setWorldFilter,
@@ -55,6 +57,26 @@ export default function RankingControls({
             </Button>
           ))}
         </div>
+        {showFilterSection ? (
+          <div className="ml-auto">
+            <Button
+              type="button"
+              size="sm"
+              variant={groupOpen ? "default" : "outline"}
+              className="h-8 border-slate-700"
+              aria-expanded={groupOpen}
+              onClick={onToggleGroup}
+            >
+              <Users size={14} className="mr-1.5 inline" />
+              {t("group.title")}
+              {groupOpen ? (
+                <ChevronUp size={14} className="ml-1.5 inline" />
+              ) : (
+                <ChevronDown size={14} className="ml-1.5 inline" />
+              )}
+            </Button>
+          </div>
+        ) : null}
       </div>
 
       {showFilterSection ? (

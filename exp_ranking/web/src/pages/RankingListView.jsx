@@ -1,10 +1,12 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
+import GroupPanel from "../GroupPanel";
 import HighlightsSection from "../components/HighlightsSection";
 import MyCharacterSummary from "../components/MyCharacterSummary";
 import RankingControls from "../components/RankingControls";
 import RankingTable from "../components/RankingTable";
 import { useBoard } from "../board/BoardContext";
 import { navigateToCharacter } from "../board/useHashRoute";
+import { useProfile } from "../profile/ProfileContext";
 
 /**
  * List view (`#/`). Screen composition only; all data/derived values come
@@ -26,11 +28,13 @@ export default function RankingListView({ active }) {
     t,
     characters,
     meta,
+    rankingPool,
     gainRankMaps,
     expTable,
     ensureHistories,
     isFavorite,
     toggleFavorite,
+    groupDetailProps,
     rankingListTitle,
     favoritesOnly,
     setFavoritesOnly,
@@ -71,9 +75,47 @@ export default function RankingListView({ active }) {
     translateAlliance,
     translateBranch,
   } = useBoard();
+  const { primaryHistoryKey } = useProfile();
 
   const [showHighlights, setShowHighlights] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
+  const [groupOpen, setGroupOpen] = useState(false);
+  // §21.3: lets the user click through group-member chips to switch which
+  // character the group panel is anchored on (add/remove-from-group button,
+  // "current" highlight) without leaving the list. Reset whenever the
+  // panel closes so reopening always starts from the primary/fallback
+  // anchor rather than a stale pick from a previous session.
+  const [groupAnchorId, setGroupAnchorId] = useState(null);
+
+  const toggleGroup = useCallback(() => {
+    setGroupOpen((current) => {
+      const next = !current;
+      if (!next) {
+        setGroupAnchorId(null);
+      }
+      return next;
+    });
+  }, []);
+
+  // §21.3: GroupPanel requires a `character` anchor to render at all. Order:
+  // explicit in-panel override -> primary my-character (profile) -> top of
+  // the (filtered) ranking pool -> first loaded character -> null (panel
+  // stays hidden rather than crashing on an empty roster).
+  const groupAnchorCharacter = useMemo(() => {
+    if (groupAnchorId != null) {
+      const overridden = characters.find((character) => character.id === groupAnchorId);
+      if (overridden) {
+        return overridden;
+      }
+    }
+    if (primaryHistoryKey) {
+      const primary = characters.find((character) => character.historyKey === primaryHistoryKey);
+      if (primary) {
+        return primary;
+      }
+    }
+    return rankingPool[0] ?? characters[0] ?? null;
+  }, [groupAnchorId, primaryHistoryKey, characters, rankingPool]);
 
   // Ref owner for the search input (T4b §3/§20-6): the empty-CTA in
   // MyCharacterSummary asks this view to focus the existing search box
@@ -134,6 +176,8 @@ export default function RankingListView({ active }) {
         showFilterSection
         showFilters={showFilters}
         setShowFilters={setShowFilters}
+        groupOpen={groupOpen}
+        onToggleGroup={toggleGroup}
         worldOptions={worldOptions}
         worldFilter={worldFilter}
         setWorldFilter={setWorldFilter}
@@ -156,6 +200,17 @@ export default function RankingListView({ active }) {
         translateAlliance={translateAlliance}
         translateBranch={translateBranch}
       />
+
+      {groupOpen && groupAnchorCharacter ? (
+        <GroupPanel
+          character={groupAnchorCharacter}
+          characters={characters}
+          mode="expanded"
+          onCollapse={toggleGroup}
+          onSelectCharacter={setGroupAnchorId}
+          {...groupDetailProps}
+        />
+      ) : null}
 
       <RankingTable
         searchInputRef={searchInputRef}
