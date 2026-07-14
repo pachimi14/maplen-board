@@ -173,13 +173,11 @@ export default function RankingTable({
                     <div className="text-sm text-slate-400">{formatJobName(character.job)}</div>
                   </td>
                   <td className="p-3">
+                    {/* §22.13 #1: server name is not a navigator link
+                        (only the name is) — a click here falls through to
+                        the row's own onClick, same as any other cell. */}
                     {character.worldId ? (
-                      <NavigatorLink
-                        href={getNavigatorUrl(character)}
-                        className="text-sky-400 font-medium"
-                      >
-                        {character.worldId}
-                      </NavigatorLink>
+                      <span className="text-slate-300 font-medium">{character.worldId}</span>
                     ) : (
                       <span className="text-slate-600">-</span>
                     )}
