@@ -671,9 +671,7 @@ export default function CharacterDetail({
                 {character.worldId ? (
                   <>
                     <span className="text-slate-600"> · </span>
-                    <NavigatorLink href={navigatorUrl} className="text-sky-400 font-medium">
-                      {character.worldId}
-                    </NavigatorLink>
+                    <span className="text-slate-300 font-medium">{character.worldId}</span>
                   </>
                 ) : null}
               </p>
