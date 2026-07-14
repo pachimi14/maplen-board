@@ -31,6 +31,7 @@ export default function RankingListView({ active }) {
     rankingPool,
     gainRankMaps,
     expTable,
+    ensureHistories,
     isFavorite,
     toggleFavorite,
     setSelectedId,
@@ -129,6 +130,7 @@ export default function RankingListView({ active }) {
         characters={characters}
         meta={meta}
         expTable={expTable}
+        ensureHistories={ensureHistories}
         onFocusSearch={focusSearch}
         t={t}
       />
