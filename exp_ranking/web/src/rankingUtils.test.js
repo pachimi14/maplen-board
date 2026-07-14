@@ -7,21 +7,29 @@ import { arrivalDatePartsForDailyRuns } from "./rankingUtils.js";
 const t = (key, params) => `${key}:${JSON.stringify(params ?? {})}`;
 
 describe("arrivalDatePartsForDailyRuns (T4b §22.11 B)", () => {
-  it("treats today as day 1 of the run: days=11 lands on today+10, not today+11", () => {
-    // JST today = 2026-07-14 (00:00 UTC == 09:00 JST, same calendar day).
-    const reference = new Date("2026-07-14T00:00:00Z");
-    const parts = arrivalDatePartsForDailyRuns(11, t, reference);
-    expect(parts.rawYear).toBe(2026);
-    expect(parts.rawMonth).toBe(7);
-    expect(parts.rawDay).toBe(24); // 7/14 (day1) ... 7/24 (day11)
-  });
+  // JST today = 2026-07-14 (00:00 UTC == 09:00 JST, same calendar day),
+  // fixed for every [confirmed] case below.
+  const reference = new Date("2026-07-14T00:00:00Z");
 
-  it("days=1 arrives today (the run's first and only day)", () => {
-    const reference = new Date("2026-07-14T00:00:00Z");
+  it("[confirmed] 1日必要 -> 今日 (day 1 of the run is today itself)", () => {
     const parts = arrivalDatePartsForDailyRuns(1, t, reference);
     expect(parts.rawYear).toBe(2026);
     expect(parts.rawMonth).toBe(7);
     expect(parts.rawDay).toBe(14);
+  });
+
+  it("[confirmed] 2日必要 -> 翌日 (today + 1)", () => {
+    const parts = arrivalDatePartsForDailyRuns(2, t, reference);
+    expect(parts.rawYear).toBe(2026);
+    expect(parts.rawMonth).toBe(7);
+    expect(parts.rawDay).toBe(15);
+  });
+
+  it("[confirmed] 11日必要 -> 10日後 (today + 10, not today + 11)", () => {
+    const parts = arrivalDatePartsForDailyRuns(11, t, reference);
+    expect(parts.rawYear).toBe(2026);
+    expect(parts.rawMonth).toBe(7);
+    expect(parts.rawDay).toBe(24); // 7/14 (day1) ... 7/24 (day11)
   });
 
   it("crosses a month boundary correctly", () => {

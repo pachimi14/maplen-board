@@ -11,6 +11,16 @@ import {
   roundPercent,
   shouldStartHistoryFetch,
 } from "./myCharacterUtils.js";
+import { computeDailyRankStreak } from "../stats/index.js";
+
+/** Sanity helper for the pickBestRankStreak fixtures below — reads the
+ * exact same `current` field pickBestRankStreak itself reads, via the
+ * real (unmocked) T3 computeDailyRankStreak, so a fixture typo fails at
+ * the assertion that states the intended per-tier number, not silently
+ * inside pickBestRankStreak's own logic. */
+function computeDailyRankStreakCurrent(history, maxRank) {
+  return computeDailyRankStreak(history, { maxRank }).current;
+}
 
 describe("errorMessageKeyForCode", () => {
   it("maps known T4a failure codes to myCharacters.error.* keys", () => {
@@ -326,8 +336,92 @@ describe("buildGoalDisplayModel", () => {
   });
 });
 
+// Builds sequential calendar-day history points (oldest -> newest) ending
+// on `lastDateIso`, one entry per `ranks` value (also oldest -> newest) —
+// used to construct the exact per-tier `current` streak counts asserted
+// below without hand-computing ISO dates.
+function sequentialDates(count, lastDateIso) {
+  const [y, m, d] = lastDateIso.split("-").map(Number);
+  const lastMs = Date.UTC(y, m - 1, d);
+  const dates = [];
+  for (let i = count - 1; i >= 0; i -= 1) {
+    dates.push(new Date(lastMs - i * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
+  }
+  return dates;
+}
+
+function historyFromRanks(ranks, lastDateIso = "2026-07-21") {
+  return sequentialDates(ranks.length, lastDateIso).map((snapshotDate, index) => ({
+    snapshotDate,
+    dailyRank: ranks[index],
+  }));
+}
+
 describe("pickBestRankStreak (T4b §22.11 A⑤)", () => {
   const TIERS = [5, 10, 50, 100, 500];
+
+  // §22.11 confirmed contract (user-fixed 2026-07-15): current(1)=1,
+  // current(2)+ picks the strictest qualifying tier, current<=1 everywhere
+  // yields null. These 4 examples are pinned exactly as specified.
+  it("[confirmed] Top5=2, Top10=8, Top500=20 -> picks the strictest: {maxRank:5, days:2}", () => {
+    // day1=600 (breaks tier500) | days2-13 (12d)=300 (tier500 only, breaks
+    // tier10/50/100) | days14-19 (6d)=8 (tier10, extends to 8 with the
+    // last 2) | days20-21 (2d)=3 (tier5).
+    const ranks = [600, ...Array(12).fill(300), ...Array(6).fill(8), ...Array(2).fill(3)];
+    const history = historyFromRanks(ranks);
+    // Sanity-check the per-tier `current` values the example is stated in
+    // terms of, so this test fails loudly if the fixture itself drifts.
+    expect(computeDailyRankStreakCurrent(history, 5)).toBe(2);
+    expect(computeDailyRankStreakCurrent(history, 10)).toBe(8);
+    expect(computeDailyRankStreakCurrent(history, 500)).toBe(20);
+    expect(pickBestRankStreak(history, TIERS)).toEqual({ maxRank: 5, days: 2 });
+  });
+
+  it("[confirmed] Top5=1, Top10=8 -> {maxRank:10, days:8}", () => {
+    // day1=50 (breaks tier10) | days2-8 (7d)=7 (tier10 only) | day9=4
+    // (tier5 too, but alone -> tier5 current=1, not enough).
+    const ranks = [50, ...Array(7).fill(7), 4];
+    const history = historyFromRanks(ranks);
+    expect(computeDailyRankStreakCurrent(history, 5)).toBe(1);
+    expect(computeDailyRankStreakCurrent(history, 10)).toBe(8);
+    expect(pickBestRankStreak(history, TIERS)).toEqual({ maxRank: 10, days: 8 });
+  });
+
+  it("[confirmed] Top10=1, Top50=1, Top500=20 -> {maxRank:500, days:20}", () => {
+    // day1=600 (breaks tier500) | days2-19 (18d)=300 (tier500 only) |
+    // day20=150 (tier500 only, also breaks tier10/50/100 right before the
+    // last day) | day21=8 (tier10/50/100 too, but alone -> current=1 each).
+    const ranks = [600, ...Array(18).fill(300), 150, 8];
+    const history = historyFromRanks(ranks);
+    expect(computeDailyRankStreakCurrent(history, 10)).toBe(1);
+    expect(computeDailyRankStreakCurrent(history, 50)).toBe(1);
+    expect(computeDailyRankStreakCurrent(history, 500)).toBe(20);
+    expect(pickBestRankStreak(history, TIERS)).toEqual({ maxRank: 500, days: 20 });
+  });
+
+  it("[confirmed] every tier current<=1 -> null", () => {
+    // A single data point: current=1 at every tier it qualifies for at all
+    // (rank=3 qualifies all 5 tiers), none reach 2.
+    const history = historyFromRanks([3]);
+    for (const tier of TIERS) {
+      expect(computeDailyRankStreakCurrent(history, tier)).toBeLessThanOrEqual(1);
+    }
+    expect(pickBestRankStreak(history, TIERS)).toBeNull();
+  });
+
+  it("[boundary] current=2 is adopted", () => {
+    // day1=600 (breaks tier500); days2-3=500 (tier500 only, current=2).
+    const history = historyFromRanks([600, 500, 500]);
+    expect(computeDailyRankStreakCurrent(history, 500)).toBe(2);
+    expect(pickBestRankStreak(history, TIERS)).toEqual({ maxRank: 500, days: 2 });
+  });
+
+  it("[boundary] current=1 is NOT adopted", () => {
+    // day1=600 (breaks tier500); day2=500 alone -> tier500 current=1.
+    const history = historyFromRanks([600, 500]);
+    expect(computeDailyRankStreakCurrent(history, 500)).toBe(1);
+    expect(pickBestRankStreak(history, TIERS)).toBeNull();
+  });
 
   it("picks the strictest tier when its current streak already reaches 2+ days", () => {
     // 07-07 breaks tier5 (50>5); 07-08..07-10 are all <=5, consecutive -> 3.
