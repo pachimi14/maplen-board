@@ -11,16 +11,17 @@ import MyCharacterCard from "./MyCharacterCard";
  * anything itself. Placed at the top of RankingListView's fragment, above
  * the TOP3 highlights (§1).
  *
- * Owns exactly one piece of state beyond the "show more" toggle:
- * `displayedHistoryKey` — the character currently shown, independent from
- * `primaryHistoryKey` (§7/§20-3). See resolveDisplayedHistoryKey for the
- * switch-back rule.
+ * Owns exactly one piece of navigational state (besides the fetch-status
+ * map below): `displayedHistoryKey` — the character currently shown,
+ * independent from `primaryHistoryKey` (§7/§20-3). See
+ * resolveDisplayedHistoryKey for the switch-back rule. There is no "show
+ * more" toggle anymore (§22.1/§22.2): MyCharacterCard always shows
+ * everything, fetching its history shard as soon as it is displayed.
  */
 export default function MyCharacterSummary({ characters, meta, expTable, ensureHistories, onFocusSearch, t }) {
   const { pinnedHistoryKeys, primaryHistoryKey } = useProfile();
 
   const [displayedHistoryKey, setDisplayedHistoryKey] = useState(() => primaryHistoryKey);
-  const [expanded, setExpanded] = useState(false);
   // §6/§20-4: fetch status per historyKey ("loading" | "failed"; absence =
   // idle/not-yet-requested). Keyed by historyKey (not a single flat flag) so
   // a late-arriving result for a key the user has since switched away from
@@ -179,8 +180,6 @@ export default function MyCharacterSummary({ characters, meta, expTable, ensureH
         allCharacters={characters}
         meta={meta}
         expTable={expTable}
-        expanded={expanded}
-        onToggleExpanded={() => setExpanded((current) => !current)}
         historyStatus={historyFetch[displayedHistoryKey] ?? "idle"}
         onRetryHistory={retryHistory}
         t={t}

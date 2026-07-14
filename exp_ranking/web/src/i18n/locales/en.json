@@ -242,7 +242,8 @@
       "registered": "Registered",
       "remove": "Remove from My Characters",
       "setPrimary": "Set as primary",
-      "primaryBadge": "Primary",
+      "primaryBadge": "Main",
+      "subBadge": "Sub",
       "disabled": {
         "limit": "You can pin up to 3 characters",
         "noHistoryKey": "This character can't be pinned"
@@ -250,6 +251,7 @@
     },
     "showMore": "Show more",
     "showLess": "Show less",
+    "viewDetail": "View details",
     "notInRanking": "Not currently in the ranking",
     "stat": {
       "levelRank": "Level rank",

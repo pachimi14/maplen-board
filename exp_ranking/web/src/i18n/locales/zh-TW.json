@@ -242,7 +242,8 @@
       "registered": "已登錄",
       "remove": "從我的角色移除",
       "setPrimary": "設為主要角色",
-      "primaryBadge": "主要",
+      "primaryBadge": "Main",
+      "subBadge": "Sub",
       "disabled": {
         "limit": "最多可釘選 3 個角色",
         "noHistoryKey": "此角色無法釘選"
@@ -250,6 +251,7 @@
     },
     "showMore": "顯示更多",
     "showLess": "收合",
+    "viewDetail": "查看詳情",
     "notInRanking": "目前不在排行榜內",
     "stat": {
       "levelRank": "等級排名",

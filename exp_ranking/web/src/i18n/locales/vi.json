@@ -242,7 +242,8 @@
       "registered": "Đã đăng ký",
       "remove": "Bỏ khỏi Nhân vật của tôi",
       "setPrimary": "Đặt làm nhân vật chính",
-      "primaryBadge": "Chính",
+      "primaryBadge": "Main",
+      "subBadge": "Sub",
       "disabled": {
         "limit": "Chỉ có thể ghim tối đa 3 nhân vật",
         "noHistoryKey": "Không thể ghim nhân vật này"
@@ -250,6 +251,7 @@
     },
     "showMore": "Xem thêm",
     "showLess": "Thu gọn",
+    "viewDetail": "Xem chi tiết",
     "notInRanking": "Hiện không có trong bảng xếp hạng",
     "stat": {
       "levelRank": "Hạng level",
