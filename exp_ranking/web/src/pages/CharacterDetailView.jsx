@@ -65,7 +65,6 @@ export default function CharacterDetailView() {
     pagedCharacters,
     showGainRank,
     filteredGainRanks,
-    selectedId,
     safePage,
     totalPages,
     setPage,
@@ -112,6 +111,16 @@ export default function CharacterDetailView() {
       navigateToCharacter(target.historyKey);
     } else {
       setSelectedId(id);
+    }
+  };
+
+  // §21.4: the mini ranking list rendered below (when expanded) uses the
+  // same row-navigate contract as the main list — a row click goes
+  // straight to that character's detail route, no-op without a
+  // historyKey (no selection concept to fall back to here either).
+  const handleRowNavigate = (character) => {
+    if (character?.historyKey) {
+      navigateToCharacter(character.historyKey);
     }
   };
 
@@ -192,8 +201,7 @@ export default function CharacterDetailView() {
           pagedCharacters={pagedCharacters}
           showGainRank={showGainRank}
           filteredGainRanks={filteredGainRanks}
-          selectedId={selectedId}
-          onSelectCharacter={setSelectedId}
+          onRowNavigate={handleRowNavigate}
           isFavorite={isFavorite}
           onToggleFavorite={toggleFavorite}
           sortKey={sortKey}
