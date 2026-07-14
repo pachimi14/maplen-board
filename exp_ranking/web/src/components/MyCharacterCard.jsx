@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import GoalModal from "./GoalModal";
 import MyCharacterPinButton from "./MyCharacterPinButton";
@@ -419,12 +420,16 @@ export default function MyCharacterCard({
                 >
                   {t(isPrimary ? "myCharacters.pin.primaryBadge" : "myCharacters.pin.subBadge")}
                 </span>
+                {/* §22.12 #1: bordered/padded button instead of a plain
+                    text link, so it reads as a clear call-to-action next
+                    to the small badge — same position/navigation. */}
                 <button
                   type="button"
-                  className="shrink-0 text-xs text-sky-400 hover:text-sky-300 hover:underline"
+                  className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-sky-500/50 bg-sky-500/10 px-2.5 py-1 text-sm font-medium text-sky-300 hover:bg-sky-500/20"
                   onClick={handleNavigateToDetail}
                 >
                   {t("myCharacters.viewDetail")}
+                  <ArrowRight size={14} />
                 </button>
               </div>
               <h2 className="text-xl font-bold break-words leading-tight mt-1">
