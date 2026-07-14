@@ -242,7 +242,8 @@
       "registered": "ลงทะเบียนแล้ว",
       "remove": "นำออกจากตัวละครของฉัน",
       "setPrimary": "ตั้งเป็นตัวหลัก",
-      "primaryBadge": "ตัวหลัก",
+      "primaryBadge": "Main",
+      "subBadge": "Sub",
       "disabled": {
         "limit": "ปักหมุดได้สูงสุด 3 ตัวละคร",
         "noHistoryKey": "ตัวละครนี้ไม่สามารถปักหมุดได้"
@@ -250,6 +251,7 @@
     },
     "showMore": "ดูเพิ่มเติม",
     "showLess": "ย่อ",
+    "viewDetail": "ดูรายละเอียด",
     "notInRanking": "ไม่ได้อยู่ในอันดับขณะนี้",
     "stat": {
       "levelRank": "อันดับเลเวล",

@@ -1,5 +1,4 @@
 import { useRef, useState } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import GoalModal from "./GoalModal";
 import MyCharacterPinButton from "./MyCharacterPinButton";
@@ -18,7 +17,8 @@ import {
   computePassedAndOvertaken,
   computePositiveGainStreak,
 } from "../stats";
-import { formatExp, formatJobName, getGainAmount } from "../rankingUtils";
+import { LEVEL_CAP, formatExp, formatJobName, getGainAmount, levelExpPercent } from "../rankingUtils";
+import { navigateToCharacter } from "../board/useHashRoute";
 import { useProfile } from "../profile/ProfileContext";
 
 // Trailing window for the goal-progress pace source (T3 F), independent of
@@ -31,11 +31,52 @@ const RANK_STREAK_MAX = 500;
 
 const MOVEMENT_DISPLAY_LIMIT = 3;
 
+/** §22.1: shared "yyyy年m月d日"-style formatting for any ISO date shown on
+ * this card (data-as-of note, goal target/arrival dates) — one place so the
+ * same locale-aware format is never re-derived slightly differently. */
+function formatIsoDateLabel(isoDate, t) {
+  if (typeof isoDate !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) {
+    return null;
+  }
+  return t("date.yearMonthDay", {
+    year: Number(isoDate.slice(0, 4)),
+    month: Number(isoDate.slice(5, 7)),
+    day: Number(isoDate.slice(8, 10)),
+  });
+}
+
 function StatBox({ label, children }) {
   return (
     <div className="bg-slate-950 rounded-xl px-3 py-2 min-w-0">
       <div className="text-slate-400 text-xs truncate">{label}</div>
       <div className="mt-0.5 text-sm font-semibold text-slate-100 truncate">{children}</div>
+    </div>
+  );
+}
+
+/**
+ * §22.1: one rank stat per row (label left, value right), replacing the old
+ * 3-column `StatBox` grid whose `truncate`/`min-w-0` combination could clip
+ * "#10/2381 (top 1.3%)" on narrow screens. `flex-wrap` lets the value wrap
+ * onto its own line instead of ever being cut off or shrunk.
+ */
+function RankRow({ label, rank, total, topPercent, t }) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 bg-slate-950 rounded-xl px-3 py-2">
+      <span className="text-slate-400 text-xs shrink-0">{label}</span>
+      {rank != null ? (
+        <span className="text-sm font-semibold text-slate-100 tabular-nums text-right">
+          #{rank}
+          {total != null ? `/${total}` : ""}
+          {topPercent != null ? (
+            <span className="text-slate-400 font-normal ml-1.5">
+              {t("myCharacters.stat.topPercent", { p: topPercent.toFixed(1) })}
+            </span>
+          ) : null}
+        </span>
+      ) : (
+        <span className="text-sm text-slate-500">-</span>
+      )}
     </div>
   );
 }
@@ -81,11 +122,13 @@ function MovementList({ title, entries, othersCount, t }) {
 }
 
 /**
- * §6/§20-4: the "show more" region's content, driven purely by the shard
- * fetch state — never triggers a fetch itself (that stays in
- * MyCharacterSummary, the only place that calls `ensureHistories`).
+ * §22.1/§22.2: the history-dependent stats (streak/self-best), driven
+ * purely by the shard fetch state — never triggers a fetch itself (that
+ * stays in MyCharacterSummary, the only place that calls `ensureHistories`).
+ * Always rendered (no "show more" gate); only the *content* depends on
+ * whether the shard has arrived yet.
  */
-function ExpandedHistorySection({ character, historyStatus, onRetryHistory, t }) {
+function HistoryDependentStatsSection({ character, historyStatus, onRetryHistory, t }) {
   const availability = classifyHistoryAvailability(character?.history, historyStatus);
 
   if (availability === "idle" || availability === "loading") {
@@ -151,11 +194,14 @@ function ExpandedHistorySection({ character, historyStatus, onRetryHistory, t })
 }
 
 /**
- * §9: goal status + progress display, plus the trigger that opens
+ * §9/§22.3: goal status + progress display, plus the trigger that opens
  * `GoalModal`. Reuses T3 E (`computeGoalProgress`) + T3 F
  * (`calculateAverageDailyGain`) for the estimate; never re-implements the
  * pace/validity logic itself. `triggerRef` lets the modal return focus here
- * on close.
+ * on close. (§22.3's 3-section redesign — pace = today's gain,
+ * `buildGoalDisplayModel` — lands in a follow-up commit; this one only
+ * relocates the existing goal summary out from under the removed "show
+ * more" toggle so it's always visible.)
  */
 function GoalSection({ character, expTable, goal, onOpenModal, triggerRef, t }) {
   const history = Array.isArray(character.history) ? character.history : [];
@@ -188,7 +234,7 @@ function GoalSection({ character, expTable, goal, onOpenModal, triggerRef, t }) 
         <div className="text-xs text-slate-400 mb-0.5">{t("myCharacters.goal.title")}</div>
         {goal ? (
           <p className="text-sm text-slate-200">
-            Lv.{goal.targetLevel} · {goal.targetDateIso}
+            Lv.{goal.targetLevel} · {formatIsoDateLabel(goal.targetDateIso, t) ?? goal.targetDateIso}
             {progressLabel ? <span className="text-slate-400 ml-2">{progressLabel}</span> : null}
           </p>
         ) : (
@@ -210,11 +256,13 @@ function GoalSection({ character, expTable, goal, onOpenModal, triggerRef, t }) 
 }
 
 /**
- * The single-character summary card (T4b §5/§20-8). Shows the currently
- * displayed pinned character's day-over-day summary immediately (no shard
- * fetch needed); the "show more" toggle reveals history-dependent stats
- * (wired in a later commit) without ever rendering all pinned characters
- * stacked (§20-8: one card, switch UI elsewhere).
+ * The single-character summary card (T4b §5/§20-8/§22.1). Shows the
+ * currently displayed pinned character's day-over-day summary immediately
+ * (no shard fetch needed); history-dependent stats (streak/self-best/goal
+ * progress) show a loading/failed/insufficient state until their shard
+ * arrives (fetched by MyCharacterSummary as soon as this character is
+ * displayed, §22.2) — there is no "show more" toggle anymore, everything is
+ * always visible (§22.1).
  */
 export default function MyCharacterCard({
   character,
@@ -222,26 +270,19 @@ export default function MyCharacterCard({
   allCharacters,
   meta,
   expTable,
-  expanded,
-  onToggleExpanded,
   historyStatus = "idle",
   onRetryHistory,
   t,
 }) {
-  const { getGoal } = useProfile();
+  const { getGoal, primaryHistoryKey } = useProfile();
   const [goalModalOpen, setGoalModalOpen] = useState(false);
   const goalTriggerRef = useRef(null);
   const goal = getGoal(historyKey);
+  const isPrimary = Boolean(historyKey) && primaryHistoryKey === historyKey;
 
   const latestSnapshotDate = meta?.latestSnapshotDate ?? null;
   const isToday = isLatestDateToday(latestSnapshotDate);
-  const asOfDate = latestSnapshotDate
-    ? t("date.yearMonthDay", {
-        year: Number(latestSnapshotDate.slice(0, 4)),
-        month: Number(latestSnapshotDate.slice(5, 7)),
-        day: Number(latestSnapshotDate.slice(8, 10)),
-      })
-    : null;
+  const asOfDate = formatIsoDateLabel(latestSnapshotDate, t);
 
   const movement = character
     ? computePassedAndOvertaken(
@@ -257,16 +298,22 @@ export default function MyCharacterCard({
   const jobTopPercent = character ? calculateTopPercent(character.jobRank, character.jobRankTotal) : null;
   const worldTopPercent = character ? calculateTopPercent(character.worldRank, character.worldRankTotal) : null;
 
+  const handleNavigateToDetail = () => {
+    if (historyKey) {
+      navigateToCharacter(historyKey);
+    }
+  };
+
   return (
     <div className="relative bg-slate-900 border border-slate-800 rounded-2xl shadow-xl p-5 sm:p-6 space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h2 className="text-lg font-bold">
-            {isToday ? t("myCharacters.todaySummary") : t("myCharacters.latestSummary")}
-          </h2>
-          {asOfDate ? <p className="text-xs text-slate-500 mt-0.5">{t("myCharacters.asOf", { date: asOfDate })}</p> : null}
-        </div>
-      </div>
+      {/* §22.1: no more "今日の成績"/"最新の成績" heading — just a small,
+          honest note about which date this data is as of (isLatestDateToday
+          decides the wording, never claims "today" when the latest snapshot
+          is actually stale/delayed). */}
+      <p className="text-xs text-slate-500">
+        {isToday ? t("myCharacters.todaySummary") : t("myCharacters.latestSummary")}
+        {asOfDate ? ` · ${t("myCharacters.asOf", { date: asOfDate })}` : ""}
+      </p>
 
       {!character ? (
         <p className="text-sm text-amber-300/90 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3">
@@ -274,12 +321,73 @@ export default function MyCharacterCard({
         </p>
       ) : (
         <>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="min-w-0">
-              <div className="font-semibold truncate">{character.name}</div>
-              <div className="text-sm text-slate-400 truncate">
-                {formatJobName(character.job)}
-                {character.worldId ? ` · ${character.worldId}` : ""}
+          {/* §22.1: header reproduced to match CharacterDetail's compact
+              header (image/name/job·server/Lv+EXP%/rank colors+sizes) —
+              CharacterDetail.jsx itself is never modified (decision A); this
+              JSX is an independent re-implementation using the same shared
+              formatters (formatJobName/levelExpPercent/formatExp/
+              getGainAmount). */}
+          <div className="flex items-start gap-4">
+            <img
+              src={character.imageUrl}
+              alt=""
+              className="rounded-2xl bg-slate-800 object-cover shrink-0 w-20 h-20 md:w-24 md:h-24"
+            />
+            <div className="min-w-0 flex-1">
+              <span
+                className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                  isPrimary ? "bg-cyan-500/20 text-cyan-200" : "bg-slate-700/50 text-slate-300"
+                }`}
+              >
+                {t(isPrimary ? "myCharacters.pin.primaryBadge" : "myCharacters.pin.subBadge")}
+              </span>
+              <h2 className="text-xl font-bold break-words leading-tight mt-1">
+                <button
+                  type="button"
+                  className="text-inherit hover:text-sky-300 text-left"
+                  onClick={handleNavigateToDetail}
+                >
+                  {character.name}
+                </button>
+              </h2>
+
+              <div className="flex items-baseline justify-between gap-3 mt-1.5">
+                <p className="text-slate-400 min-w-0 text-sm">
+                  {formatJobName(character.job)}
+                  {character.worldId ? (
+                    <>
+                      <span className="text-slate-600"> · </span>
+                      <span className="text-sky-400 font-medium">{character.worldId}</span>
+                    </>
+                  ) : null}
+                </p>
+                <p className="shrink-0 text-right tabular-nums font-bold text-lg whitespace-nowrap">
+                  Lv.{character.level ?? 0}
+                  {(character.level ?? 0) >= LEVEL_CAP ? (
+                    <span className="text-slate-300 ml-3">MAX</span>
+                  ) : (
+                    <span className="ml-3">{levelExpPercent(character).toFixed(3)}%</span>
+                  )}
+                </p>
+              </div>
+
+              <div className="flex items-baseline justify-between gap-3 mt-1">
+                <p className="text-sm text-slate-500 shrink-0">{t("myCharacters.stat.levelRank")}</p>
+                <p className="text-sm font-semibold text-cyan-300 tabular-nums text-right">
+                  #{character.rank}
+                  {overallTopPercent != null ? (
+                    <span className="text-slate-400 font-normal ml-1.5">
+                      {t("myCharacters.stat.topPercent", { p: overallTopPercent.toFixed(1) })}
+                    </span>
+                  ) : null}
+                </p>
+              </div>
+              <div className="flex justify-end mt-0.5 text-sm">
+                <RankChangeBadge
+                  previousRank={character.previousRank}
+                  rankFluctuation={character.rankFluctuation}
+                  t={t}
+                />
               </div>
             </div>
           </div>
@@ -290,49 +398,25 @@ export default function MyCharacterCard({
             <StatBox label={t("myCharacters.stat.monthlyGain")}>+{formatExp(getGainAmount(character, "monthly"))}</StatBox>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
-            <StatBox label={t("myCharacters.stat.levelRank")}>
-              <span className="tabular-nums">#{character.rank}</span>{" "}
-              <RankChangeBadge previousRank={character.previousRank} rankFluctuation={character.rankFluctuation} t={t} />
-            </StatBox>
-            <StatBox label={t("myCharacters.stat.jobRank")}>
-              {character.jobRank != null ? (
-                <>
-                  <span className="tabular-nums">
-                    #{character.jobRank}/{character.jobRankTotal}
-                  </span>
-                  {jobTopPercent != null ? (
-                    <span className="text-slate-400 ml-1.5">
-                      {t("myCharacters.stat.topPercent", { p: jobTopPercent.toFixed(1) })}
-                    </span>
-                  ) : null}
-                </>
-              ) : (
-                <span className="text-slate-500">-</span>
-              )}
-            </StatBox>
-            <StatBox label={t("myCharacters.stat.worldRank")}>
-              {character.worldRank != null ? (
-                <>
-                  <span className="tabular-nums">
-                    #{character.worldRank}/{character.worldRankTotal}
-                  </span>
-                  {worldTopPercent != null ? (
-                    <span className="text-slate-400 ml-1.5">
-                      {t("myCharacters.stat.topPercent", { p: worldTopPercent.toFixed(1) })}
-                    </span>
-                  ) : null}
-                </>
-              ) : (
-                <span className="text-slate-500">-</span>
-              )}
-            </StatBox>
+          {/* §22.1: job/world rank shown in full — no truncation, no
+              shrinking font, no ellipsis (the old 3-column StatBox grid
+              could clip "#10/2381 (top 1.3%)" on narrow screens). */}
+          <div className="space-y-2">
+            <RankRow
+              label={t("myCharacters.stat.jobRank")}
+              rank={character.jobRank}
+              total={character.jobRankTotal}
+              topPercent={jobTopPercent}
+              t={t}
+            />
+            <RankRow
+              label={t("myCharacters.stat.worldRank")}
+              rank={character.worldRank}
+              total={character.worldRankTotal}
+              topPercent={worldTopPercent}
+              t={t}
+            />
           </div>
-          {overallTopPercent != null ? (
-            <p className="text-xs text-slate-500 -mt-2">
-              {t("myCharacters.stat.topPercent", { p: overallTopPercent.toFixed(1) })}
-            </p>
-          ) : null}
 
           {passed.shown.length || overtaken.shown.length ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -346,6 +430,24 @@ export default function MyCharacterCard({
               <p className="text-xs text-slate-600 sm:col-span-2">{t("myCharacters.movement.hint")}</p>
             </div>
           ) : null}
+
+          <div className="border-t border-slate-800 pt-3">
+            <HistoryDependentStatsSection
+              character={character}
+              historyStatus={historyStatus}
+              onRetryHistory={onRetryHistory}
+              t={t}
+            />
+          </div>
+
+          <GoalSection
+            character={character}
+            expTable={expTable}
+            goal={goal}
+            onOpenModal={() => setGoalModalOpen(true)}
+            triggerRef={goalTriggerRef}
+            t={t}
+          />
         </>
       )}
 
@@ -357,34 +459,13 @@ export default function MyCharacterCard({
 
       {character ? (
         <>
-          <Button
+          <button
             type="button"
-            variant="outline"
-            className="w-full border-slate-700 bg-slate-950 hover:bg-slate-800"
-            onClick={onToggleExpanded}
+            className="w-full text-center text-sm text-sky-400 hover:text-sky-300 hover:underline"
+            onClick={handleNavigateToDetail}
           >
-            {expanded ? <ChevronUp size={16} className="mr-2" /> : <ChevronDown size={16} className="mr-2" />}
-            {expanded ? t("myCharacters.showLess") : t("myCharacters.showMore")}
-          </Button>
-
-          {expanded ? (
-            <div className="border-t border-slate-800 pt-4 space-y-3">
-              <ExpandedHistorySection
-                character={character}
-                historyStatus={historyStatus}
-                onRetryHistory={onRetryHistory}
-                t={t}
-              />
-              <GoalSection
-                character={character}
-                expTable={expTable}
-                goal={goal}
-                onOpenModal={() => setGoalModalOpen(true)}
-                triggerRef={goalTriggerRef}
-                t={t}
-              />
-            </div>
-          ) : null}
+            {t("myCharacters.viewDetail")}
+          </button>
 
           <GoalModal
             open={goalModalOpen}

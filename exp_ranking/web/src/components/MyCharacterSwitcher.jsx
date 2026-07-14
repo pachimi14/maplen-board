@@ -38,11 +38,13 @@ export default function MyCharacterSwitcher({
             }`}
           >
             {labelForKey(key)}
-            {isPrimary ? (
-              <span className="ml-1.5 rounded-full bg-cyan-500/20 px-1.5 text-[10px] font-bold text-cyan-200">
-                {t("myCharacters.pin.primaryBadge")}
-              </span>
-            ) : null}
+            <span
+              className={`ml-1.5 rounded-full px-1.5 text-[10px] font-bold ${
+                isPrimary ? "bg-cyan-500/20 text-cyan-200" : "bg-slate-700/50 text-slate-300"
+              }`}
+            >
+              {t(isPrimary ? "myCharacters.pin.primaryBadge" : "myCharacters.pin.subBadge")}
+            </span>
           </button>
         );
       })}

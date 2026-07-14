@@ -242,7 +242,8 @@
       "registered": "登録済み",
       "remove": "マイキャラから削除",
       "setPrimary": "主キャラにする",
-      "primaryBadge": "主",
+      "primaryBadge": "Main",
+      "subBadge": "Sub",
       "disabled": {
         "limit": "マイキャラは最大3体までです",
         "noHistoryKey": "このキャラは登録できません"
@@ -250,6 +251,7 @@
     },
     "showMore": "もっと見る",
     "showLess": "閉じる",
+    "viewDetail": "詳細を見る",
     "notInRanking": "現在ランキング外です",
     "stat": {
       "levelRank": "レベル順位",

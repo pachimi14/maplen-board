@@ -242,7 +242,8 @@
       "registered": "Registrado",
       "remove": "Quitar de Mis personajes",
       "setPrimary": "Marcar como principal",
-      "primaryBadge": "Principal",
+      "primaryBadge": "Main",
+      "subBadge": "Sub",
       "disabled": {
         "limit": "Puedes fijar hasta 3 personajes",
         "noHistoryKey": "Este personaje no se puede fijar"
@@ -250,6 +251,7 @@
     },
     "showMore": "Ver más",
     "showLess": "Ver menos",
+    "viewDetail": "Ver detalles",
     "notInRanking": "No está en el ranking actualmente",
     "stat": {
       "levelRank": "Rango de nivel",

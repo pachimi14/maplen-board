@@ -78,7 +78,11 @@ export default function MyCharacterPinButton({ character, className = "" }) {
                 <span className="rounded-full bg-cyan-500/20 px-1.5 text-[10px] font-bold text-cyan-200">
                   {t("myCharacters.pin.primaryBadge")}
                 </span>
-              ) : null}
+              ) : (
+                <span className="rounded-full bg-slate-700/50 px-1.5 text-[10px] font-bold text-slate-300">
+                  {t("myCharacters.pin.subBadge")}
+                </span>
+              )}
             </span>
             {!isPrimary ? (
               <Button
