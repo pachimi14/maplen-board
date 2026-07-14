@@ -161,27 +161,27 @@ describe("rankMovementDirection", () => {
 describe("shouldStartHistoryFetch", () => {
   const readyHistory = [{ snapshotDate: "2026-07-01" }, { snapshotDate: "2026-07-02" }];
 
-  it("is false when collapsed or there is no key to fetch for", () => {
-    expect(shouldStartHistoryFetch({ expanded: false, historyKey: "asset:a", history: undefined, status: undefined })).toBe(false);
-    expect(shouldStartHistoryFetch({ expanded: true, historyKey: null, history: undefined, status: undefined })).toBe(false);
+  it("is false when there is no key to fetch for (§22.2: no more expand/collapse gate)", () => {
+    expect(shouldStartHistoryFetch({ historyKey: null, history: undefined, status: undefined })).toBe(false);
+    expect(shouldStartHistoryFetch({ historyKey: undefined, history: undefined, status: undefined })).toBe(false);
   });
 
   it("is false once history has already arrived, regardless of a stale status", () => {
-    expect(shouldStartHistoryFetch({ expanded: true, historyKey: "asset:a", history: readyHistory, status: undefined })).toBe(false);
+    expect(shouldStartHistoryFetch({ historyKey: "asset:a", history: readyHistory, status: undefined })).toBe(false);
     // LULU-028: a leftover "loading"/"failed" for a key whose data actually
     // arrived (e.g. via an abandoned/canceled prior attempt) must not cause
     // a redundant re-fetch either.
-    expect(shouldStartHistoryFetch({ expanded: true, historyKey: "asset:a", history: readyHistory, status: "loading" })).toBe(false);
-    expect(shouldStartHistoryFetch({ expanded: true, historyKey: "asset:a", history: readyHistory, status: "failed" })).toBe(false);
+    expect(shouldStartHistoryFetch({ historyKey: "asset:a", history: readyHistory, status: "loading" })).toBe(false);
+    expect(shouldStartHistoryFetch({ historyKey: "asset:a", history: readyHistory, status: "failed" })).toBe(false);
   });
 
   it("is false while a fetch is already loading or has already failed (only retry clears it)", () => {
-    expect(shouldStartHistoryFetch({ expanded: true, historyKey: "asset:a", history: undefined, status: "loading" })).toBe(false);
-    expect(shouldStartHistoryFetch({ expanded: true, historyKey: "asset:a", history: undefined, status: "failed" })).toBe(false);
+    expect(shouldStartHistoryFetch({ historyKey: "asset:a", history: undefined, status: "loading" })).toBe(false);
+    expect(shouldStartHistoryFetch({ historyKey: "asset:a", history: undefined, status: "failed" })).toBe(false);
   });
 
-  it("is true when expanded, keyed, not yet loaded, and not already in flight/failed", () => {
-    expect(shouldStartHistoryFetch({ expanded: true, historyKey: "asset:a", history: undefined, status: undefined })).toBe(true);
-    expect(shouldStartHistoryFetch({ expanded: true, historyKey: "asset:a", history: null, status: "idle" })).toBe(true);
+  it("is true when keyed, not yet loaded, and not already in flight/failed (displaying is enough — no expand step)", () => {
+    expect(shouldStartHistoryFetch({ historyKey: "asset:a", history: undefined, status: undefined })).toBe(true);
+    expect(shouldStartHistoryFetch({ historyKey: "asset:a", history: null, status: "idle" })).toBe(true);
   });
 });
