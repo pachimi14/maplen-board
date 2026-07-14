@@ -227,5 +227,88 @@
     "monthDay": "{{day}}/{{month}}",
     "yearLine": "{{year}}",
     "yearMonthDay": "{{day}}/{{month}}/{{year}}"
+  },
+  "myCharacters": {
+    "section": "Nhân vật của tôi",
+    "todaySummary": "Tổng kết hôm nay",
+    "latestSummary": "Tổng kết mới nhất",
+    "asOf": "Dữ liệu tính đến {{date}}",
+    "empty": {
+      "title": "Ghim một nhân vật để xem kết quả hằng ngày tại đây",
+      "cta": "Tìm và ghim một nhân vật"
+    },
+    "pin": {
+      "add": "Thêm vào Nhân vật của tôi",
+      "registered": "Đã đăng ký",
+      "remove": "Bỏ khỏi Nhân vật của tôi",
+      "setPrimary": "Đặt làm nhân vật chính",
+      "primaryBadge": "Chính",
+      "disabled": {
+        "limit": "Chỉ có thể ghim tối đa 3 nhân vật",
+        "noHistoryKey": "Không thể ghim nhân vật này"
+      }
+    },
+    "showMore": "Xem thêm",
+    "showLess": "Thu gọn",
+    "notInRanking": "Hiện không có trong bảng xếp hạng",
+    "stat": {
+      "levelRank": "Hạng level",
+      "jobRank": "Hạng trong nhóm nghề",
+      "worldRank": "Hạng trong server",
+      "topPercent": "Top {{p}}%",
+      "newOrIncomparable": "Không có dữ liệu so sánh",
+      "dailyGain": "Tăng theo ngày",
+      "weeklyGain": "Tăng theo tuần",
+      "monthlyGain": "Tăng theo tháng",
+      "rankUp": "▲{{count}}",
+      "rankDown": "▼{{count}}",
+      "rankSame": "Không đổi"
+    },
+    "movement": {
+      "passedTitle": "Đã vượt về hạng level",
+      "overtakenTitle": "Đã bị vượt về hạng level",
+      "hint": "Theo hạng level tổng thể, không phải hạng tăng EXP theo ngày",
+      "others": "và {{n}} người khác",
+      "none": "Không có"
+    },
+    "showMoreSection": {
+      "streakTitle": "Chuỗi liên tiếp",
+      "positive": "{{count}} ngày liên tiếp tăng",
+      "rankStreak": "{{count}} ngày liên tiếp trong top {{max}}",
+      "noStreak": "Hiện không có chuỗi",
+      "selfBestTitle": "Hạng ngày tốt nhất của bản thân",
+      "selfBestValue": "Hạng #{{rank}} mọi thời điểm",
+      "selfBestOf": "(trong {{total}} ngày có thể so sánh)",
+      "selfBestNone": "Không có dữ liệu so sánh"
+    },
+    "goal": {
+      "title": "Mục tiêu",
+      "level": "Level mục tiêu",
+      "date": "Ngày mục tiêu",
+      "save": "Lưu",
+      "cancel": "Hủy",
+      "delete": "Xóa mục tiêu",
+      "set": "Đặt mục tiêu",
+      "edit": "Sửa mục tiêu",
+      "none": "Chưa đặt mục tiêu",
+      "ahead": "Sớm hơn {{days}} ngày",
+      "behind": "Trễ hơn {{days}} ngày",
+      "onTrack": "Đúng tiến độ",
+      "achieved": "Đã đạt được",
+      "insufficientData": "Không đủ dữ liệu để ước tính"
+    },
+    "state": {
+      "loading": "Đang tải…",
+      "loadFailed": "Tải lịch sử thất bại",
+      "retry": "Thử lại",
+      "insufficientHistory": "Không đủ dữ liệu lịch sử"
+    },
+    "error": {
+      "saveFailed": "Lưu thất bại. Vui lòng thử lại.",
+      "limitReached": "Chỉ có thể ghim tối đa 3 nhân vật",
+      "invalidKey": "Không thể ghim nhân vật này",
+      "invalidGoal": "Kiểm tra level/ngày mục tiêu (Lv225-275, ngày hợp lệ)",
+      "unsupportedVersion": "Dữ liệu đã lưu có định dạng mới hơn; không thể thực hiện thao tác này"
+    }
   }
 }

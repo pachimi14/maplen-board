@@ -227,5 +227,88 @@
     "monthDay": "{{month}}/{{day}}",
     "yearLine": "{{year}}",
     "yearMonthDay": "{{month}}/{{day}}/{{year}}"
+  },
+  "myCharacters": {
+    "section": "My Characters",
+    "todaySummary": "Today's Summary",
+    "latestSummary": "Latest Summary",
+    "asOf": "As of {{date}}",
+    "empty": {
+      "title": "Pin a character to see its daily results here",
+      "cta": "Search and pin a character"
+    },
+    "pin": {
+      "add": "Add to My Characters",
+      "registered": "Registered",
+      "remove": "Remove from My Characters",
+      "setPrimary": "Set as primary",
+      "primaryBadge": "Primary",
+      "disabled": {
+        "limit": "You can pin up to 3 characters",
+        "noHistoryKey": "This character can't be pinned"
+      }
+    },
+    "showMore": "Show more",
+    "showLess": "Show less",
+    "notInRanking": "Not currently in the ranking",
+    "stat": {
+      "levelRank": "Level rank",
+      "jobRank": "Job rank",
+      "worldRank": "World rank",
+      "topPercent": "Top {{p}}%",
+      "newOrIncomparable": "No comparison data",
+      "dailyGain": "Daily gain",
+      "weeklyGain": "Weekly gain",
+      "monthlyGain": "Monthly gain",
+      "rankUp": "▲{{count}}",
+      "rankDown": "▼{{count}}",
+      "rankSame": "No change"
+    },
+    "movement": {
+      "passedTitle": "Passed in level rank",
+      "overtakenTitle": "Overtaken in level rank",
+      "hint": "Based on overall level rank, not the daily EXP-gain rank",
+      "others": "+{{n}} more",
+      "none": "None"
+    },
+    "showMoreSection": {
+      "streakTitle": "Streaks",
+      "positive": "{{count}}-day gain streak",
+      "rankStreak": "{{count}} days in top {{max}}",
+      "noStreak": "No current streak",
+      "selfBestTitle": "Personal-best daily rank",
+      "selfBestValue": "#{{rank}} all-time",
+      "selfBestOf": "(of {{total}} comparable days)",
+      "selfBestNone": "No comparison data"
+    },
+    "goal": {
+      "title": "Goal",
+      "level": "Target level",
+      "date": "Target date",
+      "save": "Save",
+      "cancel": "Cancel",
+      "delete": "Delete goal",
+      "set": "Set a goal",
+      "edit": "Edit goal",
+      "none": "No goal set",
+      "ahead": "{{days}} days ahead",
+      "behind": "{{days}} days behind",
+      "onTrack": "On track",
+      "achieved": "Achieved",
+      "insufficientData": "Not enough data to estimate"
+    },
+    "state": {
+      "loading": "Loading…",
+      "loadFailed": "Failed to load history",
+      "retry": "Retry",
+      "insufficientHistory": "Not enough history data"
+    },
+    "error": {
+      "saveFailed": "Save failed. Please try again.",
+      "limitReached": "You can pin up to 3 characters",
+      "invalidKey": "This character can't be pinned",
+      "invalidGoal": "Check the target level/date (Lv225-275, a valid date)",
+      "unsupportedVersion": "Saved data is a newer format; this action isn't available"
+    }
   }
 }

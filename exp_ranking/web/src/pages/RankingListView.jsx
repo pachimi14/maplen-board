@@ -4,6 +4,7 @@ import { Star } from "lucide-react";
 import CharacterDetail from "../CharacterDetail";
 import GroupPanel from "../GroupPanel";
 import HighlightsSection from "../components/HighlightsSection";
+import MyCharacterPinButton from "../components/MyCharacterPinButton";
 import RankingControls from "../components/RankingControls";
 import RankingTable from "../components/RankingTable";
 import { useBoard } from "../board/BoardContext";
@@ -204,6 +205,7 @@ export default function RankingListView({ active }) {
                 mode="compact"
                 onExpand={expandDetail}
                 onSelectCharacter={setSelectedId}
+                pinControls={<MyCharacterPinButton character={selectedCharacter} />}
               />
             ) : (
               <div className="min-h-48 flex items-center justify-center text-slate-400">

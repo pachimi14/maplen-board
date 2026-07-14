@@ -1,13 +1,16 @@
 import { BoardProvider, useBoard } from "./board/BoardContext";
+import { ProfileProvider } from "./profile/ProfileContext";
 import BoardHeader from "./components/BoardHeader";
 import RankingListView from "./pages/RankingListView";
 import CharacterDetailView from "./pages/CharacterDetailView";
 
 export default function App() {
   return (
-    <BoardProvider>
-      <AppShell />
-    </BoardProvider>
+    <ProfileProvider>
+      <BoardProvider>
+        <AppShell />
+      </BoardProvider>
+    </ProfileProvider>
   );
 }
 
