@@ -5,6 +5,7 @@ import {
   errorMessageKeyForCode,
   isLatestDateToday,
   limitWithOthers,
+  pickBestRankStreak,
   rankMovementDirection,
   resolveDisplayedHistoryKey,
   roundPercent,
@@ -322,5 +323,62 @@ describe("buildGoalDisplayModel", () => {
     });
     expect(model.indeterminate).toBe(true);
     expect(model.estimatedArrivalDate).toBeNull();
+  });
+});
+
+describe("pickBestRankStreak (T4b §22.11 A⑤)", () => {
+  const TIERS = [5, 10, 50, 100, 500];
+
+  it("picks the strictest tier when its current streak already reaches 2+ days", () => {
+    // 07-07 breaks tier5 (50>5); 07-08..07-10 are all <=5, consecutive -> 3.
+    const history = [
+      { snapshotDate: "2026-07-07", dailyRank: 50 },
+      { snapshotDate: "2026-07-08", dailyRank: 4 },
+      { snapshotDate: "2026-07-09", dailyRank: 3 },
+      { snapshotDate: "2026-07-10", dailyRank: 2 },
+    ];
+    expect(pickBestRankStreak(history, TIERS)).toEqual({ maxRank: 5, days: 3 });
+  });
+
+  it("falls through to a looser tier when the strictest tier doesn't qualify", () => {
+    // tier5 current = 0 (both recent days >5); tier10 current = 2 (exact
+    // boundary — the minimum that still counts).
+    const history = [
+      { snapshotDate: "2026-07-08", dailyRank: 40 },
+      { snapshotDate: "2026-07-09", dailyRank: 8 },
+      { snapshotDate: "2026-07-10", dailyRank: 7 },
+    ];
+    expect(pickBestRankStreak(history, TIERS)).toEqual({ maxRank: 10, days: 2 });
+  });
+
+  it("keeps falling through until a looser tier qualifies", () => {
+    // tier5/tier10 both current = 0; tier50 current = 2.
+    const history = [
+      { snapshotDate: "2026-07-09", dailyRank: 45 },
+      { snapshotDate: "2026-07-10", dailyRank: 42 },
+    ];
+    expect(pickBestRankStreak(history, TIERS)).toEqual({ maxRank: 50, days: 2 });
+  });
+
+  it("is unaffected by the tiers array's input order (always tries strictest first)", () => {
+    const history = [
+      { snapshotDate: "2026-07-07", dailyRank: 50 },
+      { snapshotDate: "2026-07-08", dailyRank: 4 },
+      { snapshotDate: "2026-07-09", dailyRank: 3 },
+      { snapshotDate: "2026-07-10", dailyRank: 2 },
+    ];
+    expect(pickBestRankStreak(history, [500, 100, 50, 10, 5])).toEqual({ maxRank: 5, days: 3 });
+  });
+
+  it("returns null (hide the stat) when no tier's current streak reaches 2 days", () => {
+    // A single day within only the loosest tier: current = 1 everywhere it
+    // qualifies at all, which isn't enough.
+    const history = [{ snapshotDate: "2026-07-10", dailyRank: 300 }];
+    expect(pickBestRankStreak(history, TIERS)).toBeNull();
+  });
+
+  it("returns null for an empty/no-data history rather than throwing", () => {
+    expect(pickBestRankStreak([], TIERS)).toBeNull();
+    expect(pickBestRankStreak(undefined, TIERS)).toBeNull();
   });
 });
