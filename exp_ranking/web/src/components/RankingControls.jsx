@@ -3,6 +3,7 @@ import { ChevronDown, ChevronUp, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { JOB_TAXONOMY } from "../jobCategories";
+import ShareLinkButton from "./ShareLinkButton";
 
 const SORT_OPTIONS = [
   { key: "rank", labelKey: "sort.levelRank" },
@@ -46,7 +47,7 @@ export default function RankingControls({
 
   return createPortal(
     (<>
-      <div className="flex items-center gap-2 rounded-md border border-slate-800 bg-slate-900/30 p-2">
+      <div className="flex flex-wrap items-center gap-2 rounded-md border border-slate-800 bg-slate-900/30 p-2">
         <div className="flex min-w-0 flex-wrap items-center gap-1.5">
           <span className="mr-1 text-xs text-slate-500">{t("filter.sort")}</span>
           {SORT_OPTIONS.map((option) => (
@@ -54,6 +55,9 @@ export default function RankingControls({
               {t(option.labelKey)}
             </Button>
           ))}
+        </div>
+        <div className="ml-auto">
+          <ShareLinkButton t={t} />
         </div>
       </div>
 

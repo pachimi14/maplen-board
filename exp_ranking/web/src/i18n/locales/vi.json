@@ -88,6 +88,11 @@
     "character": "Tìm tên, nghề, máy chủ",
     "job": "Lọc theo tên nghề"
   },
+  "share": {
+    "copyLink": "Sao chép liên kết",
+    "copied": "Đã sao chép liên kết",
+    "copyFailed": "Không thể tự động sao chép — hãy sao chép liên kết này thủ công:"
+  },
   "favorite": {
     "only": "Chỉ yêu thích",
     "add": "Thêm vào yêu thích",
