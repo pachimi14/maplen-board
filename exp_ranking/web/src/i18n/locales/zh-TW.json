@@ -82,7 +82,14 @@
     "showFavoritesPanel": "顯示我的最愛以新增",
     "hideFavoritesPanel": "隱藏我的最愛以新增",
     "addAllFavorites": "新增 {{count}} 位我的最愛",
-    "allFavoritesInGroup": "我的最愛已全部加入群組"
+    "allFavoritesInGroup": "我的最愛已全部加入群組",
+    "noCharacters": "沒有角色資料",
+    "compareTable": {
+      "title": "比較表",
+      "periodColumn": "期間",
+      "modeTotal": "合計",
+      "modeAverage": "平均"
+    }
   },
   "search": {
     "character": "搜尋角色名、職業、伺服器",

@@ -82,7 +82,14 @@
     "showFavoritesPanel": "Mostrar favoritos para añadir",
     "hideFavoritesPanel": "Ocultar favoritos para añadir",
     "addAllFavorites": "Añadir {{count}} favoritos",
-    "allFavoritesInGroup": "Todos los favoritos ya están en el grupo"
+    "allFavoritesInGroup": "Todos los favoritos ya están en el grupo",
+    "noCharacters": "No hay datos de personajes disponibles",
+    "compareTable": {
+      "title": "Tabla comparativa",
+      "periodColumn": "Período",
+      "modeTotal": "Total",
+      "modeAverage": "Promedio"
+    }
   },
   "search": {
     "character": "Buscar nombre, clase o servidor",

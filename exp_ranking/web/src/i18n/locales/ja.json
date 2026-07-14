@@ -82,7 +82,14 @@
     "showFavoritesPanel": "お気に入りから追加を表示",
     "hideFavoritesPanel": "お気に入りから追加を非表示",
     "addAllFavorites": "お気に入り {{count}} 人を追加",
-    "allFavoritesInGroup": "お気に入りはすべてグループに入っています"
+    "allFavoritesInGroup": "お気に入りはすべてグループに入っています",
+    "noCharacters": "キャラクターデータがありません",
+    "compareTable": {
+      "title": "比較表",
+      "periodColumn": "期間",
+      "modeTotal": "合計",
+      "modeAverage": "平均"
+    }
   },
   "search": {
     "character": "キャラ名・職業・サーバーで検索",

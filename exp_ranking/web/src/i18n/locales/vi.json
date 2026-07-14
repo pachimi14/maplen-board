@@ -82,7 +82,14 @@
     "showFavoritesPanel": "Hiển thị yêu thích để thêm",
     "hideFavoritesPanel": "Ẩn yêu thích để thêm",
     "addAllFavorites": "Thêm {{count}} yêu thích",
-    "allFavoritesInGroup": "Tất cả yêu thích đã có trong nhóm"
+    "allFavoritesInGroup": "Tất cả yêu thích đã có trong nhóm",
+    "noCharacters": "Không có dữ liệu nhân vật",
+    "compareTable": {
+      "title": "Bảng so sánh",
+      "periodColumn": "Kỳ",
+      "modeTotal": "Tổng",
+      "modeAverage": "Trung bình"
+    }
   },
   "search": {
     "character": "Tìm tên, nghề, máy chủ",

@@ -3,6 +3,7 @@ import { ProfileProvider } from "./profile/ProfileContext";
 import BoardHeader from "./components/BoardHeader";
 import RankingListView from "./pages/RankingListView";
 import CharacterDetailView from "./pages/CharacterDetailView";
+import GroupCompareView from "./pages/GroupCompareView";
 
 export default function App() {
   return (
@@ -61,10 +62,11 @@ function AppShell() {
         />
 
         {/* RankingListView stays mounted (even while hidden) so its local UI
-            toggles (TOP3/filters/group-compare) survive a round trip through
-            the detail route (LULU-011b). */}
-        <RankingListView active={route.name !== "detail"} />
+            toggles (TOP3/filters) survive a round trip through the detail
+            or group-compare routes (LULU-011b / T4b §22.4). */}
+        <RankingListView active={route.name === "list"} />
         {route.name === "detail" ? <CharacterDetailView /> : null}
+        {route.name === "group" ? <GroupCompareView /> : null}
       </div>
     </div>
   );
