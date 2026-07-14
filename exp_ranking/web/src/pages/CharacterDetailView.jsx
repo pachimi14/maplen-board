@@ -128,18 +128,15 @@ export default function CharacterDetailView() {
   return (
     <>
       <div ref={detailTopRef} className="space-y-4">
-        {/* §22.12 #2: a large, clearly-visible "back to list" button up
-            top, replacing the small header-embedded "collapse" control
+        {/* §22.12/§22.13 #2: a large, clearly-visible "back to list" button
+            up top, replacing the small header-embedded "collapse" control
             that used to live inside CharacterDetail.jsx (that file is
             never modified — decision A). Not passing `onCollapse` below
             hides CharacterDetail's own small collapse button (its
-            `isExpanded && onCollapse` render gate). */}
-        <Button
-          type="button"
-          variant="outline"
-          className="border-slate-700 bg-slate-950 text-slate-200"
-          onClick={collapseDetail}
-        >
+            `isExpanded && onCollapse` render gate). §22.13: filled
+            (Button's default variant), not outline — the outline version
+            blended into the near-black page background. */}
+        <Button type="button" className="px-4 py-2.5 font-semibold" onClick={collapseDetail}>
           <ArrowLeft size={16} className="mr-2" />
           {t("route.backToList")}
         </Button>
