@@ -71,19 +71,21 @@ export default function MyCharacterSummary({ characters, meta, expTable, ensureH
     charactersRef.current = characters;
   }, [characters]);
 
-  // §6/§20-4: fetch only the *displayed* character's history shard, only
-  // once expanded, only when it isn't already loaded (board's `characters`
-  // state — via ensureHistories's own cache — is the single source of
-  // truth; no second cache is kept here) and only when a fetch for this key
-  // isn't already in flight. Switching to a different character while A is
-  // still loading starts a request keyed under B; A's late result can only
-  // ever update `historyFetch[A]`, never B's display (§20-4).
+  // §6/§20-4/§22.2: fetch only the *displayed* character's history shard —
+  // as soon as it is displayed (no "show more"/expand step gates this
+  // anymore, per §22.2) — only when it isn't already loaded (board's
+  // `characters` state — via ensureHistories's own cache — is the single
+  // source of truth; no second cache is kept here) and only when a fetch
+  // for this key isn't already in flight. Switching to a different
+  // character while A is still loading starts a request keyed under B; A's
+  // late result can only ever update `historyFetch[A]`, never B's display
+  // (§20-4).
   //
-  // LULU-028 (P0 fix): deps are deliberately just the *user-driven* triggers
-  // — expand/collapse, switching character, `ensureHistories` itself, and
-  // the explicit retry tick. `characters` and `historyFetch` must NOT be
-  // deps here: both change as a *side effect* of this very effect running
-  // (the fetch resolving updates `characters`; starting a fetch updates
+  // LULU-028 (P0 fix): deps are deliberately just the *user-driven*
+  // triggers — switching character, `ensureHistories` itself, and the
+  // explicit retry tick. `characters` and `historyFetch` must NOT be deps
+  // here: both change as a *side effect* of this very effect running (the
+  // fetch resolving updates `characters`; starting a fetch updates
   // `historyFetch`), so including them reran this effect on its own output,
   // whose cleanup canceled the in-flight request before it could resolve —
   // permanently stuck "loading" for any character not already preloaded by
@@ -91,7 +93,7 @@ export default function MyCharacterSummary({ characters, meta, expTable, ensureH
   // above) is read instead, both for the "already loaded" pre-check and for
   // verifying the outcome once `ensureHistories` resolves.
   useEffect(() => {
-    if (!expanded || !displayedHistoryKey || typeof ensureHistories !== "function") {
+    if (!displayedHistoryKey || typeof ensureHistories !== "function") {
       return undefined;
     }
     const keyAtStart = displayedHistoryKey;
@@ -105,7 +107,6 @@ export default function MyCharacterSummary({ characters, meta, expTable, ensureH
     // own to re-run it (see the dependency-array note above).
     if (
       !shouldStartHistoryFetch({
-        expanded,
         historyKey: keyAtStart,
         history: target.history,
         status: historyFetch[keyAtStart],
@@ -137,7 +138,7 @@ export default function MyCharacterSummary({ characters, meta, expTable, ensureH
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [expanded, displayedHistoryKey, ensureHistories, retryTick]);
+  }, [displayedHistoryKey, ensureHistories, retryTick]);
 
   const labelForKey = (key) => charactersByKey.get(key)?.name ?? key;
 

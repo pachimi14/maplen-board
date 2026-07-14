@@ -131,19 +131,24 @@ export function rankMovementDirection(previousRank, rankFluctuation) {
 }
 
 /**
- * §6/§20-4: pure "should the fetch-triggering effect start a new shard
+ * §6/§20-4/§22.2: pure "should the fetch-triggering effect start a new shard
  * request for this key right now?" decision, extracted so it's testable in
  * isolation from React effect/dependency timing — LULU-028 (P0) was
  * entirely a bug in *when* this got re-evaluated (a "loading" setState
  * re-running the effect and canceling its own in-flight request), not in
  * this decision itself. Callers must not include their own "loading"/
  * "failed" state as a dependency that re-triggers the check; `status`
- * should be read once per (expanded, historyKey, retry-signal) change.
+ * should be read once per (historyKey, retry-signal) change.
  *
- * @param {{expanded: boolean, historyKey: string|null|undefined, history: unknown, status: "loading"|"failed"|undefined}} input
+ * §22.2: fetching is triggered by *displaying* a character, not by an
+ * expand/"show more" toggle (that UI concept no longer exists) — this
+ * function never took the "show more" state as a reason to skip a fetch
+ * beyond gating on there being a historyKey to fetch for at all.
+ *
+ * @param {{historyKey: string|null|undefined, history: unknown, status: "loading"|"failed"|undefined}} input
  */
-export function shouldStartHistoryFetch({ expanded, historyKey, history, status }) {
-  if (!expanded || !historyKey) {
+export function shouldStartHistoryFetch({ historyKey, history, status }) {
+  if (!historyKey) {
     return false;
   }
   if (Array.isArray(history)) {
