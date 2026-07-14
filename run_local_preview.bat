@@ -17,7 +17,7 @@ if /I "%~1"=="--no-sync" set "SKIP_SYNC=1"
 set "ROOT=%~dp0"
 set "WEB=%ROOT%exp_ranking\web"
 set "BOT=%ROOT%exp_ranking\bot"
-set "JSON=%WEB%\public\data\rankings.json"
+set "JSON=%WEB%\public\data\v2\rankings.json"
 
 if exist "%BOT%\.venv\Scripts\python.exe" (
     set "PYTHON=%BOT%\.venv\Scripts\python.exe"
