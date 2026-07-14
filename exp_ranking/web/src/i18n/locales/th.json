@@ -83,13 +83,7 @@
     "hideFavoritesPanel": "ซ่อนรายการโปรดเพื่อเพิ่ม",
     "addAllFavorites": "เพิ่มรายการโปรด {{count}} คน",
     "allFavoritesInGroup": "รายการโปรดอยู่ในกลุ่มครบแล้ว",
-    "noCharacters": "ไม่มีข้อมูลตัวละคร",
-    "compareTable": {
-      "title": "ตารางเปรียบเทียบ",
-      "periodColumn": "ช่วงเวลา",
-      "modeTotal": "รวม",
-      "modeAverage": "เฉลี่ย"
-    }
+    "noCharacters": "ไม่มีข้อมูลตัวละคร"
   },
   "search": {
     "character": "ค้นหาชื่อ อาชีพ เซิร์ฟเวอร์",

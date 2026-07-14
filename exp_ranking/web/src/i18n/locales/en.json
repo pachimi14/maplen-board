@@ -83,13 +83,7 @@
     "hideFavoritesPanel": "Hide favorites to add",
     "addAllFavorites": "Add {{count}} favorites",
     "allFavoritesInGroup": "All favorites are already in the group",
-    "noCharacters": "No character data available",
-    "compareTable": {
-      "title": "Comparison table",
-      "periodColumn": "Period",
-      "modeTotal": "Total",
-      "modeAverage": "Average"
-    }
+    "noCharacters": "No character data available"
   },
   "search": {
     "character": "Search name, job, or server",
