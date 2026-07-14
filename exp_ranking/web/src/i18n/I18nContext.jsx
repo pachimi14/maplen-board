@@ -32,12 +32,36 @@ function interpolate(template, vars = {}) {
 
 const I18nContext = createContext(null);
 
+// Static English baseline (must match exp_ranking/web/index.html), used as a
+// fallback so runtime meta updates never leave the tab title/description
+// blank or throw if a locale key is missing/unresolved.
+const FALLBACK_META_TITLE = "Lulumi Tools | MapleStory N EXP Ranking";
+const FALLBACK_META_DESCRIPTION =
+  "Track daily, weekly, and monthly EXP rankings for MapleStory N characters, with detailed progress history and comparison tools.";
+
+function updateDocumentMeta(t) {
+  try {
+    const title = t("app.metaTitle");
+    document.title = title && title !== "app.metaTitle" ? title : FALLBACK_META_TITLE;
+
+    const description = t("app.metaDescription");
+    const descriptionEl = document.querySelector('meta[name="description"]');
+    if (descriptionEl) {
+      descriptionEl.setAttribute(
+        "content",
+        description && description !== "app.metaDescription"
+          ? description
+          : FALLBACK_META_DESCRIPTION
+      );
+    }
+  } catch {
+    // Never let meta updates break rendering; static index.html already
+    // carries the English baseline as a safety net.
+  }
+}
+
 export function I18nProvider({ children }) {
   const [language, setLanguageState] = useState(detectLanguage);
-
-  useEffect(() => {
-    document.documentElement.lang = language;
-  }, [language]);
 
   const setLanguage = useCallback((next) => {
     if (!SUPPORTED_LANGUAGE_CODES.includes(next)) {
@@ -58,6 +82,11 @@ export function I18nProvider({ children }) {
     },
     [language]
   );
+
+  useEffect(() => {
+    document.documentElement.lang = language;
+    updateDocumentMeta(t);
+  }, [language, t]);
 
   const value = useMemo(
     () => ({
