@@ -227,5 +227,88 @@
     "monthDay": "{{month}}/{{day}}",
     "yearLine": "{{year}}",
     "yearMonthDay": "{{year}}年{{month}}月{{day}}日"
+  },
+  "myCharacters": {
+    "section": "マイキャラ",
+    "todaySummary": "今日の成績",
+    "latestSummary": "最新の成績",
+    "asOf": "{{date}} 時点",
+    "empty": {
+      "title": "マイキャラを登録すると、ここに毎日の成績が表示されます",
+      "cta": "キャラクターを検索して登録"
+    },
+    "pin": {
+      "add": "マイキャラに追加",
+      "registered": "登録済み",
+      "remove": "マイキャラから削除",
+      "setPrimary": "主キャラにする",
+      "primaryBadge": "主",
+      "disabled": {
+        "limit": "マイキャラは最大3体までです",
+        "noHistoryKey": "このキャラは登録できません"
+      }
+    },
+    "showMore": "もっと見る",
+    "showLess": "閉じる",
+    "notInRanking": "現在ランキング外です",
+    "stat": {
+      "levelRank": "レベル順位",
+      "jobRank": "職業内順位",
+      "worldRank": "サーバー内順位",
+      "topPercent": "上位{{p}}%",
+      "newOrIncomparable": "前日比較データなし",
+      "dailyGain": "日間増加量",
+      "weeklyGain": "週間増加量",
+      "monthlyGain": "月間増加量",
+      "rankUp": "▲{{count}}",
+      "rankDown": "▼{{count}}",
+      "rankSame": "変動なし"
+    },
+    "movement": {
+      "passedTitle": "レベル順位で抜いた",
+      "overtakenTitle": "レベル順位で抜かれた",
+      "hint": "総合レベル順位の変動です（日間の増加量順位とは異なります）",
+      "others": "ほか{{n}}人",
+      "none": "対象なし"
+    },
+    "showMoreSection": {
+      "streakTitle": "連続記録",
+      "positive": "{{count}}日連続で増加中",
+      "rankStreak": "{{count}}日連続でトップ{{max}}",
+      "noStreak": "連続記録なし",
+      "selfBestTitle": "自己ベスト内順位",
+      "selfBestValue": "自己歴代{{rank}}位",
+      "selfBestOf": "（比較可能{{total}}日中）",
+      "selfBestNone": "比較データなし"
+    },
+    "goal": {
+      "title": "目標設定",
+      "level": "目標レベル",
+      "date": "目標日",
+      "save": "保存",
+      "cancel": "キャンセル",
+      "delete": "目標を削除",
+      "set": "目標を設定",
+      "edit": "目標を編集",
+      "none": "目標は未設定です",
+      "ahead": "{{days}}日先行",
+      "behind": "{{days}}日遅れ",
+      "onTrack": "予定どおり",
+      "achieved": "達成",
+      "insufficientData": "データ不足のため計算できません"
+    },
+    "state": {
+      "loading": "読み込み中…",
+      "loadFailed": "履歴の読み込みに失敗しました",
+      "retry": "再試行",
+      "insufficientHistory": "履歴データが不足しています"
+    },
+    "error": {
+      "saveFailed": "保存に失敗しました。もう一度お試しください",
+      "limitReached": "マイキャラは最大3体までです",
+      "invalidKey": "このキャラは登録できません",
+      "invalidGoal": "目標レベル・目標日を確認してください（Lv225〜275・有効な日付）",
+      "unsupportedVersion": "保存データの形式が新しいため、この操作はできません"
+    }
   }
 }

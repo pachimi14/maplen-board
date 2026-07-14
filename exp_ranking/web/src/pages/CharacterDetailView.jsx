@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import CharacterDetail from "../CharacterDetail";
+import MyCharacterPinButton from "../components/MyCharacterPinButton";
 import RankingControls from "../components/RankingControls";
 import RankingTable from "../components/RankingTable";
 import { useBoard } from "../board/BoardContext";
@@ -128,6 +129,7 @@ export default function CharacterDetailView() {
             mode="expanded"
             onCollapse={collapseDetail}
             onSelectCharacter={handleSwitchCharacter}
+            pinControls={<MyCharacterPinButton character={routeCharacter} />}
           />
         ) : (
           <div className="min-h-48 flex items-center justify-center text-slate-400">

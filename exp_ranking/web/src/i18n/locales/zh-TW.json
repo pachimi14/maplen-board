@@ -227,5 +227,88 @@
     "monthDay": "{{month}}月{{day}}日",
     "yearLine": "{{year}}年",
     "yearMonthDay": "{{year}}年{{month}}月{{day}}日"
+  },
+  "myCharacters": {
+    "section": "我的角色",
+    "todaySummary": "今日成績",
+    "latestSummary": "最新成績",
+    "asOf": "資料截至 {{date}}",
+    "empty": {
+      "title": "釘選一個角色即可在此查看每日成績",
+      "cta": "搜尋並釘選角色"
+    },
+    "pin": {
+      "add": "加入我的角色",
+      "registered": "已登錄",
+      "remove": "從我的角色移除",
+      "setPrimary": "設為主要角色",
+      "primaryBadge": "主要",
+      "disabled": {
+        "limit": "最多可釘選 3 個角色",
+        "noHistoryKey": "此角色無法釘選"
+      }
+    },
+    "showMore": "顯示更多",
+    "showLess": "收合",
+    "notInRanking": "目前不在排行榜內",
+    "stat": {
+      "levelRank": "等級排名",
+      "jobRank": "職業內排名",
+      "worldRank": "伺服器內排名",
+      "topPercent": "前 {{p}}%",
+      "newOrIncomparable": "無比較資料",
+      "dailyGain": "日增量",
+      "weeklyGain": "週增量",
+      "monthlyGain": "月增量",
+      "rankUp": "▲{{count}}",
+      "rankDown": "▼{{count}}",
+      "rankSame": "無變動"
+    },
+    "movement": {
+      "passedTitle": "等級排名超越了",
+      "overtakenTitle": "等級排名被超越",
+      "hint": "依據整體等級排名，並非日增量排名",
+      "others": "另外 {{n}} 人",
+      "none": "無"
+    },
+    "showMoreSection": {
+      "streakTitle": "連續紀錄",
+      "positive": "連續 {{count}} 天增加",
+      "rankStreak": "連續 {{count}} 天位居前 {{max}} 名",
+      "noStreak": "目前無連續紀錄",
+      "selfBestTitle": "自身歷代最佳日排名",
+      "selfBestValue": "歷代第 {{rank}} 名",
+      "selfBestOf": "（共 {{total}} 個可比較天數）",
+      "selfBestNone": "無比較資料"
+    },
+    "goal": {
+      "title": "目標設定",
+      "level": "目標等級",
+      "date": "目標日期",
+      "save": "儲存",
+      "cancel": "取消",
+      "delete": "刪除目標",
+      "set": "設定目標",
+      "edit": "編輯目標",
+      "none": "尚未設定目標",
+      "ahead": "領先 {{days}} 天",
+      "behind": "落後 {{days}} 天",
+      "onTrack": "進度正常",
+      "achieved": "已達成",
+      "insufficientData": "資料不足，無法估算"
+    },
+    "state": {
+      "loading": "載入中…",
+      "loadFailed": "歷史資料載入失敗",
+      "retry": "重試",
+      "insufficientHistory": "歷史資料不足"
+    },
+    "error": {
+      "saveFailed": "儲存失敗，請再試一次",
+      "limitReached": "最多可釘選 3 個角色",
+      "invalidKey": "此角色無法釘選",
+      "invalidGoal": "請確認目標等級／日期（Lv225-275，且為有效日期）",
+      "unsupportedVersion": "已儲存的資料格式較新，無法執行此操作"
+    }
   }
 }

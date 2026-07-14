@@ -443,6 +443,7 @@ export default function CharacterDetail({
   onExpand,
   onCollapse,
   onSelectCharacter,
+  pinControls = null,
 }) {
   const { t } = useTranslation();
   const dailyPeriod = useGainPeriodLabel("daily");
@@ -696,6 +697,8 @@ export default function CharacterDetail({
             </div>
 
             <p className="text-sm text-slate-500 font-semibold mt-0.5">#{character.rank}</p>
+
+            {pinControls ? <div className="mt-2">{pinControls}</div> : null}
           </div>
         </div>
 
