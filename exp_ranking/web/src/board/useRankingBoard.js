@@ -203,7 +203,7 @@ export function useRankingBoard(route) {
 
     async function loadRankings() {
       try {
-        const candidates = ["data/v2/rankings.json", "data/rankings.json"];
+        const candidates = ["data/v2/rankings.json"];
         let payload = null;
         let lastError = null;
         for (const candidate of candidates) {
