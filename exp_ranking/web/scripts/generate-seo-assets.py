@@ -32,7 +32,7 @@ from PIL import Image, ImageDraw, ImageFont
 # ---------------------------------------------------------------------------
 
 BG_COLOR = (15, 23, 42)  # #0f172a (slate-950, matches theme-color)
-ACCENT_COLOR = (251, 191, 36)  # #fbbf24 (amber-400)
+ACCENT_COLOR = (52, 211, 153)  # #34d399 (emerald-400, site accent)
 WHITE = (255, 255, 255)
 MUTED = (148, 163, 184)  # #94a3b8 (slate-400)
 
