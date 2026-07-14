@@ -1,9 +1,46 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
+import CharacterSearchPicker from "../CharacterSearchPicker";
 import { useProfile } from "../profile/ProfileContext";
-import { resolveDisplayedHistoryKey, shouldStartHistoryFetch } from "./myCharacterUtils";
+import { errorMessageKeyForCode, resolveDisplayedHistoryKey, shouldStartHistoryFetch } from "./myCharacterUtils";
 import MyCharacterEmptyCta from "./MyCharacterEmptyCta";
 import MyCharacterSwitcher from "./MyCharacterSwitcher";
 import MyCharacterCard from "./MyCharacterCard";
+
+/**
+ * §22.13 #3: the "add a sub character" search panel shown in place of the
+ * card while `registerMode` is on. Same CharacterSearchPicker +
+ * useProfile().pin reuse as MyCharacterEmptyCta's zero-pin search, plus a
+ * cancel action back to the normal card.
+ */
+function RegisterSubPanel({ characters, onSelect, onCancel, error, t }) {
+  return (
+    <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl p-5 sm:p-6 space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold text-slate-200">{t("myCharacters.register.title")}</h2>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-7 border-slate-700 bg-slate-950 text-xs"
+          onClick={onCancel}
+        >
+          {t("myCharacters.register.cancel")}
+        </Button>
+      </div>
+      <CharacterSearchPicker
+        characters={characters}
+        onSelect={onSelect}
+        placeholder={t("myCharacters.register.searchPlaceholder")}
+      />
+      {error ? (
+        <p className="text-xs text-rose-400" role="alert">
+          {t(error)}
+        </p>
+      ) : null}
+    </div>
+  );
+}
 
 /**
  * Home-screen self-summary (T4b). Consumes T3 (via MyCharacterCard) and T4a
@@ -17,11 +54,17 @@ import MyCharacterCard from "./MyCharacterCard";
  * resolveDisplayedHistoryKey for the switch-back rule. There is no "show
  * more" toggle anymore (§22.1/§22.2): MyCharacterCard always shows
  * everything, fetching its history shard as soon as it is displayed.
+ *
+ * §22.13 #3: `registerMode` (search-and-pin a sub character in place of the
+ * card) is the only other piece of local UI state — pinning itself is
+ * `useProfile().pin`, never reimplemented here.
  */
-export default function MyCharacterSummary({ characters, meta, expTable, ensureHistories, onFocusSearch, t }) {
-  const { pinnedHistoryKeys, primaryHistoryKey } = useProfile();
+export default function MyCharacterSummary({ characters, meta, expTable, ensureHistories, t }) {
+  const { pin, pinnedHistoryKeys, primaryHistoryKey } = useProfile();
 
   const [displayedHistoryKey, setDisplayedHistoryKey] = useState(() => primaryHistoryKey);
+  const [registerMode, setRegisterMode] = useState(false);
+  const [registerError, setRegisterError] = useState(null);
   // §6/§20-4: fetch status per historyKey ("loading" | "failed"; absence =
   // idle/not-yet-requested). Keyed by historyKey (not a single flat flag) so
   // a late-arriving result for a key the user has since switched away from
@@ -143,8 +186,29 @@ export default function MyCharacterSummary({ characters, meta, expTable, ensureH
 
   const labelForKey = (key) => charactersByKey.get(key)?.name ?? key;
 
+  // §22.13 #3: shared by the zero-pin empty-CTA search and the ≥1-pin
+  // "add sub" registerMode search — both are just useProfile().pin, never
+  // reimplemented. `id` is the CharacterSearchPicker/ranking-row id (not
+  // historyKey); a row without a historyKey can't be pinned at all.
+  // "alreadyPinned" is treated the same as success (§22.13: "成功/既存で
+  // registerMode を閉じる") — it isn't a real error, just a no-op.
+  const handleRegisterSelect = (id) => {
+    const target = characters.find((character) => character.id === id);
+    if (!target?.historyKey) {
+      setRegisterError("myCharacters.error.invalidKey");
+      return;
+    }
+    const result = pin(target.historyKey);
+    if (result.ok || result.code === "alreadyPinned") {
+      setRegisterError(null);
+      setRegisterMode(false);
+      return;
+    }
+    setRegisterError(errorMessageKeyForCode(result.code) ?? "myCharacters.error.saveFailed");
+  };
+
   if (!displayedHistoryKey) {
-    return <MyCharacterEmptyCta onFocusSearch={onFocusSearch} />;
+    return <MyCharacterEmptyCta characters={characters} onSelect={handleRegisterSelect} error={registerError} />;
   }
 
   const displayedCharacter = charactersByKey.get(displayedHistoryKey);
@@ -173,17 +237,34 @@ export default function MyCharacterSummary({ characters, meta, expTable, ensureH
         displayedHistoryKey={displayedHistoryKey}
         labelForKey={labelForKey}
         onSelect={setDisplayedHistoryKey}
+        onAddSub={() => {
+          setRegisterError(null);
+          setRegisterMode(true);
+        }}
       />
-      <MyCharacterCard
-        character={displayedCharacter}
-        historyKey={displayedHistoryKey}
-        allCharacters={characters}
-        meta={meta}
-        expTable={expTable}
-        historyStatus={historyFetch[displayedHistoryKey] ?? "idle"}
-        onRetryHistory={retryHistory}
-        t={t}
-      />
+      {registerMode ? (
+        <RegisterSubPanel
+          characters={characters}
+          onSelect={handleRegisterSelect}
+          onCancel={() => {
+            setRegisterMode(false);
+            setRegisterError(null);
+          }}
+          error={registerError}
+          t={t}
+        />
+      ) : (
+        <MyCharacterCard
+          character={displayedCharacter}
+          historyKey={displayedHistoryKey}
+          allCharacters={characters}
+          meta={meta}
+          expTable={expTable}
+          historyStatus={historyFetch[displayedHistoryKey] ?? "idle"}
+          onRetryHistory={retryHistory}
+          t={t}
+        />
+      )}
     </div>
   );
 }

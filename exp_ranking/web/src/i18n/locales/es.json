@@ -250,6 +250,14 @@
         "noHistoryKey": "Este personaje no se puede fijar"
       }
     },
+    "register": {
+      "title": "Buscar y fijar un personaje",
+      "searchPlaceholder": "Buscar nombre, clase o servidor",
+      "cancel": "Cancelar"
+    },
+    "switcher": {
+      "addSub": "+ Añadir personaje secundario"
+    },
     "showMore": "Ver más",
     "showLess": "Ver menos",
     "viewDetail": "Ver detalles",

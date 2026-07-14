@@ -250,6 +250,14 @@
         "noHistoryKey": "Không thể ghim nhân vật này"
       }
     },
+    "register": {
+      "title": "Tìm và ghim một nhân vật",
+      "searchPlaceholder": "Tìm tên, nghề, máy chủ",
+      "cancel": "Hủy"
+    },
+    "switcher": {
+      "addSub": "+ Thêm nhân vật phụ"
+    },
     "showMore": "Xem thêm",
     "showLess": "Thu gọn",
     "viewDetail": "Xem chi tiết",

@@ -250,6 +250,14 @@
         "noHistoryKey": "This character can't be pinned"
       }
     },
+    "register": {
+      "title": "Search and pin a character",
+      "searchPlaceholder": "Search name, job, or server",
+      "cancel": "Cancel"
+    },
+    "switcher": {
+      "addSub": "+ Add sub character"
+    },
     "showMore": "Show more",
     "showLess": "Show less",
     "viewDetail": "View details",
