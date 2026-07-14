@@ -412,7 +412,7 @@ export default function MyCharacterCard({
                 applied to) to push the built-in whitespace out of frame,
                 without touching the source image. */}
             <div className="rounded-2xl bg-slate-800 overflow-hidden shrink-0 w-20 h-20 md:w-24 md:h-24">
-              <img src={character.imageUrl} alt="" className="w-full h-full object-cover scale-[1.3]" />
+              <img src={character.imageUrl} alt="" className="w-full h-full object-cover scale-[1.5] -translate-y-[8%]" />
             </div>
             <div className="min-w-0 flex-1">
               {/* §22.11 A②: "詳細を見る" moved here (top-right of the
