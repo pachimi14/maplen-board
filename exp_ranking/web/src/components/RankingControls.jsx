@@ -1,9 +1,8 @@
 import { createPortal } from "react-dom";
-import { ChevronDown, ChevronUp, RotateCcw } from "lucide-react";
+import { ChevronDown, ChevronUp, RotateCcw, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { JOB_TAXONOMY } from "../jobCategories";
-import ShareLinkButton from "./ShareLinkButton";
 
 const SORT_OPTIONS = [
   { key: "rank", labelKey: "sort.levelRank" },
@@ -19,6 +18,7 @@ export default function RankingControls({
   showFilterSection,
   showFilters,
   setShowFilters,
+  onOpenGroup,
   worldOptions,
   worldFilter,
   setWorldFilter,
@@ -56,9 +56,23 @@ export default function RankingControls({
             </Button>
           ))}
         </div>
-        <div className="ml-auto">
-          <ShareLinkButton t={t} />
-        </div>
+        {showFilterSection ? (
+          <div className="ml-auto">
+            {/* §22.4 (decision C): navigates to the dedicated `#/group`
+                route — this is no longer a same-page toggle, so there is no
+                open/closed state or chevron here. */}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-8 border-slate-700"
+              onClick={onOpenGroup}
+            >
+              <Users size={14} className="mr-1.5 inline" />
+              {t("group.title")}
+            </Button>
+          </div>
+        ) : null}
       </div>
 
       {showFilterSection ? (

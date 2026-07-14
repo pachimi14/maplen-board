@@ -13,7 +13,7 @@ import {
 
 const PERIODS = ["daily", "weekly", "monthly"];
 
-function PeriodTop3({ period, characters, gainRankMaps, selectedId, onSelect, isFavorite, onToggleFavorite }) {
+function PeriodTop3({ period, characters, gainRankMaps, onSelectCharacter, isFavorite, onToggleFavorite }) {
   const { t } = useTranslation();
   const periodLabel = t(`period.${period}Short`);
   const top = topGainersForPeriod(characters, period, 3, gainRankMaps);
@@ -26,14 +26,23 @@ function PeriodTop3({ period, characters, gainRankMaps, selectedId, onSelect, is
       <ul className="space-y-1">
         {top.map((character) => (
           <li key={`${period}-${character.id}`}>
-            <button
-              type="button"
-              onClick={() => onSelect(character.id)}
-              className={`w-full text-left rounded-lg border px-2 py-1.5 transition hover:bg-slate-800/80 ${
-                selectedId === character.id
-                  ? "border-cyan-500/70 bg-slate-800/80"
-                  : "border-slate-800/80 bg-slate-950/60"
-              }`}
+            {/* A non-button clickable row: the FavoriteStar inside it is
+                itself a real <button>, and HTML forbids <button> nesting
+                (React would otherwise warn/hydration-error on this in the
+                list view). role="button" + onKeyDown keeps it operable
+                from the keyboard, matching RankingTable's <tr onClick>
+                row (also not a <button>) for the same reason. */}
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => onSelectCharacter(character)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  onSelectCharacter(character);
+                }
+              }}
+              className="w-full text-left rounded-lg border border-slate-800/80 bg-slate-950/60 px-2 py-1.5 transition hover:bg-slate-800/80 cursor-pointer"
             >
               <div className="grid grid-cols-[auto_auto_minmax(0,1fr)_auto] gap-x-1 gap-y-0.5 items-start min-w-0">
                 <div className="col-start-1 row-start-1 w-3.5 shrink-0 flex justify-center">
@@ -71,7 +80,7 @@ function PeriodTop3({ period, characters, gainRankMaps, selectedId, onSelect, is
                   )}
                 </p>
               </div>
-            </button>
+            </div>
           </li>
         ))}
       </ul>
@@ -82,8 +91,7 @@ function PeriodTop3({ period, characters, gainRankMaps, selectedId, onSelect, is
 export default function TopGainHighlights({
   characters,
   gainRankMaps,
-  selectedId,
-  onSelect,
+  onSelectCharacter,
   isFavorite,
   onToggleFavorite,
 }) {
@@ -95,8 +103,7 @@ export default function TopGainHighlights({
           period={period}
           characters={characters}
           gainRankMaps={gainRankMaps}
-          selectedId={selectedId}
-          onSelect={onSelect}
+          onSelectCharacter={onSelectCharacter}
           isFavorite={isFavorite}
           onToggleFavorite={onToggleFavorite}
         />

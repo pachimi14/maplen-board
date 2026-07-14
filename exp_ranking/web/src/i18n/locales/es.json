@@ -82,7 +82,8 @@
     "showFavoritesPanel": "Mostrar favoritos para añadir",
     "hideFavoritesPanel": "Ocultar favoritos para añadir",
     "addAllFavorites": "Añadir {{count}} favoritos",
-    "allFavoritesInGroup": "Todos los favoritos ya están en el grupo"
+    "allFavoritesInGroup": "Todos los favoritos ya están en el grupo",
+    "noCharacters": "No hay datos de personajes disponibles"
   },
   "search": {
     "character": "Buscar nombre, clase o servidor",
@@ -227,5 +228,106 @@
     "monthDay": "{{day}}/{{month}}",
     "yearLine": "{{year}}",
     "yearMonthDay": "{{day}}/{{month}}/{{year}}"
+  },
+  "myCharacters": {
+    "section": "Mis personajes",
+    "todaySummary": "Resumen de hoy",
+    "latestSummary": "Último resumen",
+    "asOf": "Datos al {{date}}",
+    "empty": {
+      "title": "Fija un personaje para ver aquí sus resultados diarios",
+      "cta": "Buscar y fijar un personaje"
+    },
+    "pin": {
+      "add": "Añadir a Mis personajes",
+      "registered": "Registrado",
+      "remove": "Quitar de Mis personajes",
+      "setPrimary": "Marcar como principal",
+      "primaryBadge": "Main",
+      "subBadge": "Sub",
+      "disabled": {
+        "limit": "Puedes fijar hasta 3 personajes",
+        "noHistoryKey": "Este personaje no se puede fijar"
+      }
+    },
+    "register": {
+      "title": "Buscar y fijar un personaje",
+      "searchPlaceholder": "Buscar nombre, clase o servidor",
+      "cancel": "Cancelar"
+    },
+    "switcher": {
+      "addSub": "+ Añadir personaje secundario"
+    },
+    "showMore": "Ver más",
+    "showLess": "Ver menos",
+    "viewDetail": "Ver detalles",
+    "notInRanking": "No está en el ranking actualmente",
+    "stat": {
+      "levelRank": "Rango de nivel",
+      "jobRank": "Rango en su clase",
+      "worldRank": "Rango en su servidor",
+      "topPercent": "Top {{p}}%",
+      "newOrIncomparable": "Sin datos de comparación",
+      "dailyGain": "Ganancia diaria",
+      "weeklyGain": "Ganancia semanal",
+      "monthlyGain": "Ganancia mensual",
+      "rankUp": "▲{{count}}",
+      "rankDown": "▼{{count}}",
+      "rankSame": "Sin cambios"
+    },
+    "movement": {
+      "passedTitle": "Superó en rango de nivel",
+      "overtakenTitle": "Fue superado en rango de nivel",
+      "hint": "Según el rango de nivel general, no el rango de ganancia diaria",
+      "others": "+{{n}} más",
+      "none": "Ninguno"
+    },
+    "showMoreSection": {
+      "streakTitle": "Rachas",
+      "positive": "{{count}} días seguidos ganando",
+      "rankStreak": "{{count}} días en el top {{max}}",
+      "noStreak": "Sin racha actual",
+      "selfBestTitle": "Mejor rango diario propio",
+      "selfBestValue": "#{{rank}} histórico",
+      "selfBestOf": "(de {{total}} días comparables)",
+      "selfBestNone": "Sin datos de comparación"
+    },
+    "goal": {
+      "title": "Objetivo",
+      "summary": "Nv.{{level}} · antes del {{date}}",
+      "level": "Nivel objetivo",
+      "date": "Fecha objetivo",
+      "save": "Guardar",
+      "cancel": "Cancelar",
+      "delete": "Eliminar objetivo",
+      "set": "Definir objetivo",
+      "edit": "Editar objetivo",
+      "none": "Sin objetivo definido",
+      "todayProgressTitle": "Progreso de hoy",
+      "todayGain": "Hoy +{{amount}}",
+      "requiredGain": "Necesario +{{amount}}",
+      "achievementRate": "Cumplimiento {{percent}}%",
+      "arrivalTitle": "Estimación de llegada",
+      "arrivalPremise": "Suponiendo que la ganancia de hoy continúe",
+      "estimatedArrival": "Llegada estimada {{date}}",
+      "ahead": "{{days}} días de adelanto",
+      "behind": "{{days}} días de retraso",
+      "onTrack": "En camino",
+      "achieved": "Logrado",
+      "insufficientData": "Datos insuficientes para estimar"
+    },
+    "state": {
+      "loading": "Cargando…",
+      "loadFailed": "Error al cargar el historial",
+      "retry": "Reintentar",
+      "insufficientHistory": "Historial insuficiente"
+    },
+    "error": {
+      "saveFailed": "Error al guardar. Inténtalo de nuevo.",
+      "limitReached": "Puedes fijar hasta 3 personajes",
+      "invalidKey": "Este personaje no se puede fijar",
+      "invalidGoal": "Revisa el nivel/fecha objetivo (Lv225-275, fecha válida)",
+      "unsupportedVersion": "Los datos guardados tienen un formato más nuevo; esta acción no está disponible"
+    }
   }
 }

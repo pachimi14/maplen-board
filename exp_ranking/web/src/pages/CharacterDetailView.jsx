@@ -1,8 +1,11 @@
 import { useState } from "react";
+import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import CharacterDetail from "../CharacterDetail";
+import MyCharacterPinButton from "../components/MyCharacterPinButton";
 import RankingControls from "../components/RankingControls";
 import RankingTable from "../components/RankingTable";
+import ShareLinkButton from "../components/ShareLinkButton";
 import { useBoard } from "../board/BoardContext";
 import { navigateToCharacter } from "../board/useHashRoute";
 
@@ -63,7 +66,6 @@ export default function CharacterDetailView() {
     pagedCharacters,
     showGainRank,
     filteredGainRanks,
-    selectedId,
     safePage,
     totalPages,
     setPage,
@@ -113,9 +115,32 @@ export default function CharacterDetailView() {
     }
   };
 
+  // §21.4: the mini ranking list rendered below (when expanded) uses the
+  // same row-navigate contract as the main list — a row click goes
+  // straight to that character's detail route, no-op without a
+  // historyKey (no selection concept to fall back to here either).
+  const handleRowNavigate = (character) => {
+    if (character?.historyKey) {
+      navigateToCharacter(character.historyKey);
+    }
+  };
+
   return (
     <>
       <div ref={detailTopRef} className="space-y-4">
+        {/* §22.12/§22.13 #2: a large, clearly-visible "back to list" button
+            up top, replacing the small header-embedded "collapse" control
+            that used to live inside CharacterDetail.jsx (that file is
+            never modified — decision A). Not passing `onCollapse` below
+            hides CharacterDetail's own small collapse button (its
+            `isExpanded && onCollapse` render gate). §22.13: filled
+            (Button's default variant), not outline — the outline version
+            blended into the near-black page background. */}
+        <Button type="button" className="px-4 py-2.5 font-semibold" onClick={collapseDetail}>
+          <ArrowLeft size={16} className="mr-2" />
+          {t("route.backToList")}
+        </Button>
+
         {historyReady ? (
           <CharacterDetail
             character={routeCharacter}
@@ -126,8 +151,9 @@ export default function CharacterDetailView() {
             isFavorite={isFavorite(routeCharacter)}
             onToggleFavorite={() => toggleFavorite(routeCharacter)}
             mode="expanded"
-            onCollapse={collapseDetail}
             onSelectCharacter={handleSwitchCharacter}
+            pinControls={<MyCharacterPinButton character={routeCharacter} />}
+            shareControls={<ShareLinkButton t={t} />}
           />
         ) : (
           <div className="min-h-48 flex items-center justify-center text-slate-400">
@@ -188,8 +214,7 @@ export default function CharacterDetailView() {
           pagedCharacters={pagedCharacters}
           showGainRank={showGainRank}
           filteredGainRanks={filteredGainRanks}
-          selectedId={selectedId}
-          onSelectCharacter={setSelectedId}
+          onRowNavigate={handleRowNavigate}
           isFavorite={isFavorite}
           onToggleFavorite={toggleFavorite}
           sortKey={sortKey}

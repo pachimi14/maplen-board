@@ -26,8 +26,7 @@ export default function RankingTable({
   pagedCharacters,
   showGainRank,
   filteredGainRanks,
-  selectedId,
-  onSelectCharacter,
+  onRowNavigate,
   isFavorite,
   onToggleFavorite,
   sortKey,
@@ -38,6 +37,8 @@ export default function RankingTable({
   rangeFrom,
   rangeTo,
   t,
+  searchInputRef,
+  groupPanel = null,
 }) {
   return (
     <Card className={`bg-slate-900 border border-slate-800 rounded-2xl shadow-xl ${cardClassName}`}>
@@ -66,16 +67,19 @@ export default function RankingTable({
             <div className="relative w-full md:w-72">
               <Search className="absolute left-3 top-2.5 text-slate-500" size={18} />
               <Input
+                ref={searchInputRef}
                 value={query}
                 onChange={(event) => onQueryChange(event.target.value)}
                 placeholder={t("search.character")}
-                className="pl-10 bg-slate-950 border-slate-800 text-slate-100"
+                className="pl-10 bg-slate-950 border-slate-800 text-slate-100 scroll-mt-24"
               />
             </div>
           </div>
         </div>
 
         <div ref={setRankingControlsTarget} className="space-y-2" />
+
+        {groupPanel}
 
         {favoritesOnly && total === 0 ? (
           <p className="text-sm text-amber-300/90 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3">
@@ -138,10 +142,8 @@ export default function RankingTable({
               {pagedCharacters.map((character) => (
                 <tr
                   key={character.id}
-                  onClick={() => onSelectCharacter(character.id)}
-                  className={`cursor-pointer border-t border-slate-800 hover:bg-slate-800/70 ${
-                    selectedId === character.id ? "bg-slate-800" : ""
-                  }`}
+                  onClick={() => onRowNavigate(character)}
+                  className="cursor-pointer border-t border-slate-800 hover:bg-slate-800/70"
                 >
                   <td className="p-3 text-center">
                     <FavoriteStar
@@ -171,13 +173,11 @@ export default function RankingTable({
                     <div className="text-sm text-slate-400">{formatJobName(character.job)}</div>
                   </td>
                   <td className="p-3">
+                    {/* §22.13 #1: server name is not a navigator link
+                        (only the name is) — a click here falls through to
+                        the row's own onClick, same as any other cell. */}
                     {character.worldId ? (
-                      <NavigatorLink
-                        href={getNavigatorUrl(character)}
-                        className="text-sky-400 font-medium"
-                      >
-                        {character.worldId}
-                      </NavigatorLink>
+                      <span className="text-slate-300 font-medium">{character.worldId}</span>
                     ) : (
                       <span className="text-slate-600">-</span>
                     )}
