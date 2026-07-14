@@ -197,6 +197,11 @@
     "noSearchMatch": "No jobs match your search.",
     "otherJobs": "Other jobs"
   },
+  "route": {
+    "notFoundTitle": "Character not found",
+    "notFoundHint": "This character doesn't exist, or may have dropped out of the ranking.",
+    "backToList": "Back to list"
+  },
   "alliance": {
     "冒険家": "Adventurer",
     "英雄": "Hero",
