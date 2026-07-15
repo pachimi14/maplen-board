@@ -1,0 +1,6 @@
+.cache/
+__pycache__/
+*.py[cod]
+local-proxy.png
+remote-direct.png
+canvas-taint-check.png
