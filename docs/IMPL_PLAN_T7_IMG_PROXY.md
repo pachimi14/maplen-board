@@ -117,3 +117,14 @@ run_local_dev.bat → 共有画像生成 → PNG 保存確認                   
 
 ### 検収(統括・翌週)
 test/build・`git diff -w` 全ファイル・uvicorn 併走で基準 6/7/8/11 の実機確認。不合格項目は翌週の修正タスクへ。
+
+## 11. 完了報告受領(2026-07-16・検収待ち)
+
+Codex より T7 全体の完了報告受領。`C:\tmp\msu-ranking-t7-img-proxy` の `t7/img-proxy`、origin/main +5コミット(37f3422/ec9e57d/1c16e23/401f3aa/2e72f8e)、未push。書面検収=基準1〜11 全て実測値付きで合格見込み(SHA一致・cold 0.314s/hit 0.003s・fallback 200+X-Img-Fallback:1・遮断400・pytest 18 緑・web 180 緑・build 成功・通常表示請求0・プロキシ停止時 placeholder 生成成功・6ロケール追加・Clipboard/DL fallback/X intent 確認)。判断一覧(1600×900固定・グラフ7日固定・X は文+URL方式・ファイル名ローカル日付)=承認。
+
+**翌週の実機検収チェックリスト(統括)**:
+1. `git diff -w origin/main...t7/img-proxy` 全ファイル走査(bot/.github/直リンク不変・改行ノイズ・スパイク由来の混入なし)
+2. ACAO 許可リストの実装確認(本番オリジン+dev のみ・ワイルドカード不使用)/ `SHARE_IMAGE_PROXY_BASE` の dev/prod 切替機構
+3. uvicorn 併走で基準 6/7/8/11 の実機再現(生成≤3s・プロキシ停止・Clipboard・通常表示請求0)
+4. i18n 6ロケールのキーパリティ / 新規テストが実装の写しでないこと
+5. 合格後: push・PR はユーザー専権 → VPS 配置(DNS/Caddy/systemd)→ 本番 curl で基準1〜4 再計測
