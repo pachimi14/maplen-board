@@ -5,6 +5,7 @@ import CharacterDetail from "../CharacterDetail";
 import MyCharacterPinButton from "../components/MyCharacterPinButton";
 import RankingControls from "../components/RankingControls";
 import RankingTable from "../components/RankingTable";
+import ShareImageButton from "../components/ShareImageButton";
 import ShareLinkButton from "../components/ShareLinkButton";
 import { useBoard } from "../board/BoardContext";
 import { navigateToCharacter } from "../board/useHashRoute";
@@ -153,7 +154,12 @@ export default function CharacterDetailView() {
             mode="expanded"
             onSelectCharacter={handleSwitchCharacter}
             pinControls={<MyCharacterPinButton character={routeCharacter} />}
-            shareControls={<ShareLinkButton t={t} />}
+            shareControls={
+              <div className="flex flex-wrap items-start gap-2">
+                <ShareImageButton character={routeCharacter} gainRankMaps={gainRankMaps} t={t} />
+                <ShareLinkButton t={t} />
+              </div>
+            }
           />
         ) : (
           <div className="min-h-48 flex items-center justify-center text-slate-400">
