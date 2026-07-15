@@ -9,7 +9,7 @@ T7 共有画像はブラウザ生成が完成済みだが、キャラ画像(`htt
 ## 1. 前提(着手前に完了しているべきもの)
 
 - [ ] **LULU-042 の HTTPS 基盤**: DNS `api.lulumi-tools.com` A レコード + caddy(推奨、Let's Encrypt 自動)or nginx+certbot — **ユーザー手作業**
-- [ ] **パイロットラン(PR-013 準拠・実装前に必ず実施)**: VPS から
+- [x] **パイロットラン(PR-013 準拠・実装前に必ず実施)= 成功(2026-07-16 ユーザー実施)**: 素の curl(UA/Referer 付与なし)で `HTTP 200 / 4036 bytes / image/png`、`file` 判定 `PNG image data, 180 x 180, 8-bit/color RGBA`。**前提成立・本計画は発注可能状態**。元の要求: VPS から
       `curl -sS -o /tmp/t.png -w '%{http_code} %{size_download}\n' '<実在の imageUrl>'`
       が **200 かつ PNG を返すこと**(Referer/UA でサーバー取得がブロックされる可能性=本計画最大の前提)。
       **崩れた場合は本計画を中止し設計変更**(候補: UA/Referer 付与の可否確認 → それでも不可なら「共有画像はキャラ画像なし(placeholder)で確定」へ縮退)
