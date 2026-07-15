@@ -329,5 +329,22 @@
       "invalidGoal": "請確認目標等級／日期（Lv225-275，且為有效日期）",
       "unsupportedVersion": "已儲存的資料格式較新，無法執行此操作"
     }
+  },
+  "shareImage": {
+    "open": "分享圖片",
+    "title": "建立分享圖片",
+    "description": "為此角色產生 PNG 分享卡。",
+    "includeCharts": "包含成長圖表",
+    "includeAverages": "包含平均增長",
+    "copyPng": "複製圖片",
+    "downloadPng": "儲存 PNG",
+    "openX": "開啟 X 發文",
+    "generating": "正在產生圖片...",
+    "ready": "圖片已準備好。",
+    "copied": "已複製圖片。",
+    "downloaded": "已儲存 PNG。",
+    "downloadedFallback": "無法複製圖片，已改為儲存 PNG。",
+    "failed": "圖片產生失敗，請稍後再試。",
+    "postText": "{{name}} Lv.{{level}} {{percent}}% | Lulumi Tools"
   }
 }

@@ -329,5 +329,22 @@
       "invalidGoal": "ตรวจสอบเลเวล/วันที่เป้าหมาย (Lv225-275 และวันที่ที่ถูกต้อง)",
       "unsupportedVersion": "ข้อมูลที่บันทึกไว้เป็นรูปแบบใหม่กว่า จึงไม่สามารถทำรายการนี้ได้"
     }
+  },
+  "shareImage": {
+    "open": "แชร์รูปภาพ",
+    "title": "สร้างรูปภาพสำหรับแชร์",
+    "description": "สร้างการ์ด PNG สำหรับตัวละครนี้",
+    "includeCharts": "รวมกราฟ EXP",
+    "includeAverages": "รวมค่าเฉลี่ย",
+    "copyPng": "คัดลอกรูป",
+    "downloadPng": "บันทึก PNG",
+    "openX": "เปิดโพสต์ X",
+    "generating": "กำลังสร้างรูปภาพ...",
+    "ready": "รูปภาพพร้อมแล้ว",
+    "copied": "คัดลอกรูปภาพแล้ว",
+    "downloaded": "บันทึก PNG แล้ว",
+    "downloadedFallback": "คัดลอกไม่ได้ จึงบันทึก PNG แทน",
+    "failed": "สร้างรูปภาพไม่สำเร็จ โปรดลองอีกครั้งภายหลัง",
+    "postText": "{{name}} Lv.{{level}} {{percent}}% | Lulumi Tools"
   }
 }

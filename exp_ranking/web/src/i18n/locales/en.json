@@ -329,5 +329,22 @@
       "invalidGoal": "Check the target level/date (Lv225-275, a valid date)",
       "unsupportedVersion": "Saved data is a newer format; this action isn't available"
     }
+  },
+  "shareImage": {
+    "open": "Share image",
+    "title": "Create share image",
+    "description": "Generate a PNG share card for this character.",
+    "includeCharts": "Include gain charts",
+    "includeAverages": "Include average gains",
+    "copyPng": "Copy image",
+    "downloadPng": "Save PNG",
+    "openX": "Open X post",
+    "generating": "Generating image...",
+    "ready": "Image is ready.",
+    "copied": "Image copied.",
+    "downloaded": "PNG saved.",
+    "downloadedFallback": "Image copy failed, so PNG was saved.",
+    "failed": "Image generation failed. Please try again later.",
+    "postText": "{{name}} Lv.{{level}} {{percent}}% | Lulumi Tools"
   }
 }

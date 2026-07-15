@@ -329,5 +329,22 @@
       "invalidGoal": "目標レベル・目標日を確認してください（Lv225〜275・有効な日付）",
       "unsupportedVersion": "保存データの形式が新しいため、この操作はできません"
     }
+  },
+  "shareImage": {
+    "open": "画像を共有",
+    "title": "共有画像を作成",
+    "description": "キャラクター詳細をX向けPNGとして生成します。",
+    "includeCharts": "増加量グラフを含める",
+    "includeAverages": "平均増加量を含める",
+    "copyPng": "画像をコピー",
+    "downloadPng": "PNG保存",
+    "openX": "X投稿文を開く",
+    "generating": "画像を生成中...",
+    "ready": "画像を生成しました。",
+    "copied": "画像をコピーしました。",
+    "downloaded": "PNGを保存しました。",
+    "downloadedFallback": "画像コピーに失敗したためPNGを保存しました。",
+    "failed": "画像生成に失敗しました。時間をおいて再試行してください。",
+    "postText": "{{name}} Lv.{{level}} {{percent}}% | Lulumi Tools"
   }
 }

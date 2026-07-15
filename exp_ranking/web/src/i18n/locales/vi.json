@@ -329,5 +329,22 @@
       "invalidGoal": "Kiểm tra level/ngày mục tiêu (Lv225-275, ngày hợp lệ)",
       "unsupportedVersion": "Dữ liệu đã lưu có định dạng mới hơn; không thể thực hiện thao tác này"
     }
+  },
+  "shareImage": {
+    "open": "Chia sẻ ảnh",
+    "title": "Tạo ảnh chia sẻ",
+    "description": "Tạo thẻ PNG cho nhân vật này.",
+    "includeCharts": "Kèm biểu đồ tăng EXP",
+    "includeAverages": "Kèm tăng trung bình",
+    "copyPng": "Sao chép ảnh",
+    "downloadPng": "Lưu PNG",
+    "openX": "Mở bài đăng X",
+    "generating": "Đang tạo ảnh...",
+    "ready": "Ảnh đã sẵn sàng.",
+    "copied": "Đã sao chép ảnh.",
+    "downloaded": "Đã lưu PNG.",
+    "downloadedFallback": "Không sao chép được nên đã lưu PNG.",
+    "failed": "Tạo ảnh thất bại. Vui lòng thử lại sau.",
+    "postText": "{{name}} Lv.{{level}} {{percent}}% | Lulumi Tools"
   }
 }
