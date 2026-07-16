@@ -59,7 +59,7 @@ function RegisterSubPanel({ characters, onSelect, onCancel, error, t }) {
  * card) is the only other piece of local UI state — pinning itself is
  * `useProfile().pin`, never reimplemented here.
  */
-export default function MyCharacterSummary({ characters, meta, expTable, ensureHistories, t }) {
+export default function MyCharacterSummary({ characters, meta, expTable, gainRankMaps, ensureHistories, t }) {
   const { pin, pinnedHistoryKeys, primaryHistoryKey } = useProfile();
 
   const [displayedHistoryKey, setDisplayedHistoryKey] = useState(() => primaryHistoryKey);
@@ -260,6 +260,7 @@ export default function MyCharacterSummary({ characters, meta, expTable, ensureH
           allCharacters={characters}
           meta={meta}
           expTable={expTable}
+          gainRankMaps={gainRankMaps}
           historyStatus={historyFetch[displayedHistoryKey] ?? "idle"}
           onRetryHistory={retryHistory}
           t={t}
