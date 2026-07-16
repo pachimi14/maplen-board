@@ -5,7 +5,6 @@ import CharacterDetail from "../CharacterDetail";
 import MyCharacterPinButton from "../components/MyCharacterPinButton";
 import RankingControls from "../components/RankingControls";
 import RankingTable from "../components/RankingTable";
-import ShareImageButton from "../components/ShareImageButton";
 import ShareLinkButton from "../components/ShareLinkButton";
 import { useBoard } from "../board/BoardContext";
 import { navigateToCharacter } from "../board/useHashRoute";
@@ -156,7 +155,6 @@ export default function CharacterDetailView() {
             pinControls={<MyCharacterPinButton character={routeCharacter} />}
             shareControls={
               <div className="flex flex-wrap items-start gap-2">
-                <ShareImageButton character={routeCharacter} gainRankMaps={gainRankMaps} t={t} />
                 <ShareLinkButton t={t} />
               </div>
             }
