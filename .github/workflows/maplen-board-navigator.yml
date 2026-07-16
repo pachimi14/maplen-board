@@ -21,8 +21,6 @@ concurrency:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
   actions: read
 
 jobs:
@@ -117,19 +115,17 @@ jobs:
         working-directory: exp_ranking/bot
         run: pip install -r requirements.txt
 
-      - name: Sync Navigator and export JSON
+      - name: Sync Navigator server info
         working-directory: exp_ranking/bot
         env:
           NAVIGATOR_ONLY: "true"
+          NAVIGATOR_EXPORT_RANKINGS_JSON: "false"
           NAVIGATOR_REQUEST_DELAY_SEC: "0.35"
           NAVIGATOR_ROTATION_ENABLED: "true"
           NAVIGATOR_ROTATION_EPOCH: "2026-06-12"
           SQLITE_DB_PATH: data/ranking.db
-          MVP_JSON_OUTPUT_PATH: ../web/public/data/rankings.json
           CHARACTER_META_JSON_PATH: data/character_meta.json
-          PAGES_SITE_URL: https://lulumi-tools.com
-          MVP_PAGES_RANKINGS_URL: https://lulumi-tools.com/data/rankings.json
-          HYDRATE_META_FROM_PAGES: "true"
+          HYDRATE_META_FROM_PAGES: "false"
           SNAPSHOT_IMPORT_FROM_PAGES: "false"
         run: python main.py
 
@@ -147,32 +143,6 @@ jobs:
           path: exp_ranking/bot/data
           key: maplen-board-data-v4-${{ github.repository }}-meta${{ steps.meta_count.outputs.count }}
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: exp_ranking/web/package-lock.json
-
-      - name: Install web dependencies
-        working-directory: exp_ranking/web
-        run: npm ci
-
-      - name: Build web
-        working-directory: exp_ranking/web
-        env:
-          GITHUB_PAGES: "true"
-          PAGES_BASE_PATH: /
-        run: npm run build
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: exp_ranking/web/dist
-
       - name: Upload ranking.db for commit job
         if: success()
         uses: actions/upload-artifact@v4
@@ -181,37 +151,6 @@ jobs:
           path: exp_ranking/bot/data/ranking.db
           if-no-files-found: ignore
           retention-days: 1
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      actions: read
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment_try.outcome == 'success' && steps.deployment_try.outputs.page_url || steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment_try
-        uses: actions/deploy-pages@v4
-        continue-on-error: true
-
-      - name: Wait before deploy retry
-        if: steps.deployment_try.outcome == 'failure'
-        run: sleep 45
-
-      - name: Deploy to GitHub Pages (retry)
-        if: steps.deployment_try.outcome == 'failure'
-        id: deployment
-        uses: actions/deploy-pages@v4
-
-      - name: Verify deploy succeeded
-        if: steps.deployment_try.outcome == 'failure' && steps.deployment.outcome != 'success'
-        run: |
-          echo "Pages deployment failed after retry"
-          exit 1
 
   commit-db:
     needs: build

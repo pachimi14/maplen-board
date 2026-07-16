@@ -87,9 +87,15 @@ def navigator_fetch_enabled() -> bool:
 
 
 def navigator_only() -> bool:
-    """When true, skip ranking fetch and only sync Navigator worldIds + re-export JSON."""
+    """When true, skip ranking fetch and only sync Navigator worldIds."""
     raw = os.environ.get("NAVIGATOR_ONLY", "").strip().lower()
     return raw in ("1", "true", "yes", "on")
+
+
+def navigator_export_rankings_json() -> bool:
+    """When true, Navigator-only runs may export production rankings JSON."""
+    raw = os.environ.get("NAVIGATOR_EXPORT_RANKINGS_JSON", "true").strip().lower()
+    return raw not in ("0", "false", "no", "off")
 
 
 def sqlite_db_path() -> Path:

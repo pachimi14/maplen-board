@@ -664,13 +664,19 @@ def run_navigator_only() -> int:
         rotation_epoch=config.navigator_rotation_epoch(),
     )
 
-    export_rankings_from_db(
-        db_path,
-        logger,
-        updated_at=resolve_ranking_updated_at(db_path, json_path, logger),
-    )
+    if config.navigator_export_rankings_json():
+        export_rankings_from_db(
+            db_path,
+            logger,
+            updated_at=resolve_ranking_updated_at(db_path, json_path, logger),
+        )
+    else:
+        checkpoint_db(db_path)
+        logger.info(
+            "Navigator-only rankings JSON export skipped "
+            "(NAVIGATOR_EXPORT_RANKINGS_JSON=false)"
+        )
     return 0
-
 
 def build_snapshot_rows(
     ranking: list[dict[str, Any]], fetched: datetime
