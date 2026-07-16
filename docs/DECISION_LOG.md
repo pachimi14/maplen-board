@@ -105,6 +105,8 @@
 
 | LULU-044 | 2026-07-16 | ✅ | **T7 の実装担当は Codex(GPT-5.5 high)を使用(ユーザー指定・PR-006 の本件限り例外)**。理由=Claude 週次トークン残 2% に対し Codex 残 98%。検収は従来どおり統括(Claude)が code-review+実機検証で実施し**作者≠レビュアーを維持**。計画書 §3 未決2点は推奨案で確定: ①スタック=Python+FastAPI+uvicorn ②placeholder=紺 `#0f172a`+緑 `#34d399` の汎用シルエット(ゲーム素材不使用)。パイロットラン成功済み(素curlで200/PNG、2026-07-16) | ユーザー指定 |
 
+| LULU-045 | 2026-07-17 | 🔶 | **T7 検収=条件付き合格(コミット・push 前ゲート)**。Codex 実装(worktree `C:\tmp\msu-ranking-t7-img-proxy`、`t7/img-proxy`=origin/main+5コミット+テーマ回の未コミット差分)を code-review+直接検証で検収。**確認済み**: bot/`.github` 不触(diff 空)/ pytest 18 緑・web 全量 180 緑・build 成功 / CORS=完全一致 allowlist(既定 `https://lulumi-tools.com` のみ・env 上書き可・ワイルドカード無)/ `toShareProxyUrl`=ホスト+prefix 固定・パス検証・dev/prod 切替(`VITE_SHARE_IMAGE_PROXY_BASE` 上書き可)/ i18n 6ロケール 327 キー完全パリティ / 共有テキストの数値は既存 `rankingUtils`(getGainAmount/getGainRank/levelExpPercent)を再利用=正の重複なし・UI 表示と同一計算 / clipboard 不可環境の DL fallback・portal 化・`noopener` 確認。**仕様変更(ユーザー確認済みとして受理)**: 共有導線は詳細ページでなく**マイキャラカード側**(詳細からは ShareImageButton 撤去=共有はピン済みキャラのみ)・テーマ3種(fantasy/aqua/forest、`public/themes/*/frame.webp`≈144KB×3)・共有画像は英語固定・X は文+URL 方式。**push 前の残条件**: ①`frame.webp` 3点の出所確認(ゲーム/Nexon 素材・第三者著作物でないこと=LULU-018 と同方針) ②テーマ回のコミット分割(`.tmp_img_proxy_cache/` 除外・個別 add) ③PR-012 のユーザーローカル確認。VPS 配置(DNS/Caddy/systemd)と本番計測は push 後 | 統括検収(直接検証) |
+
 ## 7. 軽微な整理・改善候補(バックログ・非緊急)
 
 - **フィルタ適用状態の可視化(T2 ローカル確認で判明した UX 改善要望・不具合ではない)**: URL からフィルタ付きで開いた場合、フィルタパネルが折りたたまれたままで「なぜ絞り込まれているか」が初見で分かりにくい。候補=①有効なフィルタが1つでもあればフィルタパネルを自動展開 ②折りたたみ時も「○件のフィルタ適用中」バッジ表示。T2 本体はこのままで問題なし(ユーザー承認)。今後の改善タスク候補
