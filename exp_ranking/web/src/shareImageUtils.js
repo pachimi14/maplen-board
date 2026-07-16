@@ -1,4 +1,6 @@
-﻿export function characterDetailUrl(character, locationLike = window.location) {
+import { formatExp, getGainAmount, getGainRank, levelExpPercent } from "./rankingUtils";
+
+export function characterDetailUrl(character, locationLike = window.location) {
   const origin = locationLike?.origin || "https://lulumi-tools.com";
   const pathname = locationLike?.pathname || "/";
   const key = character?.historyKey || character?.id || character?.name || "";
@@ -20,12 +22,36 @@ export function safeShareFileName(character, date = new Date()) {
   return `lulumi-tools_${safeName}_${year}-${month}-${day}.png`;
 }
 
-export function buildShareText(character, detailUrl, t) {
+function rankText(rank) {
+  return rank != null ? `No.${rank}` : "No.-";
+}
+
+function gainLine(label, amount, rank) {
+  return `${label} +${formatExp(amount)} · ${rankText(rank)}`;
+}
+
+export function buildShareText(character, detailUrl, _t, gainRankMaps = null) {
   const name = character?.name || "Character";
   const level = character?.level ?? "-";
-  const percent = Number(character?.levelExpPercent ?? character?.expPercent ?? 0).toFixed(3);
-  const title = t ? t("shareImage.postText", { name, level, percent }) : `${name} Lv.${level} ${percent}%`;
-  return `${title}\n${detailUrl}`;
+  const percent = levelExpPercent(character).toFixed(3);
+  const job = character?.job || "-";
+  const world = character?.worldId || "-";
+  const levelRank = character?.rank != null ? `Rank #${character.rank}` : "Rank -";
+  const dailyRank = gainRankMaps ? getGainRank(gainRankMaps, character.id, "daily") : null;
+  const weeklyRank = gainRankMaps ? getGainRank(gainRankMaps, character.id, "weekly") : null;
+  const monthlyRank = gainRankMaps ? getGainRank(gainRankMaps, character.id, "monthly") : null;
+
+  return [
+    `My EXP Report — ${name}`,
+    `⭐ ${job} · ${world} · Lv.${level} ${percent}% · ${levelRank}`,
+    "",
+    `📈 ${gainLine("Daily", getGainAmount(character, "daily"), dailyRank)}`,
+    `📊 ${gainLine("Weekly", getGainAmount(character, "weekly"), weeklyRank)}`,
+    `🌙 ${gainLine("Monthly", getGainAmount(character, "monthly"), monthlyRank)}`,
+    "",
+    detailUrl,
+    "#MapleStoryN #LulumiTools",
+  ].join("\n");
 }
 
 export function xIntentUrl(text) {
