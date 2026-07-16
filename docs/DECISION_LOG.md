@@ -107,6 +107,8 @@
 
 | LULU-045 | 2026-07-17 | 🔶 | **T7 検収=条件付き合格(コミット・push 前ゲート)**。Codex 実装(worktree `C:\tmp\msu-ranking-t7-img-proxy`、`t7/img-proxy`=origin/main+5コミット+テーマ回の未コミット差分)を code-review+直接検証で検収。**確認済み**: bot/`.github` 不触(diff 空)/ pytest 18 緑・web 全量 180 緑・build 成功 / CORS=完全一致 allowlist(既定 `https://lulumi-tools.com` のみ・env 上書き可・ワイルドカード無)/ `toShareProxyUrl`=ホスト+prefix 固定・パス検証・dev/prod 切替(`VITE_SHARE_IMAGE_PROXY_BASE` 上書き可)/ i18n 6ロケール 327 キー完全パリティ / 共有テキストの数値は既存 `rankingUtils`(getGainAmount/getGainRank/levelExpPercent)を再利用=正の重複なし・UI 表示と同一計算 / clipboard 不可環境の DL fallback・portal 化・`noopener` 確認。**仕様変更(ユーザー確認済みとして受理)**: 共有導線は詳細ページでなく**マイキャラカード側**(詳細からは ShareImageButton 撤去=共有はピン済みキャラのみ)・テーマ3種(fantasy/aqua/forest、`public/themes/*/frame.webp`≈144KB×3)・共有画像は英語固定・X は文+URL 方式。**push 前の残条件**: ①`frame.webp` 3点の出所確認(ゲーム/Nexon 素材・第三者著作物でないこと=LULU-018 と同方針) ②テーマ回のコミット分割(`.tmp_img_proxy_cache/` 除外・個別 add) ③PR-012 のユーザーローカル確認。VPS 配置(DNS/Caddy/systemd)と本番計測は push 後 | 統括検収(直接検証) |
 
+| LULU-046 | 2026-07-17 | ✅ | **T7 テーマ画像3点の出所確認=受理(LULU-045 残条件①解消)**。ユーザー申告: fantasy=完全自作AI生成 / aqua・forest=ゲーム内スクリーンショットを参照画像に「雰囲気を似せて」AI生成。統括が3枚を目視検査: 実素材の複製・特定マップの再現・キャラ・ロゴ・UI 要素なし、汎用ファンタジー装飾調。焼き込みテキスト(EXP Growth Report / Lulumi Tools / MapleStory N EXP ranking)崩れなし。**forest(キノコの家=ヘネシス想起)が3枚中最高リスクだが識別可能な複製ではなく許容**。指摘が来た場合は forest から差し替え(テーマ構造は frame.webp 差し替えのみで対応可能な設計) | ユーザー申告+統括目視検査 |
+
 ## 7. 軽微な整理・改善候補(バックログ・非緊急)
 
 - **フィルタ適用状態の可視化(T2 ローカル確認で判明した UX 改善要望・不具合ではない)**: URL からフィルタ付きで開いた場合、フィルタパネルが折りたたまれたままで「なぜ絞り込まれているか」が初見で分かりにくい。候補=①有効なフィルタが1つでもあればフィルタパネルを自動展開 ②折りたたみ時も「○件のフィルタ適用中」バッジ表示。T2 本体はこのままで問題なし(ユーザー承認)。今後の改善タスク候補
