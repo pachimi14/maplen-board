@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>T7 canvas taint check</title>
+    <style>
+      body {
+        margin: 24px;
+        background: #020617;
+        color: #e5f2ff;
+        font-family: system-ui, sans-serif;
+      }
+      input {
+        width: min(980px, 100%);
+        padding: 8px;
+        color: #e5f2ff;
+        background: #0f172a;
+        border: 1px solid #334155;
+      }
+      button {
+        margin: 12px 0;
+        padding: 8px 14px;
+      }
+      canvas {
+        display: block;
+        margin-top: 12px;
+        border: 1px solid #334155;
+      }
+      pre {
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>T7 canvas taint check</h1>
+    <p>Run the proxy locally, paste a proxied image URL, then check that <code>toBlob()</code> succeeds.</p>
+    <input id="url" value="http://127.0.0.1:8781/img/charimages/transient/MGEzYTI3NTA2NTk5YTBhMTMzMjI3OWE0NDgzNWExMDA2ODQ1YTEwMTI2NjlhMTAyMjI4NWExMDMyMzU3YTEwNTQ2NjZhMTA2MjE2OGExMDc0MzI2YTEwODI3MDBhMTEwMzAxOWExMzUyMjgyYTQyMmEwYTVhOTlhMGEyYTBhMWEwYTBhMGEwYTBhMGEw.png" />
+    <br />
+    <button id="run">Run</button>
+    <canvas id="canvas" width="180" height="180"></canvas>
+    <pre id="result">idle</pre>
+    <script>
+      const result = document.getElementById("result");
+      const canvas = document.getElementById("canvas");
+      const ctx = canvas.getContext("2d");
+
+      function runCheck() {
+        result.textContent = "loading";
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const image = new Image();
+        image.crossOrigin = "anonymous";
+        image.onload = () => {
+          ctx.drawImage(image, 0, 0, 180, 180);
+          try {
+            canvas.toBlob((blob) => {
+              result.textContent = blob
+                ? `toBlob ok: ${blob.type}, ${blob.size} bytes`
+                : "toBlob returned null";
+            }, "image/png");
+          } catch (error) {
+            result.textContent = `toBlob threw: ${error.message}`;
+          }
+        };
+        image.onerror = () => {
+          result.textContent = "image load failed";
+        };
+        image.src = document.getElementById("url").value;
+      }
+
+      document.getElementById("run").addEventListener("click", runCheck);
+      if (new URLSearchParams(window.location.search).get("autorun") === "1") {
+        runCheck();
+      }
+    </script>
+  </body>
+</html>
