@@ -3,6 +3,7 @@ import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import GoalModal from "./GoalModal";
 import MyCharacterPinButton from "./MyCharacterPinButton";
+import ShareImageButton from "./ShareImageButton";
 import {
   buildGoalDisplayModel,
   classifyHistoryAvailability,
@@ -351,6 +352,7 @@ export default function MyCharacterCard({
   allCharacters,
   meta,
   expTable,
+  gainRankMaps,
   historyStatus = "idle",
   onRetryHistory,
   t,
@@ -430,14 +432,17 @@ export default function MyCharacterCard({
                 {/* §22.12 #1: bordered/padded button instead of a plain
                     text link, so it reads as a clear call-to-action next
                     to the small badge — same position/navigation. */}
-                <button
-                  type="button"
-                  className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-sky-500/50 bg-sky-500/10 px-2.5 py-1 text-sm font-medium text-sky-300 hover:bg-sky-500/20"
-                  onClick={handleNavigateToDetail}
-                >
-                  {t("myCharacters.viewDetail")}
-                  <ArrowRight size={14} />
-                </button>
+                <div className="flex shrink-0 flex-col items-end gap-1.5">
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1 rounded-lg border border-sky-500/50 bg-sky-500/10 px-2.5 py-1 text-sm font-medium text-sky-300 hover:bg-sky-500/20"
+                    onClick={handleNavigateToDetail}
+                  >
+                    {t("myCharacters.viewDetail")}
+                    <ArrowRight size={14} />
+                  </button>
+                  <ShareImageButton character={character} allCharacters={allCharacters} gainRankMaps={gainRankMaps} expTable={expTable} t={t} />
+                </div>
               </div>
               <h2 className="text-xl font-bold break-words leading-tight mt-1">
                 <button
@@ -555,6 +560,7 @@ export default function MyCharacterCard({
             triggerRef={goalTriggerRef}
             t={t}
           />
+
         </>
       )}
 

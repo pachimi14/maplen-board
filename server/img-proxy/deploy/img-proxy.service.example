@@ -1,0 +1,24 @@
+[Unit]
+Description=Lulumi Tools image proxy
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=botuser
+Group=botuser
+WorkingDirectory=/home/botuser/apps/lulumi-tools-img-proxy
+Environment=IMG_PROXY_ALLOWED_ORIGINS=https://lulumi-tools.com
+Environment=IMG_PROXY_CACHE_DIR=/home/botuser/apps/lulumi-tools-img-proxy/.cache
+Environment=IMG_PROXY_CACHE_TTL_SECONDS=604800
+Environment=IMG_PROXY_CACHE_MAX_BYTES=524288000
+Environment=IMG_PROXY_MAX_UPSTREAM_BYTES=1048576
+Environment=IMG_PROXY_UPSTREAM_TIMEOUT_SECONDS=5
+ExecStart=/home/botuser/apps/lulumi-tools-img-proxy/.venv/bin/uvicorn app:app --host 127.0.0.1 --port 8781
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

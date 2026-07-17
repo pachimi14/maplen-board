@@ -153,7 +153,11 @@ export default function CharacterDetailView() {
             mode="expanded"
             onSelectCharacter={handleSwitchCharacter}
             pinControls={<MyCharacterPinButton character={routeCharacter} />}
-            shareControls={<ShareLinkButton t={t} />}
+            shareControls={
+              <div className="flex flex-wrap items-start gap-2">
+                <ShareLinkButton t={t} />
+              </div>
+            }
           />
         ) : (
           <div className="min-h-48 flex items-center justify-center text-slate-400">

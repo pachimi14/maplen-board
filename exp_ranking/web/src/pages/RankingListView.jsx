@@ -142,6 +142,7 @@ export default function RankingListView({ active }) {
           characters={characters}
           meta={meta}
           expTable={expTable}
+          gainRankMaps={gainRankMaps}
           ensureHistories={ensureHistories}
           onFocusSearch={focusSearch}
           t={t}
