@@ -22,6 +22,78 @@ def snapshot_identity_key(
     return resolve_snapshot_identity(row, name_to_asset_key)
 
 
+def select_canonical_snapshot_row(rows: list[SnapshotRow]) -> SnapshotRow:
+    """Deterministically pick one row out of duplicate `(snapshot_date, identity)` rows.
+
+    `ranking_snapshot` only enforces `UNIQUE(snapshot_date, rank)`, not
+    `(snapshot_date, identity)`; a 2026-05-29..06-03 recovery re-import produced
+    118 duplicate (date, identity) groups (167 excess rows; see
+    docs/IMPL_PLAN_dq-dup-rows.md P-DQ-1). This picks the row that represents the
+    genuine daily API fetch rather than a recovery/reimport artifact:
+
+    1. Prefer rows with a non-empty `class_code`/`job_code`. A real ranking-API
+       fetch always populates both; JSON-recovery reimports
+       (`import_snapshots_from_mvp_json`) always leave both blank, so this alone
+       resolves 77/118 real duplicate groups (verified against the production
+       DB, `exp_ranking/bot/data/ranking.db.gz`, decompressed and queried
+       2026-07-20). One group has *no* row with class/job populated (both
+       duplicate rows are themselves reimport artifacts); that group falls
+       through unfiltered to step 2.
+    2. Among the remaining candidates, take the lowest `rank`. Because
+       `ranking_snapshot` enforces `UNIQUE(snapshot_date, rank)`, two rows for
+       the same `snapshot_date` can never share a `rank` -- this step is always
+       decisive (a true tie is schema-impossible). The originally proposed
+       tie-break was "oldest `fetched_at`", but `fetched_at` is not present on
+       `SnapshotRow`/`load_all_snapshots` (would require a data-model change
+       needing separate approval). Verified instead that `rank`-min agrees with
+       `fetched_at`-oldest on all 118 real duplicate groups (0 disagreements),
+       including the 41 groups where the class/job filter alone left more than
+       one candidate: reimport rows are always assigned the class/job-empty
+       AND, in every observed case, the numerically higher rank, so `rank`-min
+       reproduces the same selection `fetched_at`-oldest would have made.
+    """
+    with_class = [
+        row
+        for row in rows
+        if (row.class_code or "").strip() or (row.job_code or "").strip()
+    ]
+    candidates = with_class if with_class else rows
+    return min(candidates, key=lambda row: row.rank)
+
+
+def deduplicate_snapshots_by_identity(
+    snapshots: list[SnapshotRow],
+    name_to_asset_key: dict[str, str] | None = None,
+) -> list[SnapshotRow]:
+    """Collapse rows sharing `(snapshot_date, identity)` to one canonical row each.
+
+    No-op (returns an equivalent list) when there are no duplicates, which is
+    true for 99.5% of rows/characters -- see `select_canonical_snapshot_row`.
+    Input order is preserved for the surviving rows; call sites that need a
+    specific order should sort the result themselves.
+    """
+    if not snapshots:
+        return []
+    if name_to_asset_key is None:
+        name_to_asset_key = build_name_to_asset_key(snapshots)
+
+    groups: dict[tuple[str, str], list[SnapshotRow]] = {}
+    group_order: list[tuple[str, str]] = []
+    for row in snapshots:
+        identity = snapshot_identity_key(row, name_to_asset_key)
+        key = (row.snapshot_date, identity)
+        if key not in groups:
+            groups[key] = []
+            group_order.append(key)
+        groups[key].append(row)
+
+    deduped: list[SnapshotRow] = []
+    for key in group_order:
+        rows = groups[key]
+        deduped.append(rows[0] if len(rows) == 1 else select_canonical_snapshot_row(rows))
+    return deduped
+
+
 def build_analysis_rows(
     snapshots: list[SnapshotRow],
     benchmark_character: str = "pachimi",
@@ -29,11 +101,12 @@ def build_analysis_rows(
     if not snapshots:
         return []
 
+    name_to_asset_key = build_name_to_asset_key(snapshots)
+    deduped = deduplicate_snapshots_by_identity(snapshots, name_to_asset_key)
     ordered = sorted(
-        snapshots,
+        deduped,
         key=lambda row: (row.snapshot_date, row.rank),
     )
-    name_to_asset_key = build_name_to_asset_key(ordered)
 
     progress_by_date_identity: dict[tuple[str, str], int] = {}
     totals_by_date: dict[str, dict[str, int]] = {}
