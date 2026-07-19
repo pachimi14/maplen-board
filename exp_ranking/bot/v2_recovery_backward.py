@@ -1,28 +1,34 @@
-"""T12 P1 follow-up investigation (not wired into main.py / config.py).
+"""T12 P1: backward-exact v2-shard DB recovery core (production).
 
-Candidate "backward-exact" DB recovery from v2 shards, as requested by the
-coordinator after P1 review: instead of inverting each historical day's
-rounded `levelExpPercent` independently (lossy, and can restore a dailyGain
-*larger* than the true value -- unacceptable per the user's accuracy bar),
-walk backward from the exact anchor (latest) day's exp using each day's own
-*exact* `dailyGain` (already computed by analysis.py from real, un-rounded
-exp at original export time -- see `analysis.build_analysis_rows`) and the
-per-day `level` (also exact in the shard) to recover each earlier day's exp
-via the level_exp.py level-requirement table.
+Used by `sqlite_storage.import_snapshots_from_v2_json` (and, transitively,
+`import_missing_snapshots_from_v2_url`) to rebuild `ranking_snapshot` rows
+from the v2 `rankings.json` summary + `shard-NN.json` history files -- the
+worst-case recovery path when neither actions/cache, a Release Asset, nor a
+git-committed db.gz is available.
 
-This module intentionally does NOT touch sqlite_storage.py's shipped
-P1 function (`import_snapshots_from_v2_json`, which uses the percent-inversion
-method, "method A" below) or mvp_export.py / the v2 JSON format. It exists so
-"method A" (already shipped), "method B" (backward, percent-fallback on
-break), "method C" (backward, null/skip on break) and "method D" (backward,
-conservative/never-over percent-fallback on break) can be measured
-side-by-side against real production data before any decision is made.
+Design (decided after a coordinator/user review of an earlier percent-only
+approach that could restore a `dailyGain` *larger* than the true value):
+walk backward from the exact anchor (latest) day's exp -- taken verbatim from
+the v2 summary, which carries it with full precision -- using each day's own
+*exact* `dailyGain` (computed by `analysis.build_analysis_rows` from real,
+un-rounded exp at original export time; never itself lossy) and the per-day
+`level` (also exact in the shard) to recover each earlier day's exp via the
+level_exp.py level-requirement table. When the exact chain cannot continue
+(missing dailyGain, or a duplicated snapshotDate -- see below), a fallback
+inversion of that day's rounded `levelExpPercent` is used, but only after
+subtracting the maximum possible upward rounding bias, so the result is
+*never* above the true exp (a small, bounded, systematic under-estimate
+instead of a coin-flip over/under estimate).
 
-Measured against a real 51-day / ~7626-character production DB
-(exp_ranking/bot/data/ranking.db.gz), methods C and D both achieve 0
-over-restored exp values out of 334,147 historical (character, date) points
-(method A: 158,011 over-restored, up to +20.5M; method B: 28, up to +1.56M).
-See the T12 P1 follow-up report for full numbers.
+Measured against a real 51-day / ~7,626-character production DB
+(`exp_ranking/bot/data/ranking.db.gz`): 0 over-restored exp values out of
+334,147 historical (character, date) points, full day coverage (no day ever
+marked unrecoverable), and 0 display-string or gain-rank changes in the
+re-exported output. The previously shipped percent-only approach had 158,011
+over-restored points (up to +20.5M) and changed roughly half of all
+weekly/monthly/daily gain rankings. See DECISION_LOG / the T12 P1 follow-up
+reports for the full comparison against the alternatives considered
+(percent-only, backward+null-on-break, backward+naive-percent-fallback).
 """
 
 from __future__ import annotations
@@ -63,17 +69,6 @@ def exp_from_progress(level: int, progress: int) -> int | None:
     return exp
 
 
-def exp_from_percent(level: int, percent: float) -> int:
-    """Method A (already shipped in sqlite_storage.import_snapshots_from_v2_json):
-    invert the rounded levelExpPercent directly. Lossy; kept here only so all
-    candidate methods can share one measurement harness. `levelExpPercent` is
-    stored rounded to 3 decimals, so this can land up to ~0.0005 percentage
-    points *above* the true percent -- i.e. this can over-restore.
-    """
-    required = exp_required_for_level(level)
-    return int(required * percent / 100.0) if required else 0
-
-
 # Half of the 3-decimal rounding step used for levelExpPercent
 # (round(percent, 3)): the maximum amount the stored percent can be above the
 # true percent.
@@ -81,12 +76,12 @@ _PERCENT_ROUNDING_HALF_STEP = 0.0005
 
 
 def exp_from_percent_conservative(level: int, percent: float) -> int:
-    """Method D fallback: same inversion as exp_from_percent, but first
-    subtracts the maximum possible upward rounding bias from the stored
-    percent. Because the percent->exp mapping is monotonic increasing, this
-    guarantees the result is <= the true exp for that day (never
-    over-restores), at the cost of a small, bounded, systematic
-    under-estimate instead of a coin-flip over/under estimate.
+    """Fallback inversion used when the exact backward chain breaks: same
+    idea as inverting `levelExpPercent` directly, but first subtracts the
+    maximum possible upward rounding bias from the stored percent. Because
+    the percent->exp mapping is monotonic increasing, this guarantees the
+    result is <= the true exp for that day (never over-restores), at the
+    cost of a small, bounded, systematic under-estimate.
     """
     required = exp_required_for_level(level)
     if not required:
@@ -100,7 +95,7 @@ class ReconstructedDay:
     snapshot_date: str
     level: int
     exp: int | None
-    method: str  # "exact" | "percent_fallback" | "unrecoverable"
+    method: str  # "exact" | "conservative_fallback" | "unrecoverable"
 
 
 def _percent_of(point: dict) -> float:
@@ -117,33 +112,30 @@ def reconstruct_exp_backward(
     anchor_level: int,
     anchor_exp: int,
     points_desc: list[dict],
-    fallback: str = "none",
+    fallback: str = "conservative",
 ) -> list[ReconstructedDay]:
     """Reconstruct exp for every point in `points_desc` (a single character's
     v2 shard `history` array, sorted descending by snapshotDate, points_desc[0]
     == the anchor/latest day).
 
     Each point must carry: snapshotDate, level, dailyGain (may be None),
-    levelExpPercent/expPercent (used only as a fallback / cross-check).
+    levelExpPercent/expPercent (used only as a fallback).
 
     `fallback` selects what happens when the exact backward chain breaks
     (dailyGain missing, algebraically inconsistent, or the snapshotDate is
     duplicated -- see below):
 
-    - "none" (method C): mark that day, and (since re-anchoring an exact
-      progress value at that point is no longer possible) all earlier days,
-      as unrecoverable (exp=None) rather than guessing. Never over-restores;
-      trades off coverage for days before an unresolved break.
-    - "percent" (method B): invert that single day's rounded percent
-      (exp_from_percent), then keep chaining backward from that approximate
-      point. Maximizes coverage but this specific inversion can land above
-      the true exp (over-restore) by design (percent rounding is
-      direction-agnostic).
-    - "conservative" (method D): invert that single day's rounded percent
-      after subtracting the maximum possible upward rounding bias
+    - "conservative" (production default): invert that single day's rounded
+      percent after subtracting the maximum possible upward rounding bias
       (exp_from_percent_conservative), then keep chaining backward from that
-      point. Maximizes coverage AND is guaranteed to never over-restore
-      (systematic small under-estimate instead).
+      point. Never over-restores (systematic small under-estimate instead)
+      and never drops a day.
+    - "none": mark that day, and (since re-anchoring an exact progress value
+      at that point is no longer possible) all earlier days, as unrecoverable
+      (exp=None) rather than guessing. Also never over-restores, but trades
+      off coverage for days before an unresolved break. Kept as an option for
+      tests/analysis that want to isolate "exact-or-nothing" behavior; not
+      used by the production recovery path.
 
     Real production data can contain more than one row for the same
     (identity, snapshotDate) -- e.g. the ranking API listing a character at
@@ -202,18 +194,15 @@ def reconstruct_exp_backward(
 
         # Break: missing dailyGain, ambiguous (duplicated) date, or an
         # algebraically inconsistent result.
-        if fallback == "percent":
-            exp_fallback = exp_from_percent(prev_level, _percent_of(prev_point))
-        elif fallback == "conservative":
+        if fallback == "conservative":
             exp_fallback = exp_from_percent_conservative(prev_level, _percent_of(prev_point))
-        else:
-            chain_alive = False
-            results.append(ReconstructedDay(prev_date, prev_level, None, "unrecoverable"))
+            progress = calculate_progress_toward_275(prev_level, exp_fallback)
+            results.append(
+                ReconstructedDay(prev_date, prev_level, exp_fallback, "conservative_fallback")
+            )
             continue
 
-        progress = calculate_progress_toward_275(prev_level, exp_fallback)
-        results.append(
-            ReconstructedDay(prev_date, prev_level, exp_fallback, "percent_fallback")
-        )
+        chain_alive = False
+        results.append(ReconstructedDay(prev_date, prev_level, None, "unrecoverable"))
 
     return results

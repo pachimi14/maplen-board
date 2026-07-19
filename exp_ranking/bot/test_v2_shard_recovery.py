@@ -4,31 +4,32 @@ no git db.gz).
 Feasibility finding (see IMPL_PLAN_T12 P1): the v2 shard `history` array only
 carries `level` + `levelExpPercent` (no raw `exp`, no rank, no job/class code,
 no image, no character name) for every date except the latest one, which is
-fully preserved in the v2 summary (`data/v2/rankings.json`). This mirrors the
-existing v1 recovery path (`import_snapshots_from_mvp_json`), which already
-reconstructs `exp` by inverting the rounded `levelExpPercent` -- an accepted,
-already-shipped lossy step. `import_snapshots_from_v2_json` reuses the exact
-same technique.
+fully preserved in the v2 summary (`data/v2/rankings.json`).
 
-`import_snapshots_from_v2_json` prefers the v2 summary's exact `level`/`exp`
-for the *latest* (anchor) day over inverting that day's shard `levelExpPercent`
-point, since the summary already carries it with full precision. This makes
-the anchor day, and any `dailyGain` computed against it by the bot's next real
-fetch, exact -- not just "close".
+`import_snapshots_from_v2_json` reconstructs each historical day's exp by
+walking *backward* from the summary's exact anchor (latest) day, using each
+day's own exact `dailyGain` (computed by analysis.py from real, un-rounded
+exp -- never itself lossy) and level (v2_recovery_backward.py). An earlier
+percent-only approach (inverting each day's rounded `levelExpPercent`
+independently) was evaluated and rejected: it could restore a `dailyGain`
+*larger* than the true value in ~47% of cases. The shipped backward-exact +
+conservative-fallback design (method D in the T12 P1 review) never does so
+(see the acceptance tests below), at the cost of a small, bounded,
+systematic *under*-estimate on the rare (real-data: ~0.1%) days where the
+exact chain breaks (missing dailyGain, or a duplicated `snapshotDate` --  a
+real, pre-existing production data-quality artifact unrelated to T12).
 
 These tests quantify what is, and is not, exactly reproduced after recovery:
 - Exact: snapshot_days, the latest day's rank/name/job/level/exp/image/
   worldId/characterAssetKey (and everything derived only from the latest
-  day), and level per historical day.
+  day), level per historical day, and (for characters with no duplicate-date
+  rows) dailyGain per historical day too.
 - Exact after one more real fetch: rank/previousRank/jobRank/worldRank/
   dailyGain for the day that follows recovery (both operands of that day's
   gain diff -- the new real day and the recovered-but-exact anchor day --
   are exact).
-- Approximate (documented, bounded): dailyGain for reconstructed *historical*
-  days (both non-anchor endpoints are approximate), and weeklyGain/
-  monthlyGain windows that span multiple such days, because raw `exp` for
-  non-anchor days is only recoverable up to the ~0.001-percentage-point
-  rounding of `levelExpPercent`.
+- Never-over, occasionally-under: reconstructed exp/dailyGain for the rare
+  days where the exact chain breaks (see v2_recovery_backward.py).
 """
 
 from __future__ import annotations
@@ -47,6 +48,7 @@ from sqlite_storage import (
     load_all_snapshots,
     load_character_meta,
 )
+from v2_recovery_backward import reconstruct_exp_backward
 
 
 CHARACTERS = [
@@ -306,12 +308,11 @@ def test_v2_shard_recovery_history_level_exact_and_percent_round_trips(tmp_path:
             assert true_point["expPercent"] == recovered_point["expPercent"]
 
 
-def test_v2_shard_recovery_daily_gain_precision_is_bounded(tmp_path: Path) -> None:
-    """Quantifies the known, pre-existing (v1-inherited) precision gap: dailyGain
-    for reconstructed historical days is derived from an `exp` value inverted
-    from a 3-decimal-rounded percent, so it can differ from the ground truth by
-    a small, bounded amount tied to the level's exp requirement -- not an
-    unbounded or qualitative divergence.
+def test_v2_shard_recovery_daily_gain_is_exact_when_no_duplicate_dates(tmp_path: Path) -> None:
+    """With no duplicate-date rows (the only thing that can break the exact
+    backward chain besides a missing dailyGain, which doesn't occur in a
+    clean fixture), every historical day's dailyGain reconstructs exactly --
+    not just "bounded".
     """
     dates = _dates("2026-01-01", DAYS)
     true_db = tmp_path / "true.db"
@@ -333,13 +334,7 @@ def test_v2_shard_recovery_daily_gain_precision_is_bounded(tmp_path: Path) -> No
     for shard in recovered_shard_payloads.values():
         recovered_histories.update(shard["histories"])
 
-    # Bound: half a rounding step (0.0005 of 100%) of the *next* level's exp
-    # requirement, doubled for two consecutive approximated days, plus a small
-    # integer-rounding slack.
-    max_required = max(exp_required_for_level(lvl) or 0 for lvl in range(240, 275))
-    bound = 2 * (max_required * 0.0005 / 100.0) + 2
-
-    max_abs_diff = 0
+    checked = 0
     for history_key, true_points in true_histories.items():
         recovered_points = recovered_histories[history_key]
         for true_point, recovered_point in zip(true_points, recovered_points):
@@ -347,15 +342,13 @@ def test_v2_shard_recovery_daily_gain_precision_is_bounded(tmp_path: Path) -> No
             recovered_gain = recovered_point.get("dailyGain")
             if true_gain is None or recovered_gain is None:
                 continue
-            diff = abs(true_gain - recovered_gain)
-            max_abs_diff = max(max_abs_diff, diff)
-            assert diff <= bound, (
+            assert recovered_gain == true_gain, (
                 f"{history_key} {true_point['snapshotDate']}: "
-                f"true={true_gain} recovered={recovered_gain} diff={diff} bound={bound}"
+                f"true={true_gain} recovered={recovered_gain}"
             )
+            checked += 1
 
-    # Sanity: the bound is meaningful (not trivially satisfied by e.g. 0 == 0).
-    assert max_abs_diff >= 0
+    assert checked > 0
 
 
 def test_v2_shard_recovery_additive_merge_does_not_regress_existing_rows(
@@ -452,3 +445,243 @@ def test_import_missing_snapshots_from_v2_url_fetches_summary_and_all_shards(
     # One request for the summary + one per shard actually present.
     assert requested_urls[0] == summary_url
     assert len(requested_urls) == 1 + len(shard_payloads)
+
+
+# =============================================================================
+# P1 acceptance criteria (user-specified, T12 P1 re-review after adopting
+# method D in production). Fixture: the existing 3-character synthetic DB,
+# plus one *injected* duplicate-(identity, snapshotDate) row for "Beta" --
+# same shape as the real production artifact found in ranking.db.gz during
+# the T12 P1 investigation (a character listed twice on the same day, at two
+# different ranks, with two different exp values). This is deliberately the
+# *only* source of an exact-chain break in the fixture, so criteria 1/2 can
+# assert precise counts.
+# =============================================================================
+
+
+def _inject_duplicate_day_row(
+    db_path: Path, *, snapshot_date: str, name: str, asset_key: str, level: int, exp: int
+) -> None:
+    """Simulate the real ranking-API artifact: a second row for an existing
+    character on a date it's already present on, at a different rank and a
+    different exp (see T12 P1 follow-up report, e.g. VeryAlone00 /
+    CHARd0mcmnj1hovs73do3g8g on 2026-06-02/03 in the real production DB).
+    """
+    duplicate_rank = len(CHARACTERS) + 1  # any rank not already used that day
+    append_snapshots(
+        db_path,
+        [
+            SnapshotRow(
+                snapshot_date=snapshot_date,
+                rank=duplicate_rank,
+                rank_fluctuation=0,
+                character_name=name,
+                class_code="",
+                job_code="",
+                level=level,
+                exp=exp,
+                image_url="",
+                character_asset_key=asset_key,
+            )
+        ],
+        fetched_at=f"{snapshot_date}T09:05:00+00:00",
+    )
+
+
+def _build_fixture_with_duplicate_row(tmp_path: Path):
+    """Ground-truth DB: DAYS of clean data for all 3 characters, plus one
+    injected duplicate row for Beta partway through the window."""
+    dates = _dates("2026-01-01", DAYS)
+    true_db = tmp_path / "true_with_dupe.db"
+    _build_true_db(true_db, dates)
+
+    dupe_date = dates[DAYS // 2]
+    beta_row = next(
+        row
+        for row in load_all_snapshots(true_db)
+        if row.snapshot_date == dupe_date and row.character_name == "Beta"
+    )
+    _inject_duplicate_day_row(
+        true_db,
+        snapshot_date=dupe_date,
+        name="Beta",
+        asset_key="asset-beta",
+        level=beta_row.level,
+        exp=beta_row.exp + 500_000,  # a plausible, slightly different exp
+    )
+    return true_db, dates, dupe_date
+
+
+# JS port of rankingUtils.js:124-134 (formatExp) -- the display rounding
+# quantum applied to daily/weekly/monthly gain in RankingTable.jsx,
+# TopGainHighlights.jsx, CharacterDetail.jsx.
+def _format_exp(value) -> str:
+    if value is None:
+        return "None"
+    if value >= 1_000_000_000_000:
+        return f"{value / 1_000_000_000_000:.2f}T"
+    if value >= 1_000_000_000:
+        return f"{value / 1_000_000_000:.1f}B"
+    if value >= 1_000_000:
+        return f"{value / 1_000_000:.1f}M"
+    return f"{int(round(value)):,}"
+
+
+# Port of rankingUtils.js:218-229 (computeGainRankMaps): descending sort by
+# gain amount, 1-based rank.
+def _gain_rank_map(characters: list[dict], field: str) -> dict[int, int]:
+    ordered = sorted(characters, key=lambda c: -(c.get(field) or 0))
+    return {c["id"]: i + 1 for i, c in enumerate(ordered)}
+
+
+def test_p1_acceptance_exact_and_fallback_counts(tmp_path: Path) -> None:
+    """Criteria 1+2: normal characters reconstruct 100% "exact" (fallback
+    never fires for them); the character with an injected duplicate-date row
+    is the *only* source of fallback, and it fires exactly at that break.
+    """
+    true_db, dates, dupe_date = _build_fixture_with_duplicate_row(tmp_path)
+    _, true_summary, true_shards = _export_v2(true_db, latest_snapshot_date=dates[-1])
+
+    histories_by_key: dict[str, list[dict]] = {}
+    for shard in true_shards:
+        histories_by_key.update(shard)
+
+    stats_by_character: dict[str, dict[str, int]] = {}
+    for character in true_summary["characters"]:
+        history_key = character["historyKey"]
+        history = histories_by_key[history_key]
+        points_desc = sorted(history, key=lambda p: p["snapshotDate"], reverse=True)
+        reconstructed = reconstruct_exp_backward(
+            anchor_date=dates[-1],
+            anchor_level=character["level"],
+            anchor_exp=character["exp"],
+            points_desc=points_desc,
+        )
+        counts = {"exact": 0, "conservative_fallback": 0, "unrecoverable": 0}
+        for day in reconstructed:
+            counts[day.method] += 1
+        stats_by_character[character["name"]] = counts
+
+    # Criterion 1: normal characters (no duplicate rows) are 100% exact.
+    assert stats_by_character["Alpha"] == {"exact": DAYS, "conservative_fallback": 0, "unrecoverable": 0}
+    assert stats_by_character["Gamma"] == {"exact": DAYS, "conservative_fallback": 0, "unrecoverable": 0}
+
+    # Criterion 2: fallback fires only for Beta, only because of the injected
+    # duplicate day (not a systemic/frequent occurrence).
+    beta_stats = stats_by_character["Beta"]
+    assert beta_stats["unrecoverable"] == 0
+    assert beta_stats["conservative_fallback"] > 0
+    assert beta_stats["conservative_fallback"] < DAYS // 4, (
+        "fallback should be confined to the neighborhood of the single "
+        f"injected duplicate day, not pervasive: {beta_stats}"
+    )
+    # DAYS + 1: the injected duplicate adds one extra history point for Beta
+    # (two rows on dupe_date instead of one).
+    assert beta_stats["exact"] + beta_stats["conservative_fallback"] == DAYS + 1
+
+
+def test_p1_acceptance_never_over_restores(tmp_path: Path) -> None:
+    """Criterion 3: reconstructed exp never exceeds the true exp, for every
+    character and every historical day, including at the injected break.
+    """
+    true_db, dates, dupe_date = _build_fixture_with_duplicate_row(tmp_path)
+    true_snapshots = load_all_snapshots(true_db)
+    true_exp_by = {
+        (row.character_asset_key or row.character_name, row.snapshot_date): row.exp
+        for row in true_snapshots
+    }
+
+    _, true_summary, true_shards = _export_v2(true_db, latest_snapshot_date=dates[-1])
+    shard_payloads = _shard_payloads(true_summary, true_shards)
+
+    recovered_db = tmp_path / "recovered_never_over.db"
+    imported = import_snapshots_from_v2_json(recovered_db, true_summary, shard_payloads)
+    assert imported > 0
+
+    recovered_snapshots = load_all_snapshots(recovered_db)
+    checked = 0
+    over_restored = []
+    for row in recovered_snapshots:
+        key = (row.character_asset_key or row.character_name, row.snapshot_date)
+        true_exp = true_exp_by.get(key)
+        if true_exp is None:
+            continue
+        checked += 1
+        if row.exp > true_exp:
+            over_restored.append((key, true_exp, row.exp))
+
+    assert checked > 0
+    assert over_restored == [], f"over-restored exp found: {over_restored}"
+
+
+def test_p1_acceptance_no_display_or_rank_impact(tmp_path: Path) -> None:
+    """Criterion 4: re-exporting the recovered DB (after the bot's next real
+    fetch, the realistic post-recovery flow) produces the same formatExp
+    display strings and the same daily/weekly/monthly gain rank ordering as
+    a DB that never lost data, for every character.
+    """
+    true_db, dates, dupe_date = _build_fixture_with_duplicate_row(tmp_path)
+    next_day = _dates(dates[-1], 2)[1]
+
+    # Ground truth: continue the *same* (duplicate-including) history one
+    # more real day.
+    true_db_plus_one = tmp_path / "true_plus_one.db"
+    _build_true_db(true_db_plus_one, dates + [next_day])
+    _inject_duplicate_day_row(
+        true_db_plus_one,
+        snapshot_date=dupe_date,
+        name="Beta",
+        asset_key="asset-beta",
+        level=next(
+            row.level
+            for row in load_all_snapshots(true_db_plus_one)
+            if row.snapshot_date == dupe_date and row.character_name == "Beta"
+        ),
+        exp=next(
+            row.exp
+            for row in load_all_snapshots(true_db_plus_one)
+            if row.snapshot_date == dupe_date and row.character_name == "Beta"
+        )
+        + 500_000,
+    )
+    _, true_summary_next, _ = _export_v2(true_db_plus_one, latest_snapshot_date=next_day)
+
+    # Recovery: v2 shards (with the duplicate baked in) up to dates[-1], then
+    # the bot's real next-day fetch on top.
+    _, summary, shards = _export_v2(true_db, latest_snapshot_date=dates[-1])
+    shard_payloads = _shard_payloads(summary, shards)
+    recovered_db = tmp_path / "recovered_display.db"
+    import_snapshots_from_v2_json(recovered_db, summary, shard_payloads)
+
+    next_day_rows = [
+        row for row in load_all_snapshots(true_db_plus_one) if row.snapshot_date == next_day
+    ]
+    append_snapshots(recovered_db, next_day_rows, fetched_at=f"{next_day}T09:05:00+00:00")
+    _, recovered_summary_next, _ = _export_v2(recovered_db, latest_snapshot_date=next_day)
+
+    true_characters = true_summary_next["characters"]
+    recovered_characters = recovered_summary_next["characters"]
+    true_by_key = {c["historyKey"]: c for c in true_characters}
+    recovered_by_key = {c["historyKey"]: c for c in recovered_characters}
+    assert set(true_by_key) == set(recovered_by_key)
+
+    display_mismatches = []
+    for field in ("dailyGain", "weeklyGain", "monthlyGain"):
+        for key, true_char in true_by_key.items():
+            recovered_char = recovered_by_key[key]
+            true_display = _format_exp(true_char.get(field))
+            recovered_display = _format_exp(recovered_char.get(field))
+            if true_display != recovered_display:
+                display_mismatches.append((key, field, true_display, recovered_display))
+    assert display_mismatches == [], f"display string changed: {display_mismatches}"
+
+    rank_mismatches = []
+    for field in ("dailyGain", "weeklyGain", "monthlyGain"):
+        true_ranks = _gain_rank_map(true_characters, field)
+        recovered_ranks = _gain_rank_map(recovered_characters, field)
+        for key, true_char in true_by_key.items():
+            true_rank = true_ranks[true_char["id"]]
+            recovered_rank = recovered_ranks[recovered_by_key[key]["id"]]
+            if true_rank != recovered_rank:
+                rank_mismatches.append((key, field, true_rank, recovered_rank))
+    assert rank_mismatches == [], f"gain rank changed: {rank_mismatches}"

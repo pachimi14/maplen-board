@@ -1044,16 +1044,22 @@ def import_snapshots_from_v2_json(
     shard_payloads: dict[int, dict] | list[dict] | None,
 ) -> int:
     """Rebuild SQLite snapshot rows from v2 rankings.json summary + shard-NN.json
-    history JSON (recovery). Mirrors import_snapshots_from_mvp_json's v1 algorithm
-    (same lossy level+levelExpPercent -> exp reconstruction, same additive
-    INSERT OR IGNORE semantics), adapted for the v2 summary/shard split where
-    `history` lives in shard files keyed by historyKey instead of inline on the
-    summary character.
+    history JSON (recovery; T12 P1). Worst-case path used when neither
+    actions/cache, a Release Asset, nor a git-committed db.gz is available.
+
+    Per character, walks backward from the exact anchor (latest) day's exp --
+    taken verbatim from the summary -- using each day's own exact dailyGain
+    and level (see v2_recovery_backward.reconstruct_exp_backward for the full
+    algorithm and rationale). This never restores an exp/dailyGain value
+    larger than the true one, and never drops a day (falls back to a
+    conservative, never-over percent inversion when the exact chain breaks).
+    Additive INSERT OR IGNORE semantics, same as import_snapshots_from_mvp_json
+    (v1) and merge_ranking_databases.
     """
     from collections import defaultdict
     from datetime import datetime, timezone
 
-    from level_exp import exp_required_for_level
+    from v2_recovery_backward import reconstruct_exp_backward
 
     characters = summary_payload.get("characters") if summary_payload else None
     meta = summary_payload.get("meta") if summary_payload else None
@@ -1088,6 +1094,7 @@ def import_snapshots_from_v2_json(
     histories_by_key = _merge_v2_shard_histories(shard_payloads)
 
     pending: dict[str, list[dict[str, object]]] = defaultdict(list)
+    recon_stats = {"exact": 0, "conservative_fallback": 0, "unrecoverable": 0}
     for character in characters:
         if not isinstance(character, dict):
             continue
@@ -1096,53 +1103,54 @@ def import_snapshots_from_v2_json(
             continue
         history_key = str(character.get("historyKey") or "").strip()
         history = histories_by_key.get(history_key)
-        if not isinstance(history, list):
+        if not isinstance(history, list) or not history:
             continue
         asset_key = str(character.get("characterAssetKey") or "").strip()
         latest_rank = int(character.get("rank") or 0)
         image_url = str(character.get("imageUrl") or "").strip()
         summary_level = character.get("level")
         summary_exp = character.get("exp")
+        if summary_level is None or summary_exp is None:
+            continue
 
+        points_desc: list[dict] = []
         for point in history:
             if not isinstance(point, dict):
                 continue
-            snapshot_raw = str(point.get("snapshotDate") or "").strip()
-            if snapshot_raw:
-                snapshot_date = snapshot_raw
-            else:
+            snapshot_date = str(point.get("snapshotDate") or "").strip()
+            if not snapshot_date:
+                # Defensive fallback for older/legacy JSON that only carries
+                # the short "MM/DD" chart label (mirrors
+                # import_snapshots_from_mvp_json's v1 behavior); current
+                # mvp_export.py always writes snapshotDate.
                 chart_date = str(point.get("date") or "").strip()
                 if not chart_date or "/" not in chart_date:
                     continue
                 snapshot_date = _chart_date_to_iso(chart_date, latest_date)
+                if not snapshot_date:
+                    continue
+            points_desc.append({**point, "snapshotDate": snapshot_date})
+        if not points_desc:
+            continue
+        points_desc.sort(key=lambda point: point["snapshotDate"], reverse=True)
 
-            if (
-                snapshot_date == latest_date
-                and summary_level is not None
-                and summary_exp is not None
-            ):
-                # The v2 summary carries the latest day's exact level/exp (no
-                # rounding loss); prefer it over inverting the shard's rounded
-                # levelExpPercent so the recovered "anchor" day -- and any
-                # dailyGain computed against it on the next real fetch -- is
-                # exact, not approximate.
-                level = int(summary_level)
-                exp = int(summary_exp)
-            else:
-                level = int(point.get("level") or 0)
-                percent = float(
-                    point.get("levelExpPercent")
-                    if point.get("levelExpPercent") is not None
-                    else point.get("expPercent") or 0
-                )
-                required = exp_required_for_level(level)
-                exp = int(required * percent / 100.0) if required else 0
-            pending[snapshot_date].append(
+        reconstructed = reconstruct_exp_backward(
+            anchor_date=latest_date,
+            anchor_level=int(summary_level),
+            anchor_exp=int(summary_exp),
+            points_desc=points_desc,
+        )
+
+        for day in reconstructed:
+            recon_stats[day.method] = recon_stats.get(day.method, 0) + 1
+            if day.exp is None or not day.snapshot_date:
+                continue
+            pending[day.snapshot_date].append(
                 {
                     "name": name,
                     "asset_key": asset_key,
-                    "level": level,
-                    "exp": exp,
+                    "level": day.level,
+                    "exp": day.exp,
                     "image_url": image_url,
                     "sort_rank": latest_rank if latest_rank > 0 else 999_999,
                 }
@@ -1150,6 +1158,13 @@ def import_snapshots_from_v2_json(
 
     if not pending:
         return 0
+
+    logger.info(
+        "v2 shard backward reconstruction: exact=%s conservative_fallback=%s unrecoverable=%s",
+        recon_stats.get("exact", 0),
+        recon_stats.get("conservative_fallback", 0),
+        recon_stats.get("unrecoverable", 0),
+    )
 
     init_db(db_path)
     imported = 0
