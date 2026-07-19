@@ -46,6 +46,7 @@ from sqlite_storage import (
     import_character_meta_file,
     init_db,
     import_missing_snapshots_from_url,
+    import_missing_snapshots_from_v2_url,
     import_snapshots_from_mvp_json,
     latest_snapshot_date,
     latest_snapshot_fetched_at,
@@ -438,6 +439,18 @@ def bootstrap_database(db_path: Path, json_path: Path, logger: logging.Logger) -
                 "Snapshot days after Pages JSON import: %s (+%s rows)",
                 count_snapshot_dates(db_path),
                 pages_imported,
+            )
+
+    if config.snapshot_import_from_v2_shards():
+        v2_imported = import_missing_snapshots_from_v2_url(
+            db_path,
+            config.pages_v2_rankings_url(),
+        )
+        if v2_imported:
+            logger.info(
+                "Snapshot days after v2 shard import: %s (+%s rows)",
+                count_snapshot_dates(db_path),
+                v2_imported,
             )
 
     if json_path.exists():
