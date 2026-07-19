@@ -1014,6 +1014,243 @@ def migrate_unique_snapshot_identity_constraint(
         create_unique_snapshot_identity_index(db_path)
         index_created = True
     return {"dedupe": dedupe_result, "index_created": index_created}
+def _merge_v2_shard_histories(
+    shard_payloads: dict[int, dict] | list[dict] | None,
+) -> dict[str, list[dict]]:
+    """Flatten {shard_index: {historyKey: history}} (or a list of shard payloads)
+    into a single historyKey -> history map."""
+    histories_by_key: dict[str, list[dict]] = {}
+    if not shard_payloads:
+        return histories_by_key
+
+    shard_iterable = (
+        shard_payloads.values() if isinstance(shard_payloads, dict) else shard_payloads
+    )
+    for shard_payload in shard_iterable:
+        if not isinstance(shard_payload, dict):
+            continue
+        histories = shard_payload.get("histories")
+        if not isinstance(histories, dict):
+            continue
+        for history_key, history in histories.items():
+            if isinstance(history, list):
+                histories_by_key[str(history_key)] = history
+    return histories_by_key
+
+
+def import_snapshots_from_v2_json(
+    db_path: Path,
+    summary_payload: dict,
+    shard_payloads: dict[int, dict] | list[dict] | None,
+) -> int:
+    """Rebuild SQLite snapshot rows from v2 rankings.json summary + shard-NN.json
+    history JSON (recovery). Mirrors import_snapshots_from_mvp_json's v1 algorithm
+    (same lossy level+levelExpPercent -> exp reconstruction, same additive
+    INSERT OR IGNORE semantics), adapted for the v2 summary/shard split where
+    `history` lives in shard files keyed by historyKey instead of inline on the
+    summary character.
+    """
+    from collections import defaultdict
+    from datetime import datetime, timezone
+
+    from level_exp import exp_required_for_level
+
+    characters = summary_payload.get("characters") if summary_payload else None
+    meta = summary_payload.get("meta") if summary_payload else None
+    if not isinstance(characters, list) or not isinstance(meta, dict):
+        return 0
+
+    latest_date = str(meta.get("latestSnapshotDate") or "").strip()
+    if not latest_date:
+        return 0
+
+    updated_raw = str(meta.get("updatedAt") or "").strip()
+    fetched_at = updated_raw or datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+    # worldId is exact (no reconstruction) in the v2 summary; hydrate character_meta
+    # unconditionally so worldRank/worldRankTotal survive recovery too.
+    meta_hydrated = 0
+    for character in characters:
+        if not isinstance(character, dict):
+            continue
+        meta_asset_key = str(character.get("characterAssetKey") or "").strip()
+        world_id = str(character.get("worldId") or "").strip()
+        if not meta_asset_key or not world_id:
+            continue
+        upsert_character_meta(db_path, meta_asset_key, world_id, fetched_at)
+        meta_hydrated += 1
+    if meta_hydrated:
+        logger.info(
+            "Hydrated character_meta from v2 summary: %s rows",
+            meta_hydrated,
+        )
+
+    histories_by_key = _merge_v2_shard_histories(shard_payloads)
+
+    pending: dict[str, list[dict[str, object]]] = defaultdict(list)
+    for character in characters:
+        if not isinstance(character, dict):
+            continue
+        name = str(character.get("name") or "").strip()
+        if not name:
+            continue
+        history_key = str(character.get("historyKey") or "").strip()
+        history = histories_by_key.get(history_key)
+        if not isinstance(history, list):
+            continue
+        asset_key = str(character.get("characterAssetKey") or "").strip()
+        latest_rank = int(character.get("rank") or 0)
+        image_url = str(character.get("imageUrl") or "").strip()
+        summary_level = character.get("level")
+        summary_exp = character.get("exp")
+
+        for point in history:
+            if not isinstance(point, dict):
+                continue
+            snapshot_raw = str(point.get("snapshotDate") or "").strip()
+            if snapshot_raw:
+                snapshot_date = snapshot_raw
+            else:
+                chart_date = str(point.get("date") or "").strip()
+                if not chart_date or "/" not in chart_date:
+                    continue
+                snapshot_date = _chart_date_to_iso(chart_date, latest_date)
+
+            if (
+                snapshot_date == latest_date
+                and summary_level is not None
+                and summary_exp is not None
+            ):
+                # The v2 summary carries the latest day's exact level/exp (no
+                # rounding loss); prefer it over inverting the shard's rounded
+                # levelExpPercent so the recovered "anchor" day -- and any
+                # dailyGain computed against it on the next real fetch -- is
+                # exact, not approximate.
+                level = int(summary_level)
+                exp = int(summary_exp)
+            else:
+                level = int(point.get("level") or 0)
+                percent = float(
+                    point.get("levelExpPercent")
+                    if point.get("levelExpPercent") is not None
+                    else point.get("expPercent") or 0
+                )
+                required = exp_required_for_level(level)
+                exp = int(required * percent / 100.0) if required else 0
+            pending[snapshot_date].append(
+                {
+                    "name": name,
+                    "asset_key": asset_key,
+                    "level": level,
+                    "exp": exp,
+                    "image_url": image_url,
+                    "sort_rank": latest_rank if latest_rank > 0 else 999_999,
+                }
+            )
+
+    if not pending:
+        return 0
+
+    init_db(db_path)
+    imported = 0
+    for snapshot_date in sorted(pending.keys()):
+        entries = sorted(
+            pending[snapshot_date],
+            key=lambda item: (int(item["sort_rank"]), str(item["name"]).casefold()),
+        )
+        rows: list[SnapshotRow] = []
+        for rank, entry in enumerate(entries, start=1):
+            rows.append(
+                SnapshotRow(
+                    snapshot_date=snapshot_date,
+                    rank=rank,
+                    rank_fluctuation=0,
+                    character_name=str(entry["name"]),
+                    class_code="",
+                    job_code="",
+                    level=int(entry["level"]),
+                    exp=int(entry["exp"]),
+                    image_url=str(entry["image_url"]),
+                    character_asset_key=str(entry["asset_key"]),
+                )
+            )
+        saved, _ = append_snapshots(db_path, rows, fetched_at)
+        imported += saved
+
+    if imported:
+        logger.info(
+            "Imported snapshot rows from v2 shard JSON: saved=%s days=%s",
+            imported,
+            count_snapshot_dates(db_path),
+        )
+        from identity import build_name_to_asset_key_from_mvp_characters
+
+        name_to_key = build_name_to_asset_key_from_mvp_characters(characters)
+        if name_to_key:
+            backfill_character_asset_keys(db_path, name_to_asset_key=name_to_key)
+
+    return imported
+
+
+def import_missing_snapshots_from_v2_url(db_path: Path, summary_url: str) -> int:
+    """Import snapshot days present in remote v2 rankings.json + shard-NN.json
+    files but missing in DB. Worst-case recovery path (P1): used when neither
+    actions/cache, a Release Asset, nor a git-committed db.gz is available.
+    """
+    import json
+    import urllib.error
+    import urllib.request
+
+    init_db(db_path)
+
+    def _fetch_json(url: str) -> dict | None:
+        try:
+            with urllib.request.urlopen(url, timeout=120) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except (OSError, urllib.error.URLError, json.JSONDecodeError, ValueError) as exc:
+            logger.warning("Cannot download %s: %s", url, exc)
+            return None
+
+    summary_payload = _fetch_json(summary_url)
+    if not summary_payload:
+        return 0
+
+    meta = summary_payload.get("meta")
+    if not isinstance(meta, dict):
+        logger.warning("v2 rankings.json at %s has no meta", summary_url)
+        return 0
+
+    history_base_path = str(meta.get("historyBasePath") or "").strip().strip("/")
+    shard_count = int(meta.get("historyShardCount") or 0)
+    if not history_base_path or shard_count <= 0:
+        logger.warning(
+            "v2 rankings.json missing historyBasePath/historyShardCount (%s)",
+            summary_url,
+        )
+        return 0
+
+    v2_root = summary_url.rsplit("/", 1)[0]
+    shard_payloads: dict[int, dict] = {}
+    for shard in range(shard_count):
+        shard_url = f"{v2_root}/{history_base_path}/shard-{shard:02d}.json"
+        shard_payload = _fetch_json(shard_url)
+        if shard_payload:
+            shard_payloads[shard] = shard_payload
+
+    if not shard_payloads:
+        logger.warning("No v2 history shards could be downloaded from %s", v2_root)
+        return 0
+
+    imported = import_snapshots_from_v2_json(db_path, summary_payload, shard_payloads)
+    if imported:
+        logger.info(
+            "Imported v2 shard recovery snapshots from %s: +%s rows (shards=%s/%s)",
+            summary_url,
+            imported,
+            len(shard_payloads),
+            shard_count,
+        )
+    return imported
 
 
 def merge_ranking_databases(primary_path: Path, secondary_path: Path) -> int:
