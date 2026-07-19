@@ -1,20 +1,20 @@
-"""T12 P1 follow-up: tests for the candidate backward-exact reconstruction
-(v2_recovery_backward.py). This module is NOT wired into main.py/config.py --
-these tests establish the correctness properties the coordinator asked to be
-verified before any decision between method B / C / D (and shipped method A)
-is made.
+"""T12 P1: tests for the production backward-exact v2-shard recovery core
+(v2_recovery_backward.py), used by
+sqlite_storage.import_snapshots_from_v2_json.
 """
 
 from __future__ import annotations
 
 import random
 
-import pytest
-
-from level_exp import LEVEL_CAP, TABLE_MIN_LEVEL, calculate_progress_toward_275, exp_required_for_level
+from level_exp import (
+    LEVEL_CAP,
+    TABLE_MIN_LEVEL,
+    calculate_level_exp_percent,
+    calculate_progress_toward_275,
+    exp_required_for_level,
+)
 from v2_recovery_backward import (
-    ReconstructedDay,
-    exp_from_percent,
     exp_from_percent_conservative,
     exp_from_progress,
     reconstruct_exp_backward,
@@ -38,35 +38,16 @@ def test_exp_from_progress_rejects_out_of_range_level() -> None:
 
 def test_exp_from_percent_conservative_never_exceeds_true_exp() -> None:
     """Property: for any level/exp, round(percent,3) -> conservative-invert
-    must be <= the true exp (the whole point of method D)."""
+    must be <= the true exp. This is the structural guarantee behind
+    "never over-restores" for the production fallback path."""
     random.seed(7)
     for _ in range(5000):
         level = random.randint(TABLE_MIN_LEVEL, LEVEL_CAP - 1)
         required = exp_required_for_level(level)
         exp = random.randint(0, required - 1)
-        from level_exp import calculate_level_exp_percent
-
         percent = calculate_level_exp_percent(level, exp)
         conservative = exp_from_percent_conservative(level, percent)
         assert conservative <= exp, (level, exp, percent, conservative)
-
-
-def test_exp_from_percent_can_exceed_true_exp() -> None:
-    """Documents the known defect in the naive (method A / B-fallback)
-    inversion: it CAN land above the true exp, unlike the conservative one."""
-    random.seed(7)
-    overshoots = 0
-    for _ in range(5000):
-        level = random.randint(TABLE_MIN_LEVEL, LEVEL_CAP - 1)
-        required = exp_required_for_level(level)
-        exp = random.randint(0, required - 1)
-        from level_exp import calculate_level_exp_percent
-
-        percent = calculate_level_exp_percent(level, exp)
-        naive = exp_from_percent(level, percent)
-        if naive > exp:
-            overshoots += 1
-    assert overshoots > 0
 
 
 def _point(date: str, level: int, daily_gain: int | None, percent: float) -> dict:
@@ -101,7 +82,6 @@ def test_reconstruct_exp_backward_clean_chain_is_exact() -> None:
         anchor_level=level,
         anchor_exp=exp_by_date[dates[-1]],
         points_desc=points_desc,
-        fallback="none",
     )
     by_date = {r.snapshot_date: r for r in result}
     for d in dates:
@@ -110,6 +90,8 @@ def test_reconstruct_exp_backward_clean_chain_is_exact() -> None:
 
 
 def test_reconstruct_exp_backward_missing_daily_gain_breaks_chain_for_none_fallback() -> None:
+    """fallback="none" (not used in production, kept for isolating the
+    exact-or-nothing property in tests/analysis)."""
     level = 240
     points_desc = [
         _point("2026-01-03", level, None, 10.0),  # anchor's own dailyGain unused
@@ -127,12 +109,13 @@ def test_reconstruct_exp_backward_missing_daily_gain_breaks_chain_for_none_fallb
     assert by_date["2026-01-03"].method == "exact"
     assert by_date["2026-01-02"].method == "unrecoverable"
     assert by_date["2026-01-02"].exp is None
-    # Once broken, method C does not guess further back either.
+    # Once broken, "none" does not guess further back either.
     assert by_date["2026-01-01"].method == "unrecoverable"
     assert by_date["2026-01-01"].exp is None
 
 
-def test_reconstruct_exp_backward_percent_fallback_fills_every_day() -> None:
+def test_reconstruct_exp_backward_conservative_fallback_fills_every_day() -> None:
+    """Production default (fallback="conservative"): never drops a day."""
     level = 240
     points_desc = [
         _point("2026-01-03", level, None, 10.0),
@@ -144,19 +127,39 @@ def test_reconstruct_exp_backward_percent_fallback_fills_every_day() -> None:
         anchor_level=level,
         anchor_exp=1_000_000,
         points_desc=points_desc,
-        fallback="percent",
     )
     assert all(r.exp is not None for r in result)
     by_date = {r.snapshot_date: r for r in result}
-    assert by_date["2026-01-02"].method == "percent_fallback"
+    assert by_date["2026-01-02"].method == "conservative_fallback"
     # Chain resumes (not exact, since it now hangs off an approximate 01-02)
-    assert by_date["2026-01-01"].method == "percent_fallback"
+    assert by_date["2026-01-01"].method == "conservative_fallback"
+
+
+def test_reconstruct_exp_backward_conservative_fallback_never_exceeds_true_exp() -> None:
+    """End-to-end version of the "never over-restore" guarantee: build a
+    points_desc from real (level, exp) pairs (via calculate_level_exp_percent,
+    exactly what mvp_export.py stores), force a break, and confirm the
+    reconstructed exp never exceeds the true exp at the fallback point.
+    """
+    level = 240
+    true_exp_day2 = 5_123_456_789
+    percent_day2 = calculate_level_exp_percent(level, true_exp_day2)
+    points_desc = [
+        _point("2026-01-03", level, None, 10.0),
+        _point("2026-01-02", level, None, percent_day2),
+    ]
+    result = reconstruct_exp_backward(
+        anchor_date="2026-01-03", anchor_level=level, anchor_exp=1_000_000,
+        points_desc=points_desc,
+    )
+    by_date = {r.snapshot_date: r for r in result}
+    assert by_date["2026-01-02"].exp <= true_exp_day2
 
 
 def test_reconstruct_exp_backward_duplicate_date_is_treated_as_untrustworthy() -> None:
     """Two rows for the same snapshotDate (a real production data-quality
-    artifact -- see the T12 P1 follow-up report) must not be silently
-    chained through, even though a numeric dailyGain is present on both.
+    artifact, unrelated to T12) must not be silently chained through, even
+    though a numeric dailyGain is present on both.
     """
     level = 225
     points_desc = [
@@ -170,35 +173,16 @@ def test_reconstruct_exp_backward_duplicate_date_is_treated_as_untrustworthy() -
         anchor_level=level,
         anchor_exp=8_019_596_009,
         points_desc=points_desc,
-        fallback="none",
     )
-    # Both duplicate-date entries must be marked unrecoverable, not "exact".
+    # Both duplicate-date entries get the (never-over) conservative fallback,
+    # not a silently-wrong "exact" chained through the ambiguous dailyGain.
     dup_entries = [r for r in result if r.snapshot_date == "2026-06-03"]
     assert len(dup_entries) == 2
-    assert all(r.method == "unrecoverable" for r in dup_entries)
-
-
-def test_reconstruct_exp_backward_conservative_fallback_never_exceeds_naive() -> None:
-    level = 240
-    points_desc = [
-        _point("2026-01-03", level, None, 10.0),
-        _point("2026-01-02", level, None, 5.123),
-    ]
-    naive = reconstruct_exp_backward(
-        anchor_date="2026-01-03", anchor_level=level, anchor_exp=1_000_000,
-        points_desc=points_desc, fallback="percent",
-    )
-    conservative = reconstruct_exp_backward(
-        anchor_date="2026-01-03", anchor_level=level, anchor_exp=1_000_000,
-        points_desc=points_desc, fallback="conservative",
-    )
-    naive_by_date = {r.snapshot_date: r.exp for r in naive}
-    conservative_by_date = {r.snapshot_date: r.exp for r in conservative}
-    assert conservative_by_date["2026-01-02"] <= naive_by_date["2026-01-02"]
+    assert all(r.method == "conservative_fallback" for r in dup_entries)
 
 
 def test_reconstruct_exp_backward_empty_points() -> None:
     assert reconstruct_exp_backward(
         anchor_date="2026-01-01", anchor_level=240, anchor_exp=0,
-        points_desc=[], fallback="none",
+        points_desc=[],
     ) == []
