@@ -144,6 +144,21 @@ def pages_rankings_url() -> str:
     return os.environ.get("MVP_PAGES_RANKINGS_URL", default).strip()
 
 
+def pages_v2_rankings_url() -> str:
+    """v2 summary JSON used by the v2-shard DB recovery path (P1, opt-in)."""
+    default = f"{pages_site_url()}/data/v2/rankings.json"
+    return os.environ.get("MVP_PAGES_V2_RANKINGS_URL", default).strip()
+
+
+def snapshot_import_from_v2_shards() -> bool:
+    """Backfill SQLite from production v2 summary+shard JSON (worst-case recovery
+    when actions/cache, Release Asset, and git db.gz are all unavailable).
+    Opt-in and off by default so existing recovery behavior is unchanged (T12 P1).
+    """
+    raw = os.environ.get("SNAPSHOT_IMPORT_FROM_V2_SHARDS", "false").strip().lower()
+    return raw in ("1", "true", "yes", "on")
+
+
 def hydrate_meta_from_pages() -> bool:
     raw = os.environ.get("HYDRATE_META_FROM_PAGES", "true").strip().lower()
     return raw not in ("0", "false", "no", "off")
