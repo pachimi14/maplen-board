@@ -11,7 +11,7 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable
 
-from analysis import build_analysis_rows
+from analysis import build_analysis_rows, deduplicate_snapshots_by_identity
 from identity import build_name_to_asset_key, resolve_snapshot_identity
 from level_exp import (
     EXP_TO_NEXT_LEVEL,
@@ -131,9 +131,15 @@ def build_mvp_characters(
     analysis_by_key = _analysis_lookup(analysis_rows)
     meta = character_meta or {}
     name_to_asset_key = build_name_to_asset_key(snapshots)
+    # Collapse duplicate (snapshot_date, identity) rows before grouping so a
+    # single ranking day never yields two history points for the same
+    # character (see docs/IMPL_PLAN_dq-dup-rows.md P-DQ-1; same rule as
+    # analysis.py's build_analysis_rows, reused here to keep one source of
+    # truth for the selection rule).
+    deduped_snapshots = deduplicate_snapshots_by_identity(snapshots, name_to_asset_key)
     by_key: dict[str, list[SnapshotRow]] = defaultdict(list)
 
-    for row in snapshots:
+    for row in deduped_snapshots:
         if row.character_name or row.character_asset_key:
             group_key = resolve_snapshot_identity(row, name_to_asset_key)
             if group_key:
