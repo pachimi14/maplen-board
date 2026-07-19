@@ -1053,8 +1053,20 @@ def import_snapshots_from_v2_json(
     algorithm and rationale). This never restores an exp/dailyGain value
     larger than the true one, and never drops a day (falls back to a
     conservative, never-over percent inversion when the exact chain breaks).
-    Additive INSERT OR IGNORE semantics, same as import_snapshots_from_mvp_json
-    (v1) and merge_ranking_databases.
+
+    Additive: reconstructed (snapshot_date, identity) pairs that already exist
+    in the DB are filtered out *before* insertion (identity = asset key, or
+    `name:<casefolded name>` for the rare rows without one -- same convention
+    as identity.py/mvp_export.py's historyKey). This is on top of, not
+    instead of, append_snapshots' own INSERT OR IGNORE (which only dedupes on
+    the synthetic (snapshot_date, rank) the recovery path itself assigns and
+    would not by itself catch two different rows for the same day/character).
+    Without this filter, re-running recovery against a DB that already has
+    some of those days (e.g. a partially-warm cache) would add a *second*,
+    differently-ranked row for the same real character/day -- not an
+    overwrite, but a duplicate the additive-merge guarantee (INV-3) doesn't
+    allow either. The existing-identity set is fetched once (single query),
+    not per character/row.
     """
     from collections import defaultdict
     from datetime import datetime, timezone
@@ -1091,10 +1103,27 @@ def import_snapshots_from_v2_json(
             meta_hydrated,
         )
 
+    # Idempotency/additive guard: one query for every (snapshot_date, identity)
+    # already in the DB, so the per-character loop below is a plain set
+    # membership check (no N+1 queries).
+    init_db(db_path)
+    with sqlite3.connect(db_path) as conn:
+        existing_rows = conn.execute(
+            "SELECT DISTINCT snapshot_date, character_asset_key, character_name "
+            "FROM ranking_snapshot"
+        ).fetchall()
+    existing_identity_dates: set[tuple[str, str]] = set()
+    for existing_date, existing_asset_key, existing_name in existing_rows:
+        existing_identity = str(existing_asset_key or "").strip() or (
+            f"name:{str(existing_name or '').strip().casefold()}"
+        )
+        existing_identity_dates.add((str(existing_date), existing_identity))
+
     histories_by_key = _merge_v2_shard_histories(shard_payloads)
 
     pending: dict[str, list[dict[str, object]]] = defaultdict(list)
     recon_stats = {"exact": 0, "conservative_fallback": 0, "unrecoverable": 0}
+    skipped_existing = 0
     for character in characters:
         if not isinstance(character, dict):
             continue
@@ -1106,6 +1135,11 @@ def import_snapshots_from_v2_json(
         if not isinstance(history, list) or not history:
             continue
         asset_key = str(character.get("characterAssetKey") or "").strip()
+        # Same identity convention as historyKey (identity.py): prefer the
+        # asset key; fall back to a casefolded name so the (rare) rows
+        # without one still get an idempotency check instead of being
+        # exempted from it.
+        identity = asset_key or f"name:{name.casefold()}"
         latest_rank = int(character.get("rank") or 0)
         image_url = str(character.get("imageUrl") or "").strip()
         summary_level = character.get("level")
@@ -1141,11 +1175,28 @@ def import_snapshots_from_v2_json(
             points_desc=points_desc,
         )
 
+        # A duplicated snapshotDate in `history` (see reconstruct_exp_backward's
+        # docstring) means this character's own points_desc can carry two
+        # entries for the same date, so `reconstructed` can too. Both are
+        # individually <= the true exp (never-over guarantee), so keep only
+        # the larger -- still <= true, and the tighter of the two safe
+        # under-estimates -- rather than emitting two rows for one identity
+        # on one day (which INSERT OR IGNORE's (snapshot_date, rank) key
+        # would not by itself catch, since each gets its own synthetic rank).
+        best_by_date: dict[str, object] = {}
         for day in reconstructed:
             recon_stats[day.method] = recon_stats.get(day.method, 0) + 1
             if day.exp is None or not day.snapshot_date:
                 continue
-            pending[day.snapshot_date].append(
+            current_best = best_by_date.get(day.snapshot_date)
+            if current_best is None or day.exp > current_best.exp:
+                best_by_date[day.snapshot_date] = day
+
+        for snapshot_date, day in best_by_date.items():
+            if (snapshot_date, identity) in existing_identity_dates:
+                skipped_existing += 1
+                continue
+            pending[snapshot_date].append(
                 {
                     "name": name,
                     "asset_key": asset_key,
@@ -1157,16 +1208,23 @@ def import_snapshots_from_v2_json(
             )
 
     if not pending:
+        if skipped_existing:
+            logger.info(
+                "v2 shard recovery: nothing to import, %s reconstructed rows "
+                "already present (idempotent no-op)",
+                skipped_existing,
+            )
         return 0
 
     logger.info(
-        "v2 shard backward reconstruction: exact=%s conservative_fallback=%s unrecoverable=%s",
+        "v2 shard backward reconstruction: exact=%s conservative_fallback=%s "
+        "unrecoverable=%s skipped_existing=%s",
         recon_stats.get("exact", 0),
         recon_stats.get("conservative_fallback", 0),
         recon_stats.get("unrecoverable", 0),
+        skipped_existing,
     )
 
-    init_db(db_path)
     imported = 0
     for snapshot_date in sorted(pending.keys()):
         entries = sorted(

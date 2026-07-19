@@ -685,3 +685,224 @@ def test_p1_acceptance_no_display_or_rank_impact(tmp_path: Path) -> None:
             if true_rank != recovered_rank:
                 rank_mismatches.append((key, field, true_rank, recovered_rank))
     assert rank_mismatches == [], f"gain rank changed: {rank_mismatches}"
+
+
+# =============================================================================
+# Idempotency / additive guard (T12 P1, added after the method-D re-review):
+# skip reconstructed (snapshot_date, identity) rows that already exist in the
+# DB *before* insertion, so re-running recovery never adds a duplicate row
+# for a character/day that's already there -- regardless of what synthetic
+# rank the reconstruction would have assigned it.
+# =============================================================================
+
+
+def _identity_date_duplicates(db_path: Path) -> list[tuple]:
+    """Direct SQL for acceptance criterion 5: any (snapshot_date, identity)
+    with more than one row. identity = asset key, or name for legacy rows
+    without one (mirrors the guard's own convention).
+    """
+    import sqlite3
+
+    with sqlite3.connect(db_path) as conn:
+        rows = conn.execute(
+            """
+            SELECT snapshot_date,
+                   COALESCE(NULLIF(character_asset_key, ''), 'name:' || lower(character_name)) AS identity,
+                   COUNT(*) AS n
+            FROM ranking_snapshot
+            GROUP BY snapshot_date, identity
+            HAVING COUNT(*) > 1
+            """
+        ).fetchall()
+    return rows
+
+
+def test_p1_idempotency_normal_recovery_into_empty_db_unaffected(tmp_path: Path) -> None:
+    """Criterion 1: the guard must not change the already-verified behavior
+    of a normal recovery into a completely empty DB (no existing rows to
+    filter against -> imported count matches the un-guarded D-method
+    baseline: every reconstructed row is new).
+    """
+    dates = _dates("2026-01-01", DAYS)
+    true_db = tmp_path / "true.db"
+    _build_true_db(true_db, dates)
+    _, summary, shards = _export_v2(true_db, latest_snapshot_date=dates[-1])
+    shard_payloads = _shard_payloads(summary, shards)
+
+    recovered_db = tmp_path / "recovered.db"
+    imported = import_snapshots_from_v2_json(recovered_db, summary, shard_payloads)
+
+    expected_rows = sum(1 for row in load_all_snapshots(true_db))
+    assert imported == expected_rows
+    assert count_snapshot_dates(recovered_db) == DAYS
+    assert _identity_date_duplicates(recovered_db) == []
+
+
+def test_p1_idempotency_partial_db_adds_only_missing_days(tmp_path: Path) -> None:
+    """Criterion 2: pre-seed whole days (the realistic partial-DB shape --
+    the bot always fetches a complete day or none at all), recover from v2
+    shards, and confirm the pre-seeded days are byte-for-byte unchanged while
+    only the missing days are added.
+    """
+    dates = _dates("2026-01-01", DAYS)
+    true_db = tmp_path / "true.db"
+    _build_true_db(true_db, dates)
+    _, summary, shards = _export_v2(true_db, latest_snapshot_date=dates[-1])
+    shard_payloads = _shard_payloads(summary, shards)
+
+    preseeded_dates = set(dates[10:15])  # 5 whole days already "warm"
+    recovered_db = tmp_path / "recovered.db"
+    preseeded_rows = [
+        row for row in load_all_snapshots(true_db) if row.snapshot_date in preseeded_dates
+    ]
+    append_snapshots(recovered_db, preseeded_rows, fetched_at=f"{dates[14]}T09:05:00+00:00")
+    assert count_snapshot_dates(recovered_db) == 5
+
+    import_snapshots_from_v2_json(recovered_db, summary, shard_payloads)
+
+    assert count_snapshot_dates(recovered_db) == DAYS
+    recovered_rows_by_date: dict[str, list] = {}
+    for row in load_all_snapshots(recovered_db):
+        recovered_rows_by_date.setdefault(row.snapshot_date, []).append(row)
+
+    # Pre-seeded days: same row count, unchanged (rank, exp, level).
+    preseeded_by_date: dict[str, list] = {}
+    for row in preseeded_rows:
+        preseeded_by_date.setdefault(row.snapshot_date, []).append(row)
+    for date in preseeded_dates:
+        before = sorted((r.rank, r.exp, r.level, r.character_name) for r in preseeded_by_date[date])
+        after = sorted(
+            (r.rank, r.exp, r.level, r.character_name) for r in recovered_rows_by_date[date]
+        )
+        assert before == after, f"pre-seeded day {date} changed: before={before} after={after}"
+
+    # Missing days: now present, with the expected character count.
+    for date in dates:
+        if date in preseeded_dates:
+            continue
+        assert len(recovered_rows_by_date.get(date, [])) == len(CHARACTERS)
+
+    assert _identity_date_duplicates(recovered_db) == []
+
+
+def test_p1_idempotency_no_duplicate_when_existing_rank_differs(tmp_path: Path) -> None:
+    """Criterion 3: reproduce the "method A masking" condition -- an existing
+    row for (date, identity) whose rank differs from whatever the
+    reconstruction's synthetic sort_rank would assign -- and confirm the
+    guard still skips it (no duplicate), since it filters on (date, identity)
+    *before* any rank is computed, not by relying on a rank collision.
+    """
+    dates = _dates("2026-01-01", DAYS)
+    true_db = tmp_path / "true.db"
+    _build_true_db(true_db, dates)
+    _, summary, shards = _export_v2(true_db, latest_snapshot_date=dates[-1])
+    shard_payloads = _shard_payloads(summary, shards)
+
+    dupe_date = dates[20]
+    recovered_db = tmp_path / "recovered.db"
+    # Existing row for Beta on dupe_date, deliberately at a rank (99) that the
+    # reconstruction's own sort_rank/enumerate assignment (1..len(CHARACTERS))
+    # would never independently produce -- guaranteeing no accidental match.
+    append_snapshots(
+        recovered_db,
+        [
+            SnapshotRow(
+                snapshot_date=dupe_date,
+                rank=99,
+                rank_fluctuation=0,
+                character_name="Beta",
+                class_code="",
+                job_code="",
+                level=246,
+                exp=123_456,
+                image_url="",
+                character_asset_key="asset-beta",
+            )
+        ],
+        fetched_at=f"{dupe_date}T09:05:00+00:00",
+    )
+
+    import_snapshots_from_v2_json(recovered_db, summary, shard_payloads)
+
+    beta_rows_that_day = [
+        row
+        for row in load_all_snapshots(recovered_db)
+        if row.snapshot_date == dupe_date and row.character_asset_key == "asset-beta"
+    ]
+    assert len(beta_rows_that_day) == 1, f"expected no duplicate, got {beta_rows_that_day}"
+    # The pre-existing row must be untouched (not overwritten), same as the
+    # additive-merge guarantee elsewhere in this file.
+    assert beta_rows_that_day[0].rank == 99
+    assert beta_rows_that_day[0].exp == 123_456
+    assert beta_rows_that_day[0].level == 246
+
+    assert _identity_date_duplicates(recovered_db) == []
+
+
+def test_p1_idempotency_running_recovery_twice_is_a_no_op(tmp_path: Path) -> None:
+    """Criterion 4: running the same recovery twice against the same DB
+    produces identical row count and content (idempotent)."""
+    dates = _dates("2026-01-01", DAYS)
+    true_db = tmp_path / "true.db"
+    _build_true_db(true_db, dates)
+    _, summary, shards = _export_v2(true_db, latest_snapshot_date=dates[-1])
+    shard_payloads = _shard_payloads(summary, shards)
+
+    recovered_db = tmp_path / "recovered.db"
+    first_imported = import_snapshots_from_v2_json(recovered_db, summary, shard_payloads)
+    assert first_imported > 0
+    rows_after_first = sorted(
+        (r.snapshot_date, r.rank, r.character_asset_key, r.exp, r.level)
+        for r in load_all_snapshots(recovered_db)
+    )
+
+    second_imported = import_snapshots_from_v2_json(recovered_db, summary, shard_payloads)
+    rows_after_second = sorted(
+        (r.snapshot_date, r.rank, r.character_asset_key, r.exp, r.level)
+        for r in load_all_snapshots(recovered_db)
+    )
+
+    assert second_imported == 0, f"second run should be a pure no-op, imported={second_imported}"
+    assert rows_after_first == rows_after_second
+    assert _identity_date_duplicates(recovered_db) == []
+
+
+def test_p1_idempotency_no_over_restoration_regression(tmp_path: Path) -> None:
+    """Criterion 6: the idempotency guard must not weaken the D-method
+    never-over-restore guarantee (it only removes candidate rows before
+    insertion; it must never change a reconstructed exp value).
+    """
+    true_db, dates, dupe_date = _build_fixture_with_duplicate_row(tmp_path)
+    true_snapshots = load_all_snapshots(true_db)
+    true_exp_by = {
+        (row.character_asset_key or row.character_name, row.snapshot_date): row.exp
+        for row in true_snapshots
+    }
+
+    _, true_summary, true_shards = _export_v2(true_db, latest_snapshot_date=dates[-1])
+    shard_payloads = _shard_payloads(true_summary, true_shards)
+
+    recovered_db = tmp_path / "recovered_never_over_with_guard.db"
+    # Pre-seed a few days (partial DB) so the idempotency guard is actually
+    # exercised in the same run as the over-restoration check.
+    preseeded_dates = set(dates[:5])
+    preseeded_rows = [row for row in true_snapshots if row.snapshot_date in preseeded_dates]
+    append_snapshots(recovered_db, preseeded_rows, fetched_at=f"{dates[4]}T09:05:00+00:00")
+
+    imported = import_snapshots_from_v2_json(recovered_db, true_summary, shard_payloads)
+    assert imported > 0
+
+    over_restored = []
+    checked = 0
+    for row in load_all_snapshots(recovered_db):
+        key = (row.character_asset_key or row.character_name, row.snapshot_date)
+        true_exp = true_exp_by.get(key)
+        if true_exp is None:
+            continue
+        checked += 1
+        if row.exp > true_exp:
+            over_restored.append((key, true_exp, row.exp))
+
+    assert checked > 0
+    assert over_restored == [], f"over-restored exp found: {over_restored}"
+    assert _identity_date_duplicates(recovered_db) == []
