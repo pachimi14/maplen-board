@@ -43,9 +43,24 @@
 > フェーズは安全な実装順序。**各フェーズ単体で「T12完了」とはしない**。全フェーズ green + §5 全基準達成が唯一の完了条件。
 
 - **P1(復旧の土台・挙動不変)**: v2シャード→DB 再構成(`import_snapshots_from_v2_shards` 等)を実装。既存の v1/git/cache 復旧と**並存**させ、INV-5 を満たすことをテストで実証(この時点では何も撤去しない)。
-- **P2(耐久層の移行・挙動不変)**: Release Asset `db-store/ranking.db.gz` を新設・初回シード。pages/navigator の `commit-db` を「Release へ download→additive-merge→--clobber」へ置換(INV-2/3/4)。**git db.gz コミットはまだ残す**(両系並行=安全網)。実運用で数日、Release と git db.gz が一致することを確認。
+- **P2(耐久層の移行・挙動不変)**: Release Asset `db-store/ranking.db.gz` を新設・初回シード。pages/navigator の `commit-db` を「Release download→additive-merge→--clobber」へ置換(INV-2/3/4)。**git db.gz コミットは残す**(両系並行=安全網)。
+  **P2→P3 完了ゲート(具体・全条件成立で初めて P3 を許可。曖昧な「数日」ではない)**:
+  - **run 数**: pages が **snapshot をコミットする正常完了 ≥3 回**(=3 取得日をまたぐ)、かつ **navigator 正常完了 ≥1 回**(worldId 反映経路を検証)。
+  - **各 run 後**、Release 版 DB と git db.gz 版 DB を両方復元し、**以下の全項目が一致**(不一致0):
+    - (a) `ranking_snapshot`: 総行数 / `COUNT(DISTINCT snapshot_date)`(=snapshot_days) / `MAX(snapshot_date)`(最新日) / 最新日の行数
+    - (b) `character_meta`: 総行数 / `world_id != ''` の件数(navigator の寄与)
+    - (c) `app_meta`: `last_ranking_fetched_at` の値
+    - (d) 強検証: `ranking_snapshot` を `(snapshot_date, rank)` 順に整列した内容ハッシュの一致
+  - **1項目でも不一致なら P3 に進まず停止報告**(§6)。取得スキップ run(snapshot 追加なし)は両系が no-op で一致することのみ確認し、run 数にカウントしない。
 - **P3(出血停止)**: git db.gz コミットを停止・除去。復旧の優先順を「cache → Release → v2シャード」へ。retry の db.gz 参照を Release/cache へ差し替え。
-- **P4(v1 廃止・scope⑤⑥)**: INV-5 実証済みを前提に、v1 rankings.json の生成停止・配信停止・v1 復旧経路撤去・関連旧処理/旧ファイル削除。
+- **P4(v1 廃止・scope⑤⑥)**: INV-5(v2シャード復旧の最悪ケース復元)実証済みを前提に、v1 の生成・配信・復旧参照を撤去。**対象を実パス・参照元付きで確定**:
+  - **廃止する v1 ファイル**: `exp_ranking/web/public/data/rankings.json`(生成元=pages workflow の `MVP_JSON_OUTPUT_PATH: ../web/public/data/rankings.json`。生成を停止)+ `exp_ranking/web/public/data/rankings.json.bak`。配信停止(Pages 成果物から除外)。※両者とも `.gitignore`(13–14行)=CI 生成物。
+  - **現在 Web UI が読むランキングデータ**: `data/v2/rankings.json`(`exp_ranking/web/src/board/useRankingBoard.js:315` の唯一候補 `["data/v2/rankings.json"]`)+ `data/v2/history/shard-00.json`〜`shard-63.json`(`exp_ranking/web/src/historyData.js:5`、64分割)。**= UI は v1 を読まない**(QW/LULU-016 で v1 フォールバック撤去済み)。
+  - **v2シャードのファイル**: `data/v2/rankings.json`(サマリ)+ `data/v2/history/shard-NN.json`(`HISTORY_SHARD_COUNT=64`、`mvp_export.py`)。`.gitignore`(15行)=CI 生成物。
+  - **復旧専用として参照しているファイル**: v1 `https://lulumi-tools.com/data/rankings.json`(`MVP_PAGES_RANKINGS_URL` → `main.py` の `import_missing_snapshots_from_url`)。**P1 で v2シャード復旧へ置換**し、P4 で本参照を撤去。
+  - **P4 後も残る公開データ**: `data/v2/rankings.json` + `data/v2/history/shard-*.json`(= UI が読む配信データ=**不変**)。
+  - **P4 後に削除される公開データ**: `data/rankings.json`(v1)+ `rankings.json.bak`。
+  - **「v1 を生成も配信もしない」と「UI/配信データ契約は不変」が矛盾しないことの明記**: 両者は**異なるファイルを指すため両立する**。UI の配信契約は `data/v2/*` のみで**不変**。v1 `data/rankings.json` は UI 非参照の**復旧専用**であり、その役割は P1 の v2シャード復旧が引き継ぐ。したがって v1 廃止は UI/配信契約を一切変えない。
 - **P5(ローカル整合・scope④)**: ローカル bat の v2 対応。
 - **P6(履歴書き換え・scope=1.9GB回収, INV-6)**: 静穏窓で CI 停止→`git filter-repo` 等で db.gz blob 除去→force push(**ユーザー専権**)→全 worktree 再作成→リポサイズ実測。
 - **P7(整合・撤去の最終掃除)**: 3 workflow の整合確認、不要になった step/スクリプト/キャッシュキーの撤去、DECISION_LOG 更新。
