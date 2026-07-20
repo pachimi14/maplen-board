@@ -40,6 +40,22 @@ def test_daily_gain_at_level_250_counts_exp_past_milestone() -> None:
     assert by_date["2026-06-12"] == 1_000_000_000
 
 
+def test_daily_gain_negative_is_nulled_not_zero_or_negative() -> None:
+    """Cumulative EXP only increases; a negative delta is a bad-data artifact
+    (docs/DECISION_LOG.md LULU-055), not a real event. It must become None --
+    not 0 (which would silently claim "no progress today" for a day the API
+    never actually reported) and not a negative number (which is
+    domain-impossible and corrupts weekly/monthly sums and chart display)."""
+    snapshots = [
+        SnapshotRow("2026-06-01", 1, 0, "Hero", "", "", 248, 5_000_000, "", "key-1"),
+        # exp goes down at the same level -- e.g. a corrupted/recovered row.
+        SnapshotRow("2026-06-02", 1, 0, "Hero", "", "", 248, 1_000_000, "", "key-1"),
+    ]
+    rows = build_analysis_rows(snapshots)
+    by_date = {row.snapshot_date: row.daily_exp_gain for row in rows}
+    assert by_date["2026-06-02"] is None
+
+
 def test_daily_gain_level_up_into_250() -> None:
     from level_exp import EXP_TO_NEXT_LEVEL
 
@@ -59,5 +75,6 @@ if __name__ == "__main__":
     test_daily_gain_none_when_previous_ranking_day_missing_in_db()
     test_daily_gain_uses_calendar_previous_day_when_present()
     test_daily_gain_at_level_250_counts_exp_past_milestone()
+    test_daily_gain_negative_is_nulled_not_zero_or_negative()
     test_daily_gain_level_up_into_250()
     print("ok")

@@ -140,6 +140,16 @@ def build_analysis_rows(
             prev_progress = progress_by_date_identity.get((prev_date, identity))
             if prev_progress is not None:
                 daily_gain = progress - prev_progress
+                if daily_gain < 0:
+                    # Cumulative EXP only increases; a negative delta is never a
+                    # genuine gain (it is an artifact of a bad snapshot pair --
+                    # e.g. a bootstrap-era recovery row derived from a rounded
+                    # levelExpPercent, see docs/DECISION_LOG.md LULU-055). Null
+                    # it out rather than showing a fabricated 0 or a negative
+                    # number; downstream consumers (sum_daily_gains_in_period,
+                    # mvp_export dailyRank) already treat None as "unknown", not
+                    # as a zero-gain day.
+                    daily_gain = None
 
         analysis_rows.append(
             AnalysisRow(
