@@ -833,6 +833,189 @@ def import_snapshots_from_mvp_json(db_path: Path, json_path: Path) -> int:
     return imported
 
 
+UNIQUE_SNAPSHOT_IDENTITY_INDEX = "idx_ranking_snapshot_date_asset_key"
+
+
+def find_duplicate_snapshot_identity_groups(db_path: Path) -> list[dict]:
+    """Find `(snapshot_date, character_asset_key)` groups with more than one row.
+
+    Only rows with a non-empty `character_asset_key` are considered -- legacy
+    name-only rows are out of scope for the partial unique index (see
+    docs/IMPL_PLAN_dq-dup-rows.md P-DQ-3 §4). For each group, the row to keep
+    is picked by `analysis.select_canonical_snapshot_row` (LULU-055/057) --
+    that rule is reused as-is (not re-implemented here) so the primary-row
+    rule stays defined in exactly one place, matching the P-DQ-1 output-side
+    aggregation (`analysis.deduplicate_snapshots_by_identity`).
+    """
+    from analysis import select_canonical_snapshot_row
+
+    if not db_path.exists():
+        return []
+    init_db(db_path)
+
+    groups: list[dict] = []
+    with sqlite3.connect(db_path) as conn:
+        conn.row_factory = sqlite3.Row
+        dup_keys = conn.execute(
+            """
+            SELECT snapshot_date, character_asset_key
+            FROM ranking_snapshot
+            WHERE character_asset_key != ''
+            GROUP BY snapshot_date, character_asset_key
+            HAVING COUNT(*) > 1
+            """
+        ).fetchall()
+
+        for dup in dup_keys:
+            snapshot_date = str(dup["snapshot_date"])
+            asset_key = str(dup["character_asset_key"])
+            rows = conn.execute(
+                """
+                SELECT id, snapshot_date, rank, rank_fluctuation, character_name,
+                       class_code, job_code, level, exp, image_url,
+                       character_asset_key, fetched_at
+                FROM ranking_snapshot
+                WHERE snapshot_date = ? AND character_asset_key = ?
+                """,
+                (snapshot_date, asset_key),
+            ).fetchall()
+
+            snapshot_rows = [
+                SnapshotRow(
+                    snapshot_date=str(row["snapshot_date"]),
+                    rank=int(row["rank"]),
+                    rank_fluctuation=int(row["rank_fluctuation"]),
+                    character_name=str(row["character_name"]),
+                    class_code=str(row["class_code"]),
+                    job_code=str(row["job_code"]),
+                    level=int(row["level"]),
+                    exp=int(row["exp"]),
+                    image_url=str(row["image_url"]),
+                    character_asset_key=str(row["character_asset_key"] or ""),
+                )
+                for row in rows
+            ]
+            canonical = select_canonical_snapshot_row(snapshot_rows)
+            row_by_id = {int(row["id"]): dict(row) for row in rows}
+            # `rank` is unique per snapshot_date (UNIQUE(snapshot_date, rank)),
+            # so it unambiguously maps the canonical SnapshotRow back to its id.
+            keep_id = next(
+                row_id
+                for row_id, row in row_by_id.items()
+                if int(row["rank"]) == canonical.rank
+            )
+            delete_ids = [row_id for row_id in row_by_id if row_id != keep_id]
+
+            groups.append(
+                {
+                    "snapshot_date": snapshot_date,
+                    "character_asset_key": asset_key,
+                    "keep_id": keep_id,
+                    "delete_ids": delete_ids,
+                    "rows": row_by_id,
+                }
+            )
+    return groups
+
+
+def dedupe_ranking_snapshot_identity_rows(
+    db_path: Path,
+    *,
+    dry_run: bool = True,
+) -> dict:
+    """Delete excess rows within duplicate `(snapshot_date, character_asset_key)`
+    groups, keeping exactly one row per group (see
+    `find_duplicate_snapshot_identity_groups` for the selection rule).
+
+    Always computes and returns a full backup (id + every column value) of
+    the rows that would be/were deleted, regardless of `dry_run`, so the
+    operation is reversible. When `dry_run` is True (the default) no row is
+    deleted -- this only reports the plan. See docs/IMPL_PLAN_dq-dup-rows.md
+    P-DQ-3.
+    """
+    groups = find_duplicate_snapshot_identity_groups(db_path)
+    delete_ids: list[int] = []
+    backup_rows: list[dict] = []
+    for group in groups:
+        for row_id in group["delete_ids"]:
+            delete_ids.append(row_id)
+            backup_rows.append(group["rows"][row_id])
+
+    result = {
+        "groups": len(groups),
+        "rows_deleted": len(delete_ids),
+        "backup_rows": backup_rows,
+        "dry_run": dry_run,
+    }
+
+    if dry_run or not delete_ids:
+        return result
+
+    with sqlite3.connect(db_path) as conn:
+        conn.executemany(
+            "DELETE FROM ranking_snapshot WHERE id = ?",
+            [(row_id,) for row_id in delete_ids],
+        )
+        conn.commit()
+
+    logger.info(
+        "Deduplicated ranking_snapshot (snapshot_date, character_asset_key): "
+        "groups=%s rows_deleted=%s db=%s",
+        len(groups),
+        len(delete_ids),
+        db_path,
+    )
+    return result
+
+
+def create_unique_snapshot_identity_index(db_path: Path) -> None:
+    """Create the partial `UNIQUE(snapshot_date, character_asset_key)` index.
+
+    `WHERE character_asset_key != ''` excludes legacy name-only rows (never
+    backfilled with an asset key) from the constraint, matching existing
+    read-side compatibility (see docs/IMPL_PLAN_dq-dup-rows.md P-DQ-3 §4).
+    Idempotent (`IF NOT EXISTS`). Must be called only after
+    `dedupe_ranking_snapshot_identity_rows` has removed existing duplicate
+    `(snapshot_date, character_asset_key)` rows -- otherwise index creation
+    raises `sqlite3.IntegrityError`.
+    """
+    init_db(db_path)
+    with sqlite3.connect(db_path) as conn:
+        conn.execute(
+            f"""
+            CREATE UNIQUE INDEX IF NOT EXISTS {UNIQUE_SNAPSHOT_IDENTITY_INDEX}
+            ON ranking_snapshot(snapshot_date, character_asset_key)
+            WHERE character_asset_key != ''
+            """
+        )
+        conn.commit()
+
+
+def migrate_unique_snapshot_identity_constraint(
+    db_path: Path,
+    *,
+    dry_run: bool = True,
+) -> dict:
+    """One-time migration: dedupe `(snapshot_date, character_asset_key)` rows,
+    then create the partial unique index. Order matters -- see
+    `create_unique_snapshot_identity_index`.
+
+    Idempotent: once no duplicates remain and the index exists, a subsequent
+    call is a no-op (`dedupe.groups == 0`, `dedupe.rows_deleted == 0`, index
+    left as-is).
+
+    Not wired into `init_db`/`_migrate_schema` or `main.py` -- real-DB
+    application requires a separate, explicit invocation and sign-off (see
+    docs/IMPL_PLAN_dq-dup-rows.md P-DQ-3).
+    """
+    dedupe_result = dedupe_ranking_snapshot_identity_rows(db_path, dry_run=dry_run)
+    index_created = False
+    if not dry_run:
+        create_unique_snapshot_identity_index(db_path)
+        index_created = True
+    return {"dedupe": dedupe_result, "index_created": index_created}
+
+
 def merge_ranking_databases(primary_path: Path, secondary_path: Path) -> int:
     """Copy missing snapshot rows from a legacy DB into the primary DB."""
     if not secondary_path.exists():
