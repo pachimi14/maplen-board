@@ -104,11 +104,19 @@ function GainChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) {
     return null;
   }
+  const value = payload[0].value;
+  // A null/undefined dailyGain is a genuine data gap (e.g. a domain-invalid
+  // negative gain the bot nulls out at the output layer, LULU-055), not a
+  // real "0 gained" day -- formatExp(null) would otherwise coerce it to the
+  // misleading "+0". Show the shared "no data" label instead.
+  const hasValue = value != null;
   return (
     <div className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm shadow-lg">
       <div className="text-slate-400">{label}</div>
       <div className="font-bold text-emerald-400 mt-0.5">
-        {t("characterDetail.gainAmount")}: +{formatExp(payload[0].value)}
+        {hasValue
+          ? `${t("characterDetail.gainAmount")}: +${formatExp(value)}`
+          : t("characterDetail.noData")}
       </div>
     </div>
   );
