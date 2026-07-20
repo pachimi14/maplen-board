@@ -172,10 +172,15 @@ def test_build_analysis_rows_daily_gain_uses_canonical_row_not_last_by_rank() ->
     ]
     rows = build_analysis_rows(snapshots)
     gain_0530 = next(r for r in rows if r.snapshot_date == "2026-05-30").daily_exp_gain
-    # genuine row (1_922_160_868) minus 05-29 (1_923_152_397) = -991_529.
-    assert gain_0530 == -991_529
+    # genuine row (1_922_160_868) minus 05-29 (1_923_152_397) = -991_529, which
+    # is a domain-impossible negative gain (cumulative EXP only increases) --
+    # analysis.py nulls it out rather than reporting a fabricated negative
+    # number (see docs/DECISION_LOG.md LULU-055).
+    assert gain_0530 is None
     # The old (buggy) last-by-rank selection would have used 1_932_595_044,
-    # yielding +9_442_647 instead -- assert we are NOT reproducing that value.
+    # yielding +9_442_647 instead -- assert we are NOT reproducing that value
+    # (a positive value would NOT be nulled, so this still discriminates the
+    # canonical-row-selection bug from the negative-gain null-out).
     assert gain_0530 != 9_442_647
 
 
@@ -246,7 +251,9 @@ def test_history_has_single_point_per_date_despite_duplicate_snapshot_rows() -> 
     assert dates == ["2026-05-29", "2026-05-30", "2026-05-31"]
 
     point_0530 = next(p for p in history if p["snapshotDate"] == "2026-05-30")
-    assert point_0530["dailyGain"] == -991_529
+    # -991_529 (see the analysis.py test above) is a negative gain -- null-ed
+    # out rather than surfaced in the history payload.
+    assert point_0530["dailyGain"] is None
 
 
 def test_mvp_characters_history_unaffected_for_non_duplicate_characters() -> None:
