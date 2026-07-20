@@ -37,13 +37,17 @@ DB_STORE_TAG = "db-store"
 DB_STORE_ASSET_NAME = "ranking.db.gz"
 
 # gh CLI が「タグ/Asset が存在しない」ことを示すために stderr に出す典型的な文言。
-# これらに一致しない失敗(認証エラー・ネットワーク断など)は「存在しない」と
-# みなさず例外にする(blind clobber を避けるための保守的なフォールバック)。
+# これらに一致しない失敗(認証エラー・ネットワーク断・レート制限など)は
+# 「存在しない」とみなさず例外にする(blind clobber を避けるための保守的な
+# フォールバック)。release_exists / download_current_asset の両方がこの1箇所
+# (_is_not_found_error)を経由して判定し、判定基準が分岐しないようにする。
 _NOT_FOUND_MARKERS = (
     "release not found",
     "not found",
     "404",
     "no release found",
+    "no assets match",
+    "no such asset",
 )
 
 
@@ -62,6 +66,17 @@ def _run_gh(args: list[str], *, check: bool = True) -> subprocess.CompletedProce
     return result
 
 
+def _is_not_found_error(stderr: str | None) -> bool:
+    """`gh` の stderr が「対象が存在しない」ことを示す既知の文言に一致するか。
+
+    True を返すのは「存在しないと確信できる」場合のみ。一致しない失敗は
+    呼び出し側が `ReleaseStoreError` を送出して fail-closed する前提
+    (release_exists / download_current_asset で共通利用)。
+    """
+    lowered = (stderr or "").lower()
+    return any(marker in lowered for marker in _NOT_FOUND_MARKERS)
+
+
 def release_exists(tag: str = DB_STORE_TAG) -> bool:
     """Release タグが存在するか確認する。
 
@@ -73,8 +88,7 @@ def release_exists(tag: str = DB_STORE_TAG) -> bool:
     result = _run_gh(["release", "view", tag], check=False)
     if result.returncode == 0:
         return True
-    stderr = (result.stderr or "").lower()
-    if any(marker in stderr for marker in _NOT_FOUND_MARKERS):
+    if _is_not_found_error(result.stderr):
         return False
     raise ReleaseStoreError(
         f"gh release view failed unexpectedly for tag '{tag}' (rc={result.returncode}): "
@@ -109,9 +123,16 @@ def download_current_asset(
 ) -> bool:
     """現在の Release Asset を `dest_path` にダウンロードする。
 
-    Release タグ自体が存在しない(=初回シード前)場合のみ False を返す。
-    それ以外の失敗(タグはあるが Asset 未アップロード等)は `gh` の終了コードから
-    判定し、Asset が存在しない場合も False を返す。
+    `False` を返すのは「Release/Asset が本当に存在しない(=初回シード前)」と
+    確信できる場合のみ。それ以外の失敗(ネットワーク/レート制限/認証エラー等、
+    `gh` の stderr から not-found と断定できないケース)は `ReleaseStoreError`
+    を送出して fail-closed する。
+
+    ここを `release_exists` と同じ判定基準(`_is_not_found_error`)に揃えていない
+    と、「Release も Asset も実在するが download が一時的に失敗しただけ」を
+    「Asset なし」と誤判定し、呼び出し元の `sync_db_to_release` が additive-merge
+    をスキップしたまま `--clobber` upload してしまう
+    (= Release 側にしかない行がサイレントに消える blind clobber, INV-2 違反)。
     """
     dest_path = Path(dest_path)
     dest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -139,7 +160,12 @@ def download_current_asset(
             check=False,
         )
         downloaded = Path(tmp_dir) / asset_name
-        if result.returncode != 0 or not downloaded.exists():
+
+        if result.returncode == 0 and downloaded.exists():
+            shutil.move(str(downloaded), str(dest_path))
+            return True
+
+        if result.returncode != 0 and _is_not_found_error(result.stderr):
             logger.info(
                 "release_store: asset '%s' not found on release '%s' (rc=%s)",
                 asset_name,
@@ -147,8 +173,15 @@ def download_current_asset(
                 result.returncode,
             )
             return False
-        shutil.move(str(downloaded), str(dest_path))
-        return True
+
+        # Ambiguous: either `gh` exited 0 without producing the file (anomaly)
+        # or it failed for a reason we can't positively identify as
+        # not-found (network/rate-limit/auth/etc). Do not treat this as
+        # "asset absent" — fail closed rather than risk a blind clobber.
+        raise ReleaseStoreError(
+            f"gh release download failed unexpectedly for tag '{tag}' asset "
+            f"'{asset_name}' (rc={result.returncode}): {result.stderr}"
+        )
 
 
 def upload_asset(
