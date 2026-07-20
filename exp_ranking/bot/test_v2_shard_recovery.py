@@ -512,6 +512,79 @@ def _build_fixture_with_duplicate_row(tmp_path: Path):
     return true_db, dates, dupe_date
 
 
+def _inject_negative_gain_row(
+    db_path: Path, *, snapshot_date: str, name: str, asset_key: str, level: int, exp: int
+) -> None:
+    """Simulate a real data-quality artifact: overwrite an existing day's row
+    for a character with a level/exp that regresses below the previous
+    calendar day's value -- e.g. a bad snapshot pair from an API glitch (see
+    DECISION_LOG LULU-055). `analysis.build_analysis_rows`'s negative-
+    dailyGain guard (analysis.py:143-152) nulls that day's `dailyGain` rather
+    than showing a fabricated negative number, which is exactly the
+    exact-chain-breaking condition `reconstruct_exp_backward`'s
+    `conservative_fallback` path is designed to survive.
+    """
+    import sqlite3
+
+    with sqlite3.connect(db_path) as conn:
+        conn.execute(
+            "UPDATE ranking_snapshot SET level = ?, exp = ? "
+            "WHERE snapshot_date = ? AND character_name = ? AND character_asset_key = ?",
+            (level, exp, snapshot_date, name, asset_key),
+        )
+        conn.commit()
+
+
+def _build_fixture_with_null_daily_gain_break(tmp_path: Path):
+    """Ground-truth DB: DAYS of clean data for all 3 characters, plus a
+    realistic data-quality glitch for Beta on one day: its recorded
+    level/exp regresses below the previous calendar day's value (a real
+    production artifact -- see analysis.py:143-152 / DECISION_LOG LULU-055),
+    which makes `analysis.build_analysis_rows` null that day's `dailyGain`
+    instead of fabricating a negative one.
+
+    This -- not an injected duplicate (identity, snapshotDate) row -- is the
+    realistic trigger for `reconstruct_exp_backward`'s exact-chain break in
+    *current* production data: P-DQ-1 (`analysis.
+    deduplicate_snapshots_by_identity`) now collapses duplicate rows to one
+    before the v2 export ever builds the shard history a recovering client
+    downloads, so a duplicated snapshotDate no longer reaches the shard at
+    all (see `test_duplicate_date_injection_no_longer_breaks_chain_after_p_dq_1`
+    below).
+    """
+    dates = _dates("2026-01-01", DAYS)
+    true_db = tmp_path / "true_with_glitch.db"
+    _build_true_db(true_db, dates)
+
+    glitch_index = DAYS // 2
+    glitch_date = dates[glitch_index]
+    prev_date = dates[glitch_index - 1]
+    prev_row = next(
+        row
+        for row in load_all_snapshots(true_db)
+        if row.snapshot_date == prev_date and row.character_name == "Beta"
+    )
+    # Regress Beta's progress strictly below the previous day's -- by exp if
+    # there's enough headroom, else by level -- so the resulting dailyGain is
+    # unambiguously negative (and therefore nulled by analysis.py) regardless
+    # of exactly where in the level table this fixture lands.
+    if prev_row.exp >= 1_000_000:
+        glitch_level = prev_row.level
+        glitch_exp = prev_row.exp - 1_000_000
+    else:
+        glitch_level = prev_row.level - 1
+        glitch_exp = 0
+    _inject_negative_gain_row(
+        true_db,
+        snapshot_date=glitch_date,
+        name="Beta",
+        asset_key="asset-beta",
+        level=glitch_level,
+        exp=glitch_exp,
+    )
+    return true_db, dates, glitch_date
+
+
 # JS port of rankingUtils.js:124-134 (formatExp) -- the display rounding
 # quantum applied to daily/weekly/monthly gain in RankingTable.jsx,
 # TopGainHighlights.jsx, CharacterDetail.jsx.
@@ -536,10 +609,22 @@ def _gain_rank_map(characters: list[dict], field: str) -> dict[int, int]:
 
 def test_p1_acceptance_exact_and_fallback_counts(tmp_path: Path) -> None:
     """Criteria 1+2: normal characters reconstruct 100% "exact" (fallback
-    never fires for them); the character with an injected duplicate-date row
-    is the *only* source of fallback, and it fires exactly at that break.
+    never fires for them); the character with a null-dailyGain break is the
+    *only* source of fallback, and it fires exactly at that break.
+
+    Trigger note (post P-DQ-1): this test used to inject a *duplicate*
+    (identity, snapshotDate) row to break the exact chain. Since main gained
+    P-DQ-1 (`analysis.deduplicate_snapshots_by_identity`), such duplicates
+    are collapsed to a single row *before* the v2 export builds the shard
+    history a recovering client downloads, so that trigger no longer reaches
+    the shard at all and `conservative_fallback` stayed at 0 -- see
+    `test_duplicate_date_injection_no_longer_breaks_chain_after_p_dq_1`
+    below, which now records that (desirable) interaction explicitly.
+    `conservative_fallback` itself is still real and reachable in current
+    production data, most plausibly via a null `dailyGain` (analysis.py's
+    negative-gain guard, analysis.py:143-152) -- the trigger used here.
     """
-    true_db, dates, dupe_date = _build_fixture_with_duplicate_row(tmp_path)
+    true_db, dates, glitch_date = _build_fixture_with_null_daily_gain_break(tmp_path)
     _, true_summary, true_shards = _export_v2(true_db, latest_snapshot_date=dates[-1])
 
     histories_by_key: dict[str, list[dict]] = {}
@@ -562,22 +647,70 @@ def test_p1_acceptance_exact_and_fallback_counts(tmp_path: Path) -> None:
             counts[day.method] += 1
         stats_by_character[character["name"]] = counts
 
-    # Criterion 1: normal characters (no duplicate rows) are 100% exact.
+    # Criterion 1: normal characters (no null dailyGain) are 100% exact.
     assert stats_by_character["Alpha"] == {"exact": DAYS, "conservative_fallback": 0, "unrecoverable": 0}
     assert stats_by_character["Gamma"] == {"exact": DAYS, "conservative_fallback": 0, "unrecoverable": 0}
 
     # Criterion 2: fallback fires only for Beta, only because of the injected
-    # duplicate day (not a systemic/frequent occurrence).
+    # null-dailyGain break (not a systemic/frequent occurrence).
     beta_stats = stats_by_character["Beta"]
     assert beta_stats["unrecoverable"] == 0
     assert beta_stats["conservative_fallback"] > 0
     assert beta_stats["conservative_fallback"] < DAYS // 4, (
         "fallback should be confined to the neighborhood of the single "
-        f"injected duplicate day, not pervasive: {beta_stats}"
+        f"injected null-dailyGain break, not pervasive: {beta_stats}"
     )
-    # DAYS + 1: the injected duplicate adds one extra history point for Beta
-    # (two rows on dupe_date instead of one).
-    assert beta_stats["exact"] + beta_stats["conservative_fallback"] == DAYS + 1
+    # DAYS: the glitch overwrites an existing day's row in place (no extra
+    # history point), unlike the retired duplicate-row trigger.
+    assert beta_stats["exact"] + beta_stats["conservative_fallback"] == DAYS
+
+
+def test_duplicate_date_injection_no_longer_breaks_chain_after_p_dq_1(tmp_path: Path) -> None:
+    """Documents an interaction between P-DQ-1 (`analysis.
+    deduplicate_snapshots_by_identity`, see DECISION_LOG) and T12 P1: an
+    injected duplicate (identity, snapshotDate) row -- the real production
+    artifact `_inject_duplicate_day_row` / `_build_fixture_with_duplicate_row`
+    simulate, and the original trigger for this file's acceptance test --
+    no longer breaks `reconstruct_exp_backward`'s exact chain, because
+    P-DQ-1 deterministically collapses such duplicates to a single row
+    *before* the v2 export ever builds the shard history a recovering
+    client downloads. The shard-level "ambiguous date" guard in
+    v2_recovery_backward.py (kept for defensive/back-compat reasons -- e.g.
+    shards exported before P-DQ-1 shipped, or a future shard producer that
+    doesn't dedupe) is therefore not exercised by current exports.
+
+    This is the intended, desirable effect of P-DQ-1 (duplicates are fixed
+    at the source instead of merely tolerated downstream), not a
+    regression: see `test_p1_acceptance_exact_and_fallback_counts` above for
+    the trigger that *is* still current (a null dailyGain).
+    """
+    true_db, dates, dupe_date = _build_fixture_with_duplicate_row(tmp_path)
+    _, true_summary, true_shards = _export_v2(true_db, latest_snapshot_date=dates[-1])
+
+    histories_by_key: dict[str, list[dict]] = {}
+    for shard in true_shards:
+        histories_by_key.update(shard)
+
+    beta_char = next(c for c in true_summary["characters"] if c["name"] == "Beta")
+    beta_history = histories_by_key[beta_char["historyKey"]]
+
+    # P-DQ-1 collapses the injected duplicate to exactly one point for
+    # dupe_date -- the shard never carries two points on the same date.
+    dupe_date_points = [p for p in beta_history if p["snapshotDate"] == dupe_date]
+    assert len(dupe_date_points) == 1
+    assert len(beta_history) == DAYS
+
+    points_desc = sorted(beta_history, key=lambda p: p["snapshotDate"], reverse=True)
+    reconstructed = reconstruct_exp_backward(
+        anchor_date=dates[-1],
+        anchor_level=beta_char["level"],
+        anchor_exp=beta_char["exp"],
+        points_desc=points_desc,
+    )
+    counts = {"exact": 0, "conservative_fallback": 0, "unrecoverable": 0}
+    for day in reconstructed:
+        counts[day.method] += 1
+    assert counts == {"exact": DAYS, "conservative_fallback": 0, "unrecoverable": 0}
 
 
 def test_p1_acceptance_never_over_restores(tmp_path: Path) -> None:
