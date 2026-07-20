@@ -128,6 +128,85 @@ def test_download_current_asset_returns_false_when_asset_missing_on_existing_rel
     assert release_store.download_current_asset(dest, tag="db-store") is False
 
 
+def test_download_current_asset_raises_on_ambiguous_failure_instead_of_assuming_absence(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Regression for the P1 gap flagged in code-review: a transient download
+    failure (network/rate-limit/auth — NOT a confirmed 'asset absent' message)
+    must raise, not return False. Returning False here would make
+    `sync_db_to_release` skip additive-merge and `--clobber` upload the local
+    DB as-is, silently dropping any rows that only exist on the current
+    Release Asset (blind clobber, INV-2 violation)."""
+
+    def fake_run(cmd: list[str], **kwargs: object) -> subprocess.CompletedProcess:
+        if cmd[:3] == ["gh", "release", "view"]:
+            return _fake_completed(0)
+        if cmd[:3] == ["gh", "release", "download"]:
+            return _fake_completed(1, stderr="error connecting to api.github.com: timeout")
+        raise AssertionError(f"unexpected gh call: {cmd}")
+
+    monkeypatch.setattr(release_store.subprocess, "run", fake_run)
+    dest = tmp_path / "downloaded.db.gz"
+    with pytest.raises(release_store.ReleaseStoreError):
+        release_store.download_current_asset(dest, tag="db-store")
+    assert not dest.exists()
+
+
+def test_download_current_asset_raises_when_gh_reports_success_but_file_missing(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Anomalous case: gh exits 0 but produced no file. Must not be silently
+    treated as 'no asset' — fail closed."""
+
+    def fake_run(cmd: list[str], **kwargs: object) -> subprocess.CompletedProcess:
+        if cmd[:3] == ["gh", "release", "view"]:
+            return _fake_completed(0)
+        if cmd[:3] == ["gh", "release", "download"]:
+            return _fake_completed(0)  # success, but no file written to --dir
+        raise AssertionError(f"unexpected gh call: {cmd}")
+
+    monkeypatch.setattr(release_store.subprocess, "run", fake_run)
+    dest = tmp_path / "downloaded.db.gz"
+    with pytest.raises(release_store.ReleaseStoreError):
+        release_store.download_current_asset(dest, tag="db-store")
+
+
+def test_sync_db_to_release_aborts_without_uploading_on_ambiguous_download_failure(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """End-to-end (through sync_db_to_release, not a mocked download_current_asset):
+    an ambiguous gh failure during download must propagate and `upload_asset`
+    must never be called — i.e. no blind clobber happens."""
+    local_db = tmp_path / "local.db"
+    append_snapshots(
+        local_db,
+        [_row("2026-07-19", 1, "Alpha", 500, "asset-a")],
+        fetched_at="2026-07-19T09:00:00+00:00",
+    )
+
+    upload_calls = 0
+
+    def fake_upload_asset(*args: object, **kwargs: object) -> None:
+        nonlocal upload_calls
+        upload_calls += 1
+
+    monkeypatch.setattr(release_store, "upload_asset", fake_upload_asset)
+
+    def fake_run(cmd: list[str], **kwargs: object) -> subprocess.CompletedProcess:
+        if cmd[:3] == ["gh", "release", "view"]:
+            return _fake_completed(0)
+        if cmd[:3] == ["gh", "release", "download"]:
+            return _fake_completed(1, stderr="429 rate limit exceeded")
+        raise AssertionError(f"unexpected gh call: {cmd}")
+
+    monkeypatch.setattr(release_store.subprocess, "run", fake_run)
+
+    with pytest.raises(release_store.ReleaseStoreError):
+        release_store.sync_db_to_release(local_db, tag="db-store")
+
+    assert upload_calls == 0
+
+
 # ---------------------------------------------------------------------------
 # ensure_release / upload_asset
 # ---------------------------------------------------------------------------
