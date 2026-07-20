@@ -204,3 +204,30 @@ jobs:
           fi
           git commit -m "chore: update ranking.db (navigator) [skip ci]"
           git push origin "HEAD:${{ github.ref_name }}"
+
+      # T12 P2: Release Asset (db-store/ranking.db.gz) を git db.gz コミットと並行して
+      # 更新する耐久層の安全網。書込は必ず「現Asset download -> additive-merge
+      # (INSERT OR IGNORE, merge_ranking_databases 再利用) -> --clobber upload」の順
+      # (INV-2/3)。書き手は pages と navigator の両方(単一書き手にしない、INV-3)。
+      # ranking.db は上のステップで git 側とマージ済みの状態がワークツリーに残って
+      # いるため、それをそのまま入力にする。git 側の commit/push が失敗しても
+      # (concurrency 直列化はしているが念のため)この安全網は独立して試行する。
+      # 配信経路(rankings.json)には一切関与しない(INV-1)。
+      - name: Persist ranking.db to Release store (P2 parallel safety net)
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if [ ! -f exp_ranking/bot/data/ranking.db ]; then
+            echo "No local ranking.db to persist to Release store"
+            exit 0
+          fi
+          cd exp_ranking/bot
+          python -c "
+          from pathlib import Path
+          from release_store import sync_db_to_release
+          result = sync_db_to_release(Path('data/ranking.db'))
+          print(f'release_store sync (navigator): {result}')
+          "
