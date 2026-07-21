@@ -29,7 +29,7 @@ describe("versionedStorage", () => {
   it("writes only the configured key with normalized data", () => {
     const store = backend();
     expect(writeVersionedState(store, config.key, { schemaVersion: 2, reminderMemo: "memo" }, normalizeDashboardState).ok).toBe(true);
-    expect(JSON.parse(store.value(config.key))).toEqual({ schemaVersion: 2, reminderMemo: "memo", dailyExpGoals: {}, legacyDailyExpGoal: "", themeColor: "green", themeDepth: "standard" });
+    expect(JSON.parse(store.value(config.key))).toEqual({ schemaVersion: 2, reminderMemo: "memo", dailyExpGoals: {}, legacyDailyExpGoal: "", themeColor: "green", themeDepth: "deep" });
   });
 });
 
