@@ -22,7 +22,7 @@ function AppShell() {
   const { t, loading, characters, loadError, meta, scheduledUpdateLabel, route } = useBoard();
   const dashboardStore = useDashboardStore();
   const themeColor = dashboardStore.state.themeColor || "green";
-  const themeDepth = dashboardStore.state.themeDepth || "standard";
+  const themeDepth = dashboardStore.state.themeDepth || "deep";
   const siteHeaderVariant = themeDepth === "deep" ? "dark" : "light";
 
   useEffect(() => {

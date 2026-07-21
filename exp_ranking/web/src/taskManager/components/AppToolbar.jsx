@@ -13,7 +13,7 @@ export default function AppToolbar({ active }) {
   const { t } = useTranslation();
   const dashboardStore = useDashboardStore();
   const color = dashboardStore.state.themeColor || "green";
-  const depth = dashboardStore.state.themeDepth || "standard";
+  const depth = dashboardStore.state.themeDepth || "deep";
 
 
   return (

@@ -32,11 +32,11 @@ function normalizeThemeColor(value) {
 
 function normalizeThemeDepth(value, hasLegacyTheme = false) {
   if (DASHBOARD_THEME_DEPTHS.includes(value)) return value;
-  return hasLegacyTheme ? "light" : "standard";
+  return hasLegacyTheme ? "light" : "deep";
 }
 
 export function createDefaultDashboardState() {
-  return { schemaVersion: DASHBOARD_SCHEMA_VERSION, reminderMemo: "", dailyExpGoals: {}, legacyDailyExpGoal: "", themeColor: "green", themeDepth: "standard" };
+  return { schemaVersion: DASHBOARD_SCHEMA_VERSION, reminderMemo: "", dailyExpGoals: {}, legacyDailyExpGoal: "", themeColor: "green", themeDepth: "deep" };
 }
 
 export function normalizeDashboardState(raw) {
