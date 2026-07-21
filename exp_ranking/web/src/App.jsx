@@ -4,6 +4,7 @@ import BoardHeader from "./components/BoardHeader";
 import RankingListView from "./pages/RankingListView";
 import CharacterDetailView from "./pages/CharacterDetailView";
 import GroupCompareView from "./pages/GroupCompareView";
+import TaskManagerRoot from "./taskManager/TaskManagerRoot.jsx";
 
 export default function App() {
   return (
@@ -17,6 +18,10 @@ export default function App() {
 
 function AppShell() {
   const { t, loading, characters, loadError, meta, scheduledUpdateLabel, route } = useBoard();
+
+  if (route.name === "dashboard" || route.name === "tasks" || route.name === "schedule") {
+    return <TaskManagerRoot route={route} />;
+  }
 
   if (loading) {
     return (
