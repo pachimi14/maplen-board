@@ -11,7 +11,7 @@ export function SiteHeader({ active = "", variant = "light" }) {
   const selected = dark ? "bg-slate-800 text-cyan-200" : "bg-emerald-50 text-emerald-700";
 
   return (
-    <header className={`border-b backdrop-blur ${shell}`}>
+    <header className={`relative z-[100] overflow-visible border-b backdrop-blur ${shell}`}>
       <div className="mx-auto flex min-h-14 max-w-7xl flex-wrap items-center justify-between gap-2 px-4 py-2 sm:flex-nowrap sm:gap-3 sm:px-6 lg:px-8">
         <a href="#/" className={`shrink-0 text-xs font-bold tracking-[0.26em] ${brand}`}>LULUMI TOOLS</a>
         <div className="flex w-full min-w-0 items-center justify-end gap-2 sm:w-auto">
