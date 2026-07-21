@@ -16,9 +16,9 @@ export function ThemePicker() {
   const depth = dashboardStore.state.themeDepth || "deep";
 
   return (
-    <details className="theme-picker relative shrink-0">
+    <details className="theme-picker relative z-[110] shrink-0">
       <summary className="theme-picker-button" aria-label={t("theme.label")} title={t("theme.label")}>🎨</summary>
-      <div className="absolute right-0 z-40 mt-2 w-56 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl">
+      <div className="absolute right-0 z-[120] mt-2 w-56 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl">
         <fieldset>
           <legend className="mb-2 text-xs font-semibold text-slate-600">{t("theme.color")}</legend>
           <div className="grid grid-cols-4 gap-3">
