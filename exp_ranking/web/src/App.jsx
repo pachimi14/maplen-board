@@ -1,6 +1,6 @@
 import { BoardProvider, useBoard } from "./board/BoardContext";
 import { ProfileProvider } from "./profile/ProfileContext";
-import BoardHeader from "./components/BoardHeader";
+import BoardHeader, { SiteHeader } from "./components/BoardHeader";
 import RankingListView from "./pages/RankingListView";
 import CharacterDetailView from "./pages/CharacterDetailView";
 import GroupCompareView from "./pages/GroupCompareView";
@@ -57,8 +57,9 @@ function AppShell() {
   }
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-slate-950 text-slate-100 p-4 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen overflow-x-hidden bg-slate-950 text-slate-100">
+      <SiteHeader active="ranking" variant="dark" />
+      <div className="mx-auto max-w-7xl space-y-6 p-4 md:p-8">
         <BoardHeader
           meta={meta}
           loadError={loadError}
