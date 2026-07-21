@@ -13,7 +13,10 @@ export default function BoardHeader({ meta, loadError, scheduledUpdateLabel, t }
         ) : null}
       </div>
       <div className="text-right md:pb-1 shrink-0 space-y-2">
-        <LanguageSwitcher />
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <a href="#/dashboard" className="inline-flex min-h-10 items-center rounded-lg border border-cyan-700 bg-cyan-950/70 px-3 py-2 text-sm font-semibold text-cyan-200 transition hover:border-cyan-400 hover:bg-cyan-900/80 hover:text-white">{t("app.openDailyDashboard")}</a>
+          <LanguageSwitcher />
+        </div>
         <div className="space-y-0.5">
           <p className="text-xs md:text-sm text-slate-500">
             {meta.rankingMinLevel
