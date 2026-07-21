@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { claimLegacyDailyExpGoal, dailyExpGoalProgress, dailyExpGoalRemaining, getDailyExpGoal, normalizeDashboardState, parseDailyExpGoal, setDailyExpGoal, setDashboardThemeColor, setDashboardThemeDepth } from "./dashboardModel.js";
+import { addDashboardCharacter, claimLegacyDailyExpGoal, dailyExpGoalProgress, dailyExpGoalRemaining, getDailyExpGoal, normalizeDashboardState, parseDailyExpGoal, removeDashboardCharacter, setDailyExpGoal, setDashboardThemeColor, setDashboardThemeDepth } from "./dashboardModel.js";
 
 describe("daily EXP goal", () => {
   it.each([["500", "500000000000"], ["1.5", "1500000000"], ["1,234", "1234000000000"]])("parses %s exactly", (input, expected) => {
@@ -8,7 +8,7 @@ describe("daily EXP goal", () => {
   it.each(["", "0", "500B", "abc", "-10"])("rejects %s", (input) => expect(parseDailyExpGoal(input)).toBeNull());
   it("migrates the old single-character goal to the primary character", () => {
     const migrated = normalizeDashboardState({ schemaVersion: 1, reminderMemo: "memo", dailyExpGoal: "500000000000" });
-    expect(migrated).toMatchObject({ schemaVersion: 2, reminderMemo: "memo", dailyExpGoals: {}, legacyDailyExpGoal: "500000000000" });
+    expect(migrated).toMatchObject({ schemaVersion: 3, reminderMemo: "memo", dailyExpGoals: {}, legacyDailyExpGoal: "500000000000", characterHistoryKeys: [] });
     expect(getDailyExpGoal(claimLegacyDailyExpGoal(migrated, "char-a"), "char-a")).toBe("500000000000");
   });
   it("stores daily goals independently for each character", () => {
@@ -36,3 +36,17 @@ describe("daily EXP goal", () => {
   });
 });
 
+
+describe("dashboard characters", () => {
+  it("stores at most two distinct history keys", () => {
+    const first = addDashboardCharacter({ schemaVersion: 3 }, "char-a");
+    const second = addDashboardCharacter(first.state, "char-b");
+    expect(second.state.characterHistoryKeys).toEqual(["char-a", "char-b"]);
+    expect(addDashboardCharacter(second.state, "char-c")).toMatchObject({ ok: false, code: "limitReached" });
+    expect(addDashboardCharacter(second.state, "char-a")).toMatchObject({ ok: false, code: "alreadyPinned" });
+  });
+  it("removes a dashboard character without changing ranking profile data", () => {
+    const state = { schemaVersion: 3, characterHistoryKeys: ["char-a", "char-b"] };
+    expect(removeDashboardCharacter(state, "char-a").state.characterHistoryKeys).toEqual(["char-b"]);
+  });
+});

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-export default function CharacterPickerDialog({ open, loading, characters, registeredKeys, onClose, onRegister, onRetry, t }) {
+export default function CharacterPickerDialog({ open, loading, characters, registeredKeys, suggestedKeys = [], onClose, onRegister, onRetry, t }) {
   const dialogRef = useRef(null);
   const [query, setQuery] = useState("");
   const [message, setMessage] = useState("");
@@ -22,6 +22,10 @@ export default function CharacterPickerDialog({ open, loading, characters, regis
       .filter((character) => character.name.toLocaleLowerCase().includes(needle))
       .slice(0, 20);
   }, [characters, query]);
+  const suggestions = useMemo(() => {
+    const byKey = new Map(characters.map((character) => [character.historyKey, character]));
+    return [...new Set(suggestedKeys)].map((key) => byKey.get(key)).filter(Boolean);
+  }, [characters, suggestedKeys]);
 
   function register(historyKey) {
     const result = onRegister(historyKey);
@@ -40,6 +44,8 @@ export default function CharacterPickerDialog({ open, loading, characters, regis
           <h2 className="text-xl font-semibold text-slate-900">{t("characters.add")}</h2>
           <button type="button" onClick={onClose} className="mini-button">{t("actions.close")}</button>
         </div>
+        {suggestions.length ? <section className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-3"><h3 className="font-bold text-emerald-900">{t("characters.rankingCandidates")}</h3><p className="mt-0.5 text-xs text-emerald-700">{t("characters.rankingCandidatesHint")}</p><div className="mt-3 grid gap-2 sm:grid-cols-2">{suggestions.map((character) => { const registered = registeredKeys.includes(character.historyKey); return <button key={character.historyKey} type="button" disabled={registered} onClick={() => register(character.historyKey)} className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-white p-2 text-left transition hover:border-emerald-400 hover:bg-emerald-50 disabled:cursor-default disabled:opacity-45">{character.imageUrl ? <img src={character.imageUrl} alt="" className="h-11 w-11 rounded-lg bg-slate-100 object-contain" /> : null}<span className="min-w-0"><span className="block truncate font-semibold text-slate-900">{character.name}</span><span className="block text-xs text-slate-500">Lv.{character.level} · {registered ? t("characters.alreadyRegistered") : t("characters.register")}</span></span></button>; })}</div></section> : null}
+        {suggestions.length ? <label className="-mb-3 block text-sm font-semibold text-slate-700">{t("characters.searchLabel")}</label> : null}
         <input
           autoFocus
           className="field"

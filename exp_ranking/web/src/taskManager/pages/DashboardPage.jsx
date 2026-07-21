@@ -4,7 +4,7 @@ import CharacterPickerDialog from "../components/CharacterPickerDialog.jsx";
 import AppToolbar from "../components/AppToolbar.jsx";
 import DashboardTasks from "../components/DashboardTasks.jsx";
 import NotificationBackgroundSync from "../components/NotificationBackgroundSync.jsx";
-import { claimLegacyDailyExpGoal, dailyExpGoalProgress, dailyExpGoalRemaining, getDailyExpGoal, parseDailyExpGoal, setDailyExpGoal, setReminderMemo } from "../domain/dashboardModel.js";
+import { addDashboardCharacter, claimLegacyDailyExpGoal, dailyExpGoalProgress, dailyExpGoalRemaining, DASHBOARD_CHARACTER_LIMIT, getDailyExpGoal, parseDailyExpGoal, removeDashboardCharacter, setDailyExpGoal, setReminderMemo } from "../domain/dashboardModel.js";
 import { calculateLiveExp } from "../domain/liveExp.js";
 import { buildEventViews, mergeTasks, summarizeTasks } from "../domain/mergeTasks.js";
 import { buildNotificationSnapshot } from "../domain/notificationModel.js";
@@ -21,8 +21,6 @@ import { useEventStore } from "../storage/useEventStore.js";
 import { useScheduleStore } from "../storage/useScheduleStore.js";
 import { useTaskStore } from "../storage/useTaskStore.js";
 import { formatExp, formatRemaining } from "../utils/format.js";
-
-const DASHBOARD_CHARACTER_LIMIT = 2;
 
 function SectionHeading({ icon, eyebrow, action, accent = "text-emerald-600" }) {
   return (
@@ -125,7 +123,7 @@ function FeaturedCharacter({ historyKey, character, primary, dataDate, stale, li
 }
 function MyCharactersCard({ profile, ranking, dashboardState, onSaveGoal, onAdd, onRemove, onRetry, t, language }) {
   const byKey = useMemo(() => new Map(ranking.characters.map((character) => [character.historyKey, character])), [ranking.characters]);
-  const dashboardKeys = useMemo(() => [profile.primaryHistoryKey, ...profile.pinnedHistoryKeys].filter((key, index, all) => key && all.indexOf(key) === index).slice(0, DASHBOARD_CHARACTER_LIMIT), [profile.primaryHistoryKey, profile.pinnedHistoryKeys]);
+  const dashboardKeys = dashboardState.characterHistoryKeys;
   const preferredKey = dashboardKeys[0] || "";
   const [selectedKey, setSelectedKey] = useState(preferredKey);
   useEffect(() => {
@@ -144,10 +142,10 @@ function MyCharactersCard({ profile, ranking, dashboardState, onSaveGoal, onAdd,
   return (
     <section className="dashboard-card min-h-0 overflow-hidden">
       <SectionHeading icon="♙" eyebrow="MY CHARACTERS" action={<button type="button" onClick={onAdd} disabled={dashboardKeys.length >= DASHBOARD_CHARACTER_LIMIT} className="dashboard-action disabled:opacity-40">＋ {t("characters.add")}</button>} accent="text-emerald-600" />
-      {ranking.status === "loading" && profile.pinnedHistoryKeys.length ? <p className="mt-3 rounded-xl bg-emerald-50 py-12 text-center text-sm text-emerald-700">{t("characters.loading")}</p> : null}
-      {ranking.status === "error" && profile.pinnedHistoryKeys.length ? <div className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-800"><span>{t("characters.loadFailed")}</span><button type="button" onClick={onRetry} className="dashboard-link ml-2">{t("actions.retry")}</button></div> : null}
-      {!profile.pinnedHistoryKeys.length ? <button type="button" onClick={onAdd} className="mt-3 w-full rounded-xl border border-dashed border-emerald-200 py-12 text-center text-sm text-emerald-700 hover:bg-emerald-50">＋ {t("characters.empty")}</button> : null}
-      {profile.pinnedHistoryKeys.length ? <CharacterTabs keys={dashboardKeys} activeKey={activeKey} byKey={byKey} primaryKey={profile.primaryHistoryKey} onSelect={setSelectedKey} t={t} /> : null}
+      {ranking.status === "loading" && dashboardKeys.length ? <p className="mt-3 rounded-xl bg-emerald-50 py-12 text-center text-sm text-emerald-700">{t("characters.loading")}</p> : null}
+      {ranking.status === "error" && dashboardKeys.length ? <div className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-800"><span>{t("characters.loadFailed")}</span><button type="button" onClick={onRetry} className="dashboard-link ml-2">{t("actions.retry")}</button></div> : null}
+      {!dashboardKeys.length ? <button type="button" onClick={onAdd} className="mt-3 w-full rounded-xl border border-dashed border-emerald-200 py-12 text-center text-sm text-emerald-700 hover:bg-emerald-50">＋ {t("characters.empty")}</button> : null}
+      {dashboardKeys.length ? <CharacterTabs keys={dashboardKeys} activeKey={activeKey} byKey={byKey} primaryKey={profile.primaryHistoryKey} onSelect={setSelectedKey} t={t} /> : null}
       {activeKey && (ranking.status === "ok" || activeCharacter) ? <FeaturedCharacter historyKey={activeKey} character={activeCharacter} live={live} liveModel={liveModel} dailyExpGoal={getDailyExpGoal(dashboardState, activeKey)} onSaveGoal={(goal) => onSaveGoal(activeKey, goal)} primary={profile.primaryHistoryKey === activeKey} dataDate={dataDate} stale={stale} onRemove={() => onRemove(activeKey)} t={t} language={language} /> : null}
     </section>
   );
@@ -209,12 +207,10 @@ export default function DashboardPage() {
   const eventViews = useMemo(() => buildEventViews({ events: eventStore.state.items }, now, language), [eventStore.state.items, now, language]);
   function toggleTask(task) { const result = taskStore.update((current) => toggleTaskCompletion(current, task, now)); setMessage(result.ok ? "" : t("backup.saveFailed")); }
   function registerDashboardCharacter(key) {
-    if (profileStore.profile.pinnedHistoryKeys.length >= DASHBOARD_CHARACTER_LIMIT) {
-      setMessage(t("characters.limitReached"));
-      return { ok: false, code: "limitReached" };
-    }
-    const result = profileStore.pin(key);
-    setMessage(result.ok ? "" : t(`characters.${result.code}`));
+    const update = addDashboardCharacter(dashboardStore.state, key);
+    if (!update.ok) { setMessage(t(`characters.${update.code}`)); return update; }
+    const result = dashboardStore.update(() => update.state);
+    setMessage(result.ok ? "" : t("backup.saveFailed"));
     if (result.ok) setPickerOpen(false);
     return result;
   }
@@ -227,14 +223,14 @@ export default function DashboardPage() {
       {warnings.length || message ? <div role="alert" className="mb-3 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800">{message || t(`status.${warnings[0]}`)}</div> : null}
       <section className="grid items-start gap-3 lg:grid-cols-12">
         <div className="lg:col-span-7 lg:row-span-2 lg:self-stretch"><DashboardTasks daily={taskView.daily} weekly={taskView.weekly} custom={taskView.custom} dailyTabs={taskTabs} weeklyTabs={taskTabs} dailySummary={daily} weeklySummary={weekly} customSummary={custom} dailyResetMs={resetSnapshot.daily.remainingMs} weeklyResetMs={resetSnapshot.weekly.remainingMs} onToggle={toggleTask} t={t} /></div>
-        <div className="lg:col-span-5"><MyCharactersCard profile={profileStore.profile} ranking={ranking} dashboardState={dashboardStore.state} onSaveGoal={(key, goal) => { const result = dashboardStore.update((state) => setDailyExpGoal(state, key, goal)); setMessage(result.ok ? "" : t("backup.saveFailed")); }} onAdd={() => setPickerOpen(true)} onRemove={(key) => { const result = profileStore.unpin(key); setMessage(result.ok ? "" : t(`characters.${result.code}`)); }} onRetry={() => {}} t={t} language={language} /></div>
+        <div className="lg:col-span-5"><MyCharactersCard profile={profileStore.profile} ranking={ranking} dashboardState={dashboardStore.state} onSaveGoal={(key, goal) => { const result = dashboardStore.update((state) => setDailyExpGoal(state, key, goal)); setMessage(result.ok ? "" : t("backup.saveFailed")); }} onAdd={() => setPickerOpen(true)} onRemove={(key) => { const update = removeDashboardCharacter(dashboardStore.state, key); const result = update.ok ? dashboardStore.update(() => update.state) : update; setMessage(result.ok ? "" : t(`characters.${result.code}`)); }} onRetry={() => {}} t={t} language={language} /></div>
         <div className="lg:col-span-5"><TodayScheduleCard items={todaySchedules} t={t} /></div>
         <div className="grid gap-3 sm:grid-cols-2 lg:col-span-12">
           <CompactEvents events={eventViews} t={t} />
           <MemoCard value={dashboardStore.state.reminderMemo} onChange={(event) => { const result = dashboardStore.update((state) => setReminderMemo(state, event.target.value)); setMessage(result.ok ? "" : t("dashboard.memoSaveFailed")); }} t={t} />
         </div>
       </section>
-      <CharacterPickerDialog open={pickerOpen} loading={ranking.status === "loading"} characters={ranking.characters} registeredKeys={profileStore.profile.pinnedHistoryKeys} onClose={() => setPickerOpen(false)} onRegister={registerDashboardCharacter} onRetry={() => {}} t={t} language={language} />
+      <CharacterPickerDialog open={pickerOpen} loading={ranking.status === "loading"} characters={ranking.characters} registeredKeys={dashboardStore.state.characterHistoryKeys} suggestedKeys={[profileStore.profile.primaryHistoryKey, ...profileStore.profile.pinnedHistoryKeys].filter(Boolean)} onClose={() => setPickerOpen(false)} onRegister={registerDashboardCharacter} onRetry={() => {}} t={t} language={language} />
     </main>
   );
 }
