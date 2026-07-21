@@ -1,8 +1,9 @@
 import { useMemo } from "react";
 import { useTranslation as useSiteTranslation } from "../../i18n/I18nContext.jsx";
+import en from "./locales/en.json";
 import ja from "./locales/ja.json";
 
-const MESSAGES = { ja };
+const MESSAGES = { ja, en };
 
 function getNested(object, path) {
   return path.split(".").reduce((current, key) => current?.[key], object);

@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import DashboardPage from "./pages/DashboardPage.jsx";
 import SchedulePage from "./pages/SchedulePage.jsx";
 import TaskManagerPage from "./pages/TaskManagerPage.jsx";
+import LanguageSwitcher from "../LanguageSwitcher.jsx";
 import { useDashboardStore } from "./storage/useDashboardStore.js";
 import "./taskManager.css";
 
@@ -31,7 +32,10 @@ export default function TaskManagerRoot({ route }) {
       <header className="border-b border-slate-200/80 bg-white/90 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <a href="#/" className="text-xs font-bold tracking-[0.26em] text-emerald-600">LULUMI TOOLS</a>
-          <a href="#/" className="text-sm font-semibold text-slate-600 hover:text-emerald-700">EXP Ranking</a>
+          <div className="flex items-center gap-3">
+            <a href="#/" className="text-sm font-semibold text-slate-600 hover:text-emerald-700">EXP Ranking</a>
+            <LanguageSwitcher />
+          </div>
         </div>
       </header>
       <Page />
