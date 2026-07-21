@@ -1,5 +1,6 @@
 import LanguageSwitcher from "../LanguageSwitcher";
 import { useTranslation } from "../i18n/I18nContext.jsx";
+import { ThemePicker } from "../taskManager/components/AppToolbar.jsx";
 
 export function SiteHeader({ active = "", variant = "light" }) {
   const { t } = useTranslation();
@@ -11,13 +12,14 @@ export function SiteHeader({ active = "", variant = "light" }) {
 
   return (
     <header className={`border-b backdrop-blur ${shell}`}>
-      <div className="mx-auto flex min-h-14 max-w-7xl items-center justify-between gap-3 px-4 py-2 sm:px-6 lg:px-8">
+      <div className="mx-auto flex min-h-14 max-w-7xl flex-wrap items-center justify-between gap-2 px-4 py-2 sm:flex-nowrap sm:gap-3 sm:px-6 lg:px-8">
         <a href="#/" className={`shrink-0 text-xs font-bold tracking-[0.26em] ${brand}`}>LULUMI TOOLS</a>
-        <div className="flex min-w-0 items-center justify-end gap-2">
+        <div className="flex w-full min-w-0 items-center justify-end gap-2 sm:w-auto">
           <nav aria-label="Lulumi Tools" className="flex min-w-0 items-center gap-1">
             <a href="#/" aria-current={active === "ranking" ? "page" : undefined} className={`rounded-lg px-2.5 py-2 text-xs font-semibold transition sm:px-3 sm:text-sm ${active === "ranking" ? selected : idle}`}>EXP Ranking</a>
             <a href="#/dashboard" aria-current={active === "daily" ? "page" : undefined} className={`rounded-lg px-2.5 py-2 text-xs font-semibold transition sm:px-3 sm:text-sm ${active === "daily" ? selected : idle}`}>{t("app.openDailyDashboard")}</a>
           </nav>
+          <ThemePicker />
           <LanguageSwitcher />
         </div>
       </div>
