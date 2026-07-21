@@ -62,7 +62,7 @@ function FlexibleTimingEditor({ task, onSave, t }) {
 }
 function DeadlineBadge({ task, t }) {
   if (!task.endsAt || task.remainingMs === null) return null;
-  return <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700" title={formatUtcDeadline(task.endsAt)}>{t("task.deadlineRemaining", { time: formatRemaining(task.remainingMs) })}</span>;
+  return <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700" title={formatUtcDeadline(task.endsAt, t.language)}>{t("task.deadlineRemaining", { time: formatRemaining(task.remainingMs, t.language) })}</span>;
 }
 
 function TaskTabBar({ tabs, selectedId, onSelect, onAdd, onRename, onDelete, t }) {
@@ -210,7 +210,7 @@ export default function TaskSection({ title, rule, remainingMs, tasks, tabs, onA
 
   return (
     <section className="panel-card">
-      <div className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-600">{rule}</p><h2 className="mt-2 text-xl font-semibold text-slate-900">{title}</h2>{remainingMs === null ? null : <p className="mt-1 text-sm font-semibold text-emerald-700">{t("reset.remaining", { time: formatRemaining(remainingMs) })}</p>}<p className="mt-1 text-xs text-slate-500">{t("task.taskCount", { count: visibleTasks.length })}</p></div><button type="button" onClick={onAdd} className="primary-button">＋ {t("task.add")}</button></div>
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-600">{rule}</p><h2 className="mt-2 text-xl font-semibold text-slate-900">{title}</h2>{remainingMs === null ? null : <p className="mt-1 text-sm font-semibold text-emerald-700">{t("reset.remaining", { time: formatRemaining(remainingMs, t.language) })}</p>}<p className="mt-1 text-xs text-slate-500">{t("task.taskCount", { count: visibleTasks.length })}</p></div><button type="button" onClick={onAdd} className="primary-button">＋ {t("task.add")}</button></div>
       <TaskTabBar tabs={tabs} selectedId={activeTabId} onSelect={setSelectedTabId} onAdd={onAddTab} onRename={onRenameTab} onDelete={onDeleteTab} t={t}/>
       {visibleTasks.length ? <ul className="space-y-3">{visibleTasks.map((task,index)=><TaskRow key={task.id} task={task} index={index} total={visibleTasks.length} tabs={tabs} showTabBadge={!activeTabId} dragState={dropTarget} onDragStart={beginDrag} onDragOver={dragOver} onDrop={drop} onDragEnd={endDrag} onOverride={onOverride} onAssignTab={onAssignTab} onDelete={onDelete} onMove={(current,direction)=>onMove(visibleTasks,current,direction)} onAddChild={onAddChild} onRenameTask={onRenameTask} onRenameChild={onRenameChild} onUpdateTaskDeadline={onUpdateTaskDeadline} onUpdateTaskTiming={onUpdateTaskTiming} onUpdateChildDeadline={onUpdateChildDeadline} onRemoveChild={onRemoveChild} onReorderChild={onReorderChild} t={t}/>)}</ul>:<div className="rounded-2xl border border-dashed border-slate-300 px-5 py-8 text-center"><p className="font-medium text-slate-700">{t("task.emptyTitle")}</p><p className="mt-2 text-sm text-slate-500">{t("task.emptyHint")}</p></div>}
     </section>

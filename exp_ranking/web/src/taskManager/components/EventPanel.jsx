@@ -22,9 +22,9 @@ export default function EventPanel({ events, t, compact = false }) {
                   <h3 className="mt-3 font-medium text-slate-900">{event.label}</h3>
                   {event.note ? <p className="mt-2 line-clamp-2 text-xs leading-4 text-slate-500">{event.note}</p> : null}
                 </div>
-                <p className="text-sm font-semibold text-slate-700">{formatRemaining(event.remainingMs)}</p>
+                <p className="text-sm font-semibold text-slate-700">{formatRemaining(event.remainingMs, t.language)}</p>
               </div>
-              <p className="mt-4 text-xs text-slate-500">{t("event.deadline", { date: formatUtcDeadline(event.finalDeadlineAt) })}</p>
+              <p className="mt-4 text-xs text-slate-500">{t("event.deadline", { date: formatUtcDeadline(event.finalDeadlineAt, t.language) })}</p>
             </article>
           ))}
         </div>

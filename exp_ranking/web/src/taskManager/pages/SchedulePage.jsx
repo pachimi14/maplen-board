@@ -11,8 +11,8 @@ import {
 import { useTranslation } from "../i18n/useTaskTranslation.jsx";
 import { useScheduleStore } from "../storage/useScheduleStore.js";
 
-function weekRangeLabel(days) {
-  const format = new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "short", day: "numeric" });
+function weekRangeLabel(days, language) {
+  const format = new Intl.DateTimeFormat(language, { year: "numeric", month: "short", day: "numeric" });
   return `${format.format(days[0])} 〜 ${format.format(days[6])}`;
 }
 
@@ -53,7 +53,7 @@ function DayColumn({ date, items, todayKey, onCreate, onEdit, onDelete, t }) {
 }
 
 export default function SchedulePage() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const { state, status, update } = useScheduleStore();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -119,7 +119,7 @@ export default function SchedulePage() {
         <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-xs font-semibold tracking-[0.2em] text-emerald-600">WEEK</p>
-            <h2 className="mt-2 text-xl font-semibold text-slate-900">{weekRangeLabel(weekDays)}</h2>
+            <h2 className="mt-2 text-xl font-semibold text-slate-900">{weekRangeLabel(weekDays, language)}</h2>
             <p className="mt-1 text-xs text-slate-500">{t("schedule.localTime")}</p>
           </div>
           <div className="grid grid-cols-3 gap-2 sm:flex">

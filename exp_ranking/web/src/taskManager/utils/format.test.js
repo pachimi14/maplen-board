@@ -11,4 +11,5 @@ describe("compact remaining-time formatting", () => {
   ])("formats %i ms as %s", (milliseconds, expected) => {
     expect(formatCompactRemaining(milliseconds)).toBe(expected);
   });
+  it("uses the selected locale for units", () => { expect(formatCompactRemaining(2 * 86400000, "es")).toBe("2 d"); expect(formatCompactRemaining(2 * 86400000, "th")).not.toContain("日"); });
 });
