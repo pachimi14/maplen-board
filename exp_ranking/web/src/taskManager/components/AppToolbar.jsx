@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { DASHBOARD_THEME_COLORS, DASHBOARD_THEME_DEPTHS, setDashboardThemeColor, setDashboardThemeDepth } from "../domain/dashboardModel.js";
 import { useTranslation } from "../i18n/useTaskTranslation.jsx";
 import { ROUTES } from "../routing/hashRoute.js";
@@ -16,10 +15,6 @@ export default function AppToolbar({ active }) {
   const color = dashboardStore.state.themeColor || "green";
   const depth = dashboardStore.state.themeDepth || "standard";
 
-  useEffect(() => {
-    document.documentElement.dataset.themeColor = color;
-    document.documentElement.dataset.themeDepth = depth;
-  }, [color, depth]);
 
   return (
     <div className="flex max-w-full min-w-0 items-center gap-2">
