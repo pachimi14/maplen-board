@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+const STORE_UPDATED_EVENT = "maplen-board-store-updated";
+
 export function useVersionedStore(config) {
   const configRef = useRef(config);
   const [snapshot, setSnapshot] = useState(() => config.read());
@@ -7,14 +9,27 @@ export function useVersionedStore(config) {
   snapshotRef.current = snapshot;
 
   useEffect(() => {
-    function onStorage(event) {
-      if (event.key !== configRef.current.key) return;
+    function reload(key) {
+      if (key !== configRef.current.key) return;
       const next = configRef.current.read();
       snapshotRef.current = next;
       setSnapshot(next);
     }
+
+    function onStorage(event) {
+      reload(event.key);
+    }
+
+    function onLocalUpdate(event) {
+      reload(event.detail?.key);
+    }
+
     window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
+    window.addEventListener(STORE_UPDATED_EVENT, onLocalUpdate);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener(STORE_UPDATED_EVENT, onLocalUpdate);
+    };
   }, []);
 
   const update = useCallback((mutate) => {
@@ -26,6 +41,7 @@ export function useVersionedStore(config) {
     const next = { state: nextState, status: "ok" };
     snapshotRef.current = next;
     setSnapshot(next);
+    window.dispatchEvent(new CustomEvent(STORE_UPDATED_EVENT, { detail: { key: configRef.current.key } }));
     return { ok: true, state: nextState };
   }, []);
 
