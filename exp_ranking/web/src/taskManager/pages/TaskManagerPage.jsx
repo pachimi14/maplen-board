@@ -33,7 +33,7 @@ function uniqueId(prefix) {
 }
 
 export default function TaskManagerPage() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const { state, status, update, replace } = useTaskStore(preset);
   const [now, setNow] = useState(() => new Date());
   const [addCadence, setAddCadence] = useState(null);
@@ -48,11 +48,11 @@ export default function TaskManagerPage() {
   }, []);
 
 const view = useMemo(
-    () => mergeTasks(preset, state, now, { language: "ja", includeHidden: true }),
-    [state, now],
+    () => mergeTasks(preset, state, now, { language, includeHidden: true }),
+    [state, now, language],
   );
   const resetSnapshot = useMemo(() => getResetSnapshot(now), [now]);
-  const templates = useMemo(() => listTaskTemplates(preset, addCadence, "ja", now), [addCadence, now]);
+  const templates = useMemo(() => listTaskTemplates(preset, addCadence, language, now), [addCadence, now, language]);
   const taskTabs = useMemo(() => listTaskTabs(state), [state]);
   const notificationSnapshot = useMemo(() => buildNotificationSnapshot(view, state.notificationSettings), [view, state.notificationSettings]);
   const statusMessage = ["corrupt", "unsupportedVersion", "storageError"].includes(status)
@@ -171,7 +171,7 @@ const view = useMemo(
         <TaskSection cadence="daily" tabs={taskTabs} title={t("task.daily")} rule={t("reset.dailyRule")} remainingMs={resetSnapshot.daily.remainingMs} tasks={view.daily} onAdd={() => setAddCadence("daily")} {...commonProps} />
         <TaskSection cadence="weekly" tabs={taskTabs} title={t("task.weekly")} rule={t("reset.weeklyRule")} remainingMs={resetSnapshot.weekly.remainingMs} tasks={view.weekly} onAdd={() => setAddCadence("weekly")} {...commonProps} />
         <TaskSection cadence="custom" tabs={taskTabs} title={t("task.customCadence")} rule={t("reset.customRule")} remainingMs={null} tasks={view.custom} onAdd={() => setAddCadence("custom")} {...commonProps} />
-        <EventManagementSection templates={preset.eventTemplates} t={t} />
+        <EventManagementSection templates={preset.eventTemplates} t={t} language={language} />
       </section>
       <NotificationSettings open={notificationOpen} onClose={() => setNotificationOpen(false)} onConnectionChange={setNotificationConnection} settings={state.notificationSettings} customTasks={view.custom} snapshot={notificationSnapshot} onChange={changeNotificationSettings} onSetCustomRule={setCustomNotification} t={t} />
       <AddTaskDialog open={Boolean(addCadence)} fixedCadence={addCadence} templates={templates} onClose={() => setAddCadence(null)} onSubmit={addTask} t={t} />

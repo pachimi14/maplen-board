@@ -59,13 +59,13 @@ function AvailabilityBadge({ task, t }) {
   return <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${closing ? "bg-rose-100 text-rose-700" : active ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-500"}`}>{closing ? t("task.weekendClosing") : active ? t("task.weekendAvailable") : t("task.weekendUpcoming")}</span>;
 }
 function DeadlineBadge({ task, t }) {
-  if (task.cadence === "custom" && task.dueAt) return <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${task.dueOverdue ? "bg-rose-100 text-rose-700" : "bg-amber-50 text-amber-700"}`} title={formatUtcDeadline(task.dueAt)}>{task.dueOverdue ? t("task.overdue") : t("task.dueRemaining", { time: formatCompactRemaining(task.dueRemainingMs) })}</span>;
+  if (task.cadence === "custom" && task.dueAt) return <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${task.dueOverdue ? "bg-rose-100 text-rose-700" : "bg-amber-50 text-amber-700"}`} title={formatUtcDeadline(task.dueAt, t.language)}>{task.dueOverdue ? t("task.overdue") : t("task.dueRemaining", { time: formatCompactRemaining(task.dueRemainingMs, t.language) })}</span>;
   if (!task.endsAt || task.remainingMs === null) return null;
-  return <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700" title={formatUtcDeadline(task.endsAt)}>{t("task.deadlineRemaining", { time: formatCompactRemaining(task.remainingMs) })}</span>;
+  return <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700" title={formatUtcDeadline(task.endsAt, t.language)}>{t("task.deadlineRemaining", { time: formatCompactRemaining(task.remainingMs, t.language) })}</span>;
 }
 function CustomTimingBadges({ task, t }) {
   if (task.cadence !== "custom") return null;
-  return <>{task.resetRemainingMs !== null ? <span className="shrink-0 rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-sky-700">{t("task.resetRemaining", { time: formatCompactRemaining(task.resetRemainingMs) })}</span> : null}{task.visibleUntil && task.visibleRemainingMs !== null ? <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500" title={formatUtcDeadline(task.visibleUntil)}>{t("task.visibleRemaining", { time: formatCompactRemaining(task.visibleRemainingMs) })}</span> : null}</>;
+  return <>{task.resetRemainingMs !== null ? <span className="shrink-0 rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-sky-700">{t("task.resetRemaining", { time: formatCompactRemaining(task.resetRemainingMs, t.language) })}</span> : null}{task.visibleUntil && task.visibleRemainingMs !== null ? <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500" title={formatUtcDeadline(task.visibleUntil, t.language)}>{t("task.visibleRemaining", { time: formatCompactRemaining(task.visibleRemainingMs, t.language) })}</span> : null}</>;
 }
 
 function TabBadge({ name, tone }) {
@@ -138,7 +138,7 @@ function CadenceColumn({ title, tasks, tabs, summary, remainingMs, onToggle, t, 
   return (
     <section className="dashboard-cadence-column h-full rounded-xl border border-slate-200 bg-white/75 p-3 shadow-sm shadow-slate-200/50">
       <div className="flex items-center justify-between gap-3">
-        <div><div className="flex items-baseline gap-2"><h3 className="text-base font-semibold text-slate-900">{title}</h3><span className="text-xs text-slate-400">{visibleSummary.completed}/{visibleSummary.total}</span></div><p className="mt-0.5 text-xs font-medium text-slate-500">{remainingMs === null ? t("reset.customRule") : t("reset.remaining", { time: formatRemaining(remainingMs) })}</p></div>
+        <div><div className="flex items-baseline gap-2"><h3 className="text-base font-semibold text-slate-900">{title}</h3><span className="text-xs text-slate-400">{visibleSummary.completed}/{visibleSummary.total}</span></div><p className="mt-0.5 text-xs font-medium text-slate-500">{remainingMs === null ? t("reset.customRule") : t("reset.remaining", { time: formatRemaining(remainingMs, t.language) })}</p></div>
         <span className={`text-base font-bold ${textTone}`}>{visibleSummary.percent}%</span>
       </div>
       <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full bg-gradient-to-r ${progressTone} transition-all`} style={{ width: `${visibleSummary.percent}%` }} /></div>

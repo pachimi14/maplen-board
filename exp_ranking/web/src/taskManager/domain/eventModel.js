@@ -27,6 +27,6 @@ export function upsertUserEvent(state, input) {
   return { state: { ...base, items: exists ? base.items.map((current) => current.id === item.id ? item : current) : [...base.items, item] }, code: exists ? "updated" : "added" };
 }
 export function removeUserEvent(state, id) { const base = normalizeEventState(state); return { ...base, items: base.items.filter((item) => item.id !== id) }; }
-export function instantiateEventTemplate(template, id, now = new Date()) {
-  return normalizeUserEvent({ ...template, id, title: template?.label?.ja || template?.title || "", createdAt: now.toISOString() });
+export function instantiateEventTemplate(template, id, now = new Date(), language = "ja") {
+  return normalizeUserEvent({ ...template, id, title: template?.label?.[language] || template?.label?.ja || template?.label?.en || template?.title || "", createdAt: now.toISOString() });
 }
