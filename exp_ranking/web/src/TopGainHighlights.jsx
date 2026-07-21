@@ -65,19 +65,20 @@ function PeriodTop3({ period, characters, gainRankMaps, onSelectCharacter, isFav
                 <span className="col-start-4 row-start-1 text-emerald-400 text-base font-semibold tabular-nums whitespace-nowrap shrink-0">
                   +{formatExp(getGainAmount(character, period))}
                 </span>
-                <p className="col-start-3 row-start-2 col-end-4 min-w-0 text-sm text-slate-500 leading-snug truncate text-left">
+                <p className="col-start-3 row-start-2 col-end-5 min-w-0 text-sm text-slate-400 leading-snug text-left">
                   {(character.level ?? 0) >= LEVEL_CAP ? (
                     <>
-                      Lv.{character.level} MAX {formatJobName(character.job)}{" "}
-                      {t("highlights.levelRank")} #{character.rank}
+                      Lv.{character.level} MAX · {t("highlights.levelRank")} #{character.rank}
                     </>
                   ) : (
                     <>
-                      Lv.{character.level} {levelExpPercent(character).toFixed(3)}%{" "}
-                      {formatJobName(character.job)} {t("highlights.levelRank")} #
-                      {character.rank}
+                      Lv.{character.level} {levelExpPercent(character).toFixed(3)}% ·{" "}
+                      {t("highlights.levelRank")} #{character.rank}
                     </>
                   )}
+                </p>
+                <p className="col-start-3 row-start-3 col-end-5 min-w-0 text-xs text-slate-500 leading-snug break-words text-left">
+                  {formatJobName(character.job)}
                 </p>
               </div>
             </div>
