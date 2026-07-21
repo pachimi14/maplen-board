@@ -173,7 +173,7 @@
   html[data-theme-depth="deep"] .site-theme :is(.text-slate-500, .text-slate-400) { color: #94a3b8 !important; }
   html[data-theme-depth="deep"] .site-theme .text-emerald-700,
   html[data-theme-depth="deep"] .site-theme .text-emerald-600 { color: var(--theme-deep-accent) !important; }
-  html[data-theme-depth="deep"] .site-theme :is(.bg-white, .bg-white\/75, .bg-white\/85) { background-color: #111c2e !important; }
+  html[data-theme-depth="deep"] .site-theme :is(.bg-white, .bg-white\/55, .bg-white\/60, .bg-white\/70, .bg-white\/75, .bg-white\/85) { background-color: #111c2e !important; }
   html[data-theme-depth="deep"] .site-theme .theme-picker-button,
   html[data-theme-depth="deep"] .site-theme .theme-picker > div,
   html[data-theme-depth="deep"] .site-theme nav { background: #111827 !important; border-color: #334155 !important; color: #e2e8f0; }
