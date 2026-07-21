@@ -51,6 +51,7 @@ JOB_DISPLAY_BY_BASE: dict[str, str] = {
     "LEFWARRIOR": "Adele",
     "HOYOUNG": "Ho Young",
     "HO_YOUNG": "Ho Young",
+    "ANIMA_THIEF": "Ho Young",
 }
 
 JOB_LITERAL_ALIASES: dict[str, str] = {
