@@ -14,14 +14,14 @@ function backend(initial = {}) {
 const config = {
   key: "maplen-board-dashboard-v1",
   versionField: "schemaVersion",
-  version: 2,
+  version: 3,
   normalize: normalizeDashboardState,
   createDefault: createDefaultDashboardState,
 };
 
 describe("versionedStorage", () => {
   it("classifies unsupported versions without overwriting them", () => {
-    const store = backend({ [config.key]: JSON.stringify({ schemaVersion: 3, reminderMemo: "future" }) });
+    const store = backend({ [config.key]: JSON.stringify({ schemaVersion: 4, reminderMemo: "future" }) });
     expect(readVersionedState(store, config).status).toBe("unsupportedVersion");
     expect(store.value(config.key)).toContain("future");
   });
@@ -29,7 +29,7 @@ describe("versionedStorage", () => {
   it("writes only the configured key with normalized data", () => {
     const store = backend();
     expect(writeVersionedState(store, config.key, { schemaVersion: 2, reminderMemo: "memo" }, normalizeDashboardState).ok).toBe(true);
-    expect(JSON.parse(store.value(config.key))).toEqual({ schemaVersion: 2, reminderMemo: "memo", dailyExpGoals: {}, legacyDailyExpGoal: "", themeColor: "green", themeDepth: "deep" });
+    expect(JSON.parse(store.value(config.key))).toEqual({ schemaVersion: 3, reminderMemo: "memo", dailyExpGoals: {}, legacyDailyExpGoal: "", characterHistoryKeys: [], themeColor: "green", themeDepth: "deep" });
   });
 });
 

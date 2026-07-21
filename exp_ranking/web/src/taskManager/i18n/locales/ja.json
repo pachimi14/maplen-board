@@ -237,6 +237,9 @@
   },
   "characters": {
     "add": "マイキャラを登録",
+    "rankingCandidates": "EXPランキングのマイキャラ",
+    "rankingCandidatesHint": "クリックしてダッシュボードへ追加できます",
+    "searchLabel": "キャラクターを検索",
     "searchPlaceholder": "キャラクター名を2文字以上入力",
     "loading": "lulumi-toolsからキャラクターデータを読み込んでいます…",
     "loadFailed": "キャラクターデータを取得できませんでした。ほかの機能はそのまま利用できます。",

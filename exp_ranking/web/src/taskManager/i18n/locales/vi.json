@@ -238,6 +238,9 @@
   },
   "characters": {
     "add": "Đăng ký nhân vật của tôi",
+    "rankingCandidates": "Nhân vật của tôi từ BXH EXP",
+    "rankingCandidatesHint": "Nhấp để thêm vào bảng điều khiển",
+    "searchLabel": "Tìm nhân vật",
     "searchPlaceholder": "Nhập 2 ký tự trở lên cho tên nhân vật",
     "loading": "Đang tải dữ liệu ký tự từ lulumi-tools...",
     "loadFailed": "Không lấy được dữ liệu ký tự. Các chức năng khác có thể được sử dụng như cũ.",

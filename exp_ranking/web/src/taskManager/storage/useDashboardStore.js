@@ -17,7 +17,7 @@ export function useDashboardStore(backend = window.localStorage) {
       if (current.status !== "unsupportedVersion") return current;
       try {
         const legacy = JSON.parse(backend?.getItem(DASHBOARD_STORAGE_KEY) || "null");
-        if (legacy?.schemaVersion === 1) return { state: normalizeDashboardState(legacy), status: "ok" };
+        if ([1, 2].includes(legacy?.schemaVersion)) return { state: normalizeDashboardState(legacy), status: "ok" };
       } catch {
         return { state: createDefaultDashboardState(), status: "corrupt" };
       }

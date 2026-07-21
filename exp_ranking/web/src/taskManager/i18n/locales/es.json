@@ -238,6 +238,9 @@
   },
   "characters": {
     "add": "Registrar mi personaje",
+    "rankingCandidates": "Mis personajes del ranking de EXP",
+    "rankingCandidatesHint": "Haz clic para añadirlos al panel",
+    "searchLabel": "Buscar personajes",
     "searchPlaceholder": "Ingrese 2 o más caracteres para el nombre del personaje",
     "loading": "Cargando datos de caracteres de lulumi-tools...",
     "loadFailed": "No se pudieron obtener los datos del personaje. Se pueden utilizar otras funciones tal cual.",

@@ -238,6 +238,9 @@
   },
   "characters": {
     "add": "註冊我的角色",
+    "rankingCandidates": "EXP 排名的我的角色",
+    "rankingCandidatesHint": "點擊即可加入儀表板",
+    "searchLabel": "搜尋角色",
     "searchPlaceholder": "輸入 2 個或更多字元作為角色名稱",
     "loading": "正在從 lulumi-tools 載入字元資料...",
     "loadFailed": "取得字元資料失敗。其他功能可原樣使用。",
