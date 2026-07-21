@@ -1,0 +1,244 @@
+{
+    "schemaVersion":  2,
+    "version":  "2026-07-20.12",
+    "tasks":  [
+
+              ],
+    "templates":  [
+                      {
+                          "id":  "template:daily:symbol",
+                          "cadence":  "daily",
+                          "label":  {
+                                        "ja":  "シンボルデイリー"
+                                    },
+                          "children":  [
+                                           {
+                                               "label":  {
+                                                             "ja":  "消滅"
+                                                         }
+                                           },
+                                           {
+                                               "label":  {
+                                                             "ja":  "チューチュー"
+                                                         }
+                                           },
+                                           {
+                                               "label":  {
+                                                             "ja":  "レヘルン"
+                                                         }
+                                           },
+                                           {
+                                               "label":  {
+                                                             "ja":  "アルカナ"
+                                                         }
+                                           },
+                                           {
+                                               "label":  {
+                                                             "ja":  "モラス"
+                                                         }
+                                           },
+                                           {
+                                               "label":  {
+                                                             "ja":  "エスフェラ"
+                                                         }
+                                           }
+                                       ]
+                      },
+                      {
+                          "id":  "template:daily:hyper-summer",
+                          "cadence":  "daily",
+                          "eventLimited":  true,
+                          "endsAt":  "2026-07-22T23:59:00.000Z",
+                          "label":  {
+                                        "ja":  "Hyper Summer Daily"
+                                    },
+                          "children":  [
+                                           {
+                                               "label":  {
+                                                             "ja":  "Raise the Golden Octopus"
+                                                         },
+                                               "endsAt":  "2026-07-22T23:59:00.000Z"
+                                           }
+                                       ]
+                      },
+                      {
+                          "id":  "template:daily:monster-park",
+                          "cadence":  "daily",
+                          "label":  {
+                                        "ja":  "モンスターパーク"
+                                    },
+                          "children":  [
+
+                                       ]
+                      },
+                      {
+                          "id":  "template:weekly:bosses",
+                          "cadence":  "weekly",
+                          "label":  {
+                                        "ja":  "ウィークリーボス"
+                                    },
+                          "children":  [
+                                           {
+                                               "label":  {
+                                                             "ja":  "シグナス"
+                                                         }
+                                           },
+                                           {
+                                               "label":  {
+                                                             "ja":  "ジャクム"
+                                                         }
+                                           },
+                                           {
+                                               "label":  {
+                                                             "ja":  "PB"
+                                                         }
+                                           },
+                                           {
+                                               "label":  {
+                                                             "ja":  "ヒルラ"
+                                                         }
+                                           },
+                                           {
+                                               "label":  {
+                                                             "ja":  "バンバン"
+                                                         }
+                                           },
+                                           {
+                                               "label":  {
+                                                             "ja":  "ピエール"
+                                                         }
+                                           },
+                                           {
+                                               "label":  {
+                                                             "ja":  "クイーン"
+                                                         }
+                                           },
+                                           {
+                                               "label":  {
+                                                             "ja":  "ベルルム"
+                                                         }
+                                           },
+                                           {
+                                               "label":  {
+                                                             "ja":  "マグナス"
+                                                         }
+                                           },
+                                           {
+                                               "label":  {
+                                                             "ja":  "ビシャス"
+                                                         }
+                                           },
+                                           {
+                                               "label":  {
+                                                             "ja":  "ガデスラ"
+                                                         }
+                                           },
+                                           {
+                                               "label":  {
+                                                             "ja":  "スウ"
+                                                         }
+                                           },
+                                           {
+                                               "label":  {
+                                                             "ja":  "デミアン"
+                                                         }
+                                           },
+                                           {
+                                               "label":  {
+                                                             "ja":  "ルシード"
+                                                         }
+                                           }
+                                       ]
+                      },
+                      {
+                          "id":  "template:weekly:hyper-summer",
+                          "cadence":  "weekly",
+                          "eventLimited":  true,
+                          "label":  {
+                                        "ja":  "Hyper Summer Weekly"
+                                    },
+                          "children":  [
+                                           {
+                                               "label":  {
+                                                             "ja":  "Gold Richie Coin Exchange"
+                                                         },
+                                               "endsAt":  "2026-07-22T23:59:00.000Z"
+                                           },
+                                           {
+                                               "label":  {
+                                                             "ja":  "1st World Mu Lung Tournament報酬"
+                                                         },
+                                               "endsAt":  "2026-07-22T23:59:00.000Z"
+                                           },
+                                           {
+                                               "label":  {
+                                                             "ja":  "Pick a Pearl!"
+                                                         },
+                                               "endsAt":  "2026-08-19T23:59:00.000Z"
+                                           },
+                                           {
+                                               "label":  {
+                                                             "ja":  "Gold Richie Coin Shop交換"
+                                                         },
+                                               "endsAt":  "2026-08-23T23:59:00.000Z"
+                                           }
+                                       ]
+                      },
+                      {
+                          "id":  "template:weekly:maplers-shop",
+                          "cadence":  "weekly",
+                          "label":  {
+                                        "ja":  "Maplers Shop購入"
+                                    },
+                          "children":  [
+
+                                       ]
+                      },
+                      {
+                          "id":  "template:weekly:weekend-reward",
+                          "cadence":  "weekly",
+                          "availability":  "weekend",
+                          "label":  {
+                                        "ja":  "Weekend報酬"
+                                    },
+                          "children":  [
+
+                                       ]
+                      }
+                  ],
+    "eventTemplates":  [
+                           {
+                               "id":  "event-template:tropical-adventure",
+                               "label":  {
+                                             "ja":  "Tropical Adventure"
+                                         },
+                               "startsAt":  "2026-07-02T00:00:00.000Z",
+                               "endsAt":  "2026-07-22T23:59:00.000Z"
+                           },
+                           {
+                               "id":  "event-template:7-star-catered-buffet",
+                               "label":  {
+                                             "ja":  "7-Star Catered Buffet"
+                                         },
+                               "startsAt":  "2026-07-02T00:00:00.000Z",
+                               "endsAt":  "2026-07-22T23:59:00.000Z"
+                           },
+                           {
+                               "id":  "event-template:vip-membership",
+                               "label":  {
+                                             "ja":  "VIP Membership"
+                                         },
+                               "startsAt":  "2026-06-11T00:00:00.000Z",
+                               "endsAt":  "2026-08-19T23:59:00.000Z"
+                           },
+                           {
+                               "id":  "event-template:super-burning-chance",
+                               "label":  {
+                                             "ja":  "Super Burning Chance"
+                                         },
+                               "startsAt":  "2026-06-11T00:00:00.000Z",
+                               "endsAt":  "2026-07-22T23:59:00.000Z"
+                           }
+                       ]
+}
+
