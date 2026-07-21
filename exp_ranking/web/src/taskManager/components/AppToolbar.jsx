@@ -22,10 +22,10 @@ export default function AppToolbar({ active }) {
   }, [color, depth]);
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex max-w-full min-w-0 items-center gap-2">
       <nav aria-label={t("nav.label")} className="grid grid-cols-3 gap-1 rounded-xl bg-slate-100 p-1">
         {NAV_ITEMS.map(([name, href]) => (
-          <a key={name} href={href} aria-current={active === name ? "page" : undefined} className={`rounded-lg px-3 py-2 text-center text-sm font-medium transition ${active === name ? "bg-white text-emerald-700 shadow-sm" : "text-slate-600 hover:bg-white/70 hover:text-slate-900"}`}>
+          <a key={name} href={href} aria-current={active === name ? "page" : undefined} className={`rounded-lg px-2 py-2 text-center text-xs font-medium transition sm:px-3 sm:text-sm ${active === name ? "bg-white text-emerald-700 shadow-sm" : "text-slate-600 hover:bg-white/70 hover:text-slate-900"}`}>
             {t(`nav.${name}`)}
           </a>
         ))}

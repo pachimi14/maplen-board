@@ -24,7 +24,9 @@ export function useTranslation() {
   return useMemo(() => {
     const t = (key, vars) => {
       const local = getNested(MESSAGES[site.language], key) ?? getNested(MESSAGES.ja, key);
-      return typeof local === "string" ? interpolate(local, vars) : site.t(key, vars);
+      if (typeof local === "string") return interpolate(local, vars);
+      if (local !== undefined) return local;
+      return site.t(key, vars);
     };
     t.language = site.language;
     return { ...site, t };
