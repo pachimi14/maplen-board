@@ -152,6 +152,9 @@ function parseRawQuery(search) {
  *   - `#/` or empty (+ optional query)               -> { name: "list", query }
  *   - `#/character/:historyKey` (+ optional query)    -> { name: "detail", historyKey, query }
  *   - `#/group` (+ optional query)                    -> { name: "group", query }
+ *   - `#/dashboard`                                   -> { name: "dashboard", query }
+ *   - `#/tasks`                                       -> { name: "tasks", query }
+ *   - `#/schedule`                                    -> { name: "schedule", query }
  *     (T4b §22.4: group has no groupId of its own — the active group is
  *     decision C, resolved from existing activeGroupId/localStorage, never
  *     the URL)
@@ -176,6 +179,10 @@ export function parseHash(hash) {
     return { name: "group", query };
   }
 
+  if (path === "/dashboard" || path === "/tasks" || path === "/schedule") {
+    return { name: path.slice(1), query };
+  }
+
   return { name: "list", query };
 }
 
@@ -186,7 +193,9 @@ function buildHash(route) {
     ? `/character/${encodeURIComponent(route.historyKey)}`
     : route?.name === "group"
       ? "/group"
-      : "/";
+      : route?.name === "dashboard" || route?.name === "tasks" || route?.name === "schedule"
+        ? `/${route.name}`
+        : "/";
   return `#${path}${search ? `?${search}` : ""}`;
 }
 
@@ -354,6 +363,19 @@ export function navigateToCharacter(historyKey, partialQuery = {}, options = {})
 export function navigateToGroup(partialQuery = {}, options = {}) {
   applyRoute(
     (base) => ({ name: "group", query: normalizeQuery({ ...base.query, ...partialQuery }) }),
+    options,
+  );
+}
+
+/** Navigates to a Task Manager page while keeping the shared query shape.
+ * Only the three registered tool routes are accepted; invalid input returns
+ * to the ranking list instead of creating an unknown URL. */
+export function navigateToTool(name, options = {}) {
+  const target = name === "dashboard" || name === "tasks" || name === "schedule"
+    ? name
+    : "list";
+  applyRoute(
+    (base) => ({ name: target, query: normalizeQuery(base.query) }),
     options,
   );
 }

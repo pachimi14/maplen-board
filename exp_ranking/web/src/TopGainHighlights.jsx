@@ -19,11 +19,11 @@ function PeriodTop3({ period, characters, gainRankMaps, onSelectCharacter, isFav
   const top = topGainersForPeriod(characters, period, 3, gainRankMaps);
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-2">
-      <h3 className="font-semibold text-base text-slate-400 mb-1.5">
+    <div className="bg-slate-900 border border-slate-800 rounded-xl px-2 py-1.5">
+      <h3 className="font-semibold text-[14px] text-slate-400 mb-1">
         {periodLabel}
       </h3>
-      <ul className="space-y-1">
+      <ul className="space-y-0.5">
         {top.map((character) => (
           <li key={`${period}-${character.id}`}>
             {/* A non-button clickable row: the FavoriteStar inside it is
@@ -42,9 +42,9 @@ function PeriodTop3({ period, characters, gainRankMaps, onSelectCharacter, isFav
                   onSelectCharacter(character);
                 }
               }}
-              className="w-full text-left rounded-lg border border-slate-800/80 bg-slate-950/60 px-2 py-1.5 transition hover:bg-slate-800/80 cursor-pointer"
+              className="w-full text-left rounded-lg border border-slate-800/80 bg-slate-950/60 px-1.5 py-1 transition hover:bg-slate-800/80 cursor-pointer"
             >
-              <div className="grid grid-cols-[auto_auto_minmax(0,1fr)_auto] gap-x-1 gap-y-0.5 items-start min-w-0">
+              <div className="grid grid-cols-[auto_auto_minmax(0,1fr)_auto] gap-x-1 gap-y-0 items-start min-w-0">
                 <div className="col-start-1 row-start-1 w-3.5 shrink-0 flex justify-center">
                   {onToggleFavorite ? (
                     <FavoriteStar
@@ -55,29 +55,29 @@ function PeriodTop3({ period, characters, gainRankMaps, onSelectCharacter, isFav
                   ) : null}
                 </div>
                 <span
-                  className={`col-start-2 row-start-1 font-bold text-base shrink-0 leading-snug ${gainRankClass(character.gainRank)}`}
+                  className={`col-start-2 row-start-1 font-bold text-[14px] shrink-0 leading-tight ${gainRankClass(character.gainRank)}`}
                 >
                   #{character.gainRank}
                 </span>
-                <span className="col-start-3 row-start-1 font-semibold text-base leading-snug break-words min-w-0">
+                <span className="col-start-3 row-start-1 font-semibold text-[14px] leading-tight break-words min-w-0">
                   {character.name}
                 </span>
-                <span className="col-start-4 row-start-1 text-emerald-400 text-base font-semibold tabular-nums whitespace-nowrap shrink-0">
+                <span className="col-start-4 row-start-1 text-emerald-400 text-[14px] font-semibold tabular-nums whitespace-nowrap shrink-0">
                   +{formatExp(getGainAmount(character, period))}
                 </span>
-                <p className="col-start-3 row-start-2 col-end-4 min-w-0 text-sm text-slate-500 leading-snug truncate text-left">
+                <p className="col-start-3 row-start-2 col-end-5 min-w-0 text-[12px] text-slate-400 leading-tight text-left">
                   {(character.level ?? 0) >= LEVEL_CAP ? (
                     <>
-                      Lv.{character.level} MAX {formatJobName(character.job)}{" "}
-                      {t("highlights.levelRank")} #{character.rank}
+                      Lv.{character.level} MAX · #{character.rank}
                     </>
                   ) : (
                     <>
-                      Lv.{character.level} {levelExpPercent(character).toFixed(3)}%{" "}
-                      {formatJobName(character.job)} {t("highlights.levelRank")} #
-                      {character.rank}
+                      Lv.{character.level} {levelExpPercent(character).toFixed(3)}% · #{character.rank}
                     </>
                   )}
+                </p>
+                <p className="col-start-3 row-start-3 col-end-5 min-w-0 text-[11px] text-slate-500 leading-tight break-words text-left">
+                  {formatJobName(character.job)}
                 </p>
               </div>
             </div>

@@ -3,6 +3,7 @@
     "switch": "Idioma"
   },
   "app": {
+    "openDailyDashboard": "Task Manager",
     "pageTitle": "Clasificación de EXP de MSU",
     "pageDescription": "Clasificación de nivel y ganancias de EXP diarias, semanales y mensuales de personajes de nivel 225 o superior, basada en la clasificación oficial de MSU.",
     "metaTitle": "Lulumi Tools | Clasificación de EXP de MapleStory N",
