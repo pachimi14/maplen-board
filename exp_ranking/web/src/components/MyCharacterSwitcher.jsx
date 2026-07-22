@@ -51,7 +51,7 @@ export default function MyCharacterSwitcher({
                 {labelForKey(key)}
                 <span
                   className={`ml-1.5 rounded-full px-1.5 text-[10px] font-bold ${
-                    isPrimary ? "bg-cyan-500/20 text-cyan-200" : "bg-slate-700/50 text-slate-300"
+                    isPrimary ? "profile-primary-badge bg-emerald-100 text-emerald-700" : "bg-slate-700/50 text-slate-300"
                   }`}
                 >
                   {t(isPrimary ? "myCharacters.pin.primaryBadge" : "myCharacters.pin.subBadge")}

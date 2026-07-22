@@ -120,7 +120,18 @@ export default function RankingTable({
         </div>
 
         <div className="overflow-x-auto rounded-2xl border border-slate-800">
-          <table className="w-full min-w-[720px] text-base">
+          <table className="w-full min-w-[680px] table-fixed text-[14px]">
+            <colgroup>
+              <col className="w-[6%]" />
+              {showGainRank ? <col className="w-[8%]" /> : null}
+              <col className="w-[9%]" />
+              <col className="w-[18%]" />
+              <col className="w-[10%]" />
+              <col className="w-[16%]" />
+              <col className="w-[11%]" />
+              <col className="w-[11%]" />
+              <col className="w-[11%]" />
+            </colgroup>
             <thead className="bg-slate-950 text-slate-400">
               <tr>
                 <th className="text-center p-3 w-12">
@@ -165,12 +176,12 @@ export default function RankingTable({
                     <div className="font-semibold">
                       <NavigatorLink
                         href={getNavigatorUrl(character)}
-                        className="text-inherit hover:text-sky-300"
+                        className="block truncate text-inherit hover:text-sky-300"
                       >
                         {character.name}
                       </NavigatorLink>
                     </div>
-                    <div className="text-sm text-slate-400">{formatJobName(character.job)}</div>
+                    <div className="truncate text-xs text-slate-400">{formatJobName(character.job)}</div>
                   </td>
                   <td className="p-3">
                     {/* §22.13 #1: server name is not a navigator link

@@ -72,10 +72,10 @@ export default function MyCharacterPinButton({ character, className = "" }) {
       <div className="flex flex-wrap items-center gap-2">
         {pinned ? (
           <>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-cyan-700 bg-cyan-950/60 px-2.5 py-1 text-xs font-semibold text-cyan-300">
+            <span className="profile-pin-status inline-flex items-center gap-1.5 rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
               {t("myCharacters.pin.registered")}
               {isPrimary ? (
-                <span className="rounded-full bg-cyan-500/20 px-1.5 text-[10px] font-bold text-cyan-200">
+                <span className="profile-primary-badge rounded-full bg-emerald-100 px-1.5 text-[10px] font-bold text-emerald-700">
                   {t("myCharacters.pin.primaryBadge")}
                 </span>
               ) : (

@@ -1,0 +1,10 @@
+import { describe, expect, it } from "vitest";
+import { createDefaultEventState, instantiateEventTemplate, normalizeEventState, removeUserEvent, upsertUserEvent } from "./eventModel.js";
+const item = { id: "event:a", title: "イベント", startsAt: "2026-07-20T00:00:00Z", endsAt: "2026-07-30T00:00:00Z", claimEndsAt: "2026-08-01T00:00:00Z", shopEndsAt: "", createdAt: "2026-07-20T00:00:00Z" };
+describe("user events", () => {
+  it("adds, edits and removes without mutating input", () => { const original=createDefaultEventState(); const added=upsertUserEvent(original,item); expect(original.items).toHaveLength(0); expect(added.code).toBe("added"); const edited=upsertUserEvent(added.state,{...item,title:"変更"}); expect(edited.state.items[0].title).toBe("変更"); expect(removeUserEvent(edited.state,item.id).items).toHaveLength(0); });
+  it("rejects invalid ranges and unknown schemas", () => { expect(upsertUserEvent(createDefaultEventState(),{...item,endsAt:"2026-07-19T00:00:00Z"}).code).toBe("invalidEvent"); expect(normalizeEventState({schemaVersion:2,items:[item]}).items).toHaveLength(0); });
+  it("copies a template into an editable independent event", () => { const template={label:{ja:"配布"},startsAt:item.startsAt,endsAt:item.endsAt}; const copy=instantiateEventTemplate(template,"event:copy"); expect(copy.title).toBe("配布"); copy.title="編集"; expect(template.label.ja).toBe("配布"); });
+  it("keeps old events compatible and limits a one-line note to 120 characters", () => { const old=normalizeEventState({schemaVersion:1,items:[item]}); expect(old.items[0].note).toBe(""); const note=`  ${"メ".repeat(130)}  `; expect(upsertUserEvent(createDefaultEventState(),{...item,note}).state.items[0].note).toBe("メ".repeat(120)); });
+  it("uses the requested locale when instantiating a template", () => { const template={label:{ja:"Japanese",es:"Espanol"},startsAt:item.startsAt,endsAt:item.endsAt}; expect(instantiateEventTemplate(template,"event:es",new Date("2026-07-20T00:00:00Z"),"es").title).toBe("Espanol"); });
+});
