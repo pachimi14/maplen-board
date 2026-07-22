@@ -22,7 +22,7 @@
     "standard": "Estándar",
     "deep": "Intenso"
   },
-  "dashboard": {
+  "dashboard": { "pageTitle": "MapleN Task Manager",
     "tasks": "progreso de la tarea",
     "openTasks": "Ir a gestión de tareas",
     "todaySchedule": "El horario de hoy",
@@ -130,7 +130,7 @@
     "unavailable": "Discord El servicio de notificación está actualmente en preparación. La configuración de tareas se puede utilizar tal cual.",
     "deliveryFailed": "No se pudo enviar DM a Discord. Por favor verifique la configuración de recepción de DM.",
     "daily": "Notificación diaria",
-    "weekly": "Notificación semanal",
+    "weekly": "Notificación semanal", "schedule": "Recordatorios de agenda", "scheduleHint": "Envía por DM los eventos únicos y semanales una hora antes de que comiencen.",
     "custom": "Otras notificaciones individuales",
     "customEmpty": "Si registra otras tareas, puede configurar notificaciones individuales.",
     "timeZone": "huso horario",

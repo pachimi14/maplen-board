@@ -31,4 +31,13 @@ describe("notification settings", () => {
     }, settings);
     expect(snapshot.tasks.map((task) => task.id)).toEqual(["daily-open", "weekly-open", "selected"]);
   });
+
+  it("includes one-time and weekly schedules in the synchronized snapshot", () => {
+    const snapshot = buildNotificationSnapshot({}, { schedule: { enabled: true } }, { items: [
+      { id: "once", title: "Lotus", recurrence: "once", date: "2026-07-24", time: "20:00" },
+      { id: "weekly", title: "Guild boss", recurrence: "weekly", weekday: 6, time: "22:30" },
+    ] });
+    expect(snapshot.settings.schedule).toEqual({ enabled: true, leadMinutes: 60 });
+    expect(snapshot.schedules).toHaveLength(2);
+  });
 });

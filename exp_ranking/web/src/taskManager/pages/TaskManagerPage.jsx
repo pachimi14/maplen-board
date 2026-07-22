@@ -6,7 +6,7 @@ import EventManagementSection from "../components/EventManagementSection.jsx";
 import TaskSection from "../components/TaskSection.jsx";
 import NotificationSettings from "../components/NotificationSettings.jsx";
 import { mergeTasks } from "../domain/mergeTasks.js";
-import AppToolbar from "../components/AppToolbar.jsx";
+import PageHeader from "../components/PageHeader.jsx";
 import { getResetSnapshot } from "../domain/reset.js";
 import { buildNotificationSnapshot, normalizeNotificationSettings } from "../domain/notificationModel.js";
 import { instantiateTaskTemplate, listTaskTemplates } from "../domain/taskTemplates.js";
@@ -27,6 +27,7 @@ import {
 } from "../domain/taskModel.js";
 import { useTranslation } from "../i18n/useTaskTranslation.jsx";
 import { useTaskStore } from "../storage/useTaskStore.js";
+import { useScheduleStore } from "../storage/useScheduleStore.js";
 
 function uniqueId(prefix) {
   return `${prefix}:${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`}`;
@@ -35,6 +36,7 @@ function uniqueId(prefix) {
 export default function TaskManagerPage() {
   const { t, language } = useTranslation();
   const { state, status, update, replace } = useTaskStore(preset);
+  const scheduleStore = useScheduleStore();
   const [now, setNow] = useState(() => new Date());
   const [addCadence, setAddCadence] = useState(null);
   const [backupOpen, setBackupOpen] = useState(false);
@@ -54,7 +56,10 @@ const view = useMemo(
   const resetSnapshot = useMemo(() => getResetSnapshot(now), [now]);
   const templates = useMemo(() => listTaskTemplates(preset, addCadence, language, now), [addCadence, now, language]);
   const taskTabs = useMemo(() => listTaskTabs(state), [state]);
-  const notificationSnapshot = useMemo(() => buildNotificationSnapshot(view, state.notificationSettings), [view, state.notificationSettings]);
+  const notificationSnapshot = useMemo(
+    () => buildNotificationSnapshot(view, state.notificationSettings, scheduleStore.state),
+    [view, state.notificationSettings, scheduleStore.state],
+  );
   const statusMessage = ["corrupt", "unsupportedVersion", "storageError"].includes(status)
     ? t(`status.${status}`)
     : "";
@@ -158,14 +163,8 @@ const view = useMemo(
   };
 
   return (
-    <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-      <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">{t("nav.tasks")}</h1>
-          <p className="mt-1 text-sm text-slate-500">{t("task.configurationHint")}</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2"><AppToolbar active="tasks" /><button type="button" onClick={() => setNotificationOpen(true)} className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold shadow-sm transition ${notificationConnection === "connected" ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100" : "border-rose-300 bg-rose-50 text-rose-700 ring-2 ring-rose-200 hover:bg-rose-100"}`}><span aria-hidden="true">🔔</span><span>{t("notification.toolbar")}</span><span className={`rounded-full px-2 py-0.5 text-xs ${notificationConnection === "connected" ? "bg-emerald-600 text-white" : "bg-rose-600 text-white"}`}>{notificationConnection === "connected" ? t("notification.connected") : notificationConnection === "loading" ? t("notification.checking") : notificationConnection === "unavailable" ? t("notification.connectionError") : t("notification.notConnected")}</span></button><button type="button" onClick={() => setBackupOpen(true)} className="secondary-button">{t("actions.data")}</button></div>
-      </section>
+    <main className="mx-auto max-w-7xl space-y-6 px-4 py-2 sm:px-6 lg:px-8">
+      <PageHeader active="tasks" title={t("nav.tasks")} description={t("task.configurationHint")} actions={<><button type="button" onClick={() => setNotificationOpen(true)} className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold shadow-sm transition ${notificationConnection === "connected" ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100" : "border-rose-300 bg-rose-50 text-rose-700 ring-2 ring-rose-200 hover:bg-rose-100"}`}><span aria-hidden="true">🔔</span><span>{t("notification.toolbar")}</span><span className={`rounded-full px-2 py-0.5 text-xs ${notificationConnection === "connected" ? "bg-emerald-600 text-white" : "bg-rose-600 text-white"}`}>{notificationConnection === "connected" ? t("notification.connected") : notificationConnection === "loading" ? t("notification.checking") : notificationConnection === "unavailable" ? t("notification.connectionError") : t("notification.notConnected")}</span></button><button type="button" onClick={() => setBackupOpen(true)} className="secondary-button">{t("actions.data")}</button></>} />
       {statusMessage || operationError ? <div role="alert" className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">{statusMessage || operationError}</div> : null}
       <section className="grid items-start gap-6 lg:grid-cols-2">
         <TaskSection cadence="daily" tabs={taskTabs} title={t("task.daily")} rule={t("reset.dailyRule")} remainingMs={resetSnapshot.daily.remainingMs} tasks={view.daily} onAdd={() => setAddCadence("daily")} {...commonProps} />

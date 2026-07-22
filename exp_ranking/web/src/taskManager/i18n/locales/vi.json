@@ -22,7 +22,7 @@
     "standard": "Vừa",
     "deep": "Đậm"
   },
-  "dashboard": {
+  "dashboard": { "pageTitle": "MapleN Task Manager",
     "tasks": "tiến độ nhiệm vụ",
     "openTasks": "Đi tới quản lý tác vụ",
     "todaySchedule": "Lịch trình hôm nay",
@@ -130,7 +130,7 @@
     "unavailable": "Discord Dịch vụ thông báo hiện đang được chuẩn bị. Cài đặt tác vụ có thể được sử dụng như cũ.",
     "deliveryFailed": "Không gửi được DM tới Discord. Vui lòng kiểm tra cài đặt tiếp nhận DM của bạn.",
     "daily": "Thông báo hàng ngày",
-    "weekly": "Thông báo hàng tuần",
+    "weekly": "Thông báo hàng tuần", "schedule": "Nhắc lịch", "scheduleHint": "Gửi DM cho lịch một lần và hàng tuần trước giờ bắt đầu 1 giờ.",
     "custom": "Các thông báo cá nhân khác",
     "customEmpty": "Nếu bạn đăng ký các tác vụ khác, bạn có thể đặt thông báo riêng lẻ.",
     "timeZone": "múi giờ",

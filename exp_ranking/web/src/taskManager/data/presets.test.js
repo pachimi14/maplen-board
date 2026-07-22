@@ -25,12 +25,20 @@ describe("operator template contract", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
+  it("provides every operator label in all six supported languages", () => {
+    const locales = ["ja", "en", "es", "th", "vi", "zh-TW"];
+    for (const label of labels(preset)) {
+      expect(locales.filter((locale) => typeof label?.[locale] !== "string" || !label[locale].trim())).toEqual([]);
+      expect(["es", "th", "vi", "zh-TW"].map((locale) => label[locale])).toEqual(Array(4).fill(label.en));
+    }
+  });
+
   it("keeps initial tasks empty and offers the requested Symbol Daily template", () => {
     expect(preset.tasks).toEqual([]);
     const symbol = preset.templates.find((template) => template.id === "template:daily:symbol");
     expect(symbol).toMatchObject({ cadence: "daily", label: { ja: "シンボルデイリー" } });
     expect(symbol.children.map((child) => child.label.ja)).toEqual([
-      "消滅", "チューチュー", "レヘルン", "アルカナ", "モラス", "エスフェラ",
+      "消滅の旅路", "チューチューアイランド", "レヘルン", "アルカナ", "モラス", "エスフェラ",
     ]);
   });
 
@@ -38,13 +46,13 @@ describe("operator template contract", () => {
     const weeklyBosses = preset.templates.find((template) => template.id === "template:weekly:bosses");
     expect(weeklyBosses).toMatchObject({ cadence: "weekly", label: { ja: "ウィークリーボス" } });
     expect(weeklyBosses.children.map((child) => child.label.ja)).toEqual([
-      "シグナス", "ジャクム", "PB", "ヒルラ", "バンバン", "ピエール", "クイーン",
-      "ベルルム", "マグナス", "ビシャス", "ガデスラ", "スウ", "デミアン", "ルシード",
+      "シグナス", "ジャクム", "ピンクビーン", "ヒルラ", "バンバン", "ピエール", "ブラッディクイーン",
+      "ベルルム", "マグナス", "ビシャスプラント", "ガーディアンエンジェルスライム", "スウ", "デミアン", "ルシード",
     ]);
   });
   it("offers the selected Hyper Summer task templates", () => {
     const daily = preset.templates.find((template) => template.id === "template:daily:hyper-summer");
-    expect(daily).toMatchObject({ cadence: "daily", endsAt: "2026-07-22T23:59:00.000Z", label: { ja: "Hyper Summer Daily" } });
+    expect(daily).toMatchObject({ cadence: "daily", endsAt: "2026-07-22T23:59:00.000Z", label: { ja: "Hyper Summer デイリー" } });
     expect(daily.children.map((child) => child.label.ja)).toEqual(["Raise the Golden Octopus"]);
 
     const weekly = preset.templates.find((template) => template.id === "template:weekly:hyper-summer");
@@ -82,4 +90,3 @@ describe("operator template contract", () => {
     expect(new Set(preset.eventTemplates.map((template) => template.id)).size).toBe(4);
   });
 });
-

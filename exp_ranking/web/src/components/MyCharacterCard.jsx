@@ -424,7 +424,7 @@ export default function MyCharacterCard({
               <div className="flex items-start justify-between gap-2">
                 <span
                   className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
-                    isPrimary ? "bg-cyan-500/20 text-cyan-200" : "bg-slate-700/50 text-slate-300"
+                    isPrimary ? "profile-primary-badge bg-emerald-100 text-emerald-700" : "bg-slate-700/50 text-slate-300"
                   }`}
                 >
                   {t(isPrimary ? "myCharacters.pin.primaryBadge" : "myCharacters.pin.subBadge")}

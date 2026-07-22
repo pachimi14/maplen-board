@@ -22,7 +22,7 @@
     "standard": "標準",
     "deep": "深色"
   },
-  "dashboard": {
+  "dashboard": { "pageTitle": "MapleN Task Manager",
     "tasks": "任務進度",
     "openTasks": "進入任務管理",
     "todaySchedule": "今天的日程",
@@ -130,7 +130,7 @@
     "unavailable": "Discord 通知服務目前正在準備中。任務設定可以原樣使用。",
     "deliveryFailed": "無法將 DM 傳送至 Discord。請檢查您的 DM 接收設定。",
     "daily": "每日通知",
-    "weekly": "每週通知",
+    "weekly": "每週通知", "schedule": "行程提前一小時通知", "scheduleHint": "在已登記的單次及每週行程開始前一小時傳送 DM。",
     "custom": "其他個別通知",
     "customEmpty": "如果您註冊其他任務，則可以設定單獨的通知。",
     "timeZone": "時區",

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import AppToolbar from "../components/AppToolbar.jsx";
+import PageHeader from "../components/PageHeader.jsx";
 import ScheduleDialog from "../components/ScheduleDialog.jsx";
 import {
   localDateKey,
@@ -106,14 +106,8 @@ export default function SchedulePage() {
     : "";
 
   return (
-    <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-      <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">{t("nav.schedule")}</h1>
-          <p className="mt-1 text-sm text-slate-500">{t("schedule.weekStartsThursday")}</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2"><AppToolbar active="schedule" /><button type="button" className="primary-button" onClick={() => openNew()}>＋ {t("schedule.add")}</button></div>
-      </section>
+    <main className="mx-auto max-w-7xl space-y-6 px-4 py-2 sm:px-6 lg:px-8">
+      <PageHeader active="schedule" title={t("nav.schedule")} description={t("schedule.weekStartsThursday")} actions={<><button type="button" className="primary-button" onClick={() => openNew()}>＋ {t("schedule.add")}</button></>} />
       {error || storageMessage ? <div role="alert" className="rounded-xl bg-amber-50 p-4 text-sm text-amber-800">{error || storageMessage}</div> : null}
       <section className="panel-card overflow-hidden">
         <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">

@@ -9,11 +9,17 @@ const NAV_ITEMS = [
   ["schedule", ROUTES.schedule],
 ];
 
-export function ThemePicker() {
+export function ThemePicker({ value = null, onChange = null }) {
   const { t } = useTranslation();
   const dashboardStore = useDashboardStore();
-  const color = dashboardStore.state.themeColor || "green";
-  const depth = dashboardStore.state.themeDepth || "deep";
+  const color = value?.themeColor || dashboardStore.state.themeColor || "green";
+  const depth = value?.themeDepth || dashboardStore.state.themeDepth || "deep";
+  const updateColor = (themeColor) => onChange
+    ? onChange({ themeColor, themeDepth: depth })
+    : dashboardStore.update((state) => setDashboardThemeColor(state, themeColor));
+  const updateDepth = (themeDepth) => onChange
+    ? onChange({ themeColor: color, themeDepth })
+    : dashboardStore.update((state) => setDashboardThemeDepth(state, themeDepth));
 
   return (
     <details className="theme-picker relative z-[110] shrink-0">
@@ -23,7 +29,7 @@ export function ThemePicker() {
           <legend className="mb-2 text-xs font-semibold text-slate-600">{t("theme.color")}</legend>
           <div className="grid grid-cols-4 gap-3">
             {DASHBOARD_THEME_COLORS.map((name) => (
-              <button key={name} type="button" className={`theme-swatch theme-swatch-${name} ${color === name ? "is-selected" : ""}`} aria-label={t(`theme.${name}`)} title={t(`theme.${name}`)} aria-pressed={color === name} onClick={() => dashboardStore.update((state) => setDashboardThemeColor(state, name))}>
+              <button key={name} type="button" className={`theme-swatch theme-swatch-${name} ${color === name ? "is-selected" : ""}`} aria-label={t(`theme.${name}`)} title={t(`theme.${name}`)} aria-pressed={color === name} onClick={() => updateColor(name)}>
                 {color === name ? "✓" : ""}
               </button>
             ))}
@@ -33,7 +39,7 @@ export function ThemePicker() {
           <legend className="mb-2 text-xs font-semibold text-slate-600">{t("theme.depth")}</legend>
           <div className="grid grid-cols-3 gap-1 rounded-xl bg-slate-100 p-1">
             {DASHBOARD_THEME_DEPTHS.map((name) => (
-              <button key={name} type="button" className={`rounded-lg px-2 py-1.5 text-xs font-semibold transition ${depth === name ? "bg-white text-emerald-700 shadow-sm" : "text-slate-500 hover:text-slate-800"}`} aria-pressed={depth === name} onClick={() => dashboardStore.update((state) => setDashboardThemeDepth(state, name))}>
+              <button key={name} type="button" className={`rounded-lg px-2 py-1.5 text-xs font-semibold transition ${depth === name ? "bg-white text-emerald-700 shadow-sm" : "text-slate-500 hover:text-slate-800"}`} aria-pressed={depth === name} onClick={() => updateDepth(name)}>
                 {t(`theme.${name}`)}
               </button>
             ))}

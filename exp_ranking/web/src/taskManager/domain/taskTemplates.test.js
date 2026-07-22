@@ -11,12 +11,12 @@ describe("task template installation", () => {
       title: "ウィークリーボス",
     });
     expect(weekly.children).toHaveLength(14);
-    expect(weekly.children.slice(0, 3)).toEqual([{ title: "シグナス" }, { title: "ジャクム" }, { title: "PB" }]);
+    expect(weekly.children.slice(0, 3)).toEqual([{ title: "シグナス" }, { title: "ジャクム" }, { title: "ピンクビーン" }]);
     expect(listTaskTemplates(preset, "daily")[0]).toMatchObject({
       id: "template:daily:symbol",
       title: "シンボルデイリー",
       cadence: "daily",
-      children: [{ title: "消滅" }, { title: "チューチュー" }, { title: "レヘルン" }, { title: "アルカナ" }, { title: "モラス" }, { title: "エスフェラ" }],
+      children: [{ title: "消滅の旅路" }, { title: "チューチューアイランド" }, { title: "レヘルン" }, { title: "アルカナ" }, { title: "モラス" }, { title: "エスフェラ" }],
     });
   });
 
@@ -61,7 +61,7 @@ describe("task template installation", () => {
     const legacy = {
       schemaVersion: 4, presetVersion: "old", taskOverrides: {}, completions: {},
       customTasks: [{
-        id: "user:daily", templateId: "template:daily:hyper-summer", title: "Hyper Summer Daily", cadence: "daily", endsAt: null, deadlineCustomized: false, children: [],
+        id: "user:daily", templateId: "template:daily:hyper-summer", title: "Hyper Summer0����", cadence: "daily", endsAt: null, deadlineCustomized: false, children: [],
       }, {
         id: "user:legacy", title: "名前を変更済み", cadence: "weekly", children: [
           { id: "child:shop", title: "Gold Richie Coin Shop交換", endsAt: null, deadlineCustomized: false },
