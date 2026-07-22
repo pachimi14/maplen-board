@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+import logging
 import re
+
+logger = logging.getLogger(__name__)
 
 # Base job id (without advancement tier suffix) → display name
 JOB_DISPLAY_BY_BASE: dict[str, str] = {
     "HERO": "Hero",
     "PALADIN": "Paladin",
     "DARKKNIGHT": "Dark Knight",
+    "DARK_KNIGHT": "Dark Knight",
     "FIREPOISON": "Arch Mage(Fire / Poison)",
     "FP_ARCH_MAGE": "Arch Mage(Fire / Poison)",
     "ICELIGHTNING": "Arch Mage(Ice / Lightning)",
@@ -20,11 +24,13 @@ JOB_DISPLAY_BY_BASE: dict[str, str] = {
     "NIGHTLORD": "Night Lord",
     "SHADOWER": "Shadower",
     "BLADEMASTER": "Blade Master",
+    "BLADE_MASTER": "Blade Master",
     "SOULEMASTER": "Dawn Warrior",
     "CORSAIR": "Corsair",
     "BUCCANEER": "Buccaneer",
     "CANNONMASTER": "Cannon Master",
     "CANNONSHOOTER": "Cannon Master",
+    "CANNON_MASTER": "Cannon Master",
     "EUNWOL": "Shade",
     "EVAN": "Evan",
     "ARAN": "Aran",
@@ -51,6 +57,7 @@ JOB_DISPLAY_BY_BASE: dict[str, str] = {
     "LEFWARRIOR": "Adele",
     "HOYOUNG": "Ho Young",
     "HO_YOUNG": "Ho Young",
+    "ANIMA_THIEF": "Ho Young",
 }
 
 JOB_LITERAL_ALIASES: dict[str, str] = {
@@ -97,4 +104,12 @@ def format_job_name(job_code: str) -> str:
     if text.startswith("JobCode_"):
         text = text.removeprefix("JobCode_")
     without_tier = re.sub(r"\d+$", "", text)
-    return without_tier.replace("_", " ").title()
+    fallback_name = without_tier.replace("_", " ").title()
+    logger.warning(
+        "Unmapped job_code %r (base_key=%r); falling back to derived name %r. "
+        "Consider adding it to JOB_DISPLAY_BY_BASE.",
+        job_code,
+        base_key,
+        fallback_name,
+    )
+    return fallback_name
