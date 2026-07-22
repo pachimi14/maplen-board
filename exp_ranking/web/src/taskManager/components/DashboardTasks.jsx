@@ -19,9 +19,9 @@ function CheckIndicator({ task, small = false }) {
   const completed = task.progress.completed;
   return (
     <span
-      className={`grid shrink-0 place-items-center rounded-full border transition ${small ? "h-5 w-5 text-xs" : "h-7 w-7 text-sm"} ${
+      className={`task-check-indicator grid shrink-0 place-items-center rounded-full border transition ${small ? "h-5 w-5 text-xs" : "h-7 w-7 text-sm"} ${
         completed
-          ? "border-emerald-400 bg-emerald-400 text-emerald-950 shadow-sm shadow-emerald-200"
+          ? "is-completed border-emerald-400 bg-emerald-400 text-emerald-950 shadow-sm shadow-emerald-200"
           : "border-slate-300 bg-white text-transparent group-hover:border-emerald-400 group-hover:text-emerald-500"
       }`}
       aria-hidden="true"

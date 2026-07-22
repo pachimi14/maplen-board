@@ -212,6 +212,12 @@
   html[data-theme-depth="deep"] .site-theme main [class*="border-slate-"] { border-color: #334155 !important; }
   html[data-theme-depth="deep"] .site-theme main [class*="border-emerald-"] { border-color: color-mix(in srgb, var(--theme-deep-border) 46%, #334155) !important; }
   html[data-theme-depth="deep"] .site-theme main [class*="border-dashed"] { border-color: #475569 !important; }
+  html[data-theme-depth="deep"] .site-theme main .task-check-indicator.is-completed {
+    background-color: var(--theme-deep-border) !important;
+    border-color: color-mix(in srgb, var(--theme-deep-accent) 72%, white) !important;
+    color: #f0fdf4 !important;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--theme-deep-accent) 32%, transparent), 0 0 10px color-mix(in srgb, var(--theme-deep-accent) 24%, transparent);
+  }
   /* Keep task-state fills after the generic Deep utility remapping above. */
   html[data-theme-depth="deep"] .site-theme main .dashboard-group-task {
     background: color-mix(in srgb, var(--theme-deep-border) 18%, #111827) !important;
