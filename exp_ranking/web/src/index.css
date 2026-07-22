@@ -2,10 +2,7 @@
 
 @layer base {
   html {
-    font-size: 16px;
-  }
-
-  html:has(.tm-app) {
     font-size: 17px;
+    scrollbar-gutter: stable;
   }
 }

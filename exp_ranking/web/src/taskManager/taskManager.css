@@ -179,7 +179,15 @@
   html[data-theme-depth="deep"] .site-theme nav a[aria-current="page"] { background: #1e293b !important; color: var(--theme-deep-accent) !important; }
   html[data-theme-depth="deep"] .site-theme textarea { background: #0b1525 !important; border-color: #334155 !important; color: #e2e8f0 !important; }
   html[data-theme-depth="deep"] .site-theme textarea::placeholder { color: #64748b; }
-  html[data-theme-depth="deep"] .site-theme .dashboard-link { color: #94a3b8; }
+  html[data-theme-depth="deep"] .site-theme .profile-pin-status {
+    background: #0d2630 !important;
+    border-color: color-mix(in srgb, var(--theme-deep-border) 60%, #334155) !important;
+    color: var(--theme-deep-accent) !important;
+  }
+  html[data-theme-depth="deep"] .site-theme .profile-primary-badge {
+    background: color-mix(in srgb, var(--theme-deep-border) 28%, #0f172a) !important;
+    color: var(--theme-deep-accent) !important;
+  }  html[data-theme-depth="deep"] .site-theme .dashboard-link { color: #94a3b8; }
   html[data-theme-depth="deep"] .site-theme .dashboard-link:hover { color: var(--theme-deep-accent); }
   html[data-theme-depth="deep"] .site-theme .dashboard-action { background: color-mix(in srgb, var(--theme-deep-border) 72%, #0f172a) !important; }
   html[data-theme-depth="deep"] .site-theme [class*="border-emerald-"] { border-color: color-mix(in srgb, var(--theme-deep-border) 46%, #334155); }
@@ -204,6 +212,19 @@
   html[data-theme-depth="deep"] .site-theme main [class*="border-slate-"] { border-color: #334155 !important; }
   html[data-theme-depth="deep"] .site-theme main [class*="border-emerald-"] { border-color: color-mix(in srgb, var(--theme-deep-border) 46%, #334155) !important; }
   html[data-theme-depth="deep"] .site-theme main [class*="border-dashed"] { border-color: #475569 !important; }
+  /* Keep task-state fills after the generic Deep utility remapping above. */
+  html[data-theme-depth="deep"] .site-theme main .dashboard-group-task {
+    background: color-mix(in srgb, var(--theme-deep-border) 18%, #111827) !important;
+    border-color: color-mix(in srgb, var(--theme-deep-border) 58%, #334155) !important;
+  }
+  html[data-theme-depth="deep"] .site-theme main .dashboard-leaf-task {
+    background: #0b1525 !important;
+    border-color: #26364d !important;
+  }
+  html[data-theme-depth="deep"] .site-theme main .dashboard-leaf-task[aria-pressed="true"] {
+    background: color-mix(in srgb, var(--theme-deep-border) 35%, #0b1525) !important;
+    border-color: color-mix(in srgb, var(--theme-deep-border) 76%, #334155) !important;
+  }
   .ranking-root {
     background:
       radial-gradient(circle at 12% -8%, var(--theme-glow-primary), transparent 28rem),

@@ -21,6 +21,7 @@ export function defaultNotificationSettings(timeZone = "UTC") {
     timeZone: isValidTimeZone(timeZone) ? timeZone : "UTC",
     daily: { enabled: false, time: "20:00" },
     weekly: { enabled: false, weekday: 3, time: "20:00" },
+    schedule: { enabled: false, leadMinutes: 60 },
     custom: {},
   };
 }
@@ -49,11 +50,12 @@ export function normalizeNotificationSettings(value, fallbackTimeZone = "UTC") {
     timeZone,
     daily: { enabled: Boolean(value.daily?.enabled), time: dailyTime },
     weekly: { enabled: Boolean(value.weekly?.enabled), weekday, time: weeklyTime },
+    schedule: { enabled: Boolean(value.schedule?.enabled), leadMinutes: 60 },
     custom,
   };
 }
 
-export function buildNotificationSnapshot(view, settings) {
+export function buildNotificationSnapshot(view, settings, scheduleState) {
   const normalized = normalizeNotificationSettings(settings);
   const tasks = [...(view?.daily || []), ...(view?.weekly || []), ...(view?.custom || [])]
     .filter((task) => !task.hidden && !task.progress?.completed && (task.cadence !== "custom" || Boolean(normalized.custom[task.id])))
@@ -64,5 +66,14 @@ export function buildNotificationSnapshot(view, settings) {
       cadence: task.cadence,
       completed: Boolean(task.progress?.completed),
     }));
-  return { schemaVersion: 1, settings: normalized, tasks };
+  const schedules = (Array.isArray(scheduleState?.items) ? scheduleState.items : [])
+    .slice(0, 100)
+    .map((item) => ({
+      id: item.id,
+      title: String(item.title || "").slice(0, 120),
+      recurrence: item.recurrence,
+      time: item.time,
+      ...(item.recurrence === "once" ? { date: item.date } : { weekday: item.weekday }),
+    }));
+  return { schemaVersion: 1, settings: normalized, tasks, schedules };
 }

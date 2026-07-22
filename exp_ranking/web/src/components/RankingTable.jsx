@@ -120,7 +120,7 @@ export default function RankingTable({
         </div>
 
         <div className="overflow-x-auto rounded-2xl border border-slate-800">
-          <table className="w-full min-w-[680px] table-fixed text-sm">
+          <table className="w-full min-w-[680px] table-fixed text-[14px]">
             <colgroup>
               <col className="w-[6%]" />
               {showGainRank ? <col className="w-[8%]" /> : null}

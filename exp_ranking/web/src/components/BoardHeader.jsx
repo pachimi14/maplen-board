@@ -2,7 +2,7 @@ import LanguageSwitcher from "../LanguageSwitcher";
 import { useTranslation } from "../i18n/I18nContext.jsx";
 import { ThemePicker } from "../taskManager/components/AppToolbar.jsx";
 
-export function SiteHeader({ active = "", variant = "light" }) {
+export function SiteHeader({ active = "", variant = "light", theme = null, onThemeChange = null }) {
   const { t } = useTranslation();
   const dark = variant === "dark";
   const shell = dark ? "border-slate-800 bg-slate-950/95" : "border-slate-200/80 bg-white/90";
@@ -13,13 +13,15 @@ export function SiteHeader({ active = "", variant = "light" }) {
   return (
     <header className={`relative z-[100] overflow-visible border-b backdrop-blur ${shell}`}>
       <div className="mx-auto flex min-h-14 max-w-7xl flex-wrap items-center justify-between gap-2 px-4 py-2 sm:flex-nowrap sm:gap-3 sm:px-6 lg:px-8">
-        <a href="#/" className={`shrink-0 text-xs font-bold tracking-[0.26em] ${brand}`}>LULUMI TOOLS</a>
-        <div className="flex w-full min-w-0 items-center justify-end gap-2 sm:w-auto">
+        <div className="flex min-w-0 items-center gap-3 sm:gap-5">
+          <a href="#/" className={`shrink-0 text-[12.75px] font-bold tracking-[0.26em] ${brand}`}>LULUMI TOOLS</a>
           <nav aria-label="Lulumi Tools" className="flex min-w-0 items-center gap-1">
             <a href="#/" aria-current={active === "ranking" ? "page" : undefined} className={`rounded-lg px-2.5 py-2 text-xs font-semibold transition sm:px-3 sm:text-sm ${active === "ranking" ? selected : idle}`}>EXP Ranking</a>
             <a href="#/dashboard" aria-current={active === "daily" ? "page" : undefined} className={`rounded-lg px-2.5 py-2 text-xs font-semibold transition sm:px-3 sm:text-sm ${active === "daily" ? selected : idle}`}>{t("app.openDailyDashboard")}</a>
           </nav>
-          <ThemePicker />
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <ThemePicker value={theme} onChange={onThemeChange} />
           <LanguageSwitcher />
         </div>
       </div>
@@ -31,22 +33,14 @@ export default function BoardHeader({ meta, loadError, scheduledUpdateLabel, t }
   return (
     <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
       <div>
-        <p className="text-sm text-slate-400">Lulumi Tools</p>
-        <h1 className="text-3xl font-bold tracking-tight md:text-5xl">MapleN Exp Ranking</h1>
+        <h1 className="text-[25.5px] font-semibold leading-[34px] tracking-tight">MapleN Exp Ranking</h1>
         {meta.demoGains ? (
           <p className="mt-1 text-sm text-amber-300">
             {t("app.demoGains", { days: meta.demoGainDays || "?" })}
           </p>
         ) : null}
       </div>
-      <div className="shrink-0 space-y-0.5 text-right md:pb-1">
-        <p className="text-xs text-slate-500 md:text-sm">
-          {meta.rankingMinLevel
-            ? `Lv.${meta.rankingMinLevel}+`
-            : meta.rankingTopN
-              ? t("app.fetchedCount", { count: meta.rankingTopN })
-              : null}
-        </p>
+      <div className="shrink-0 text-right md:pb-1">
         {scheduledUpdateLabel ? (
           <p className="text-sm text-slate-400 md:text-base">{scheduledUpdateLabel}</p>
         ) : null}

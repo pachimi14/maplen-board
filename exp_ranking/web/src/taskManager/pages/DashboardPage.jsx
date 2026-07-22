@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import preset from "../data/presets.json";
 import CharacterPickerDialog from "../components/CharacterPickerDialog.jsx";
-import AppToolbar from "../components/AppToolbar.jsx";
+import PageHeader from "../components/PageHeader.jsx";
 import DashboardTasks from "../components/DashboardTasks.jsx";
 import NotificationBackgroundSync from "../components/NotificationBackgroundSync.jsx";
 import { addDashboardCharacter, claimLegacyDailyExpGoal, dailyExpGoalProgress, dailyExpGoalRemaining, DASHBOARD_CHARACTER_LIMIT, getDailyExpGoal, parseDailyExpGoal, removeDashboardCharacter, setDailyExpGoal, setReminderMemo } from "../domain/dashboardModel.js";
@@ -219,7 +219,7 @@ export default function DashboardPage() {
   return (
     <main className="dashboard-shell mx-auto max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
       <NotificationBackgroundSync snapshot={notificationSnapshot} />
-      <header className="mb-3 flex flex-wrap items-end justify-between gap-3"><h1 className="text-2xl font-bold tracking-tight text-slate-900">{t("nav.dashboard")}</h1><div className="flex flex-wrap items-center justify-end gap-2"><AppToolbar active="dashboard" /><p className="rounded-full border border-emerald-100 bg-white/75 px-3 py-1 text-sm font-medium text-slate-500">{new Intl.DateTimeFormat(language, { dateStyle: "full" }).format(now)}</p></div></header>
+      <PageHeader active="dashboard" title={t("dashboard.pageTitle")} className="mb-3" actions={<p className="rounded-full border border-emerald-100 bg-white/75 px-3 py-1 text-sm font-medium text-slate-500">{new Intl.DateTimeFormat(language, { dateStyle: "full" }).format(now)}</p>} />
       {warnings.length || message ? <div role="alert" className="mb-3 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800">{message || t(`status.${warnings[0]}`)}</div> : null}
       <section className="grid items-start gap-3 lg:grid-cols-12">
         <div className="lg:col-span-7 lg:row-span-2 lg:self-stretch"><DashboardTasks daily={taskView.daily} weekly={taskView.weekly} custom={taskView.custom} dailyTabs={taskTabs} weeklyTabs={taskTabs} dailySummary={daily} weeklySummary={weekly} customSummary={custom} dailyResetMs={resetSnapshot.daily.remainingMs} weeklyResetMs={resetSnapshot.weekly.remainingMs} onToggle={toggleTask} t={t} /></div>
