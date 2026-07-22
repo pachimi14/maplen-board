@@ -347,6 +347,7 @@
       "id": "template:weekly:weekend-reward",
       "cadence": "weekly",
       "availability": "weekend",
+      "endsAt": "2026-08-16T23:59:00.000Z",
       "label": {
         "ja": "Weekend報酬",
         "en": "Weekend Reward",

@@ -76,6 +76,10 @@ describe("operator template contract", () => {
       expect(parentDeadline || childDeadlines, template.id).toBe(true);
     }
   });
+  it("gives the Weekend Reward template its official availability deadline", () => {
+    expect(preset.templates.find((template) => template.id === "template:weekly:weekend-reward"))
+      .toMatchObject({ cadence: "weekly", availability: "weekend", endsAt: "2026-08-16T23:59:00.000Z" });
+  });
   it("offers Monster Park as a Daily template", () => {
     expect(preset.templates.find((template) => template.id === "template:daily:monster-park"))
       .toMatchObject({ cadence: "daily", label: { ja: "モンスターパーク" }, children: [] });
