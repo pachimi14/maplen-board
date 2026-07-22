@@ -112,7 +112,7 @@ function GroupTask({ task, onToggle, t, tabName = "", tabTone: tone = TAB_TONES[
           event.preventDefault();
           setExpanded((value) => !value);
         }}
-        aria-label={`${task.label}を${expanded ? "折りたたむ" : "展開する"}`}
+        aria-label={`${task.label}: ${t("task.expandHint")}`}
         aria-expanded={expanded}
         className="group flex cursor-pointer items-center gap-2 rounded-lg transition hover:bg-white/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
       >
