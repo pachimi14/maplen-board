@@ -75,8 +75,9 @@ function TabBadge({ name, tone }) {
 
 function TaskMeta({ task, tabName, tabTone: tone, t }) {
   const hasTiming = task.cadence === "custom" ? Boolean(task.dueAt || task.visibleUntil || task.nextResetAt) : Boolean(task.endsAt && task.remainingMs !== null);
-  if (!tabName && !hasTiming) return null;
-  return <span className="flex shrink-0 flex-col items-end gap-1"><TabBadge name={tabName} tone={tone} /><DeadlineBadge task={task} t={t} /><CustomTimingBadges task={task} t={t} /></span>;
+  const hasAvailability = task.availability === "weekend";
+  if (!tabName && !hasTiming && !hasAvailability) return null;
+  return <span className="flex shrink-0 flex-col items-end gap-1"><TabBadge name={tabName} tone={tone} /><DeadlineBadge task={task} t={t} /><CustomTimingBadges task={task} t={t} /><AvailabilityBadge task={task} t={t} /></span>;
 }
 
 function LeafTask({ task, onToggle, t, child = false, tabName = "", tabTone: tone = TAB_TONES[0] }) {
@@ -93,7 +94,6 @@ function LeafTask({ task, onToggle, t, child = false, tabName = "", tabTone: ton
       <CheckIndicator task={task} t={t} small={child} />
       <span className={`min-w-0 flex-1 break-words text-sm leading-tight ${task.progress.completed ? "text-slate-400 line-through" : "text-slate-700"}`}>{task.label}</span>
       <TaskMeta task={task} tabName={child ? "" : tabName} tabTone={tone} t={t} />
-      <AvailabilityBadge task={task} t={t} />
       {task.progress.totalCount > 1 ? <span className="text-xs font-medium text-slate-400">{task.progress.completedCount}/{task.progress.totalCount}</span> : null}
     </div>
   );
@@ -120,7 +120,6 @@ function GroupTask({ task, onToggle, t, tabName = "", tabTone: tone = TAB_TONES[
         <span className={`text-xs text-emerald-600 transition ${expanded ? "rotate-90" : ""}`}>▶</span>
         <span className={`min-w-0 flex-1 break-words text-sm font-semibold leading-tight ${task.progress.completed ? "text-slate-400 line-through" : "text-slate-800"}`}>{task.label}</span>
         <TaskMeta task={task} tabName={tabName} tabTone={tone} t={t} />
-        <AvailabilityBadge task={task} t={t} />
         <span className="rounded-full bg-white px-2 py-0.5 text-xs font-bold text-emerald-700 ring-1 ring-emerald-100">{task.progress.completedCount}/{task.progress.totalCount}</span>
       </div>
       {expanded ? <div className="mt-2 space-y-1.5 border-l border-emerald-200 pl-3">{task.children.map((child) => <LeafTask key={child.id} task={child} onToggle={onToggle} t={t} child />)}</div> : null}
