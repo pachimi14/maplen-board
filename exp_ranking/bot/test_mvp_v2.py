@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from level_exp import EXP_TABLE_VERSION
 from analysis import build_analysis_rows
 from models import SnapshotRow
 from mvp_export import build_mvp_payload, build_v2_payloads, export_mvp_v2_json
@@ -28,6 +29,7 @@ def test_v2_summary_and_shards_preserve_all_histories() -> None:
     summary, shards = build_v2_payloads(payload, shard_count=4)
 
     assert summary["meta"]["dataFormatVersion"] == 2
+    assert summary["meta"]["expTableVersion"] == EXP_TABLE_VERSION
     assert summary["meta"]["historyBasePath"] == "history/2026-07-02"
     assert all("history" not in character for character in summary["characters"])
     assert all("historyKey" in character for character in summary["characters"])

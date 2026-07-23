@@ -39,13 +39,43 @@ from level_exp import (
     EXP_TO_NEXT_LEVEL,
     LEVEL_CAP,
     TABLE_MIN_LEVEL,
-    TOTAL_EXP_225_TO_275,
-    calculate_progress_toward_275,
-    exp_required_for_level,
 )
 
 
-def exp_from_progress(level: int, progress: int) -> int | None:
+ExpTable = dict[int, int]
+
+
+def _exp_table_or_current(exp_table: ExpTable | None = None) -> ExpTable:
+    return exp_table or EXP_TO_NEXT_LEVEL
+
+
+def _exp_required_for_level(level: int, exp_table: ExpTable) -> int | None:
+    if level >= LEVEL_CAP:
+        return None
+    return exp_table.get(level)
+
+
+def _total_exp_to_275(exp_table: ExpTable) -> int:
+    return sum(exp_table.get(level, 0) for level in range(TABLE_MIN_LEVEL, LEVEL_CAP))
+
+
+def _calculate_progress_toward_275(level: int, exp: int, exp_table: ExpTable) -> int:
+    total = _total_exp_to_275(exp_table)
+    if level >= LEVEL_CAP:
+        return total
+    if level < TABLE_MIN_LEVEL:
+        return 0
+
+    required_current = _exp_required_for_level(level, exp_table)
+    if required_current is None:
+        return 0
+    remaining = max(required_current - exp, 0)
+    for lv in range(level + 1, LEVEL_CAP):
+        remaining += exp_table.get(lv, 0)
+    return total - remaining
+
+
+def exp_from_progress(level: int, progress: int, exp_table: ExpTable | None = None) -> int | None:
     """Invert calculate_progress_toward_275(level, exp) -> exp, given a known
     (exact) level. Returns None when the level is outside the invertible
     range (below TABLE_MIN_LEVEL or at/above LEVEL_CAP, where progress is
@@ -53,17 +83,18 @@ def exp_from_progress(level: int, progress: int) -> int | None:
     outside the valid [0, required_for_level] range (internally inconsistent
     input -- refuse to fabricate a number rather than guess).
     """
+    table = _exp_table_or_current(exp_table)
     if level < TABLE_MIN_LEVEL or level >= LEVEL_CAP:
         return None
 
-    required_current = exp_required_for_level(level)
+    required_current = _exp_required_for_level(level, table)
     if required_current is None:
         return None
 
     remaining_levels_sum = sum(
-        EXP_TO_NEXT_LEVEL.get(lv, 0) for lv in range(level + 1, LEVEL_CAP)
+        table.get(lv, 0) for lv in range(level + 1, LEVEL_CAP)
     )
-    exp = progress - TOTAL_EXP_225_TO_275 + required_current + remaining_levels_sum
+    exp = progress - _total_exp_to_275(table) + required_current + remaining_levels_sum
     if exp < 0 or exp > required_current:
         return None
     return exp
@@ -75,7 +106,7 @@ def exp_from_progress(level: int, progress: int) -> int | None:
 _PERCENT_ROUNDING_HALF_STEP = 0.0005
 
 
-def exp_from_percent_conservative(level: int, percent: float) -> int:
+def exp_from_percent_conservative(level: int, percent: float, exp_table: ExpTable | None = None) -> int:
     """Fallback inversion used when the exact backward chain breaks: same
     idea as inverting `levelExpPercent` directly, but first subtracts the
     maximum possible upward rounding bias from the stored percent. Because
@@ -83,7 +114,7 @@ def exp_from_percent_conservative(level: int, percent: float) -> int:
     result is <= the true exp for that day (never over-restores), at the
     cost of a small, bounded, systematic under-estimate.
     """
-    required = exp_required_for_level(level)
+    required = _exp_required_for_level(level, _exp_table_or_current(exp_table))
     if not required:
         return 0
     safe_percent = max(percent - _PERCENT_ROUNDING_HALF_STEP, 0.0)
@@ -113,6 +144,7 @@ def reconstruct_exp_backward(
     anchor_exp: int,
     points_desc: list[dict],
     fallback: str = "conservative",
+    exp_table: ExpTable | None = None,
 ) -> list[ReconstructedDay]:
     """Reconstruct exp for every point in `points_desc` (a single character's
     v2 shard `history` array, sorted descending by snapshotDate, points_desc[0]
@@ -152,13 +184,14 @@ def reconstruct_exp_backward(
     if not points_desc:
         return []
 
+    table = _exp_table_or_current(exp_table)
     date_counts: dict[str, int] = {}
     for point in points_desc:
         d = str(point.get("snapshotDate") or "")
         date_counts[d] = date_counts.get(d, 0) + 1
 
     results: list[ReconstructedDay] = []
-    progress = calculate_progress_toward_275(anchor_level, anchor_exp)
+    progress = _calculate_progress_toward_275(anchor_level, anchor_exp, table)
     results.append(
         ReconstructedDay(anchor_date, anchor_level, anchor_exp, "exact")
     )
@@ -186,7 +219,7 @@ def reconstruct_exp_backward(
         daily_gain = None if ambiguous else current_point.get("dailyGain")
         if daily_gain is not None:
             candidate_progress = progress - int(daily_gain)
-            exp_prev = exp_from_progress(prev_level, candidate_progress)
+            exp_prev = exp_from_progress(prev_level, candidate_progress, table)
             if exp_prev is not None:
                 progress = candidate_progress
                 results.append(ReconstructedDay(prev_date, prev_level, exp_prev, "exact"))
@@ -195,8 +228,8 @@ def reconstruct_exp_backward(
         # Break: missing dailyGain, ambiguous (duplicated) date, or an
         # algebraically inconsistent result.
         if fallback == "conservative":
-            exp_fallback = exp_from_percent_conservative(prev_level, _percent_of(prev_point))
-            progress = calculate_progress_toward_275(prev_level, exp_fallback)
+            exp_fallback = exp_from_percent_conservative(prev_level, _percent_of(prev_point), table)
+            progress = _calculate_progress_toward_275(prev_level, exp_fallback, table)
             results.append(
                 ReconstructedDay(prev_date, prev_level, exp_fallback, "conservative_fallback")
             )
