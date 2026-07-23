@@ -8,6 +8,7 @@ from __future__ import annotations
 import random
 
 from level_exp import (
+    LEGACY_EXP_TO_NEXT_LEVEL_PRE_2026_07_23,
     LEVEL_CAP,
     TABLE_MIN_LEVEL,
     calculate_level_exp_percent,
@@ -186,3 +187,45 @@ def test_reconstruct_exp_backward_empty_points() -> None:
         anchor_date="2026-01-01", anchor_level=240, anchor_exp=0,
         points_desc=[],
     ) == []
+
+
+def _legacy_progress_toward_275(level: int, exp: int) -> int:
+    total = sum(
+        LEGACY_EXP_TO_NEXT_LEVEL_PRE_2026_07_23[lv]
+        for lv in range(TABLE_MIN_LEVEL, LEVEL_CAP)
+    )
+    remaining = LEGACY_EXP_TO_NEXT_LEVEL_PRE_2026_07_23[level] - exp
+    remaining += sum(
+        LEGACY_EXP_TO_NEXT_LEVEL_PRE_2026_07_23[lv]
+        for lv in range(level + 1, LEVEL_CAP)
+    )
+    return total - remaining
+
+
+def test_reconstruct_exp_backward_uses_supplied_legacy_exp_table() -> None:
+    level = 225
+    exp_by_date = {
+        "2026-07-21": 12_345_678_901,
+        "2026-07-22": 45_678_901_234,
+    }
+    progress_by_date = {
+        day: _legacy_progress_toward_275(level, exp)
+        for day, exp in exp_by_date.items()
+    }
+    daily_gain = progress_by_date["2026-07-22"] - progress_by_date["2026-07-21"]
+    points_desc = [
+        _point("2026-07-22", level, daily_gain, 0.0),
+        _point("2026-07-21", level, None, 0.0),
+    ]
+
+    result = reconstruct_exp_backward(
+        anchor_date="2026-07-22",
+        anchor_level=level,
+        anchor_exp=exp_by_date["2026-07-22"],
+        points_desc=points_desc,
+        exp_table=LEGACY_EXP_TO_NEXT_LEVEL_PRE_2026_07_23,
+    )
+
+    by_date = {row.snapshot_date: row for row in result}
+    assert by_date["2026-07-21"].method == "exact"
+    assert by_date["2026-07-21"].exp == exp_by_date["2026-07-21"]

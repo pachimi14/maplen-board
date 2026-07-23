@@ -64,6 +64,23 @@ def _migrate_schema(conn: sqlite3.Connection) -> None:
         )
 
 
+def _parse_exp_table_from_meta(meta: dict) -> dict[int, int] | None:
+    raw = meta.get("expTable")
+    if not isinstance(raw, dict):
+        return None
+
+    parsed: dict[int, int] = {}
+    for level_raw, value_raw in raw.items():
+        try:
+            level = int(level_raw)
+            value = int(value_raw)
+        except (TypeError, ValueError):
+            return None
+        if value <= 0:
+            return None
+        parsed[level] = value
+    return parsed or None
+
 def init_db(db_path: Path) -> None:
     db_path.parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(db_path) as conn:
@@ -724,7 +741,6 @@ def import_snapshots_from_mvp_json(db_path: Path, json_path: Path) -> int:
     from collections import defaultdict
     from datetime import datetime, timezone
 
-    from level_exp import exp_required_for_level
 
     try:
         payload = json.loads(json_path.read_text(encoding="utf-8"))
@@ -743,6 +759,14 @@ def import_snapshots_from_mvp_json(db_path: Path, json_path: Path) -> int:
 
     updated_raw = str(meta.get("updatedAt") or "").strip()
     fetched_at = updated_raw or datetime.now(timezone.utc).isoformat(timespec="seconds")
+    exp_table = _parse_exp_table_from_meta(meta)
+    if exp_table is None:
+        from level_exp import EXP_TO_NEXT_LEVEL
+
+        exp_table = EXP_TO_NEXT_LEVEL
+        logger.warning(
+            "rankings.json has no usable meta.expTable; using current EXP table for recovery"
+        )
 
     pending: dict[str, list[dict[str, object]]] = defaultdict(list)
     for character in characters:
@@ -775,7 +799,7 @@ def import_snapshots_from_mvp_json(db_path: Path, json_path: Path) -> int:
                 if point.get("levelExpPercent") is not None
                 else point.get("expPercent") or 0
             )
-            required = exp_required_for_level(level)
+            required = exp_table.get(level)
             exp = int(required * percent / 100.0) if required else 0
             pending[snapshot_date].append(
                 {
@@ -1084,6 +1108,14 @@ def import_snapshots_from_v2_json(
 
     updated_raw = str(meta.get("updatedAt") or "").strip()
     fetched_at = updated_raw or datetime.now(timezone.utc).isoformat(timespec="seconds")
+    exp_table = _parse_exp_table_from_meta(meta)
+    if exp_table is None:
+        from level_exp import EXP_TO_NEXT_LEVEL
+
+        exp_table = EXP_TO_NEXT_LEVEL
+        logger.warning(
+            "v2 rankings.json has no usable meta.expTable; using current EXP table for recovery"
+        )
 
     # worldId is exact (no reconstruction) in the v2 summary; hydrate character_meta
     # unconditionally so worldRank/worldRankTotal survive recovery too.
@@ -1173,6 +1205,7 @@ def import_snapshots_from_v2_json(
             anchor_level=int(summary_level),
             anchor_exp=int(summary_exp),
             points_desc=points_desc,
+            exp_table=exp_table,
         )
 
         # A duplicated snapshotDate in `history` (see reconstruct_exp_backward's

@@ -15,6 +15,7 @@ from analysis import build_analysis_rows, deduplicate_snapshots_by_identity
 from identity import build_name_to_asset_key, resolve_snapshot_identity
 from level_exp import (
     EXP_TO_NEXT_LEVEL,
+    EXP_TABLE_VERSION,
     TARGET_TOTAL_EXP_250,
     TARGET_TOTAL_EXP_275,
     calculate_level_exp_percent,
@@ -430,6 +431,7 @@ def build_mvp_payload(
             "targetTotalExp250": TARGET_TOTAL_EXP_250,
             "targetTotalExp275": TARGET_TOTAL_EXP_275,
             "levelCap": 275,
+            "expTableVersion": EXP_TABLE_VERSION,
             "expTable": {
                 str(level): EXP_TO_NEXT_LEVEL[level]
                 for level in sorted(EXP_TO_NEXT_LEVEL)
