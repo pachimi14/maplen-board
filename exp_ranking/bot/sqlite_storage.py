@@ -35,6 +35,10 @@ CREATE INDEX IF NOT EXISTS idx_ranking_snapshot_date
 CREATE INDEX IF NOT EXISTS idx_ranking_snapshot_character
     ON ranking_snapshot(character_name);
 
+CREATE INDEX IF NOT EXISTS idx_ranking_snapshot_empty_asset_name
+    ON ranking_snapshot(character_name)
+    WHERE character_asset_key IS NULL OR character_asset_key = '';
+
 CREATE TABLE IF NOT EXISTS character_meta (
     character_asset_key TEXT PRIMARY KEY,
     world_id TEXT NOT NULL DEFAULT '',
@@ -658,9 +662,46 @@ def backfill_character_asset_keys(
     if not name_to_asset_key:
         return 0
 
+    normalized = {
+        str(name_key or "").casefold(): str(asset_key or "").strip()
+        for name_key, asset_key in name_to_asset_key.items()
+        if str(name_key or "").strip() and str(asset_key or "").strip()
+    }
+    if not normalized:
+        return 0
+
     updated = 0
     with sqlite3.connect(db_path) as conn:
-        for name_key, asset_key in name_to_asset_key.items():
+        missing_rows = conn.execute(
+            """
+            SELECT DISTINCT lower(character_name)
+            FROM ranking_snapshot
+            WHERE (character_asset_key IS NULL OR character_asset_key = '')
+              AND character_name != ''
+            """
+        ).fetchall()
+        missing_names = {
+            str(row[0] or "").casefold()
+            for row in missing_rows
+            if str(row[0] or "").strip()
+        }
+        if not missing_names:
+            logger.info("Skipped character_asset_key backfill: no empty asset keys")
+            return 0
+
+        pending = {
+            name_key: asset_key
+            for name_key, asset_key in normalized.items()
+            if name_key in missing_names
+        }
+        if not pending:
+            logger.info(
+                "Skipped character_asset_key backfill: %s empty-name groups, no matches",
+                len(missing_names),
+            )
+            return 0
+
+        for name_key, asset_key in pending.items():
             cursor = conn.execute(
                 """
                 UPDATE ranking_snapshot
@@ -675,9 +716,10 @@ def backfill_character_asset_keys(
 
     if updated:
         logger.info(
-            "Complemented character_asset_key on %s rows (%s names from today)",
+            "Complemented character_asset_key on %s rows (%s matched names, %s empty-name groups)",
             updated,
-            len(name_to_asset_key),
+            len(pending),
+            len(missing_names),
         )
     return updated
 
