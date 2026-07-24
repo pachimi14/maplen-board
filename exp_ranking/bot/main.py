@@ -29,7 +29,7 @@ from ranking_day_skip import (
 )
 from models import SnapshotRow
 from mvp_export import export_mvp_json, filter_snapshots_for_history
-from navigator import collect_asset_keys, extract_asset_key, sync_world_ids
+from navigator import collect_asset_keys, extract_asset_key, rotation_target_world, sync_world_ids
 from sqlite_storage import (
     append_snapshots,
     backfill_character_asset_keys,
@@ -71,6 +71,57 @@ RANKING_DAY_TIMEZONE = UTC
 
 LOG_DIR = config.BASE_DIR / "logs"
 LOG_PATH = LOG_DIR / "msu_ranking_bot.log"
+
+NAVIGATOR_LAST_SUCCESS_KEY = "navigator_last_success"
+
+
+def navigator_success_payload(
+    *,
+    run_date: date,
+    target_world: str,
+    snapshot_date: str,
+) -> str:
+    return json.dumps(
+        {
+            "runDate": run_date.isoformat(),
+            "targetWorld": target_world,
+            "snapshotDate": snapshot_date,
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+
+def navigator_success_matches(
+    raw: str | None,
+    *,
+    run_date: date,
+    target_world: str,
+    snapshot_date: str,
+) -> bool:
+    if not raw:
+        return False
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError:
+        return False
+    if not isinstance(payload, dict):
+        return False
+    return (
+        str(payload.get("runDate") or "") == run_date.isoformat()
+        and str(payload.get("targetWorld") or "") == target_world
+        and str(payload.get("snapshotDate") or "") == snapshot_date
+    )
+
+
+def should_store_navigator_success_marker(
+    *,
+    rotation_enabled: bool,
+    snapshot_date: str,
+    failed_count: int,
+) -> bool:
+    return rotation_enabled and bool(snapshot_date) and failed_count == 0
+
 
 RANKING_API_BASE = "https://msu.io/maplestoryn/api/msn/ranking"
 RANKING_QUERY = (
@@ -669,13 +720,70 @@ def run_navigator_only() -> int:
             "No character_asset_key values in latest snapshot; run ranking fetch first"
         )
 
-    sync_world_ids(
+    navigator_run_date = datetime.now(UTC).date()
+    rotation_enabled = config.navigator_rotation_enabled()
+    rotation_epoch = config.navigator_rotation_epoch()
+    current_snapshot_date = latest_snapshot_date(db_path) or ""
+    target_world = ""
+    if rotation_enabled:
+        # This is a duplicate-run marker, not an interprocess lock. GitHub Actions
+        # serializes Pages/Navigator via the shared `maplen-board-pages` concurrency group.
+        target_world = rotation_target_world(
+            navigator_run_date,
+            epoch=rotation_epoch,
+        )
+        if current_snapshot_date and navigator_success_matches(
+            get_app_meta(db_path, NAVIGATOR_LAST_SUCCESS_KEY),
+            run_date=navigator_run_date,
+            target_world=target_world,
+            snapshot_date=current_snapshot_date,
+        ):
+            logger.info(
+                "Navigator-only skipped: target=%s already synced on %s for snapshot=%s",
+                target_world,
+                navigator_run_date.isoformat(),
+                current_snapshot_date,
+            )
+            return 0
+
+    fetched_count, skipped_count, failed_count = sync_world_ids(
         db_path,
         asset_keys,
         request_delay_sec=config.navigator_request_delay_sec(),
-        rotation_enabled=config.navigator_rotation_enabled(),
-        rotation_epoch=config.navigator_rotation_epoch(),
+        rotation_enabled=rotation_enabled,
+        rotation_epoch=rotation_epoch,
+        reference_date=navigator_run_date,
     )
+
+    # `sync_world_ids` commits character_meta upserts before returning. Store the
+    # duplicate-run marker only after those DB updates complete without failures.
+    if should_store_navigator_success_marker(
+        rotation_enabled=rotation_enabled,
+        snapshot_date=current_snapshot_date,
+        failed_count=failed_count,
+    ):
+        set_app_meta(
+            db_path,
+            NAVIGATOR_LAST_SUCCESS_KEY,
+            navigator_success_payload(
+                run_date=navigator_run_date,
+                target_world=target_world,
+                snapshot_date=current_snapshot_date,
+            ),
+        )
+        logger.info(
+            "Navigator-only success marker stored: target=%s run_date=%s snapshot=%s fetched=%s skipped=%s",
+            target_world,
+            navigator_run_date.isoformat(),
+            current_snapshot_date,
+            fetched_count,
+            skipped_count,
+        )
+    elif failed_count:
+        logger.warning(
+            "Navigator-only success marker not stored because failed=%s",
+            failed_count,
+        )
 
     if config.navigator_export_rankings_json():
         export_rankings_from_db(
