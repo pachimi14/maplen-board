@@ -37,7 +37,11 @@ from __future__ import annotations
 from pathlib import Path
 
 from analysis import build_analysis_rows
-from level_exp import exp_required_for_level
+from level_exp import (
+    LEGACY_EXP_TO_NEXT_LEVEL_PRE_2026_07_23,
+    exp_required_for_level,
+    exp_table_for,
+)
 from models import SnapshotRow
 from mvp_export import build_mvp_payload, build_v2_payloads
 from sqlite_storage import (
@@ -1095,3 +1099,116 @@ def test_p1_idempotency_no_over_restoration_regression(tmp_path: Path) -> None:
     assert checked > 0
     assert over_restored == [], f"over-restored exp found: {over_restored}"
     assert _identity_date_duplicates(recovered_db) == []
+
+
+# =============================================================================
+# B' (docs/IMPL_PLAN_recovery-era.md) regression coverage.
+#
+# Note on the two now-un-xfailed LULU-062 tests above
+# (test_v2_shard_recovery_history_level_exact_and_percent_round_trips,
+# test_v2_shard_recovery_daily_gain_is_exact_when_no_duplicate_dates) and
+# test_p1_acceptance_exact_and_fallback_counts near the top of this file:
+# their fixture (dates 2026-01-01..2026-03-31, entirely pre-2026-07-23) is
+# already the basis-1/3/4 regression coverage for the *general* single-table
+# bug (production always defaulted to the *current* table regardless of
+# date; Alpha's repeated pre-boundary level-ups there is exactly what
+# exposed it, and their now-green, non-xfailed assertions are exactly what
+# guards against a regression). No separate "boundary-crossing" fixture
+# adds anything for *that* bug -- a boundary-crossing link whose destination
+# day happens to be on/after 2026-07-23 uses the current table on *both*
+# sides of the old and new code (same table, same math); only the
+# *destination-day-still-pre-boundary* case (already covered above)
+# differed.
+#
+# What neither of those fixtures exercises is the guard redesign itself
+# (2.2): a level-up whose destination day is on/after the boundary can
+# legitimately produce an origin-day exp *above* the current table's
+# requirement (a real "wake-up" overshoot, not a data error) -- the pre-B'
+# guard rejected exactly this correct value. That is unit-tested directly
+# against reconstruct_exp_backward in test_v2_recovery_backward.py
+# (test_reconstruct_exp_backward_accepts_post_patch_wake_up_overshoot); the
+# test below re-proves it end-to-end through the full sqlite_storage v2
+# JSON round trip (export -> shard JSON -> import), since that path has its
+# own (now-removed) single-table override that could have reintroduced the
+# same bug independently of v2_recovery_backward.py's own fix.
+# =============================================================================
+
+
+def _build_wake_up_true_db(tmp_path: Path):
+    """Hand-crafted 2-day fixture: the worked example from
+    docs/IMPL_PLAN_recovery-era.md 2.2 -- a level-up (Lv251 -> Lv252) whose
+    destination day IS the 2026-07-23 boundary, with a legitimate "wake-up"
+    origin-day exp that exceeds the *current* (post-reduction) table's
+    Lv251 requirement but is well within the legacy table's bound.
+    """
+    asset_key = "asset-wakeup"
+    name = "WakeUp"
+    day_prev = "2026-07-22"  # pre-boundary (the day being reconstructed)
+    day_cur = "2026-07-23"  # on-boundary (destination day of the level-up link)
+    prev_level, cur_level = 251, 252
+    cur_exp = 600_000_000_000
+    gain = 200_000_000_000
+
+    current_table = exp_table_for(day_cur)
+    prev_exp = cur_exp + current_table[prev_level] - gain
+    # Sanity: must actually be the "wake-up overshoot" case (exceeds the
+    # current requirement) yet still within the legacy bound the new guard
+    # checks -- otherwise this fixture proves nothing about the fix.
+    assert prev_exp > current_table[prev_level]
+    assert prev_exp <= LEGACY_EXP_TO_NEXT_LEVEL_PRE_2026_07_23[prev_level]
+
+    true_db = tmp_path / "true_wake_up.db"
+    for snapshot_date, level, exp in ((day_prev, prev_level, prev_exp), (day_cur, cur_level, cur_exp)):
+        append_snapshots(
+            true_db,
+            [
+                SnapshotRow(
+                    snapshot_date=snapshot_date,
+                    rank=1,
+                    rank_fluctuation=0,
+                    character_name=name,
+                    class_code="1002",
+                    job_code="100200",
+                    level=level,
+                    exp=exp,
+                    image_url="https://img/wakeup.png",
+                    character_asset_key=asset_key,
+                )
+            ],
+            fetched_at=f"{snapshot_date}T09:05:00+00:00",
+        )
+    return true_db, asset_key, day_prev, day_cur, prev_exp
+
+
+def test_v2_shard_recovery_accepts_post_patch_wake_up_overshoot_end_to_end(
+    tmp_path: Path,
+) -> None:
+    """Basis 1, full sqlite_storage pipeline: the guard redesign's headline
+    case (docs/IMPL_PLAN_recovery-era.md 2.2) survives the complete
+    export -> v2 shard JSON -> import_snapshots_from_v2_json round trip, not
+    just a direct reconstruct_exp_backward call. Pre-B',
+    import_snapshots_from_v2_json's own single current-table override
+    (independent of v2_recovery_backward.py's internal table choice) made
+    the old guard reject this value and under-restore via the conservative
+    fallback instead.
+    """
+    true_db, asset_key, day_prev, day_cur, true_prev_exp = _build_wake_up_true_db(tmp_path)
+    _, summary, shards = _export_v2(true_db, latest_snapshot_date=day_cur)
+    shard_payloads = _shard_payloads(summary, shards)
+
+    recovered_db = tmp_path / "recovered_wake_up.db"
+    imported = import_snapshots_from_v2_json(recovered_db, summary, shard_payloads)
+    assert imported > 0
+
+    recovered_rows = {
+        row.snapshot_date: row
+        for row in load_all_snapshots(recovered_db)
+        if row.character_asset_key == asset_key
+    }
+    assert day_prev in recovered_rows, "the wake-up-overshoot day was not recovered at all"
+    assert recovered_rows[day_prev].level == 251
+    assert recovered_rows[day_prev].exp == true_prev_exp, (
+        "wake-up overshoot day should reconstruct EXACTLY, not fall back to "
+        f"an under-estimate: recovered={recovered_rows[day_prev].exp} "
+        f"true={true_prev_exp}"
+    )
