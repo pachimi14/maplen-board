@@ -1,5 +1,5 @@
-"""T12 P1: tests for the production backward-exact v2-shard recovery core
-(v2_recovery_backward.py), used by
+"""T12 P1 / B': tests for the production backward-exact v2-shard recovery
+core (v2_recovery_backward.py), used by
 sqlite_storage.import_snapshots_from_v2_json.
 """
 
@@ -12,8 +12,10 @@ from level_exp import (
     LEVEL_CAP,
     TABLE_MIN_LEVEL,
     calculate_level_exp_percent,
+    calculate_level_exp_percent_for_table,
     calculate_progress_toward_275,
     exp_required_for_level,
+    exp_table_for,
 )
 from v2_recovery_backward import (
     exp_from_percent_conservative,
@@ -138,23 +140,29 @@ def test_reconstruct_exp_backward_conservative_fallback_fills_every_day() -> Non
 
 def test_reconstruct_exp_backward_conservative_fallback_never_exceeds_true_exp() -> None:
     """End-to-end version of the "never over-restore" guarantee: build a
-    points_desc from real (level, exp) pairs (via calculate_level_exp_percent,
-    exactly what mvp_export.py stores), force a break, and confirm the
-    reconstructed exp never exceeds the true exp at the fallback point.
+    points_desc from real (level, exp) pairs (via the era-correct percent
+    for that point's own date -- exactly what mvp_export.py stores post
+    LULU-062 -- since B' picks the fallback's inversion table from the
+    point's own snapshotDate, not a single table for the whole call), force
+    a break, and confirm the reconstructed exp never exceeds the true exp at
+    the fallback point.
     """
     level = 240
     true_exp_day2 = 5_123_456_789
-    percent_day2 = calculate_level_exp_percent(level, true_exp_day2)
+    date2 = "2026-01-02"  # pre-2026-07-23 -> legacy table, per exp_table_for
+    percent_day2 = calculate_level_exp_percent_for_table(
+        level, true_exp_day2, exp_table_for(date2)
+    )
     points_desc = [
         _point("2026-01-03", level, None, 10.0),
-        _point("2026-01-02", level, None, percent_day2),
+        _point(date2, level, None, percent_day2),
     ]
     result = reconstruct_exp_backward(
         anchor_date="2026-01-03", anchor_level=level, anchor_exp=1_000_000,
         points_desc=points_desc,
     )
     by_date = {r.snapshot_date: r for r in result}
-    assert by_date["2026-01-02"].exp <= true_exp_day2
+    assert by_date[date2].exp <= true_exp_day2
 
 
 def test_reconstruct_exp_backward_duplicate_date_is_treated_as_untrustworthy() -> None:
@@ -229,3 +237,47 @@ def test_reconstruct_exp_backward_uses_supplied_legacy_exp_table() -> None:
     by_date = {row.snapshot_date: row for row in result}
     assert by_date["2026-07-21"].method == "exact"
     assert by_date["2026-07-21"].exp == exp_by_date["2026-07-21"]
+
+
+def test_reconstruct_exp_backward_accepts_post_patch_wake_up_overshoot() -> None:
+    """B' guard redesign, the exact case it exists to fix (see module
+    docstring / IMPL_PLAN_recovery-era.md 2.2): a level-up link whose
+    destination day is on/after the 2026-07-23 table reduction can
+    legitimately produce an earlier-day `exp` that is ABOVE the *current*
+    (shrunk) table's requirement for that level -- a real "wake-up"
+    overshoot, not a data error. The pre-B' guard (`exp > current
+    requirement -> reject`) rejected this correct value and pushed it to
+    the conservative fallback; the redesigned guard
+    (`0 <= exp <= LEGACY[level]`) accepts it, because the legacy table is a
+    strict upper bound across eras.
+    """
+    prev_level = 251
+    cur_level = 252
+    cur_date = "2026-07-24"  # on/after the boundary -> current (shrunk) table
+    cur_exp = 600_000_000_000
+    gain = 101_000_000_000
+
+    current_table = exp_table_for(cur_date)
+    required_for_251_current = current_table[prev_level]
+    expected_exp_prev = cur_exp + required_for_251_current - gain
+
+    # The headline claim: this is a real overshoot above the *current*
+    # table's Lv251 requirement -- exactly what the old guard rejected.
+    assert expected_exp_prev > required_for_251_current
+    # ...but still comfortably inside the legacy (pre-boundary) bound that
+    # the new guard actually checks.
+    assert expected_exp_prev <= LEGACY_EXP_TO_NEXT_LEVEL_PRE_2026_07_23[prev_level]
+
+    points_desc = [
+        _point(cur_date, cur_level, gain, 0.0),  # dailyGain lives on the LATER day
+        _point("2026-07-23", prev_level, None, 0.0),
+    ]
+    result = reconstruct_exp_backward(
+        anchor_date=cur_date,
+        anchor_level=cur_level,
+        anchor_exp=cur_exp,
+        points_desc=points_desc,
+    )
+    by_date = {row.snapshot_date: row for row in result}
+    assert by_date["2026-07-23"].method == "exact"
+    assert by_date["2026-07-23"].exp == expected_exp_prev
