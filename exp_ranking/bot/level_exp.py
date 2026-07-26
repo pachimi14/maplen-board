@@ -216,3 +216,70 @@ def calculate_progress_toward_275(level: int, exp: int) -> int:
 
 def calculate_exp_percent(level: int, exp: int) -> float:
     return calculate_level_exp_percent(level, exp)
+
+
+# --- Era-aware, non-clamped primitives (LULU-062) ---------------------------
+#
+# The in-game EXP table was reduced ~20% effective 2026-07-23 (UTC fetch);
+# `LEGACY_EXP_TO_NEXT_LEVEL_PRE_2026_07_23` (pre-reduction) applies to
+# snapshots dated 2026-07-22 or earlier, `EXP_TO_NEXT_LEVEL` (current) to
+# 2026-07-23 or later. Everything above this line is unchanged (same
+# signatures, same clamped-to-100%/current-table-only behavior) and stays
+# that way -- `calculate_level_exp_percent` and friends are still relied on
+# for planner ETA / "latest day" totals, which only ever need the current
+# table. The functions below exist so `analysis.py` (daily gain) and
+# `mvp_export.py` (history percent) can compute era-correct, non-clamped
+# values instead of clamping every historical day to the current table (the
+# root cause of both the pre-patch under-count and the post-patch wake-up
+# overshoot; see docs/DECISION_LOG.md LULU-062).
+EXP_TABLE_CHANGE_BOUNDARY = "2026-07-23"
+
+
+def exp_table_for(snapshot_date: str) -> dict[int, int]:
+    """EXP-to-next-level table in effect on `snapshot_date`.
+
+    Snapshots dated strictly before `EXP_TABLE_CHANGE_BOUNDARY` (ISO
+    `YYYY-MM-DD` string comparison, which sorts correctly for this format)
+    used the legacy (pre-reduction) table; `EXP_TABLE_CHANGE_BOUNDARY` itself
+    and later use the current (reduced) table.
+    """
+    if snapshot_date and snapshot_date < EXP_TABLE_CHANGE_BOUNDARY:
+        return LEGACY_EXP_TO_NEXT_LEVEL_PRE_2026_07_23
+    return EXP_TO_NEXT_LEVEL
+
+
+def calculate_progress_for_table(level: int, exp: int, table: dict[int, int]) -> int:
+    """P(T, level, exp) = Σ T[TABLE_MIN_LEVEL .. level-1] + exp.
+
+    Unlike `calculate_progress_toward_275`, this does NOT clamp in-level
+    `exp` to the level's required-for-next value: an `exp` that already
+    exceeds `table[level]` (overshoot -- e.g. right after the table shrank
+    while a character stayed at the same level) is carried through as-is.
+    This is what makes two calls with the same `table` telescope to a pure
+    `exp` delta whenever `level` is identical, and lets a level-up that
+    happens to land on/after an overshoot resolve exactly instead of
+    over-counting the carried-over EXP a second time.
+    """
+    total = exp
+    for lv in range(TABLE_MIN_LEVEL, level):
+        total += table.get(lv, 0)
+    return total
+
+
+def calculate_level_exp_percent_for_table(
+    level: int, exp: int, table: dict[int, int]
+) -> float:
+    """Progress within the current level for an explicit table, NOT capped
+    at 100 -- mirrors `calculate_level_exp_percent` but (a) takes an
+    explicit table (so callers can pick the era-correct one) and (b) reports
+    overshoot as >100% instead of clamping it away. See LULU-062.
+    """
+    if level >= LEVEL_CAP:
+        return 100.0
+
+    required = table.get(level)
+    if not required or required <= 0:
+        return 0.0
+
+    percent = exp / required * 100.0
+    return round(max(percent, 0.0), 3)
