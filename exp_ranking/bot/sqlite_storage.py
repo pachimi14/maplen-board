@@ -68,22 +68,45 @@ def _migrate_schema(conn: sqlite3.Connection) -> None:
         )
 
 
-def _parse_exp_table_from_meta(meta: dict) -> dict[int, int] | None:
-    raw = meta.get("expTable")
-    if not isinstance(raw, dict):
-        return None
+# B' (IMPL_PLAN_recovery-era.md): recovery no longer parses a single
+# `meta.expTable` and uses it for every row/link regardless of that row's
+# own snapshotDate -- that single-table model is exactly the era bug this
+# fix closes (see level_exp.exp_table_for / v2_recovery_backward.py, both of
+# which now select a table per (row, its own date) instead). `meta.expTable`
+# itself is no longer read for table selection; `meta.expTableVersion` is
+# still read, but only as a safety-valve sanity check (below), not a source
+# of truth for which table applies to a historical date.
+_KNOWN_EXP_TABLE_VERSIONS: frozenset[str] | None = None
 
-    parsed: dict[int, int] = {}
-    for level_raw, value_raw in raw.items():
-        try:
-            level = int(level_raw)
-            value = int(value_raw)
-        except (TypeError, ValueError):
-            return None
-        if value <= 0:
-            return None
-        parsed[level] = value
-    return parsed or None
+
+def _warn_if_unknown_exp_table_version(meta: dict, *, source: str) -> None:
+    """Safety valve (LULU-062/B'): recovery now always derives each row's
+    table from its own snapshotDate via level_exp.exp_table_for, which only
+    knows about the eras hardcoded into level_exp._EXP_TABLE_ERAS. If the
+    JSON's own `meta.expTableVersion` names a version this bot's level_exp.py
+    doesn't recognize, era-based selection may silently disagree with the
+    exporter's actual table for some historical dates -- warn so an operator
+    notices rather than trusting a possibly-wrong recovered exp.
+    """
+    global _KNOWN_EXP_TABLE_VERSIONS
+    if _KNOWN_EXP_TABLE_VERSIONS is None:
+        from level_exp import EXP_TABLE_VERSION, LEGACY_EXP_TABLE_VERSION_PRE_2026_07_23
+
+        _KNOWN_EXP_TABLE_VERSIONS = frozenset(
+            {EXP_TABLE_VERSION, LEGACY_EXP_TABLE_VERSION_PRE_2026_07_23}
+        )
+
+    version = str(meta.get("expTableVersion") or "").strip()
+    if version and version not in _KNOWN_EXP_TABLE_VERSIONS:
+        logger.warning(
+            "%s meta.expTableVersion=%r is not a version this bot's "
+            "level_exp.py era table knows about; snapshot-date-based era "
+            "selection (level_exp.exp_table_for) may not match the "
+            "exporter's actual table for some historical dates -- verify "
+            "before trusting recovered exp.",
+            source,
+            version,
+        )
 
 def init_db(db_path: Path) -> None:
     db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -801,14 +824,9 @@ def import_snapshots_from_mvp_json(db_path: Path, json_path: Path) -> int:
 
     updated_raw = str(meta.get("updatedAt") or "").strip()
     fetched_at = updated_raw or datetime.now(timezone.utc).isoformat(timespec="seconds")
-    exp_table = _parse_exp_table_from_meta(meta)
-    if exp_table is None:
-        from level_exp import EXP_TO_NEXT_LEVEL
+    _warn_if_unknown_exp_table_version(meta, source="rankings.json")
 
-        exp_table = EXP_TO_NEXT_LEVEL
-        logger.warning(
-            "rankings.json has no usable meta.expTable; using current EXP table for recovery"
-        )
+    from level_exp import exp_table_for
 
     pending: dict[str, list[dict[str, object]]] = defaultdict(list)
     for character in characters:
@@ -841,7 +859,12 @@ def import_snapshots_from_mvp_json(db_path: Path, json_path: Path) -> int:
                 if point.get("levelExpPercent") is not None
                 else point.get("expPercent") or 0
             )
-            required = exp_table.get(level)
+            # Era-aware (B'): each point's own snapshotDate picks its own
+            # table -- a single table for the whole import (the previous
+            # behavior, sourced from meta.expTable or a current-table
+            # fallback) mis-converts percent->exp for any point whose era
+            # differs from that one table (see docs/DECISION_LOG.md LULU-062).
+            required = exp_table_for(snapshot_date).get(level)
             exp = int(required * percent / 100.0) if required else 0
             pending[snapshot_date].append(
                 {
@@ -1150,14 +1173,7 @@ def import_snapshots_from_v2_json(
 
     updated_raw = str(meta.get("updatedAt") or "").strip()
     fetched_at = updated_raw or datetime.now(timezone.utc).isoformat(timespec="seconds")
-    exp_table = _parse_exp_table_from_meta(meta)
-    if exp_table is None:
-        from level_exp import EXP_TO_NEXT_LEVEL
-
-        exp_table = EXP_TO_NEXT_LEVEL
-        logger.warning(
-            "v2 rankings.json has no usable meta.expTable; using current EXP table for recovery"
-        )
+    _warn_if_unknown_exp_table_version(meta, source="v2 rankings.json")
 
     # worldId is exact (no reconstruction) in the v2 summary; hydrate character_meta
     # unconditionally so worldRank/worldRankTotal survive recovery too.
@@ -1242,12 +1258,19 @@ def import_snapshots_from_v2_json(
             continue
         points_desc.sort(key=lambda point: point["snapshotDate"], reverse=True)
 
+        # Era-aware (B'): no `exp_table` override -- reconstruct_exp_backward
+        # picks each link's table from that link's own destination-day
+        # snapshotDate (level_exp.exp_table_for) instead of one table fixed
+        # for this whole character (the previous behavior, sourced from
+        # meta.expTable / a current-table fallback above, which is what let
+        # a level-up whose destination day fell in a different era than
+        # `EXP_TABLE_VERSION` over-restore dailyGain; see
+        # docs/DECISION_LOG.md LULU-062).
         reconstructed = reconstruct_exp_backward(
             anchor_date=latest_date,
             anchor_level=int(summary_level),
             anchor_exp=int(summary_exp),
             points_desc=points_desc,
-            exp_table=exp_table,
         )
 
         # A duplicated snapshotDate in `history` (see reconstruct_exp_backward's
