@@ -18,9 +18,10 @@ from level_exp import (
     EXP_TABLE_VERSION,
     TARGET_TOTAL_EXP_250,
     TARGET_TOTAL_EXP_275,
-    calculate_level_exp_percent,
+    calculate_level_exp_percent_for_table,
     calculate_total_exp_from_240,
     exp_required_for_level,
+    exp_table_for,
 )
 from job_names import format_job_name
 from models import AnalysisRow, SnapshotRow
@@ -173,7 +174,15 @@ def build_mvp_characters(
                 daily_gain = analysis.daily_exp_gain
 
             daily_by_date.append((snap.snapshot_date, daily_gain))
-            level_pct = calculate_level_exp_percent(snap.level, snap.exp)
+            # Era-correct, non-clamped percent (LULU-062): use the table in
+            # effect on this history point's own date, and report overshoot
+            # (>100%) as-is instead of capping it -- the top-level
+            # levelExpPercent/expPercent below is the *same* metric for the
+            # latest date, so this keeps that field and the last history
+            # point for one character in agreement.
+            level_pct = calculate_level_exp_percent_for_table(
+                snap.level, snap.exp, exp_table_for(snap.snapshot_date)
+            )
             history.append(
                 {
                     "date": _format_chart_date(snap.snapshot_date),
@@ -209,7 +218,13 @@ def build_mvp_characters(
             else calculate_total_exp_from_240(latest.level, latest.exp)
         )
 
-        level_pct = calculate_level_exp_percent(latest.level, latest.exp)
+        # Same era-correct, non-clamped percent as the history loop above --
+        # `latest` is always today's snapshot, so this is normally the
+        # current table anyway, but must not clamp overshoot (LULU-062 §4
+        # basis 8) to stay consistent with the last `history` point.
+        level_pct = calculate_level_exp_percent_for_table(
+            latest.level, latest.exp, exp_table_for(latest.snapshot_date)
+        )
         asset_key = latest.character_asset_key
         world_id = meta.get(asset_key, "") if asset_key else ""
         name = latest.character_name
