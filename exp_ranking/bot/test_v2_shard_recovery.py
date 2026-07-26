@@ -53,33 +53,44 @@ from sqlite_storage import (
 from v2_recovery_backward import reconstruct_exp_backward
 
 
-# LULU-062 (2026-07-27 coordinator ruling): commit 2 made analysis.py's
-# dailyGain era-aware (legacy table for destination days <= 2026-07-22,
-# current table on/after 2026-07-23), but this module's backward-chain
-# reconstruction still inverts with a SINGLE constant table for the whole
-# chain (sourced from meta.expTable in production, always the current
-# table). For a level-up whose destination day is <= 2026-07-22 -- possible
-# only while that date is still inside the retained history window, i.e.
-# until 2026-10-20 (2026-07-22 + the 90-day retention default) -- the
-# recovered exp for the day *before* the level-up can come out UNDER the
-# true value, which can make the *next* day's freshly-recomputed dailyGain
-# come out OVER the true value. Measured against the real production DB:
-# 27,372/359,271 = 7.62% of recoverable day-points affected, up to 3.07x the
-# true value (e.g. Benjapol 2026-07-20: true=1,179,837,974,224, recovered=
-# 2,038,875,777,215 = 1.73x). This is NOT the same as the file's core "never
-# over-restores" guarantee for raw exp/percent, which still holds and is not
-# xfailed (see test_p1_acceptance_never_over_restores and
+# LULU-062 (2026-07-27 coordinator ruling), superseded in part by B' (see
+# below): commit 2 made analysis.py's dailyGain era-aware (legacy table for
+# destination days <= 2026-07-22, current table on/after 2026-07-23), but
+# this module's backward-chain reconstruction inverted with a SINGLE
+# constant table for the whole chain (sourced from meta.expTable in
+# production, always the current table). For a level-up whose destination
+# day is <= 2026-07-22 -- possible only while that date is still inside the
+# retained history window, i.e. until 2026-10-20 (2026-07-22 + the 90-day
+# retention default) -- the recovered exp for the day *before* the level-up
+# could come out UNDER the true value, which could make the *next* day's
+# freshly-recomputed dailyGain come out OVER the true value. Measured
+# against the real production DB: 27,372/359,271 = 7.62% of recoverable
+# day-points affected, up to 3.07x the true value (e.g. Benjapol 2026-07-20:
+# true=1,179,837,974,224, recovered=2,038,875,777,215 = 1.73x). This was NOT
+# the same as the file's core "never over-restores" guarantee for raw
+# exp/percent, which held throughout and was never xfailed (see
+# test_p1_acceptance_never_over_restores and
 # test_p1_idempotency_no_over_restoration_regression below, both green).
-# Fix planned for a dedicated follow-up PR ("B'": era-aware, link-by-link
-# exp arithmetic in v2_recovery_backward.py + sqlite_storage.py). Do not
-# remove these xfail markers without shipping that fix -- `strict=True` so
-# an unexpected pass (xpass) fails CI and forces us to notice and clean up.
+#
+# B' (docs/IMPL_PLAN_recovery-era.md): `v2_recovery_backward.py`'s backward
+# chain now inverts each link with its own destination day's era table
+# (`level_exp.exp_table_for`) instead of one table for the whole chain, so
+# `test_p1_acceptance_exact_and_fallback_counts` above no longer needs an
+# xfail. `import_snapshots_from_v2_json` (sqlite_storage.py) still has to
+# stop forcing a single `meta.expTable`-derived table onto that per-link
+# selection for the *remaining* two xfails below (which exercise the full
+# v2-shard-JSON import path, not just `reconstruct_exp_backward` directly)
+# to also go green. Do not remove those markers without shipping that
+# fix -- `strict=True` so an unexpected pass (xpass) fails CI and forces us
+# to notice and clean up.
 _LULU_062_RECOVERY_GAIN_XFAIL_REASON = (
-    "LULU-062: commit 2 (era-aware gain) makes this module's single-table "
-    "backward recovery over-restore dailyGain for some pre-2026-07-23 "
+    "LULU-062/B': sqlite_storage.import_snapshots_from_v2_json still forces "
+    "a single meta.expTable-derived table onto v2_recovery_backward's "
+    "(now per-link era-aware) backward recovery for some pre-2026-07-23 "
     "level-ups still inside the retention window (measured 7.62% of "
-    "points, up to 3.07x true on the real DB) -- fixed in a dedicated "
-    "follow-up PR (\"B'\", era-aware recovery), not this one."
+    "points, up to 3.07x true on the real DB) -- fixed in the same "
+    "follow-up PR (\"B'\"), commit 3 (sqlite_storage.py), not yet landed "
+    "when this marker is present."
 )
 
 
@@ -656,7 +667,6 @@ def _gain_rank_map(characters: list[dict], field: str) -> dict[int, int]:
     return {c["id"]: i + 1 for i, c in enumerate(ordered)}
 
 
-@pytest.mark.xfail(reason=_LULU_062_RECOVERY_GAIN_XFAIL_REASON, strict=True)
 def test_p1_acceptance_exact_and_fallback_counts(tmp_path: Path) -> None:
     """Criteria 1+2: normal characters reconstruct 100% "exact" (fallback
     never fires for them); the character with a null-dailyGain break is the
@@ -674,12 +684,13 @@ def test_p1_acceptance_exact_and_fallback_counts(tmp_path: Path) -> None:
     production data, most plausibly via a null `dailyGain` (analysis.py's
     negative-gain guard, analysis.py:143-152) -- the trigger used here.
 
-    XFAIL (LULU-062): "Alpha" (gain=50B/day) is now large enough to level up
-    repeatedly over these 90 pre-boundary days, so it too now hits the
-    single-table era mismatch (`_LULU_062_RECOVERY_GAIN_XFAIL_REASON`) and
-    is no longer 100% "exact" (Beta -- the deliberately-glitched character
-    this test is actually about -- is unaffected; its criteria still hold in
-    isolation, but the whole function is xfailed for Alpha's assertion).
+    No longer XFAIL (B', LULU-062 follow-up): "Alpha" (gain=50B/day) levels
+    up repeatedly over these 90 pre-boundary days, which used to hit the
+    single-table era mismatch this test's old xfail documented. With
+    `reconstruct_exp_backward`'s link-unit exp arithmetic (each link now
+    picks its own destination day's era table instead of one table for the
+    whole chain), Alpha reconstructs 100% exact again, same as before
+    LULU-062's gain fix exposed the recovery-side bug.
     """
     true_db, dates, glitch_date = _build_fixture_with_null_daily_gain_break(tmp_path)
     _, true_summary, true_shards = _export_v2(true_db, latest_snapshot_date=dates[-1])
