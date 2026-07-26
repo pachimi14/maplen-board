@@ -8,8 +8,9 @@ from identity import build_name_to_asset_key, resolve_snapshot_identity
 from models import AnalysisRow, SnapshotRow
 from level_exp import (
     calculate_exp_to_250,
-    calculate_progress_toward_275,
+    calculate_progress_for_table,
     calculate_total_exp_from_240,
+    exp_table_for,
 )
 from utils import normalize_int
 
@@ -108,13 +109,16 @@ def build_analysis_rows(
         key=lambda row: (row.snapshot_date, row.rank),
     )
 
-    progress_by_date_identity: dict[tuple[str, str], int] = {}
+    # (snapshot_date, identity) -> (level, exp), kept raw (not pre-collapsed
+    # into a progress number) because the era-correct gain formula (LULU-062)
+    # needs to evaluate *both* the current and the previous day's (level,
+    # exp) under the *destination* day's table -- see the loop below.
+    raw_by_date_identity: dict[tuple[str, str], tuple[int, int]] = {}
     totals_by_date: dict[str, dict[str, int]] = {}
 
     for row in ordered:
         identity = snapshot_identity_key(row, name_to_asset_key)
-        progress = calculate_progress_toward_275(row.level, row.exp)
-        progress_by_date_identity[(row.snapshot_date, identity)] = progress
+        raw_by_date_identity[(row.snapshot_date, identity)] = (row.level, row.exp)
 
         total_exp = calculate_total_exp_from_240(row.level, row.exp)
         date_totals = totals_by_date.setdefault(row.snapshot_date, {})
@@ -132,13 +136,25 @@ def build_analysis_rows(
 
     for row in ordered:
         identity = snapshot_identity_key(row, name_to_asset_key)
-        progress = progress_by_date_identity[(row.snapshot_date, identity)]
         prev_date = previous_ranking_date(row.snapshot_date)
 
         daily_gain: int | None = None
         if prev_date:
-            prev_progress = progress_by_date_identity.get((prev_date, identity))
-            if prev_progress is not None:
+            prev_raw = raw_by_date_identity.get((prev_date, identity))
+            if prev_raw is not None:
+                prev_level, prev_exp = prev_raw
+                # gain(d) = P(T_d, level_d, exp_d) - P(T_d, level_{d-1}, exp_{d-1}):
+                # both operands use the *destination* day d's table (LULU-062
+                # §2.1), not each day's own table -- that is what makes a
+                # same-era-and-level pair telescope to a pure exp diff even
+                # right across the 2026-07-23 table-reduction boundary, and
+                # what makes a wake-up (overshoot -> level-up) day resolve
+                # without the old clamp's ~1,744x overcount.
+                table_d = exp_table_for(row.snapshot_date)
+                progress = calculate_progress_for_table(row.level, row.exp, table_d)
+                prev_progress = calculate_progress_for_table(
+                    prev_level, prev_exp, table_d
+                )
                 daily_gain = progress - prev_progress
                 if daily_gain < 0:
                     # Cumulative EXP only increases; a negative delta is never a
