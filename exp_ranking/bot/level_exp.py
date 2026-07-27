@@ -234,18 +234,55 @@ def calculate_exp_percent(level: int, exp: int) -> float:
 # overshoot; see docs/DECISION_LOG.md LULU-062).
 EXP_TABLE_CHANGE_BOUNDARY = "2026-07-23"
 
+# Ordered (effective_date, table) list, ascending by effective_date. Era N's
+# table is in effect from its own effective_date (inclusive) up to (but not
+# including) era N+1's effective_date; before the first entry, the implicit
+# era is `LEGACY_EXP_TO_NEXT_LEVEL_PRE_2026_07_23`. Today this list has a
+# single entry, so this is exactly equivalent to the old hardcoded
+# before/on-or-after-boundary check below -- it exists only so a *future*
+# table change has a place to be recorded as data instead of a rewritten
+# if/else.
+#
+# IMPORTANT -- this generalizes the *lookup*, not the *semantics*: the
+# link-unit backward-recovery arithmetic in v2_recovery_backward.py (and the
+# era-aware primitives below) rely on three properties measured to hold
+# across the 2026-07-23 change specifically: (a) absolute exp is preserved
+# exactly across the boundary (no re-basing of a character's progress), (b)
+# an in-level overshoot right after the table shrank is carried through
+# unclamped rather than reset, and (c) the legacy (pre-change) table is a
+# strict upper bound on `exp` at every level, across every era seen so far
+# (verified against the full production DB: 0 rows exceed it -- see
+# docs/DECISION_LOG.md LULU-062/LULU-057 follow-ups). A future change that
+# *increases* requirements (the opposite of 2026-07-23's 20% reduction)
+# would invalidate (c) and silently break the "never over-restores"
+# guarantee. Before appending a new entry here, re-verify these three
+# invariants against real data for the new boundary -- do not assume they
+# generalize for free just because the lookup mechanism does.
+_EXP_TABLE_ERAS: list[tuple[str, dict[int, int]]] = [
+    (EXP_TABLE_CHANGE_BOUNDARY, EXP_TO_NEXT_LEVEL),
+]
+
 
 def exp_table_for(snapshot_date: str) -> dict[int, int]:
     """EXP-to-next-level table in effect on `snapshot_date`.
 
-    Snapshots dated strictly before `EXP_TABLE_CHANGE_BOUNDARY` (ISO
-    `YYYY-MM-DD` string comparison, which sorts correctly for this format)
-    used the legacy (pre-reduction) table; `EXP_TABLE_CHANGE_BOUNDARY` itself
-    and later use the current (reduced) table.
+    Walks `_EXP_TABLE_ERAS` (ascending by effective date) and returns the
+    table for the latest era whose effective date is <= `snapshot_date`
+    (ISO `YYYY-MM-DD` string comparison, which sorts correctly for this
+    format); an empty/falsy `snapshot_date` or one before every listed era
+    falls back to `LEGACY_EXP_TO_NEXT_LEVEL_PRE_2026_07_23` -- except that,
+    to match the pre-existing behavior exactly, an empty/falsy date resolves
+    to the *current* table instead (no historical date to compare against).
     """
-    if snapshot_date and snapshot_date < EXP_TABLE_CHANGE_BOUNDARY:
-        return LEGACY_EXP_TO_NEXT_LEVEL_PRE_2026_07_23
-    return EXP_TO_NEXT_LEVEL
+    if not snapshot_date:
+        return EXP_TO_NEXT_LEVEL
+    table = LEGACY_EXP_TO_NEXT_LEVEL_PRE_2026_07_23
+    for effective_date, era_table in _EXP_TABLE_ERAS:
+        if snapshot_date >= effective_date:
+            table = era_table
+        else:
+            break
+    return table
 
 
 def calculate_progress_for_table(level: int, exp: int, table: dict[int, int]) -> int:
