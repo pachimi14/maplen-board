@@ -179,6 +179,15 @@ jobs:
           NAVIGATOR_FETCH_ENABLED: "false"
           HYDRATE_META_FROM_PAGES: ${{ contains(github.event.head_commit.message, '[web-only]') && 'false' || 'true' }}
           SNAPSHOT_IMPORT_FROM_PAGES: ${{ contains(github.event.head_commit.message, '[web-only]') && 'false' || 'true' }}
+          # T12 P3 §2.3/§5 step 3: explicitly enable the v2-shard recovery
+          # layer (era-aware, B'/LULU-062 verified: 374,121/374,121 bit-exact,
+          # 0 over-restoration) as the new last-resort tier now that the git
+          # db.gz commit is being phased out. Mirrors SNAPSHOT_IMPORT_FROM_PAGES's
+          # [web-only] gating above (a pure web-only redeploy fetches nothing,
+          # so there is nothing new to reconcile). Under normal operation this
+          # is expected to import 0 rows (cache/Release already have every
+          # snapshot day) -- see §3 row 8 / S1 in the completion report.
+          SNAPSHOT_IMPORT_FROM_V2_SHARDS: ${{ contains(github.event.head_commit.message, '[web-only]') && 'false' || 'true' }}
           PAGES_SITE_URL: https://lulumi-tools.com
           MVP_PAGES_RANKINGS_URL: https://lulumi-tools.com/data/rankings.json
           IMPORT_SNAPSHOTS_JSON: data/seed/rankings_seed.json

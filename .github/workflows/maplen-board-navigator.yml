@@ -156,6 +156,16 @@ jobs:
           CHARACTER_META_JSON_PATH: data/character_meta.json
           HYDRATE_META_FROM_PAGES: "false"
           SNAPSHOT_IMPORT_FROM_PAGES: "false"
+          # T12 P3 §2.3/§5 step 3: explicitly enable the v2-shard recovery
+          # layer (era-aware, B'/LULU-062 verified: 374,121/374,121 bit-exact,
+          # 0 over-restoration) as the new last-resort tier now that the git
+          # db.gz commit is being phased out. Unlike SNAPSHOT_IMPORT_FROM_PAGES
+          # above, this is not gated -- run_navigator_only() also persists to
+          # Release (commit-db job below), so it needs the same recovery
+          # coverage as the main Pages run. Under normal operation this is
+          # expected to import 0 rows (cache/Release already have every
+          # snapshot day).
+          SNAPSHOT_IMPORT_FROM_V2_SHARDS: "true"
           # T12 P3 §2.4: diagnostic-only inputs for snapshot_guard's "restore
           # method" log line (restore_method_label). Never used in the
           # guard's pass/fail judgment itself (see config.py comments).
