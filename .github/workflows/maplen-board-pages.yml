@@ -336,9 +336,13 @@ jobs:
       # in the repo (frozen, unread by any workflow as of T12 P3 commit 2/7)
       # -- removing it from git history entirely is a separate, later step
       # (T12 P6, out of scope here per §1 "触らないもの").
+      # §5 step 6: `continue-on-error` is intentionally *not* set here anymore
+      # (it was, under T12 P2, since git db.gz was still the primary store and
+      # this was only a parallel safety net). Now that this is the sole
+      # persistence path, a failure here must fail the run visibly rather
+      # than be silently swallowed.
       - name: Persist ranking.db to Release store (sole durable store, T12 P3)
         if: always()
-        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
