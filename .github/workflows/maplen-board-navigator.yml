@@ -147,6 +147,14 @@ jobs:
       - name: Sync Navigator server info
         working-directory: exp_ranking/bot
         env:
+          # snapshot_guard.fetch_release_snapshot_days() shells out to `gh
+          # release view`/`gh release download` (via release_store.py) to
+          # establish the Release-baseline half of the fail-closed truncated
+          # publish guard (§2.4). Without GH_TOKEN/GH_REPO here, that call
+          # fails auth and the guard silently falls back to the single
+          # public-v2 basis, defeating the intended two-basis redundancy.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
           NAVIGATOR_ONLY: "true"
           NAVIGATOR_EXPORT_RANKINGS_JSON: "false"
           NAVIGATOR_REQUEST_DELAY_SEC: "0.35"
