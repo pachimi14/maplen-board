@@ -33,11 +33,40 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Restore ranking database
+      # T12 P3: restore source switched from the git-committed db.gz to the
+      # Release Asset (db-store/ranking.db.gz, T12 P2, §2.1). This workflow
+      # only needs yesterday's row count for the "should we retry" decision
+      # below, so a Release-unavailable outcome is non-fatal here (it just
+      # leaves row_count at 0, which correctly triggers a retry dispatch --
+      # the dispatched maplen-board-pages.yml run has its own full
+      # cache/Release/v1/v2 restore chain plus the truncated-publish guard,
+      # §2.3/§2.4).
+      - name: Restore ranking database from Release
+        working-directory: exp_ranking/bot
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          if [ ! -f exp_ranking/bot/data/ranking.db ] && [ -f exp_ranking/bot/data/ranking.db.gz ]; then
-            gzip -dc exp_ranking/bot/data/ranking.db.gz > exp_ranking/bot/data/ranking.db
-          fi
+          python -c "
+          import gzip
+          import shutil
+          from pathlib import Path
+          from release_store import ReleaseStoreError, download_current_asset
+
+          gz_dest = Path('/tmp/ranking.db.gz.from_release')
+          db_dest = Path('data/ranking.db')
+          db_dest.parent.mkdir(parents=True, exist_ok=True)
+          try:
+              restored = download_current_asset(gz_dest)
+          except ReleaseStoreError as exc:
+              print(f'release restore unavailable (non-fatal): {exc}')
+              restored = False
+          if restored:
+              with gzip.open(gz_dest, 'rb') as src, open(db_dest, 'wb') as dst:
+                  shutil.copyfileobj(src, dst)
+              print(f'release-db-bytes={db_dest.stat().st_size}')
+          print(f'release-db-restored={restored}')
+          "
 
       - name: Wait before immediate failure retry
         if: github.event_name == 'workflow_run'

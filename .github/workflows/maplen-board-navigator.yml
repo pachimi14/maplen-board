@@ -41,23 +41,51 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Preserve ranking database from git
-        id: git_db
+      # T12 P3: restore source switched from the git-committed db.gz to the
+      # Release Asset (db-store/ranking.db.gz, T12 P2). The git db.gz commit
+      # itself still runs in the commit-db job below in parallel during this
+      # transition (§5 step 2) -- this step only stops *reading* it for
+      # restore. `download_current_asset` is reused as-is (its fail-closed
+      # not-found detection is exactly what we want to keep, §2.1), but a
+      # failure here must not abort the run before the v1(Pages)/v2(shard)
+      # fallback layers inside main.py get a chance (§2.3's layered
+      # cache -> Release -> v1 -> v2 chain) -- so we catch ReleaseStoreError
+      # here and degrade to exists=false rather than failing the step. The
+      # actual fail-closed backstop for the whole chain is the truncated
+      # publish guard (snapshot_guard.py, §2.4), invoked from main.py after
+      # all of cache/Release/v1/v2 restoration completes.
+      - name: Restore ranking database from Release
+        id: release_db
+        working-directory: exp_ranking/bot
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          mkdir -p exp_ranking/bot/data
-          if [ -f exp_ranking/bot/data/ranking.db.gz ]; then
-            gzip -dc exp_ranking/bot/data/ranking.db.gz > /tmp/ranking.db.from_git
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "git-db-source=ranking.db.gz"
-          elif [ -f exp_ranking/bot/data/ranking.db ]; then
-            cp exp_ranking/bot/data/ranking.db /tmp/ranking.db.from_git
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "git-db-source=ranking.db (legacy)"
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-          fi
+          python -c "
+          import gzip
+          import os
+          import shutil
+          from pathlib import Path
+          from release_store import ReleaseStoreError, download_current_asset
+
+          gz_dest = Path('/tmp/ranking.db.gz.from_release')
+          db_dest = Path('/tmp/ranking.db.from_release')
+          try:
+              restored = download_current_asset(gz_dest)
+          except ReleaseStoreError as exc:
+              print(f'release restore unavailable (non-fatal, falling back): {exc}')
+              restored = False
+          if restored:
+              with gzip.open(gz_dest, 'rb') as src, open(db_dest, 'wb') as dst:
+                  shutil.copyfileobj(src, dst)
+              print(f'release-db-bytes={db_dest.stat().st_size}')
+          print(f'release-db-restored={restored}')
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as output:
+              print('exists=' + ('true' if restored else 'false'), file=output)
+          "
 
       - name: Restore legacy ranking.db cache (v2 path)
+        id: legacy_db_cache
         uses: actions/cache/restore@v4
         with:
           path: exp_ranking/bot/data/ranking.db
@@ -75,6 +103,7 @@ jobs:
           fi
 
       - name: Restore ranking data cache
+        id: ranking_db_cache
         uses: actions/cache/restore@v4
         with:
           path: exp_ranking/bot/data
@@ -84,24 +113,24 @@ jobs:
             exp-ranking-data-v3-${{ github.repository }}-meta
             exp-ranking-data-v3-pachimi14/msu-exp-ranking-meta
 
-      - name: Merge ranking.db from git into working copy
-        if: steps.git_db.outputs.exists == 'true'
+      - name: Merge ranking.db from Release into working copy
+        if: steps.release_db.outputs.exists == 'true'
         working-directory: exp_ranking/bot
         run: |
           python -c "
           from pathlib import Path
           import shutil
           from sqlite_storage import merge_ranking_databases
-          git_db = Path('/tmp/ranking.db.from_git')
+          release_db = Path('/tmp/ranking.db.from_release')
           work_db = Path('data/ranking.db')
-          if not git_db.exists():
+          if not release_db.exists():
               raise SystemExit(0)
           if work_db.exists():
-              merged = merge_ranking_databases(work_db, git_db)
-              print(f'merged rows from git ranking.db: {merged}')
+              merged = merge_ranking_databases(work_db, release_db)
+              print(f'merged rows from Release ranking.db: {merged}')
           else:
-              shutil.copy(git_db, work_db)
-              print('restored ranking.db from git')
+              shutil.copy(release_db, work_db)
+              print('restored ranking.db from Release')
           "
 
       - name: Set up Python
@@ -127,6 +156,21 @@ jobs:
           CHARACTER_META_JSON_PATH: data/character_meta.json
           HYDRATE_META_FROM_PAGES: "false"
           SNAPSHOT_IMPORT_FROM_PAGES: "false"
+          # T12 P3 §2.3/§5 step 3: explicitly enable the v2-shard recovery
+          # layer (era-aware, B'/LULU-062 verified: 374,121/374,121 bit-exact,
+          # 0 over-restoration) as the new last-resort tier now that the git
+          # db.gz commit is being phased out. Unlike SNAPSHOT_IMPORT_FROM_PAGES
+          # above, this is not gated -- run_navigator_only() also persists to
+          # Release (commit-db job below), so it needs the same recovery
+          # coverage as the main Pages run. Under normal operation this is
+          # expected to import 0 rows (cache/Release already have every
+          # snapshot day).
+          SNAPSHOT_IMPORT_FROM_V2_SHARDS: "true"
+          # T12 P3 §2.4: diagnostic-only inputs for snapshot_guard's "restore
+          # method" log line (restore_method_label). Never used in the
+          # guard's pass/fail judgment itself (see config.py comments).
+          SNAPSHOT_GUARD_CACHE_HIT: ${{ (steps.ranking_db_cache.outputs.cache-hit == 'true' || steps.legacy_db_cache.outputs.cache-hit == 'true') && 'true' || 'false' }}
+          SNAPSHOT_GUARD_RELEASE_RESTORED: ${{ steps.release_db.outputs.exists }}
         run: python main.py
 
       - name: Count navigator meta for cache key
@@ -159,7 +203,7 @@ jobs:
       needs.build.result == 'success'
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -173,49 +217,21 @@ jobs:
           path: exp_ranking/bot/data
         continue-on-error: true
 
-      - name: Commit ranking database
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
-          if [ ! -f exp_ranking/bot/data/ranking.db ]; then
-            echo "No ranking.db artifact to commit"
-            exit 0
-          fi
-          cp exp_ranking/bot/data/ranking.db /tmp/ranking.db.navigator-artifact
-          git fetch origin "${{ github.ref_name }}"
-          git rebase "origin/${{ github.ref_name }}"
-          cp /tmp/ranking.db.navigator-artifact exp_ranking/bot/data/ranking.db
-          if [ -f exp_ranking/bot/data/ranking.db.gz ]; then
-            gzip -dc exp_ranking/bot/data/ranking.db.gz > /tmp/ranking.db.remote
-            python exp_ranking/bot/merge_db_for_commit.py \
-              exp_ranking/bot/data/ranking.db \
-              /tmp/ranking.db.remote
-          fi
-          gzip -n -c exp_ranking/bot/data/ranking.db > exp_ranking/bot/data/ranking.db.gz.tmp
-          mv exp_ranking/bot/data/ranking.db.gz.tmp exp_ranking/bot/data/ranking.db.gz
-          git rm --cached --ignore-unmatch exp_ranking/bot/data/ranking.db
-          git add exp_ranking/bot/data/ranking.db.gz
-          if git diff --staged --quiet; then
-            echo "No ranking database changes to commit"
-            exit 0
-          fi
-          git commit -m "chore: update ranking.db (navigator) [skip ci]"
-          git push origin "HEAD:${{ github.ref_name }}"
-
-      # T12 P2: Release Asset (db-store/ranking.db.gz) を git db.gz コミットと並行して
-      # 更新する耐久層の安全網。書込は必ず「現Asset download -> additive-merge
-      # (INSERT OR IGNORE, merge_ranking_databases 再利用) -> --clobber upload」の順
-      # (INV-2/3)。書き手は pages と navigator の両方(単一書き手にしない、INV-3)。
-      # ranking.db は上のステップで git 側とマージ済みの状態がワークツリーに残って
-      # いるため、それをそのまま入力にする。git 側の commit/push が失敗しても
-      # (concurrency 直列化はしているが念のため)この安全網は独立して試行する。
-      # 配信経路(rankings.json)には一切関与しない(INV-1)。
-      - name: Persist ranking.db to Release store (P2 parallel safety net)
+      # T12 P3 §5 step 5 ("出血停止本体"): the git db.gz commit/push is
+      # removed here. The Release Asset persist step below (added in T12 P2
+      # as a parallel safety net; write side b of INV-3, pages being side a)
+      # is now the *sole* durable store for ranking.db (§2.2).
+      # `exp_ranking/bot/data/ranking.db.gz` itself is left as-is in the repo
+      # (frozen, unread by any workflow as of T12 P3 commit 2/7) -- removing
+      # it from git history entirely is a separate, later step (T12 P6, out
+      # of scope here per §1 "触らないもの").
+      # §5 step 6: `continue-on-error` is intentionally *not* set here anymore
+      # (it was, under T12 P2, since git db.gz was still the primary store and
+      # this was only a parallel safety net). Now that this is the sole
+      # persistence path, a failure here must fail the run visibly rather
+      # than be silently swallowed.
+      - name: Persist ranking.db to Release store (sole durable store, T12 P3)
         if: always()
-        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}

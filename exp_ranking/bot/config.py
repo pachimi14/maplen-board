@@ -150,6 +150,27 @@ def pages_v2_rankings_url() -> str:
     return os.environ.get("MVP_PAGES_V2_RANKINGS_URL", default).strip()
 
 
+def restore_cache_hit() -> bool:
+    """actions/cache から復元できたか(workflow が設定する診断用フラグ、T12 P3 §2.4)。
+
+    切り詰め公開防止ガード(snapshot_guard.py)のログ「復元方法」用の入力に
+    過ぎず、ガードの合否判定(fail-closed 判定)には使わない。未設定時は
+    False(=cache層が寄与したという情報は無い)。
+    """
+    raw = os.environ.get("SNAPSHOT_GUARD_CACHE_HIT", "").strip().lower()
+    return raw in ("1", "true", "yes", "on")
+
+
+def restore_release_restored() -> bool:
+    """Release Asset から復元できたか(workflow が設定する診断用フラグ、T12 P3 §2.4)。
+
+    切り詰め公開防止ガード(snapshot_guard.py)のログ「復元方法」用の入力に
+    過ぎず、ガードの合否判定には使わない。未設定時は False。
+    """
+    raw = os.environ.get("SNAPSHOT_GUARD_RELEASE_RESTORED", "").strip().lower()
+    return raw in ("1", "true", "yes", "on")
+
+
 def snapshot_import_from_v2_shards() -> bool:
     """Backfill SQLite from production v2 summary+shard JSON (worst-case recovery
     when actions/cache, Release Asset, and git db.gz are all unavailable).
