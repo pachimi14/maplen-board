@@ -203,7 +203,7 @@ jobs:
       needs.build.result == 'success'
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -217,47 +217,15 @@ jobs:
           path: exp_ranking/bot/data
         continue-on-error: true
 
-      - name: Commit ranking database
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
-          if [ ! -f exp_ranking/bot/data/ranking.db ]; then
-            echo "No ranking.db artifact to commit"
-            exit 0
-          fi
-          cp exp_ranking/bot/data/ranking.db /tmp/ranking.db.navigator-artifact
-          git fetch origin "${{ github.ref_name }}"
-          git rebase "origin/${{ github.ref_name }}"
-          cp /tmp/ranking.db.navigator-artifact exp_ranking/bot/data/ranking.db
-          if [ -f exp_ranking/bot/data/ranking.db.gz ]; then
-            gzip -dc exp_ranking/bot/data/ranking.db.gz > /tmp/ranking.db.remote
-            python exp_ranking/bot/merge_db_for_commit.py \
-              exp_ranking/bot/data/ranking.db \
-              /tmp/ranking.db.remote
-          fi
-          gzip -n -c exp_ranking/bot/data/ranking.db > exp_ranking/bot/data/ranking.db.gz.tmp
-          mv exp_ranking/bot/data/ranking.db.gz.tmp exp_ranking/bot/data/ranking.db.gz
-          git rm --cached --ignore-unmatch exp_ranking/bot/data/ranking.db
-          git add exp_ranking/bot/data/ranking.db.gz
-          if git diff --staged --quiet; then
-            echo "No ranking database changes to commit"
-            exit 0
-          fi
-          git commit -m "chore: update ranking.db (navigator) [skip ci]"
-          git push origin "HEAD:${{ github.ref_name }}"
-
-      # T12 P2: Release Asset (db-store/ranking.db.gz) を git db.gz コミットと並行して
-      # 更新する耐久層の安全網。書込は必ず「現Asset download -> additive-merge
-      # (INSERT OR IGNORE, merge_ranking_databases 再利用) -> --clobber upload」の順
-      # (INV-2/3)。書き手は pages と navigator の両方(単一書き手にしない、INV-3)。
-      # ranking.db は上のステップで git 側とマージ済みの状態がワークツリーに残って
-      # いるため、それをそのまま入力にする。git 側の commit/push が失敗しても
-      # (concurrency 直列化はしているが念のため)この安全網は独立して試行する。
-      # 配信経路(rankings.json)には一切関与しない(INV-1)。
-      - name: Persist ranking.db to Release store (P2 parallel safety net)
+      # T12 P3 §5 step 5 ("出血停止本体"): the git db.gz commit/push is
+      # removed here. The Release Asset persist step below (added in T12 P2
+      # as a parallel safety net; write side b of INV-3, pages being side a)
+      # is now the *sole* durable store for ranking.db (§2.2).
+      # `exp_ranking/bot/data/ranking.db.gz` itself is left as-is in the repo
+      # (frozen, unread by any workflow as of T12 P3 commit 2/7) -- removing
+      # it from git history entirely is a separate, later step (T12 P6, out
+      # of scope here per §1 "触らないもの").
+      - name: Persist ranking.db to Release store (sole durable store, T12 P3)
         if: always()
         continue-on-error: true
         env:
