@@ -30,6 +30,7 @@ from ranking_day_skip import (
 from models import SnapshotRow
 from mvp_export import export_mvp_json, filter_snapshots_for_history
 from navigator import collect_asset_keys, extract_asset_key, rotation_target_world, sync_world_ids
+from snapshot_guard import check_snapshot_integrity, restore_method_label
 from sqlite_storage import (
     append_snapshots,
     backfill_character_asset_keys,
@@ -448,10 +449,22 @@ def fetch_ranking_min_level(
     )
 
 
-def bootstrap_database(db_path: Path, json_path: Path, logger: logging.Logger) -> None:
+def bootstrap_database(
+    db_path: Path, json_path: Path, logger: logging.Logger
+) -> dict[str, int]:
+    """DB を初期化し、legacy/seed/v1(Pages)/v2(シャード) の順で復元・補完する。
+
+    戻り値の `pages_imported` / `v2_imported` は、切り詰め公開防止ガード
+    (snapshot_guard.py, T12 P3 §2.4)がログの「復元方法」を組み立てるための
+    診断用カウント(既存の import 呼び出しの戻り値そのものを再利用しているだけ
+    で、判定ロジックの複製ではない)。呼び出し元が戻り値を無視しても挙動は
+    変わらない(この関数自体が行う処理は従来通り)。
+    """
     init_db(db_path)
     if apply_ranking_day_label_migration(db_path):
         logger.info("Applied one-time ranking-day label migration (UTC gain day)")
+
+    restore_info = {"pages_imported": 0, "v2_imported": 0}
 
     legacy_db_path = db_path.parent / "ranking.legacy.db"
     if legacy_db_path.exists():
@@ -485,6 +498,7 @@ def bootstrap_database(db_path: Path, json_path: Path, logger: logging.Logger) -
             db_path,
             config.pages_rankings_url(),
         )
+        restore_info["pages_imported"] = pages_imported
         if pages_imported:
             logger.info(
                 "Snapshot days after Pages JSON import: %s (+%s rows)",
@@ -497,6 +511,7 @@ def bootstrap_database(db_path: Path, json_path: Path, logger: logging.Logger) -
             db_path,
             config.pages_v2_rankings_url(),
         )
+        restore_info["v2_imported"] = v2_imported
         if v2_imported:
             logger.info(
                 "Snapshot days after v2 shard import: %s (+%s rows)",
@@ -517,6 +532,47 @@ def bootstrap_database(db_path: Path, json_path: Path, logger: logging.Logger) -
         logger.info(
             "Raised last_ranking_fetched_at from latest snapshot fetched_at in DB"
         )
+
+    return restore_info
+
+
+def enforce_snapshot_integrity_guard(
+    db_path: Path,
+    logger: logging.Logger,
+    restore_info: dict[str, int],
+) -> None:
+    """切り詰め公開防止ガード(T12 P3 §2.4)を呼び出す。
+
+    呼び出し位置は必ず `bootstrap_database()`(cache・Release・v1・v2 の復元が
+    全て完了する箇所)の直後、かつランキングAPI取得・Pages export・Release
+    persist より前であること(§2.4)。`run()` / `run_navigator_only()` の両方
+    から、それぞれの `bootstrap_database()` 呼び出し直後に呼ぶ(navigator-only
+    runもコミットジョブでRelease persistを行うため対象になる)。
+
+    `SnapshotGuardError` はここで捕捉せずそのまま伝播させる――呼び出し元の
+    `main()` が捕捉して `sys.exit(1)` することで run 自体を fail させ、
+    GitHub Actions 上で後続の Pages export / Release persist ステップを
+    スキップさせる(=fail-closed の実体化)。
+    """
+    method = restore_method_label(
+        cache_hit=config.restore_cache_hit(),
+        release_restored=config.restore_release_restored(),
+        pages_imported=restore_info.get("pages_imported", 0),
+        v2_imported=restore_info.get("v2_imported", 0),
+    )
+    census = check_snapshot_integrity(
+        db_path,
+        method=method,
+        v2_meta_url=config.pages_v2_rankings_url(),
+    )
+    logger.info(
+        "Snapshot integrity guard passed: method=%s snapshot_days=%s "
+        "(expected_min=%s) total_rows=%s",
+        census.method,
+        census.snapshot_days,
+        census.expected_min_days,
+        census.total_rows,
+    )
 
 
 def collect_asset_keys_from_db(db_path: Path) -> list[str]:
@@ -696,7 +752,8 @@ def run_navigator_only() -> int:
     json_path = config.mvp_json_output_path()
     meta_json_path = config.character_meta_json_path()
 
-    bootstrap_database(db_path, json_path, logger)
+    restore_info = bootstrap_database(db_path, json_path, logger)
+    enforce_snapshot_integrity_guard(db_path, logger, restore_info)
     import_character_meta_file(db_path, meta_json_path)
 
     if config.hydrate_meta_from_pages():
@@ -842,7 +899,8 @@ def run() -> int:
     json_path = config.mvp_json_output_path()
     meta_json_path = config.character_meta_json_path()
     ranking_data_fetched_at: datetime | None = None
-    bootstrap_database(db_path, json_path, logger)
+    restore_info = bootstrap_database(db_path, json_path, logger)
+    enforce_snapshot_integrity_guard(db_path, logger, restore_info)
 
     if config.enforce_jst_fetch_window():
         wait_until_jst_fetch_window(logger)
