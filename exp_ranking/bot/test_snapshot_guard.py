@@ -243,16 +243,22 @@ def test_check_snapshot_integrity_fires_when_days_below_public_v2_basis(
         )
 
 
-def test_check_snapshot_integrity_falls_back_to_absolute_floor_when_no_external_basis(
+def test_check_snapshot_integrity_fails_closed_when_both_external_bases_unavailable(
     tmp_path: Path,
 ) -> None:
-    """公開v2・Releaseのどちらも取得できない場合でも、絶対最低30日
-    (-2 の許容込みで28日)は必ず適用される(§2.4 第3/4基準)。"""
+    """是正(統括レビュー, T12 P3 commit 1/7 検収): 公開v2 meta と Release
+    baseline の両方が取得できない場合は、絶対最低30日だけを根拠に判定を通しては
+    ならない(§2.4 第4基準「信頼できる基準値がどれも取得できない場合は
+    fail-closed」)。これは日数の多寡に関係なく発火する -- ここでは意図的に
+    90日分(絶対最低ラインを大きく超える量)を用意してもなお発火することを
+    確認する(=「基準が無いから通す」の禁止そのものを検証する)。"""
     db_path = tmp_path / "ranking.db"
+    _build_db(db_path, {d: 100 for d in _consecutive_dates(90)})
 
-    # 27 days: below floor(30) - tolerance(2) = 28 -> fires.
-    _build_db(db_path, {d: 100 for d in _consecutive_dates(27)})
-    with pytest.raises(snapshot_guard.SnapshotGuardError):
+    with pytest.raises(
+        snapshot_guard.SnapshotGuardError,
+        match="no reliable snapshot_days basis available",
+    ):
         snapshot_guard.check_snapshot_integrity(
             db_path,
             method="unknown(no-restore-layer-signal)",
@@ -262,16 +268,58 @@ def test_check_snapshot_integrity_falls_back_to_absolute_floor_when_no_external_
         )
 
 
+def test_check_snapshot_integrity_judges_normally_with_only_one_real_basis(
+    tmp_path: Path,
+) -> None:
+    """片方だけ実基準が取得できた場合は、従来どおり
+    max(実基準, 30) - tolerance で判定する(fail-closed にはならない)。"""
+    db_path = tmp_path / "ranking.db"
+    # v2_public=60, release=None -> expected_min_days = max(60, 30) - 2 = 58.
+    _build_db(db_path, {d: 100 for d in _consecutive_dates(57)})
+
+    with pytest.raises(snapshot_guard.SnapshotGuardError, match="snapshot_days=57"):
+        snapshot_guard.check_snapshot_integrity(
+            db_path,
+            method="release",
+            v2_meta_url="https://example.test/v2/rankings.json",
+            fetch_public_v2_days=lambda url: 60,
+            fetch_release_days=lambda: None,
+        )
+
+
+def test_check_snapshot_integrity_absolute_floor_still_applies_when_real_basis_is_smaller(
+    tmp_path: Path,
+) -> None:
+    """実基準が絶対最低ライン(30日)より小さくても、30日は追加の下限として
+    維持される(実基準の値だけを採用してはならない、§2.4 第3基準)。"""
+    db_path = tmp_path / "ranking.db"
+
+    # v2_public=10 (< floor 30), so expected_min_days must still be
+    # max(10, 30) - 2 = 28, not max(10) - 2 = 8.
+    _build_db(db_path, {d: 100 for d in _consecutive_dates(27)})
+    with pytest.raises(snapshot_guard.SnapshotGuardError, match="snapshot_days=27"):
+        snapshot_guard.check_snapshot_integrity(
+            db_path,
+            method="unknown(no-restore-layer-signal)",
+            v2_meta_url="https://example.test/v2/rankings.json",
+            fetch_public_v2_days=lambda url: 10,
+            fetch_release_days=lambda: None,
+        )
+
+
 def test_check_snapshot_integrity_passes_at_absolute_floor_boundary(tmp_path: Path) -> None:
     db_path = tmp_path / "ranking.db"
     # 28 days == floor(30) - tolerance(2): boundary, must pass (not "<").
+    # A real basis (v2_public=30) must be present -- with both external bases
+    # unavailable this would now fail-closed regardless of day count (see
+    # test_check_snapshot_integrity_fails_closed_when_both_external_bases_unavailable).
     _build_db(db_path, {d: 100 for d in _consecutive_dates(28)})
     census = snapshot_guard.check_snapshot_integrity(
         db_path,
-        method="unknown(no-restore-layer-signal)",
+        method="release",
         v2_meta_url="https://example.test/v2/rankings.json",
         fetch_public_v2_days=lambda url: None,
-        fetch_release_days=lambda: None,
+        fetch_release_days=lambda: 30,
     )
     assert census.snapshot_days == 28
 
@@ -311,7 +359,7 @@ def test_check_snapshot_integrity_fires_when_latest_day_rows_truncated(
             db_path,
             method="v2",
             v2_meta_url="https://example.test/v2/rankings.json",
-            fetch_public_v2_days=lambda url: None,
+            fetch_public_v2_days=lambda url: 35,
             fetch_release_days=lambda: None,
         )
 
@@ -330,7 +378,7 @@ def test_check_snapshot_integrity_tolerates_normal_daily_row_variation(
         db_path,
         method="v2",
         v2_meta_url="https://example.test/v2/rankings.json",
-        fetch_public_v2_days=lambda url: None,
+        fetch_public_v2_days=lambda url: 35,
         fetch_release_days=lambda: None,
     )
     assert census.latest_day_rows == 95

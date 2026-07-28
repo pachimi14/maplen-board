@@ -21,13 +21,29 @@ fail-closed を徹底する)。
     3. 絶対最低ライン = 30日(1,2 がこれ未満でも 30 を下回る復元は許さない)
     4. 信頼できる基準値がどれも取得できない場合は fail-closed
 
-1,2 は外部/Releaseへの読み取りアクセスに依存するため、取得できなくても
-(ネットワーク不達等)ここでは例外にしない――3 の絶対最低ラインが常に
-存在するため、`expected_min_days` は必ず計算できる(=判定基準は必ず得られる)。
+【統括レビュー(T12 P3 commit 1/7 検収, 2026-07-28)による是正】
+1,2 は外部/Releaseへの読み取りアクセスに依存するため個別には取得できなく
+てもここで即例外にはしない(§2.4 第1/2基準は「利用可能なら」)。**ただし
+1,2 が両方とも取得できなかった場合に、3 の絶対最低ライン(30日)だけを
+根拠に判定を通してしまうのは誤りだった**: それは「部分復元(例: 真の57日
+に対し40日しか復元できていない)+ 両基準が取得不能」というケースを
+`expected_min_days=28` で通過させてしまい、§2.4 第4基準「信頼できる基準値が
+どれも取得できない場合は fail-closed(『基準が無いから通す』は禁止)」が
+まさに塞ごうとしていた穴そのものだった(絶対最低ラインは実基準が最低でも
+1つ得られた場合の**追加の下限**であって、実基準の代替ではない)。
+
+是正後の意味論:
+    - 1,2 のうち **少なくとも一方が実際に取得できた場合**:
+      `expected_min_days = max(取得できた実基準…, 30) − tolerance` (現行どおり。
+      30 は実基準が小さくてもそれを下回らせないための追加下限)。
+    - 1,2 の **両方が取得できなかった場合**: 30 へフォールバックせず、
+      `SnapshotGuardError` を送出して fail-closed する(判定を試みた URL /
+      Release タグをエラーメッセージに含める。個別の失敗理由は各 fetch 関数が
+      直前に WARNING ログへ出力済み)。
+
 判定そのものの計算(このモジュール内のロジック)が予期せぬ例外を起こした
-場合は、呼び出し元で捕捉せずそのまま伝播させること(=それこそが「基準が
-無ければfail-closed」の実体化。ここを try/except で握り潰して素通りさせては
-ならない)。
+場合も、呼び出し元で捕捉せずそのまま伝播させること(=「基準が無ければ
+fail-closed」の実体化。ここを try/except で握り潰して素通りさせてはならない)。
 """
 
 from __future__ import annotations
@@ -197,16 +213,35 @@ def check_snapshot_integrity(
 
     v2_public_days = fetch_public_v2_days(v2_meta_url)
     release_days = fetch_release_days()
-    basis_candidates = [
-        value
-        for value in (v2_public_days, release_days, ABSOLUTE_MIN_SNAPSHOT_DAYS)
-        if value is not None
+    real_basis_candidates = [
+        value for value in (v2_public_days, release_days) if value is not None
     ]
-    # basis_candidates は ABSOLUTE_MIN_SNAPSHOT_DAYS を必ず含むため空になり得ない
-    # (=判定基準は常に得られる。§2.4 第4基準「信頼できる基準値がどれも取得でき
-    # ない場合はfail-closed」は、この計算自体が予期せぬ例外を起こした場合に
-    # 呼び出し元がそれを握り潰さず伝播させることで実体化する)。
-    expected_min_days = max(basis_candidates) - SNAPSHOT_DAYS_TOLERANCE
+
+    if not real_basis_candidates:
+        # 是正(統括レビュー, T12 P3 commit 1/7 検収): 実基準(公開v2 meta /
+        # Release baseline)が両方とも取得できない場合、絶対最低ライン(30日)
+        # だけを根拠に判定を通してはならない(§2.4 第4基準)。そうしないと
+        # 「真の日数はもっと多いのに40日しか復元できていない部分DB」を、
+        # 30日という無関係な下限だけを頼りに通過させてしまう(=切り詰め
+        # 公開そのもの)。個別の失敗理由は直前の fetch_public_v2_snapshot_days
+        # / fetch_release_snapshot_days の WARNING ログに出ている。
+        message = (
+            f"no reliable snapshot_days basis available (method={method}): "
+            f"both the public v2 meta (url={v2_meta_url}) and the Release "
+            f"baseline (tag={release_store.DB_STORE_TAG}) were unavailable or "
+            f"returned no value. Refusing to fall back to the absolute "
+            f"{ABSOLUTE_MIN_SNAPSHOT_DAYS}-day floor alone (§2.4 item 4: "
+            f"'no basis available' must fail-closed, not pass); see the "
+            f"preceding WARNING log lines for each source's failure reason."
+        )
+        logger.error("snapshot_guard: %s", message)
+        raise SnapshotGuardError(message)
+
+    # 少なくとも一方の実基準は得られた: 現行どおり max(実基準…, 30) を採用する
+    # (30 は実基準がそれより小さくても下回らせないための追加の下限)。
+    expected_min_days = (
+        max(*real_basis_candidates, ABSOLUTE_MIN_SNAPSHOT_DAYS) - SNAPSHOT_DAYS_TOLERANCE
+    )
 
     census = SnapshotCensus(
         method=method,
