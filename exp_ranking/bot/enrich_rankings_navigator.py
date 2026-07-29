@@ -79,8 +79,11 @@ def main() -> int:
         "-i",
         "--input",
         type=Path,
-        default=config.mvp_json_output_path(),
-        help="Input rankings.json",
+        required=True,
+        # T12 P4: no default anymore -- the v1 rankings.json this used to
+        # default to (`config.mvp_json_output_path()`) is retired. Pass an
+        # explicit path to any MVP/v1-shaped JSON file to enrich.
+        help="Input rankings.json (MVP/v1-shaped JSON with a characters array)",
     )
     parser.add_argument(
         "-o",

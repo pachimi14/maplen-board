@@ -28,7 +28,7 @@ from ranking_day_skip import (
     try_skip_entire_run,
 )
 from models import SnapshotRow
-from mvp_export import export_mvp_json, filter_snapshots_for_history
+from mvp_export import build_mvp_payload, export_mvp_v2_json, filter_snapshots_for_history
 from navigator import collect_asset_keys, extract_asset_key, rotation_target_world, sync_world_ids
 from snapshot_guard import check_snapshot_integrity, restore_method_label
 from sqlite_storage import (
@@ -42,11 +42,8 @@ from sqlite_storage import (
     export_character_meta_file,
     ensure_ranking_fetched_at_meta,
     get_app_meta,
-    hydrate_character_meta_from_json,
-    hydrate_character_meta_from_url,
     import_character_meta_file,
     init_db,
-    import_missing_snapshots_from_url,
     import_missing_snapshots_from_v2_url,
     import_snapshots_from_mvp_json,
     latest_snapshot_date,
@@ -450,15 +447,24 @@ def fetch_ranking_min_level(
 
 
 def bootstrap_database(
-    db_path: Path, json_path: Path, logger: logging.Logger
+    db_path: Path, logger: logging.Logger
 ) -> dict[str, int]:
-    """DB を初期化し、legacy/seed/v1(Pages)/v2(シャード) の順で復元・補完する。
+    """DB を初期化し、legacy/seed/v2(シャード) の順で復元・補完する。
 
-    戻り値の `pages_imported` / `v2_imported` は、切り詰め公開防止ガード
+    T12 P4: v1(Pages) の取り込み・hydrate 段(旧 `SNAPSHOT_IMPORT_FROM_PAGES`
+    / `HYDRATE_META_FROM_PAGES` / 旧 `json_path` 引数)は撤去済み。worldId
+    復旧は Release 復元(character_meta ごと保持)・v2シャード復元
+    (`import_missing_snapshots_from_v2_url` が character_meta も再水和)・
+    navigator の `sync_world_ids` の3経路で担保されることを事前実証済み
+    (docs/IMPL_PLAN_T12_P4.md §3.4.1 W1-W4)。
+
+    戻り値の `v2_imported` は、切り詰め公開防止ガード
     (snapshot_guard.py, T12 P3 §2.4)がログの「復元方法」を組み立てるための
     診断用カウント(既存の import 呼び出しの戻り値そのものを再利用しているだけ
     で、判定ロジックの複製ではない)。呼び出し元が戻り値を無視しても挙動は
-    変わらない(この関数自体が行う処理は従来通り)。
+    変わらない(この関数自体が行う処理は従来通り)。`pages_imported` は v1
+    撤去により常に 0 のまま保持している(`restore_method_label`/
+    `snapshot_guard.py` の呼び出し互換性のため。§1 "触らないもの")。
     """
     init_db(db_path)
     if apply_ranking_day_label_migration(db_path):
@@ -493,19 +499,6 @@ def bootstrap_database(
                 import_json,
             )
 
-    if config.snapshot_import_from_pages():
-        pages_imported = import_missing_snapshots_from_url(
-            db_path,
-            config.pages_rankings_url(),
-        )
-        restore_info["pages_imported"] = pages_imported
-        if pages_imported:
-            logger.info(
-                "Snapshot days after Pages JSON import: %s (+%s rows)",
-                count_snapshot_dates(db_path),
-                pages_imported,
-            )
-
     if config.snapshot_import_from_v2_shards():
         v2_imported = import_missing_snapshots_from_v2_url(
             db_path,
@@ -519,15 +512,7 @@ def bootstrap_database(
                 v2_imported,
             )
 
-    if json_path.exists():
-        hydrated = hydrate_character_meta_from_json(db_path, json_path)
-        if hydrated:
-            logger.info(
-                "character_meta after local rankings.json: %s",
-                count_character_meta(db_path),
-            )
-
-    ensure_ranking_fetched_at_meta(db_path, json_path)
+    ensure_ranking_fetched_at_meta(db_path)
     if reconcile_ranking_fetched_at_meta(db_path):
         logger.info(
             "Raised last_ranking_fetched_at from latest snapshot fetched_at in DB"
@@ -543,8 +528,9 @@ def enforce_snapshot_integrity_guard(
 ) -> None:
     """切り詰め公開防止ガード(T12 P3 §2.4)を呼び出す。
 
-    呼び出し位置は必ず `bootstrap_database()`(cache・Release・v1・v2 の復元が
-    全て完了する箇所)の直後、かつランキングAPI取得・Pages export・Release
+    呼び出し位置は必ず `bootstrap_database()`(cache・Release・v2 の復元が
+    全て完了する箇所。v1 段は T12 P4 で撤去済み)の直後、かつランキングAPI
+    取得・Pages export・Release
     persist より前であること(§2.4)。`run()` / `run_navigator_only()` の両方
     から、それぞれの `bootstrap_database()` 呼び出し直後に呼ぶ(navigator-only
     runもコミットジョブでRelease persistを行うため対象になる)。
@@ -596,47 +582,20 @@ def collect_asset_keys_from_db(db_path: Path) -> list[str]:
     return keys
 
 
-def read_json_updated_at(json_path: Path) -> datetime | None:
-    if not json_path.exists():
-        return None
-    try:
-        payload = json.loads(json_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return None
-    meta = payload.get("meta")
-    if not isinstance(meta, dict):
-        return None
-    raw = str(meta.get("updatedAt") or "").strip()
-    if not raw:
-        return None
-    return parse_iso_datetime(raw)
-
-
-def read_json_updated_at_from_url(url: str, timeout: float = REQUEST_TIMEOUT_SEC) -> datetime | None:
-    if not url.strip():
-        return None
-    try:
-        response = requests.get(url, timeout=timeout)
-        response.raise_for_status()
-        payload = response.json()
-    except (requests.RequestException, json.JSONDecodeError, ValueError):
-        return None
-    meta = payload.get("meta")
-    if not isinstance(meta, dict):
-        return None
-    raw = str(meta.get("updatedAt") or "").strip()
-    if not raw:
-        return None
-    return parse_iso_datetime(raw)
-
-
 def resolve_ranking_updated_at(
     db_path: Path,
-    json_path: Path,
     logger: logging.Logger,
     *,
     prefer: datetime | None = None,
 ) -> datetime:
+    """Resolve the ranking updatedAt timestamp, DB-derived only (T12 P4).
+
+    Previously also fell back to the local v1 rankings.json's meta.updatedAt
+    (`read_json_updated_at`) and, failing that, the deployed Pages v1 JSON
+    (`read_json_updated_at_from_url`/`config.pages_rankings_url()`). Both v1
+    fallbacks are removed here; the from_db priority below (app_meta, then
+    the latest snapshot's own fetched_at) is unchanged.
+    """
     if prefer is not None:
         resolved = prefer.astimezone(UTC) if prefer.tzinfo else prefer.replace(tzinfo=UTC)
         logger.info("Using ranking updatedAt from current fetch: %s", resolved.isoformat())
@@ -658,21 +617,6 @@ def resolve_ranking_updated_at(
             from_db.isoformat(),
         )
         return from_db
-
-    local = read_json_updated_at(json_path)
-    if local:
-        logger.info("Using ranking updatedAt from local rankings.json: %s", local.isoformat())
-        return local
-
-    pages_url = config.pages_rankings_url().strip()
-    if pages_url:
-        remote = read_json_updated_at_from_url(pages_url)
-        if remote:
-            logger.info(
-                "Using ranking updatedAt from Pages rankings.json: %s",
-                remote.isoformat(),
-            )
-            return remote
 
     fallback = now_utc()
     logger.warning(
@@ -715,10 +659,15 @@ def export_rankings_from_db(
     )
     character_meta = load_character_meta(db_path)
 
-    mvp_path = export_mvp_json(
+    # T12 P4: the v1 JSON file (`export_mvp_json`) is retired -- only the
+    # payload-building step it used internally (`build_mvp_payload`, shared
+    # with v2) and the v2 export it always also called (`export_mvp_v2_json`,
+    # §1 "触らないもの", unchanged) are kept. `config.mvp_export_dir()`
+    # supplies the same directory the old v1 file lived in, which
+    # `export_mvp_v2_json` still uses to derive its `v2/` subfolder.
+    payload = build_mvp_payload(
         export_snapshots,
         analysis_rows,
-        config.mvp_json_output_path(),
         updated_at=exported_at,
         export_top_n=export_top_n,
         ranking_top_n=ranking_top_n,
@@ -728,6 +677,7 @@ def export_rankings_from_db(
         ranking_min_level=min_level,
         character_meta=character_meta,
     )
+    mvp_path = export_mvp_v2_json(payload, config.mvp_export_dir() / "rankings.json")
 
     meta_exported = export_character_meta_file(db_path, meta_json_path)
     checkpoint_db(db_path)
@@ -749,23 +699,11 @@ def export_rankings_from_db(
 def run_navigator_only() -> int:
     logger = logging.getLogger(__name__)
     db_path = config.sqlite_db_path()
-    json_path = config.mvp_json_output_path()
     meta_json_path = config.character_meta_json_path()
 
-    restore_info = bootstrap_database(db_path, json_path, logger)
+    restore_info = bootstrap_database(db_path, logger)
     enforce_snapshot_integrity_guard(db_path, logger, restore_info)
     import_character_meta_file(db_path, meta_json_path)
-
-    if config.hydrate_meta_from_pages():
-        pages_hydrated = hydrate_character_meta_from_url(
-            db_path, config.pages_rankings_url()
-        )
-        if pages_hydrated:
-            logger.info(
-                "character_meta after Pages hydrate: %s (imported %s)",
-                count_character_meta(db_path),
-                pages_hydrated,
-            )
 
     asset_keys = collect_asset_keys_from_db(db_path)
     logger.info(
@@ -846,7 +784,7 @@ def run_navigator_only() -> int:
         export_rankings_from_db(
             db_path,
             logger,
-            updated_at=resolve_ranking_updated_at(db_path, json_path, logger),
+            updated_at=resolve_ranking_updated_at(db_path, logger),
         )
     else:
         checkpoint_db(db_path)
@@ -896,10 +834,9 @@ def run() -> int:
     max_pages = config.ranking_max_pages()
 
     db_path = config.sqlite_db_path()
-    json_path = config.mvp_json_output_path()
     meta_json_path = config.character_meta_json_path()
     ranking_data_fetched_at: datetime | None = None
-    restore_info = bootstrap_database(db_path, json_path, logger)
+    restore_info = bootstrap_database(db_path, logger)
     enforce_snapshot_integrity_guard(db_path, logger, restore_info)
 
     if config.enforce_jst_fetch_window():
@@ -941,24 +878,6 @@ def run() -> int:
         import_character_meta_file(db_path, meta_json_path)
         cached_meta = count_character_meta(db_path)
         logger.info("character_meta in DB after file import: %s with worldId", cached_meta)
-
-        if json_path.exists():
-            hydrated = hydrate_character_meta_from_json(db_path, json_path)
-            if hydrated:
-                cached_meta = count_character_meta(db_path)
-                logger.info("character_meta after local rankings.json: %s", cached_meta)
-
-        if config.hydrate_meta_from_pages():
-            pages_hydrated = hydrate_character_meta_from_url(
-                db_path, config.pages_rankings_url()
-            )
-            if pages_hydrated:
-                cached_meta = count_character_meta(db_path)
-                logger.info(
-                    "character_meta after Pages hydrate: %s (imported %s)",
-                    cached_meta,
-                    pages_hydrated,
-                )
 
         ranking = fetch_ranking_min_level(
             min_level,
@@ -1055,7 +974,6 @@ def run() -> int:
         logger,
         updated_at=resolve_ranking_updated_at(
             db_path,
-            json_path,
             logger,
             prefer=ranking_data_fetched_at,
         ),

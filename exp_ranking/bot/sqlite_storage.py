@@ -175,26 +175,16 @@ def latest_snapshot_fetched_at(db_path: Path) -> datetime | None:
     return parse_iso_datetime(str(row[0]))
 
 
-def ensure_ranking_fetched_at_meta(db_path: Path, json_path: Path) -> None:
+def ensure_ranking_fetched_at_meta(db_path: Path) -> None:
+    """Backfill app_meta's last_ranking_fetched_at from the DB if unset.
+
+    T12 P4: previously also fell back to reading `meta.updatedAt` from the
+    local v1 rankings.json (now retired); the DB-derived fallback below is
+    unchanged (main.py's `resolve_ranking_updated_at` still prefers this same
+    app_meta value, then falls back to the latest snapshot's fetched_at).
+    """
     if get_app_meta(db_path, LAST_RANKING_FETCHED_AT_KEY):
         return
-
-    if json_path.exists():
-        try:
-            payload = json.loads(json_path.read_text(encoding="utf-8"))
-            meta = payload.get("meta")
-            if isinstance(meta, dict):
-                raw = str(meta.get("updatedAt") or "").strip()
-                parsed = parse_iso_datetime(raw)
-                if parsed:
-                    set_app_meta(
-                        db_path,
-                        LAST_RANKING_FETCHED_AT_KEY,
-                        parsed.isoformat(timespec="seconds"),
-                    )
-                    return
-        except (OSError, json.JSONDecodeError):
-            pass
 
     from_db = latest_snapshot_fetched_at(db_path)
     if from_db:
@@ -366,62 +356,6 @@ def import_character_meta_file(db_path: Path, meta_json_path: Path) -> int:
     return imported
 
 
-def hydrate_character_meta_from_url(db_path: Path, url: str) -> int:
-    """Load worldId from the last deployed rankings.json (GitHub Pages)."""
-    import json
-
-    import requests
-
-    if not url:
-        return 0
-
-    try:
-        response = requests.get(
-            url,
-            timeout=120,
-            headers={
-                "Accept": "application/json",
-                "User-Agent": "msu-ranking-bot/1.0",
-            },
-        )
-        if response.status_code != 200:
-            logger.warning(
-                "Pages rankings.json not available for hydrate: HTTP %s",
-                response.status_code,
-            )
-            return 0
-        payload = response.json()
-    except Exception as exc:
-        logger.warning("Pages rankings.json hydrate failed: %s", exc)
-        return 0
-
-    characters = payload.get("characters")
-    if not isinstance(characters, list):
-        return 0
-
-    from datetime import datetime, timezone
-
-    updated_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    imported = 0
-    for character in characters:
-        if not isinstance(character, dict):
-            continue
-        asset_key = str(character.get("characterAssetKey") or "").strip()
-        world_id = str(character.get("worldId") or "").strip()
-        if not asset_key or not world_id:
-            continue
-        upsert_character_meta(db_path, asset_key, world_id, updated_at)
-        imported += 1
-
-    if imported:
-        logger.info(
-            "Hydrated character_meta from Pages JSON: %s keys (%s)",
-            imported,
-            url,
-        )
-    return imported
-
-
 def count_character_meta(db_path: Path) -> int:
     if not db_path.exists():
         return 0
@@ -431,45 +365,6 @@ def count_character_meta(db_path: Path) -> int:
             "SELECT COUNT(*) FROM character_meta WHERE world_id != ''"
         ).fetchone()
     return int(row[0]) if row else 0
-
-
-def hydrate_character_meta_from_json(db_path: Path, json_path: Path) -> int:
-    """Import worldId from an existing rankings.json into character_meta."""
-    import json
-
-    if not json_path.exists():
-        return 0
-
-    try:
-        payload = json.loads(json_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return 0
-
-    characters = payload.get("characters")
-    if not isinstance(characters, list):
-        return 0
-
-    from datetime import datetime, timezone
-
-    updated_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    imported = 0
-    for character in characters:
-        if not isinstance(character, dict):
-            continue
-        asset_key = str(character.get("characterAssetKey") or "").strip()
-        world_id = str(character.get("worldId") or "").strip()
-        if not asset_key or not world_id:
-            continue
-        upsert_character_meta(db_path, asset_key, world_id, updated_at)
-        imported += 1
-
-    if imported:
-        logger.info(
-            "Hydrated character_meta from JSON: %s rows from %s",
-            imported,
-            json_path,
-        )
-    return imported
 
 
 def load_character_meta(db_path: Path) -> dict[str, str]:
@@ -761,47 +656,15 @@ def _chart_date_to_iso(chart_date: str, latest_snapshot_date: str) -> str:
     return candidate.isoformat()
 
 
-def import_missing_snapshots_from_url(db_path: Path, url: str) -> int:
-    """Import snapshot days present in remote rankings.json but missing in DB."""
-    import tempfile
-    import urllib.error
-    import urllib.request
-
-    init_db(db_path)
-    db_dates = set(list_snapshot_dates(db_path))
-
-    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tmp:
-        temp_path = Path(tmp.name)
-
-    try:
-        try:
-            with urllib.request.urlopen(url, timeout=120) as response:
-                temp_path.write_bytes(response.read())
-        except (OSError, urllib.error.URLError) as exc:
-            logger.warning("Cannot download rankings.json from %s: %s", url, exc)
-            return 0
-
-        json_dates = snapshot_dates_in_mvp_json(temp_path)
-        missing = sorted(json_dates - db_dates)
-        if not missing:
-            logger.info(
-                "Pages rankings.json has no missing snapshot days for DB (days=%s)",
-                len(db_dates),
-            )
-            return 0
-
-        logger.info(
-            "Importing missing snapshot days from %s: %s",
-            url,
-            missing,
-        )
-        return import_snapshots_from_mvp_json(db_path, temp_path)
-    finally:
-        temp_path.unlink(missing_ok=True)
-
-
 def import_snapshots_from_mvp_json(db_path: Path, json_path: Path) -> int:
-    """Rebuild SQLite snapshot rows from rankings.json history (recovery)."""
+    """Rebuild SQLite snapshot rows from rankings.json history (recovery).
+
+    T12 P4: the v1-Pages-URL-backed wrapper (`import_missing_snapshots_from_
+    url`) was removed here -- this function's only remaining caller is the
+    local snapshot-seed import in `main.bootstrap_database`
+    (`config.resolve_snapshot_import_path` / `IMPORT_SNAPSHOTS_JSON`), which
+    reads a repo-bundled fixture file, not the retired live Pages endpoint.
+    """
     import json
     from collections import defaultdict
     from datetime import datetime, timezone

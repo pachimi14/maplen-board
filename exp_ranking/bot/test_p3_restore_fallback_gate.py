@@ -118,21 +118,21 @@ def _run_bootstrap_and_guard(
     v2_import_fake,
 ) -> dict[str, int]:
     db_path = tmp_path / "ranking.db"
-    json_path = tmp_path / "rankings.json"  # deliberately does not exist
 
     # cache miss + Release unreachable: nothing pre-populates db_path here,
-    # and config flags mirror the workflow env for this scenario (§5 step 2/3:
-    # SNAPSHOT_IMPORT_FROM_PAGES stays as-is per §2.5/S10 semantics -- here
-    # disabled to isolate the v2 layer being tested; SNAPSHOT_IMPORT_FROM_V2_
-    # SHARDS=true per commit 3/7).
+    # and config flags mirror the workflow env for this scenario (§5 step 2/3;
+    # T12 P4: the v1-Pages import layer this used to also disable here
+    # -- SNAPSHOT_IMPORT_FROM_PAGES -- is removed entirely, so only the
+    # snapshot-seed layer (resolve_snapshot_import_path) needs disabling to
+    # isolate the v2 layer being tested; SNAPSHOT_IMPORT_FROM_V2_SHARDS=true
+    # per commit 3/7).
     monkeypatch.setattr(main.config, "resolve_snapshot_import_path", lambda _db: None)
-    monkeypatch.setattr(main.config, "snapshot_import_from_pages", lambda: False)
     monkeypatch.setattr(main.config, "snapshot_import_from_v2_shards", lambda: True)
     monkeypatch.setattr(main.config, "restore_cache_hit", lambda: False)
     monkeypatch.setattr(main.config, "restore_release_restored", lambda: False)
     monkeypatch.setattr(main, "import_missing_snapshots_from_v2_url", v2_import_fake)
 
-    restore_info = main.bootstrap_database(db_path, json_path, logging.getLogger(__name__))
+    restore_info = main.bootstrap_database(db_path, logging.getLogger(__name__))
     main.enforce_snapshot_integrity_guard(db_path, logging.getLogger(__name__), restore_info)
     return restore_info
 
