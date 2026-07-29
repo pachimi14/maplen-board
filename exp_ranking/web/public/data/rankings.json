@@ -1,0 +1,6 @@
+{
+  "deprecated": true,
+  "message": "This endpoint has been retired.",
+  "replacement": "/data/v2/rankings.json",
+  "retiredAt": "2026-07-30"
+}

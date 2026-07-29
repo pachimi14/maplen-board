@@ -51,13 +51,14 @@ jobs:
       # transition (§5 step 2) -- this step only stops *reading* it for
       # restore. `download_current_asset` is reused as-is (its fail-closed
       # not-found detection is exactly what we want to keep, §2.1), but a
-      # failure here must not abort the run before the v1(Pages)/v2(shard)
-      # fallback layers inside main.py get a chance (§2.3's layered
-      # cache -> Release -> v1 -> v2 chain) -- so we catch ReleaseStoreError
-      # here and degrade to exists=false rather than failing the step. The
-      # actual fail-closed backstop for the whole chain is the truncated
-      # publish guard (snapshot_guard.py, §2.4), invoked from main.py after
-      # all of cache/Release/v1/v2 restoration completes.
+      # failure here must not abort the run before the v2(shard) fallback
+      # layer inside main.py gets a chance (§2.3's layered cache -> Release ->
+      # v2 chain; the v1(Pages) tier was removed in T12 P4) -- so we catch
+      # ReleaseStoreError here and degrade to exists=false rather than
+      # failing the step. The actual fail-closed backstop for the whole
+      # chain is the truncated publish guard (snapshot_guard.py, §2.4),
+      # invoked from main.py after all of cache/Release/v2 restoration
+      # completes.
       - name: Restore ranking database from Release
         id: release_db
         working-directory: exp_ranking/bot
@@ -180,24 +181,27 @@ jobs:
           MVP_HISTORY_DAYS: "90"
           MVP_EXPORT_TOP_N: "0"
           SQLITE_DB_PATH: data/ranking.db
-          MVP_JSON_OUTPUT_PATH: ../web/public/data/rankings.json
           CHARACTER_META_JSON_PATH: data/character_meta.json
           NAVIGATOR_REQUEST_DELAY_SEC: "0.35"
           SKIP_MSU_RANKING_FETCH: ${{ contains(github.event.head_commit.message, '[web-only]') && 'true' || '' }}
           NAVIGATOR_FETCH_ENABLED: "false"
-          HYDRATE_META_FROM_PAGES: ${{ contains(github.event.head_commit.message, '[web-only]') && 'false' || 'true' }}
-          SNAPSHOT_IMPORT_FROM_PAGES: ${{ contains(github.event.head_commit.message, '[web-only]') && 'false' || 'true' }}
+          # T12 P4: v1 (data/rankings.json) generation, hydrate, and import
+          # settings removed here (HYDRATE_META_FROM_PAGES, SNAPSHOT_IMPORT_
+          # FROM_PAGES, MVP_JSON_OUTPUT_PATH, MVP_PAGES_RANKINGS_URL). v1 is
+          # retired: cache -> Release -> v2 shards is now the full recovery
+          # chain (§3.4 of docs/IMPL_PLAN_T12_P4.md; worldId recovery
+          # verified W1-W4 before this change).
           # T12 P3 §2.3/§5 step 3: explicitly enable the v2-shard recovery
           # layer (era-aware, B'/LULU-062 verified: 374,121/374,121 bit-exact,
           # 0 over-restoration) as the new last-resort tier now that the git
-          # db.gz commit is being phased out. Mirrors SNAPSHOT_IMPORT_FROM_PAGES's
-          # [web-only] gating above (a pure web-only redeploy fetches nothing,
-          # so there is nothing new to reconcile). Under normal operation this
-          # is expected to import 0 rows (cache/Release already have every
-          # snapshot day) -- see §3 row 8 / S1 in the completion report.
+          # db.gz commit is being phased out. [web-only] gating below mirrors
+          # the old SNAPSHOT_IMPORT_FROM_PAGES gating (a pure web-only
+          # redeploy fetches nothing, so there is nothing new to reconcile).
+          # Under normal operation this is expected to import 0 rows
+          # (cache/Release already have every snapshot day) -- see §3 row 8 /
+          # S1 in the T12 P3 completion report.
           SNAPSHOT_IMPORT_FROM_V2_SHARDS: ${{ contains(github.event.head_commit.message, '[web-only]') && 'false' || 'true' }}
           PAGES_SITE_URL: https://lulumi-tools.com
-          MVP_PAGES_RANKINGS_URL: https://lulumi-tools.com/data/rankings.json
           IMPORT_SNAPSHOTS_JSON: data/seed/rankings_seed.json
           ENFORCE_JST_FETCH_WINDOW: ${{ github.event_name == 'schedule' && 'true' || '' }}
           SKIP_RUN_IF_RANKING_DAY_EXISTS: "true"
