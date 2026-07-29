@@ -47,13 +47,14 @@ jobs:
       # transition (§5 step 2) -- this step only stops *reading* it for
       # restore. `download_current_asset` is reused as-is (its fail-closed
       # not-found detection is exactly what we want to keep, §2.1), but a
-      # failure here must not abort the run before the v1(Pages)/v2(shard)
-      # fallback layers inside main.py get a chance (§2.3's layered
-      # cache -> Release -> v1 -> v2 chain) -- so we catch ReleaseStoreError
-      # here and degrade to exists=false rather than failing the step. The
-      # actual fail-closed backstop for the whole chain is the truncated
-      # publish guard (snapshot_guard.py, §2.4), invoked from main.py after
-      # all of cache/Release/v1/v2 restoration completes.
+      # failure here must not abort the run before the v2(shard) fallback
+      # layer inside main.py gets a chance (§2.3's layered cache -> Release ->
+      # v2 chain; the v1(Pages) tier was removed in T12 P4) -- so we catch
+      # ReleaseStoreError here and degrade to exists=false rather than
+      # failing the step. The actual fail-closed backstop for the whole
+      # chain is the truncated publish guard (snapshot_guard.py, §2.4),
+      # invoked from main.py after all of cache/Release/v2 restoration
+      # completes.
       - name: Restore ranking database from Release
         id: release_db
         working-directory: exp_ranking/bot
@@ -162,17 +163,19 @@ jobs:
           NAVIGATOR_ROTATION_EPOCH: "2026-06-12"
           SQLITE_DB_PATH: data/ranking.db
           CHARACTER_META_JSON_PATH: data/character_meta.json
-          HYDRATE_META_FROM_PAGES: "false"
-          SNAPSHOT_IMPORT_FROM_PAGES: "false"
+          # T12 P4: HYDRATE_META_FROM_PAGES / SNAPSHOT_IMPORT_FROM_PAGES were
+          # already "false" here (v1 was never used on the navigator-only
+          # path) and are removed as pure no-op cleanup now that the
+          # corresponding config.py functions are retired (see
+          # docs/IMPL_PLAN_T12_P4.md) -- no behavior change.
           # T12 P3 §2.3/§5 step 3: explicitly enable the v2-shard recovery
           # layer (era-aware, B'/LULU-062 verified: 374,121/374,121 bit-exact,
           # 0 over-restoration) as the new last-resort tier now that the git
-          # db.gz commit is being phased out. Unlike SNAPSHOT_IMPORT_FROM_PAGES
-          # above, this is not gated -- run_navigator_only() also persists to
-          # Release (commit-db job below), so it needs the same recovery
-          # coverage as the main Pages run. Under normal operation this is
-          # expected to import 0 rows (cache/Release already have every
-          # snapshot day).
+          # db.gz commit is being phased out. Not gated on [web-only] here --
+          # run_navigator_only() also persists to Release (commit-db job
+          # below), so it needs the same recovery coverage as the main Pages
+          # run. Under normal operation this is expected to import 0 rows
+          # (cache/Release already have every snapshot day).
           SNAPSHOT_IMPORT_FROM_V2_SHARDS: "true"
           # T12 P3 §2.4: diagnostic-only inputs for snapshot_guard's "restore
           # method" log line (restore_method_label). Never used in the
