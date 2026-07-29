@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import logging
 import shutil
 import tempfile
@@ -25,7 +24,6 @@ from sqlite_storage import (
 def test_resolve_prefers_app_meta_over_export_time() -> None:
     tmpdir = Path(tempfile.mkdtemp())
     db = tmpdir / "t.db"
-    json_path = tmpdir / "rankings.json"
     logger = logging.getLogger("test_ranking_updated_at")
     try:
         init_db(db)
@@ -36,7 +34,7 @@ def test_resolve_prefers_app_meta_over_export_time() -> None:
             stored.isoformat(timespec="seconds"),
         )
 
-        resolved = resolve_ranking_updated_at(db, json_path, logger)
+        resolved = resolve_ranking_updated_at(db, logger)
         assert resolved == stored
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
@@ -60,21 +58,22 @@ def test_latest_snapshot_fetched_at_uses_newest_day() -> None:
         shutil.rmtree(tmpdir, ignore_errors=True)
 
 
-def test_resolve_uses_local_json_when_app_meta_missing() -> None:
+def test_resolve_falls_back_to_now_when_no_app_meta_or_snapshots() -> None:
+    """T12 P4: the local v1 rankings.json fallback (`read_json_updated_at`)
+    is retired -- with no app_meta and no snapshot rows, resolution now falls
+    straight through to the current-time fallback (still DB-derived-first,
+    per main.py:660's from_db priority, which this test does not exercise)."""
     tmpdir = Path(tempfile.mkdtemp())
     db = tmpdir / "t.db"
-    json_path = tmpdir / "rankings.json"
     logger = logging.getLogger("test_ranking_updated_at")
     try:
         init_db(db)
-        stored = datetime(2026, 6, 20, 12, 0, tzinfo=timezone.utc)
-        json_path.write_text(
-            json.dumps({"meta": {"updatedAt": stored.isoformat(timespec="seconds")}}),
-            encoding="utf-8",
-        )
+        before = datetime.now(timezone.utc)
 
-        resolved = resolve_ranking_updated_at(db, json_path, logger)
-        assert resolved == stored
+        resolved = resolve_ranking_updated_at(db, logger)
+
+        after = datetime.now(timezone.utc)
+        assert before <= resolved <= after
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 
@@ -82,7 +81,6 @@ def test_resolve_uses_local_json_when_app_meta_missing() -> None:
 def test_resolve_upgrades_stale_app_meta_from_latest_snapshot() -> None:
     tmpdir = Path(tempfile.mkdtemp())
     db = tmpdir / "t.db"
-    json_path = tmpdir / "rankings.json"
     logger = logging.getLogger("test_ranking_updated_at")
     try:
         init_db(db)
@@ -98,7 +96,7 @@ def test_resolve_upgrades_stale_app_meta_from_latest_snapshot() -> None:
         newer = datetime(2026, 6, 25, 0, 35, 0, tzinfo=timezone.utc)
         append_snapshots(db, rows, newer.isoformat(timespec="seconds"))
 
-        resolved = resolve_ranking_updated_at(db, json_path, logger)
+        resolved = resolve_ranking_updated_at(db, logger)
         assert resolved == newer
         stored = get_app_meta(db, LAST_RANKING_FETCHED_AT_KEY)
         assert stored == newer.isoformat(timespec="seconds")
@@ -132,7 +130,7 @@ def test_reconcile_ranking_fetched_at_meta() -> None:
 if __name__ == "__main__":
     test_resolve_prefers_app_meta_over_export_time()
     test_latest_snapshot_fetched_at_uses_newest_day()
-    test_resolve_uses_local_json_when_app_meta_missing()
+    test_resolve_falls_back_to_now_when_no_app_meta_or_snapshots()
     test_resolve_upgrades_stale_app_meta_from_latest_snapshot()
     test_reconcile_ranking_fetched_at_meta()
     print("ok")
