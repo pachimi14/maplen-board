@@ -1,6 +1,6 @@
 # MapleN Board Bot
 
-MSU のランキング API から **指定レベル以上**のキャラを全件取得し、SQLite に保存して `rankings.json` を出力します。
+MSU のランキング API から **指定レベル以上**のキャラを全件取得し、SQLite に保存して **v2**（`data/v2/rankings.json` + `data/v2/history/shard-NN.json`）を出力します。
 
 ## 取得条件（既定・テスト）
 
@@ -22,8 +22,8 @@ API は総合順位順です。ページを進めるとレベルが下がるた�
 
 ## データ保持
 
-月間増加用に DB は直近 **35 ランキング日**のみ（`SNAPSHOT_RETENTION_DAYS`）。それより古い行は削除します。  
-`ranking.db` は CI が **main に毎日コミット**します（ローカル開発時は `git pull` で同期）。
+月間増加用に DB は直近 **90 ランキング日**のみ（`SNAPSHOT_RETENTION_DAYS`）。それより古い行は削除します。  
+`ranking.db` は CI が **GitHub Release `db-store`** に日次保存します（**Git への日次コミットは廃止**。T12 P3）。ローカル開発は `run_local_dev.bat`（公開 v2 を同期）を使ってください。
 
 公式の経験値は **UTC 0:00（JST 9:00）** で更新されます。取得したスナップショットのランキング日ラベルは **その前の UTC 暦日**（例: UTC 6/5 に取得 → `2026-06-04` の増加量）です。スケジューラは **毎日 9:20 JST 以降** に 1 回実行を推奨します。
 

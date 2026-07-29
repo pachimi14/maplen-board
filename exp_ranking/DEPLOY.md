@@ -31,8 +31,8 @@ git push -u origin main
 ```
 
 `.env` は `.gitignore` 済みです。**秘密情報は push しないでください。**  
-`ranking.db` は **Git に毎日コミット**します（Actions が `[skip ci]` 付きで push。DB のみの変更ではワークフローは再実行されません）。  
-起動時に **本番 `rankings.json` から DB に無い日付だけ取り込み**ます（`SNAPSHOT_IMPORT_FROM_PAGES=true`）。JSON→DB の復旧用です。
+`ranking.db` は **GitHub Release `db-store`** に日次で保存します（T12 P3 以降。**Git への日次コミットは廃止**）。  
+起動時の復旧順は **actions cache → Release `db-store` → v2 シャード → cold start** です（T12 P4 で旧 v1 `rankings.json` からの取り込みは廃止）。
 
 ## 2. GitHub Pages を有効化
 
@@ -88,8 +88,8 @@ push 済みのワークフロー [`.github/workflows/maplen-board-pages.yml`](..
 | 順番 | 処理 |
 |------|------|
 | 1 | 公式ランキング API から取得（既定: Lv225+） |
-| 2 | **SQLite**（`ranking.db`）に追記・35日より古い行を削除 |
-| 3 | `rankings.json` を生成 |
+| 2 | **SQLite**（`ranking.db`）に追記・90日より古い行を削除 |
+| 3 | **v2** `data/v2/rankings.json` + `data/v2/history/shard-NN.json` を生成 |
 | 4 | Web をビルドして **GitHub Pages** を更新 |
 
 **スケジュール**（リセット **JST 9:00**。**キューは JST 8:00 のみ**。実行時は **9:20 まで待機**してから取得・スキップ判定）:
@@ -106,7 +106,7 @@ push 済みのワークフロー [`.github/workflows/maplen-board-pages.yml`](..
 
 **手動更新**: [Actions](https://github.com/pachimi14/maplen-board/actions) → **MapleN Board Pages** → **Run workflow**
 
-**DB の保存場所**: `exp_ranking/bot/data/ranking.db` を **main に毎日コミット**します。Actions キャッシュは補助（`character_meta` など）。履歴は Git が正本です。
+**DB の保存場所**: **GitHub Release `db-store` の `ranking.db.gz` が永続層の正**です（T12 P3）。各 run は「現アセットを download → 加算マージ → `--clobber` upload」で更新します。Actions キャッシュは高速化の補助。**Git への日次コミットは廃止**（`exp_ranking/bot/data/ranking.db.gz` は凍結。履歴からの除去は T12 P6）。
 
 ## 画面が真っ白なとき
 
