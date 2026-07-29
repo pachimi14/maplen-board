@@ -5,7 +5,7 @@
 
 ```
 exp_ranking/
-├── bot/   … API 取得 → SQLite（35日）→ rankings.json
+├── bot/   … API 取得 → SQLite（90日）→ v2 rankings.json + history shards
 └── web/   … React / Vite
 ```
 
@@ -27,8 +27,10 @@ exp_ranking/
 
 ### ローカルと GitHub Pages でデータが違うとき
 
-`exp_ranking/bot/data/ranking.db` は **Git に毎日コミット**されます（`git pull` でローカルも追従可能）。  
-`exp_ranking/web/public/data/rankings.json` は Git に含めません。本番と揃えるには `run_local_dev.bat`（自動同期）を使ってください。API から作り直す場合は `run_fetch.bat`。
+DB は **GitHub Release `db-store`** に日次で保存されます（T12 P3 以降。**Git への日次コミットは廃止**）。  
+本番と揃えるには `run_local_dev.bat`（**公開 v2 rankings.json + history shards を自動同期**）を使ってください。API から作り直す場合は `run_fetch.bat`（ローカルの `data/ranking.db` を更新）。
+
+`exp_ranking/web/public/data/rankings.json` は **旧 v1 の廃止案内（145バイト）**で、データ源ではありません（T12 P4）。実データは `data/v2/rankings.json` + `data/v2/history/shard-NN.json`。
 
 ## 公開まわり
 
@@ -39,4 +41,4 @@ exp_ranking/
 
 GitHub でリポジトリ名を `msu-exp-ranking` から `maplen-board` に変更したあと、**Settings → Pages** でサイト URL が新パスになっているか確認してください。
 
-`ranking.db` は main に毎日コミットされます（詳細は [exp_ranking/DEPLOY.md](exp_ranking/DEPLOY.md)）。
+`ranking.db` の永続層は **GitHub Release `db-store`** です。復旧順は **actions cache → Release → v2 シャード → cold start**（詳細は [exp_ranking/DEPLOY.md](exp_ranking/DEPLOY.md)）。
