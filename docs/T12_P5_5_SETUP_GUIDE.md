@@ -55,29 +55,50 @@ pip install -r requirements-backup-setup.txt
 ```
 
 ### 2-2. スクリプトの実行
+
+> **`--client-secret` 引数は存在しません（意図的に廃止）。** コマンドライン引数はシェル履歴（`.bash_history` 等）や `ps` のプロセス一覧に残ってしまうため、client secret の入力手段としては使いません。**getpass による非表示入力**を第一手段とし、`client_secret_*.json` ファイルをそのまま渡す方法も使えます。
+
+**方法A（推奨・第一候補）: getpass での非表示入力**
+
 リポジトリのルートで実行する。
 
 ```bash
-python tools/gdrive_backup_setup.py --client-id <1-4で控えたクライアントID> --client-secret <1-4で控えたクライアントシークレット>
+python tools/gdrive_backup_setup.py --client-id <1-4で控えたクライアントID>
 ```
 
-- `--client-id` / `--client-secret` の代わりに環境変数 `GDRIVE_CLIENT_ID` / `GDRIVE_CLIENT_SECRET` を設定して省略することもできる。
+- `Client secret を入力してください（画面には表示されません）:` と表示されるので、1-4 で控えたクライアントシークレットを貼り付けて Enter を押す。**入力内容は画面に表示されない**（`getpass` による非表示入力）。
+
+**方法B（任意・利便性重視）: client_secret_*.json ファイルをそのまま指定**
+
+Google Cloud の認証情報画面からダウンロードできる `client_secret_....json` のパスをそのまま渡すこともできる（この場合 `--client-id` は不要）。
+
+```bash
+python tools/gdrive_backup_setup.py --client-secrets-file "C:/path/to/client_secret_XXXX.json"
+```
+
+- このファイル自体はスクリプトが作成・削除・改変することはない。**ダウンロードしたこのファイルをリポジトリに置いたり `git add` したりしないこと**（`.gitignore` に `client_secret*.json` を登録済みだが、リポジトリ外の場所に保管するのがより安全）。
+
+**共通**
+
+- `--client-id` の代わりに環境変数 `GDRIVE_CLIENT_ID` を設定して省略することもできる。client secret も環境変数 `GDRIVE_CLIENT_SECRET` で渡せるが、**シェル履歴に残らない getpass 入力を第一手段として推奨する**。
 - 実行するとブラウザが開き、Google アカウントへのサインインと同意画面が表示される。**1-3 でテストユーザーに追加した自分自身のアカウント**でログインし、許可する。
 - 同意後、スクリプトが自動的に:
   1. `drive.file` スコープで refresh token を取得する
   2. 専用フォルダ「`Lulumi Tools DB Backup`」を作成する（既に存在する場合は既存フォルダの ID を再利用し、重複作成はしない）
-  3. **refresh token** と **backup folder ID** を、ラベル付きで画面に表示する
+  3. **refresh token** と **backup folder ID** を、ラベル付きで画面に表示する（refresh token には共有禁止・commit禁止の警告文が併記される）
+- **本スクリプトは CI（GitHub Actions 等）上では実行できない**（`GITHUB_ACTIONS` または `CI` 環境変数が設定されていると実行を拒否する）。**必ずローカルPCで実行する**。
 
-出力例（値はダミー）:
+出力例（値はダミー。実際の値はここに書き写さないこと）:
 
 ```
 === 取得結果（この値を控えて GitHub Secrets に登録してください） ===
 refresh_token: 1//0xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+警告: refresh token は秘密情報です。第三者と共有せず、Git にコミットしたり、チャット・チケット等に貼り付けたりしないでください。GitHub Secrets への登録にのみ使用してください。
 backup_folder_id: 1AbCdEfGhIjKlMnOpQrStUvWxYz
 ```
 
 - **この値はファイルに保存されません**（標準出力にのみ表示される）。表示された内容をその場でコピーし、次の手順の GitHub Secrets に貼り付ける。
-- ターミナルの実行履歴に秘密情報が残る点に注意し、作業後は必要に応じてターミナル履歴をクリアする。
+- ターミナルの実行履歴に秘密情報（refresh token）が残る点に注意し、作業後は必要に応じてターミナル履歴をクリアする。client secret はコマンドライン引数として渡していないため、ターミナル履歴には残らない。
 
 ---
 
@@ -98,6 +119,8 @@ backup_folder_id: 1AbCdEfGhIjKlMnOpQrStUvWxYz
 ## 4. 注意事項まとめ
 
 - **秘密情報は誰にも共有しない**。統括アーキテクトにも実装担当にも見せる必要はない。GitHub Secrets に直接入力する。
+- **client secret はコマンドライン引数で渡さない**。`--client-secret` 引数は廃止済み。getpass の非表示入力、または `--client-secrets-file` でファイルを直接指定する。
 - **Drive 画面でフォルダを手動作成しない**。`drive.file` スコープでは手動作成フォルダを操作できないため、必ずスクリプトに作らせる。
+- **本スクリプトはローカル専用**。`GITHUB_ACTIONS` / `CI` 環境変数が設定された環境では実行を拒否する（refresh token を CI 上で表示しないため）。
 - **Testing のままだと refresh token が7日で失効しうる**。日次バックアップを継続運用する前に、OAuth 同意画面を「本番環境に公開（In production）」へ切り替えることを推奨する。
 - 本手順の完了時点では、**バックアップの本番組み込み（workflow への配線）はまだ行われていない**。GitHub Secrets の登録が完了した後、別コミットで `backup-gdrive` ジョブが追加される（`docs/IMPL_PLAN_T12_P5_5_GOOGLE_DRIVE_BACKUP.md` §5 コミット4）。

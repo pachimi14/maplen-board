@@ -35,3 +35,4 @@ server/raffle-api/*.sqlite3*
 token.json
 tools/token.json
 *.credentials.json
+client_secret*.json
