@@ -185,12 +185,12 @@ def apply_ranking_day_label_migration(
     if db.exists():
         shifted_rows = shift_all_snapshot_dates(db, days=days)
 
+    # T12 P4: this one-time migration previously also shifted dates inside
+    # the local v1 rankings.json (`config.mvp_json_output_path()`, now
+    # retired). Only the bundled cold-start snapshot seed remains here.
     seen_json: set[Path] = set()
     json_paths: list[Path] = []
-    for path in (
-        config.mvp_json_output_path(),
-        config.snapshot_seed_json_path(),
-    ):
+    for path in (config.snapshot_seed_json_path(),):
         resolved = path.resolve()
         if resolved in seen_json:
             continue

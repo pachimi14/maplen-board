@@ -125,9 +125,16 @@ def benchmark_character_name() -> str:
     return os.environ.get("BENCHMARK_CHARACTER_NAME", "pachimi").strip()
 
 
-def mvp_json_output_path() -> Path:
-    default = str(BASE_DIR.parent / "web" / "public" / "data" / "rankings.json")
-    return env_path("MVP_JSON_OUTPUT_PATH", default)
+def mvp_export_dir() -> Path:
+    """Directory the v2 export (build_v2_payloads/export_mvp_v2_json) writes into.
+
+    T12 P4: the v1 output file itself (`.../data/rankings.json`, previously
+    `MVP_JSON_OUTPUT_PATH`) is retired -- this bot no longer writes it. This
+    accessor only supplies the *directory* `export_mvp_v2_json` derives its
+    `v2/` subfolder from (same directory the old v1 file used to live in);
+    the v2 export function itself (§1 "触らないもの") is unchanged.
+    """
+    return BASE_DIR.parent / "web" / "public" / "data"
 
 
 def character_meta_json_path() -> Path:
@@ -137,11 +144,6 @@ def character_meta_json_path() -> Path:
 
 def pages_site_url() -> str:
     return os.environ.get("PAGES_SITE_URL", "https://lulumi-tools.com").strip().rstrip("/")
-
-
-def pages_rankings_url() -> str:
-    default = f"{pages_site_url()}/data/rankings.json"
-    return os.environ.get("MVP_PAGES_RANKINGS_URL", default).strip()
 
 
 def pages_v2_rankings_url() -> str:
@@ -178,17 +180,6 @@ def snapshot_import_from_v2_shards() -> bool:
     """
     raw = os.environ.get("SNAPSHOT_IMPORT_FROM_V2_SHARDS", "false").strip().lower()
     return raw in ("1", "true", "yes", "on")
-
-
-def hydrate_meta_from_pages() -> bool:
-    raw = os.environ.get("HYDRATE_META_FROM_PAGES", "true").strip().lower()
-    return raw not in ("0", "false", "no", "off")
-
-
-def snapshot_import_from_pages() -> bool:
-    """Backfill SQLite from production rankings.json when DB lacks history days."""
-    raw = os.environ.get("SNAPSHOT_IMPORT_FROM_PAGES", "true").strip().lower()
-    return raw not in ("0", "false", "no", "off")
 
 
 def snapshot_seed_json_path() -> Path:
