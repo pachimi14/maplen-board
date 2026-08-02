@@ -87,6 +87,7 @@ describe("parseHash: Task Manager routes", () => {
     ["#/dashboard", "dashboard"],
     ["#/tasks", "tasks"],
     ["#/schedule", "schedule"],
+    ["#/raffle", "raffle"],
   ])("parses %s as %s", async (hash, name) => {
     const { parseHash } = await freshModule();
     expect(parseHash(hash).name).toBe(name);
@@ -147,7 +148,7 @@ describe("navigateToTool", () => {
     installFakeWindow("#/");
     const { navigateToTool, parseHash } = await freshModule();
 
-    for (const name of ["dashboard", "tasks", "schedule"]) {
+    for (const name of ["dashboard", "tasks", "schedule", "raffle"]) {
       navigateToTool(name);
       await flushRouteCommit();
       expect(parseHash(globalThis.window.location.hash).name).toBe(name);
