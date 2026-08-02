@@ -179,7 +179,7 @@ export function parseHash(hash) {
     return { name: "group", query };
   }
 
-  if (path === "/dashboard" || path === "/tasks" || path === "/schedule") {
+  if (path === "/dashboard" || path === "/tasks" || path === "/schedule" || path === "/raffle") {
     return { name: path.slice(1), query };
   }
 
@@ -193,7 +193,7 @@ function buildHash(route) {
     ? `/character/${encodeURIComponent(route.historyKey)}`
     : route?.name === "group"
       ? "/group"
-      : route?.name === "dashboard" || route?.name === "tasks" || route?.name === "schedule"
+      : route?.name === "dashboard" || route?.name === "tasks" || route?.name === "schedule" || route?.name === "raffle"
         ? `/${route.name}`
         : "/";
   return `#${path}${search ? `?${search}` : ""}`;
@@ -368,10 +368,10 @@ export function navigateToGroup(partialQuery = {}, options = {}) {
 }
 
 /** Navigates to a Task Manager page while keeping the shared query shape.
- * Only the three registered tool routes are accepted; invalid input returns
+ * Only registered tool routes are accepted; invalid input returns
  * to the ranking list instead of creating an unknown URL. */
 export function navigateToTool(name, options = {}) {
-  const target = name === "dashboard" || name === "tasks" || name === "schedule"
+  const target = name === "dashboard" || name === "tasks" || name === "schedule" || name === "raffle"
     ? name
     : "list";
   applyRoute(

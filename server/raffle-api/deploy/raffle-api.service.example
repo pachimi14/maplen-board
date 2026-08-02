@@ -1,0 +1,33 @@
+[Unit]
+Description=Lulumi Tools Raffle API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=botuser
+Group=botuser
+WorkingDirectory=/home/botuser/apps/lulumi-tools-raffle-api
+EnvironmentFile=/etc/lulumi-tools/raffle-api.env
+Environment=RAFFLE_API_ITEM_CACHE_DB=/var/lib/lulumi-tools-raffle-api/item-metadata.sqlite3
+ExecStart=/home/botuser/apps/lulumi-tools-raffle-api/.venv/bin/python -m uvicorn app:app --host 127.0.0.1 --port 8782 --workers 1 --no-access-log
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=15
+NoNewPrivileges=true
+PrivateTmp=true
+StateDirectory=lulumi-tools-raffle-api
+StateDirectoryMode=0700
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryMax=192M
+TasksMax=64
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

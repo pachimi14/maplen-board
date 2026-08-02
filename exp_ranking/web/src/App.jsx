@@ -6,6 +6,7 @@ import RankingListView from "./pages/RankingListView";
 import CharacterDetailView from "./pages/CharacterDetailView";
 import GroupCompareView from "./pages/GroupCompareView";
 import TaskManagerRoot from "./taskManager/TaskManagerRoot.jsx";
+import RaffleCalculatorRoot from "./raffle/RaffleCalculatorRoot.jsx";
 import { useDashboardStore } from "./taskManager/storage/useDashboardStore.js";
 const RANKING_THEME_STORAGE_KEY = "maplen-board-ranking-theme-v1";
 const RANKING_THEME_DEFAULT = Object.freeze({ themeColor: "green", themeDepth: "deep" });
@@ -42,6 +43,7 @@ function AppShell() {
   const dashboardStore = useDashboardStore();
   const [rankingTheme, setRankingTheme] = useState(loadRankingTheme);
   const isTaskManagerRoute = route.name === "dashboard" || route.name === "tasks" || route.name === "schedule";
+  const isRaffleRoute = route.name === "raffle";
   const activeTheme = isTaskManagerRoute
     ? { themeColor: dashboardStore.state.themeColor || "green", themeDepth: dashboardStore.state.themeDepth || "deep" }
     : rankingTheme;
@@ -62,6 +64,14 @@ function AppShell() {
 
   const updateRankingTheme = (nextTheme) => setRankingTheme(normalizeRankingTheme(nextTheme));
 
+  if (isRaffleRoute) {
+    return (
+      <div className="site-theme ranking-root min-h-screen bg-slate-50 dark:bg-slate-950">
+        <SiteHeader active="raffle" variant={siteHeaderVariant} theme={rankingTheme} onThemeChange={updateRankingTheme} />
+        <RaffleCalculatorRoot />
+      </div>
+    );
+  }
   if (isTaskManagerRoute) {
     return <TaskManagerRoot route={route} />;
   }
