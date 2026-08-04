@@ -1,4 +1,4 @@
-"""SH-2 §4: generate the SF-history target equipment list snapshot.
+"""SH-2/SH-3 §4: generate the SF-history target equipment list snapshot.
 
 Reads the priority-equipment logic from maplenEnhancebot **read-only** --
 maplenEnhancebot's ``priority_equipment.py`` / ``item_catalog.py`` remain the
@@ -10,9 +10,14 @@ ever opens files under its own ``--out`` path.
 Output: ``data/sf_history_items.json``
     { "generatedAt": ..., "sourceRepo": "maplenEnhancebot", "sourceCommit": <hash>,
       "excluded": [{ "itemId": ..., "reason": ... }],
-      "items": [{ "itemId": ..., "itemName": ..., "aliasItemIds": [...] }] }
+      "items": [{ "itemId": ..., "itemName": ..., "aliasItemIds": [...], "maxStar": ... }] }
 
 Accept criterion (a): ``items`` must be exactly 28 entries (IMPL_PLAN_SH2 §4/§6).
+
+``maxStar`` (SH-3, design §7.1) is derived from ``sf_price_history_hourly``'s
+actual data (``MAX(item_upgrade) + 1``), never hardcoded -- if the backfill
+DB is not present at ``--db``, ``maxStar`` is left ``null`` rather than
+guessed.
 """
 
 from __future__ import annotations
@@ -25,43 +30,57 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+import db  # noqa: E402
+
 DEFAULT_SOURCE_REPO = Path(r"C:\Users\pachi\Desktop\maplenEnhancebot")
 DEFAULT_OUTPUT_PATH = Path(__file__).resolve().parent.parent / "data" / "sf_history_items.json"
+DEFAULT_DB_PATH = Path(__file__).resolve().parent.parent / "data" / "sf_price_history.sqlite"
 EXPECTED_ITEM_COUNT = 28
 
-# IMPL_PLAN_SH2 §4 / DESIGN_SF_COST_HISTORY.md §7: excluded by explicit design
-# directive. Evidence gathered while implementing this script (2026-08-05):
-# these are the *only* two items in maplenEnhancebot's priority representative
-# set at level band RANGE_118_TO_127 -- every other of the 30 priority
-# representatives is RANGE_128_TO_137 or higher. In maplenEnhancebot itself
-# they only enter the priority set via a manual override
-# (`priority_equipment.EXTRA_PRIORITY_GROUPS`, tagged "SNAP-1 S0") specifically
-# because `BOSS_ACCESSORY_EXCLUDED_LEVEL_TYPES` normally drops that band; that
-# override exists for gear-sim's own per-character worn-item coverage, not
-# because these items continue the RANGE_128_TO_137+ endgame lineup this SF
-# price-history chart targets. This implementer could not find the original
-# "原案" text the design doc references (docs/DESIGN_SF_COST_HISTORY.md §7,
-# IMPL_PLAN_SH2 §4) in this repo's committed history, so the reason below is
-# reconstructed from that evidence rather than quoted verbatim -- flagged for
-# architect confirmation in the SH-2 completion report.
+# SH-3 correction (IMPL_PLAN_SH3 §4(m), design §7): SH-2's implementer could
+# not find the "原案" (original draft) text this exclusion traces back to in
+# this repo's history, and wrote a *reconstructed* rationale (level-band
+# outlier evidence) into this dict instead, flagged for confirmation in the
+# SH-2 completion report. The architect has since confirmed the correct
+# attribution: these two items were named explicitly by the user in the
+# original 28-item draft list, not inferred from level-band data. The
+# level-band evidence below is kept as corroborating context (it is true and
+# was independently observed), but it is not the reason for the exclusion.
 EXCLUDED_ITEM_IDS: dict[int, str] = {
     1113282: (
-        "Noble Ifia's Ring -- design directive (DESIGN_SF_COST_HISTORY.md §7, "
-        "IMPL_PLAN_SH2 §4) excludes this item. Reconstructed rationale: only "
-        "RANGE_118_TO_127 item in the priority representative set (all 28 kept "
-        "items are RANGE_128_TO_137+); enters maplenEnhancebot's priority set "
-        "only via a manual low-band override (EXTRA_PRIORITY_GROUPS, SNAP-1 S0) "
-        "for gear-sim's own worn-item coverage, not as part of the endgame "
-        "boss-accessory lineup this chart targets."
+        "Noble Ifia's Ring -- one of the two items the user explicitly named for "
+        "exclusion in the original 28-item draft list (design directive, "
+        "DESIGN_SF_COST_HISTORY.md \u00a77 / IMPL_PLAN_SH3 \u00a74(m)). "
+        "Corroborating context (not the reason): this is the only "
+        "RANGE_118_TO_127 item in maplenEnhancebot's priority representative "
+        "set (all 28 kept items are RANGE_128_TO_137+); it enters "
+        "maplenEnhancebot's priority set only via a manual low-band override "
+        "(EXTRA_PRIORITY_GROUPS, SNAP-1 S0) for gear-sim's own worn-item "
+        "coverage, not as part of the endgame boss-accessory lineup this chart "
+        "targets."
     ),
     1122254: (
-        "Mechanator Pendant -- design directive (DESIGN_SF_COST_HISTORY.md §7, "
-        "IMPL_PLAN_SH2 §4) excludes this item. Reconstructed rationale: same as "
-        "1113282 (Noble Ifia's Ring) -- only RANGE_118_TO_127 item besides it in "
-        "the priority representative set; manual low-band override in "
-        "maplenEnhancebot, not part of the RANGE_128_TO_137+ endgame lineup."
+        "Mechanator Pendant -- one of the two items the user explicitly named "
+        "for exclusion in the original 28-item draft list (design directive, "
+        "DESIGN_SF_COST_HISTORY.md \u00a77 / IMPL_PLAN_SH3 \u00a74(m)). "
+        "Corroborating context (not the reason): same level-band outlier "
+        "evidence as 1113282 (Noble Ifia's Ring) -- only RANGE_118_TO_127 item "
+        "besides it in the priority representative set; manual low-band "
+        "override in maplenEnhancebot, not part of the RANGE_128_TO_137+ "
+        "endgame lineup."
     ),
 }
+
+
+def _max_upgrade_by_item(db_path: Path) -> dict[int, int]:
+    if not db_path.exists():
+        return {}
+    conn = db.connect(db_path)
+    try:
+        return db.max_upgrade_by_item(conn)
+    finally:
+        conn.close()
 
 
 def _load_source_modules(source_repo: Path) -> tuple[Any, Any]:
@@ -92,12 +111,15 @@ def _source_commit(source_repo: Path) -> str:
     return result.stdout.strip()
 
 
-def build_item_list(source_repo: Path = DEFAULT_SOURCE_REPO) -> dict[str, Any]:
+def build_item_list(
+    source_repo: Path = DEFAULT_SOURCE_REPO, db_path: Path = DEFAULT_DB_PATH
+) -> dict[str, Any]:
     item_catalog, priority_equipment = _load_source_modules(source_repo)
 
     catalog = item_catalog.load_catalog()
     representative_ids = priority_equipment.load_priority_representative_item_ids()
     item_to_representative = priority_equipment.build_priority_item_to_representative_map()
+    max_upgrade_by_item = _max_upgrade_by_item(db_path)
 
     representative_to_aliases: dict[int, set[int]] = {}
     for item_id, representative in item_to_representative.items():
@@ -122,11 +144,16 @@ def build_item_list(source_repo: Path = DEFAULT_SOURCE_REPO) -> dict[str, Any]:
             )
             continue
         alias_ids = sorted(representative_to_aliases.get(representative, {representative}))
+        max_upgrade = max_upgrade_by_item.get(representative)
+        # design §7.1: maxStar is derived from hourly data (MAX(item_upgrade)+1),
+        # never hardcoded. null when the backfill DB isn't available to derive it from.
+        max_star = (max_upgrade + 1) if max_upgrade is not None else None
         items.append(
             {
                 "itemId": representative,
                 "itemName": name_by_representative.get(representative),
                 "aliasItemIds": alias_ids,
+                "maxStar": max_star,
             }
         )
 
@@ -142,10 +169,11 @@ def build_item_list(source_repo: Path = DEFAULT_SOURCE_REPO) -> dict[str, Any]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source-repo", type=Path, default=DEFAULT_SOURCE_REPO)
+    parser.add_argument("--db", type=Path, default=DEFAULT_DB_PATH)
     parser.add_argument("--out", type=Path, default=DEFAULT_OUTPUT_PATH)
     args = parser.parse_args()
 
-    payload = build_item_list(args.source_repo)
+    payload = build_item_list(args.source_repo, args.db)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 

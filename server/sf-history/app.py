@@ -203,7 +203,13 @@ def prices(request: Request, itemId: str | None = None) -> JSONResponse:
         if not (0 <= upgrade < UPGRADE_COUNT):
             continue
         slot = by_date.setdefault(price_at, [None] * UPGRADE_COUNT)
-        slot[upgrade] = end_price
+        # Rounded to 2 decimals at the transport boundary only (the stored
+        # sf_price_history_4h.end_price keeps full precision) -- values here
+        # are NESO prices in the hundreds-of-thousands to low-millions range,
+        # so sub-cent digits are display noise, not signal. This is what
+        # keeps gzip'd response size under the plan §7(d) 100KB budget: full
+        # precision measured ~117-127KB gzip'd, 2 decimals ~80-90KB.
+        slot[upgrade] = round(end_price, 2)
 
     dates = sorted(by_date)
     points = [{"date": d, "prices": by_date[d]} for d in dates]

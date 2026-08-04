@@ -1,26 +1,35 @@
-# SF Price History -- SH-2 (Backfill)
+# SF Price History -- `server/sf-history/`
 
-SH-2 builds the SQLite database that later slices (SH-3 service, SH-5 UI)
-read from. It runs entirely on the main PC -- it does not touch the VPS
-(design: `docs/DESIGN_SF_COST_HISTORY.md` §5.3, plan: `docs/IMPL_PLAN_SH2.md`).
+SH-2 built the SQLite backfill (`sf_price_history_hourly`); SH-3 adds the
+4-hour derivation, the FastAPI service, and the current-price proxy. This
+directory follows the same structure and conventions as `server/img-proxy/`
+(the established precedent for services under `api.lulumi-tools.com`):
+FastAPI + systemd + Caddy + offline pytest, per-request CORS computed from an
+env var rather than baked into middleware, and tests that call route
+functions directly (no `TestClient`/`httpx` dependency).
 
-This directory follows the same structure as `server/img-proxy/` (the
-established precedent for services under `api.lulumi-tools.com`), but SH-2
-only needs `requests` -- FastAPI/uvicorn are SH-3's concern (`app.py` does not
-exist yet).
+**SH-3 does not touch the VPS.** It runs and is verified locally; VPS
+deployment is SH-6 (`docs/reports/SH1B_VPS_PROBE.md` has the real Caddyfile
+shape and the confirmed-free port, 8785).
 
 ## Files
 
 ```text
-schema.sql                          sf_price_history_hourly + sf_history_backfill_progress
-db.py                                connect / apply_schema / upsert / progress read-write
-fetcher.py                           rate-limited, 429-backoff HTTP GET (all requests go through this)
+schema.sql                          sf_price_history_hourly + sf_history_backfill_progress + sf_price_history_4h
+db.py                                connect / apply_schema / hourly + 4h read-write / progress read-write
+fetcher.py                           rate-limited, 429-backoff HTTP GET for `history` (backfill.py / update.py)
+aggregate.py                         SH-3 §3: deterministic hourly -> 4h derivation (design §9)
+fetch_latest.py                      SH-3 §5: TTL-60s, single-flight `enhance-price/latest` proxy (design §6)
+app.py                               SH-3 §4: FastAPI app (health / equipment / prices / latest)
 scripts/gen_item_list.py             generates data/sf_history_items.json (reads maplenEnhancebot, read-only)
 scripts/backfill.py                  resumable backfill: 28 items x itemUpgrade 0..21 x ~150 days
+scripts/rebuild_4h.py                full, deterministic rebuild of sf_price_history_4h
+scripts/update.py                    4-hourly differential fetch + incremental 4h re-derivation (design §5.2)
 scripts/audit_high_star_plateau.py   design §9.2: do the ☆20/☆21 end_price series match exactly?
-data/sf_history_items.json           committed snapshot of the target equipment list
+data/sf_history_items.json           committed snapshot of the target equipment list (incl. maxStar)
 data/.gitignore                      *.sqlite* is never committed (SH-2 §8)
-tests/                                offline pytest (no network)
+deploy/                              Caddyfile / systemd .service / .timer *.example files (SH-6 reads these)
+tests/                                offline pytest (no network -- see "Offline by design" below)
 ```
 
 ## Local run
@@ -30,11 +39,12 @@ cd server/sf-history
 python -m pip install -r requirements-dev.txt
 python -m pytest .
 
-# 1. Regenerate the target equipment list (reads maplenEnhancebot read-only).
+# 1. Regenerate the target equipment list (reads maplenEnhancebot read-only,
+#    and data/sf_price_history.sqlite if present, for maxStar).
 python scripts/gen_item_list.py
 
-# 2. Backfill. Resumable: re-running skips (item, itemUpgrade) combinations
-#    already marked status='done'. Ctrl-C at any time is safe.
+# 2. Backfill (SH-2). Resumable: re-running skips (item, itemUpgrade)
+#    combinations already marked status='done'. Ctrl-C at any time is safe.
 python scripts/backfill.py
 
 # Smoke test with a small slice:
@@ -42,7 +52,51 @@ python scripts/backfill.py --limit 5
 
 # 3. §9.2 audit (after backfill has data for itemUpgrade 20 and 21):
 python scripts/audit_high_star_plateau.py
+
+# 4. Derive the 4h table from hourly (SH-3). Safe to re-run any time --
+#    it is a pure function of the hourly data and `now`.
+python scripts/rebuild_4h.py
+
+# 5. Run the service.
+python -m uvicorn app:app --host 127.0.0.1 --port 8785 --workers 1
+
+# 6. The 4-hourly differential job (what a systemd timer runs in production --
+#    see deploy/sf-history-update.timer.example). Safe to run any time; it
+#    only ever fetches the last 8h per (item, itemUpgrade) and re-derives the
+#    4h buckets that could have changed.
+python scripts/update.py
 ```
+
+## Endpoints
+
+```text
+GET /sf-history/health                liveness check
+GET /sf-history/equipment             28-item list + aliasItemIds + data-derived maxStar (design §7.1)
+GET /sf-history/prices?itemId=        4h series, up to 150 days, 22-wide prices[] per point (null = missing)
+GET /sf-history/latest?itemId=        current price (official `latest` proxied, TTL 60s, no historical fallback)
+```
+
+`itemId` must be one of `data/sf_history_items.json`'s **representative**
+IDs (not an alias) -- clients resolve alias -> representative client-side
+using `equipment`'s `aliasItemIds` (design §7: "検索対象はグループ内の全
+itemId、取得・表示は代表"). Unknown `itemId` -> `404`; missing/non-integer
+`itemId` -> `400`.
+
+## Environment
+
+```text
+SF_HISTORY_DB_PATH=./data/sf_price_history.sqlite
+SF_HISTORY_ITEMS_PATH=./data/sf_history_items.json
+SF_HISTORY_ALLOWED_ORIGINS=https://lulumi-tools.com
+```
+
+## Offline by design
+
+Only `scripts/backfill.py`, `scripts/update.py`, and `fetch_latest.py` ever
+call the official API, and only when actually run (backfill/update) or when
+`/sf-history/latest` is actually hit with a cache miss. **No pytest test
+calls the official API** -- `fetcher.Fetcher` and `LatestPriceCache` are
+always exercised through fake sessions in tests.
 
 ## Rate-limit discipline (IMPL_PLAN_SH2 §2)
 

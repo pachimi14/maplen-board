@@ -1,0 +1,12 @@
+[Unit]
+Description=Run sf-history-update.service every 4 hours
+
+[Timer]
+# design §5.2: offset (:43:00) and RandomizedDelaySec chosen to avoid
+# colliding with other jobs that fire on the hour/every-4-hours boundary.
+OnCalendar=*-*-* 01,05,09,13,17,21:43:00
+Persistent=true
+RandomizedDelaySec=120
+
+[Install]
+WantedBy=timers.target
