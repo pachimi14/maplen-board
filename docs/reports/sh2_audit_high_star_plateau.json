@@ -1,0 +1,1600 @@
+{
+  "upgradeA": 20,
+  "upgradeB": 21,
+  "itemsChecked": 28,
+  "fullyMatchedCount": 0,
+  "unmatchedCount": 22,
+  "noOverlapCount": 6,
+  "unmatchedDetail": [
+    {
+      "itemId": 1003720,
+      "itemName": "Chaos Von Bon Helmet",
+      "mismatchCount": 734,
+      "commonPoints": 3753
+    },
+    {
+      "itemId": 1003797,
+      "itemName": "Royal Warrior Helm",
+      "mismatchCount": 685,
+      "commonPoints": 3753
+    },
+    {
+      "itemId": 1012757,
+      "itemName": "Twilight Mark",
+      "mismatchCount": 1880,
+      "commonPoints": 3525
+    },
+    {
+      "itemId": 1022277,
+      "itemName": "Papulatus Mark",
+      "mismatchCount": 717,
+      "commonPoints": 3753
+    },
+    {
+      "itemId": 1042257,
+      "itemName": "Eagle Eye Assassin Shirt",
+      "mismatchCount": 800,
+      "commonPoints": 3753
+    },
+    {
+      "itemId": 1072485,
+      "itemName": "Lionheart Battle Boots",
+      "mismatchCount": 1249,
+      "commonPoints": 3753
+    },
+    {
+      "itemId": 1073035,
+      "itemName": "AbsoLab Pirate Shoes",
+      "mismatchCount": 540,
+      "commonPoints": 3753
+    },
+    {
+      "itemId": 1073160,
+      "itemName": "Arcane Umbra Archer Shoes",
+      "mismatchCount": 669,
+      "commonPoints": 3496
+    },
+    {
+      "itemId": 1082297,
+      "itemName": "Falcon Wing Sentinel Gloves",
+      "mismatchCount": 807,
+      "commonPoints": 3753
+    },
+    {
+      "itemId": 1082637,
+      "itemName": "AbsoLab Mage Gloves",
+      "mismatchCount": 407,
+      "commonPoints": 3753
+    },
+    {
+      "itemId": 1082698,
+      "itemName": "Arcane Umbra Thief Gloves",
+      "mismatchCount": 523,
+      "commonPoints": 3662
+    },
+    {
+      "itemId": 1102276,
+      "itemName": "Dragon Tail Mage Cape",
+      "mismatchCount": 938,
+      "commonPoints": 3753
+    },
+    {
+      "itemId": 1102775,
+      "itemName": "AbsoLab Knight Cape",
+      "mismatchCount": 658,
+      "commonPoints": 3753
+    },
+    {
+      "itemId": 1102940,
+      "itemName": "Arcane Umbra Knight Cape",
+      "mismatchCount": 572,
+      "commonPoints": 3490
+    },
+    {
+      "itemId": 1113313,
+      "itemName": "Guardian Angel Ring",
+      "mismatchCount": 765,
+      "commonPoints": 3753
+    },
+    {
+      "itemId": 1122150,
+      "itemName": "Dominator Pendant",
+      "mismatchCount": 862,
+      "commonPoints": 3753
+    },
+    {
+      "itemId": 1132272,
+      "itemName": "Golden Clover Belt",
+      "mismatchCount": 552,
+      "commonPoints": 3753
+    },
+    {
+      "itemId": 1152108,
+      "itemName": "Lionheart Battle Shoulder",
+      "mismatchCount": 1377,
+      "commonPoints": 3753
+    },
+    {
+      "itemId": 1152176,
+      "itemName": "AbsoLab Mage Shoulder",
+      "mismatchCount": 532,
+      "commonPoints": 3753
+    },
+    {
+      "itemId": 1212115,
+      "itemName": "AbsoLab Shining Rod",
+      "mismatchCount": 73,
+      "commonPoints": 3754
+    },
+    {
+      "itemId": 1332225,
+      "itemName": "Fafnir Damascus",
+      "mismatchCount": 111,
+      "commonPoints": 3754
+    },
+    {
+      "itemId": 1382265,
+      "itemName": "Arcane Umbra Staff",
+      "mismatchCount": 251,
+      "commonPoints": 3504
+    }
+  ],
+  "noOverlapDetail": [
+    {
+      "itemId": 1022232,
+      "itemName": "Black Bean Mark"
+    },
+    {
+      "itemId": 1032241,
+      "itemName": "Dea Sidus Earring"
+    },
+    {
+      "itemId": 1072972,
+      "itemName": "Royal Von Leon Warrior Boots"
+    },
+    {
+      "itemId": 1082613,
+      "itemName": "Royal Von Leon Warrior Hands"
+    },
+    {
+      "itemId": 1102713,
+      "itemName": "Royal Von Leon Warrior Cape"
+    },
+    {
+      "itemId": 1212102,
+      "itemName": "Royal Von Leon Glorier"
+    }
+  ],
+  "perItem": [
+    {
+      "itemId": 1003720,
+      "itemName": "Chaos Von Bon Helmet",
+      "commonPoints": 3753,
+      "seriesLenA": 3753,
+      "seriesLenB": 3753,
+      "mismatchCount": 734,
+      "mismatchesSample": [
+        {
+          "priceAt": "2026-03-03T20:00:00Z",
+          "endPrice20": 584324.175839,
+          "endPrice21": 561484.142907
+        },
+        {
+          "priceAt": "2026-03-03T21:00:00Z",
+          "endPrice20": 574807.495451,
+          "endPrice21": 551967.462519
+        },
+        {
+          "priceAt": "2026-03-03T22:00:00Z",
+          "endPrice20": 565290.815062,
+          "endPrice21": 542450.78213
+        },
+        {
+          "priceAt": "2026-03-03T23:00:00Z",
+          "endPrice20": 555774.134674,
+          "endPrice21": 532934.101742
+        },
+        {
+          "priceAt": "2026-03-12T10:00:00Z",
+          "endPrice20": 691465.355904,
+          "endPrice21": 679645.43529
+        },
+        {
+          "priceAt": "2026-03-12T11:00:00Z",
+          "endPrice20": 681615.422059,
+          "endPrice21": 669795.501445
+        },
+        {
+          "priceAt": "2026-03-12T12:00:00Z",
+          "endPrice20": 671765.488214,
+          "endPrice21": 659945.5676
+        },
+        {
+          "priceAt": "2026-03-12T16:00:00Z",
+          "endPrice20": 667825.514676,
+          "endPrice21": 632365.752835
+        },
+        {
+          "priceAt": "2026-03-12T17:00:00Z",
+          "endPrice20": 657975.580831,
+          "endPrice21": 622515.81899
+        },
+        {
+          "priceAt": "2026-03-12T18:00:00Z",
+          "endPrice20": 648125.646987,
+          "endPrice21": 612665.885145
+        }
+      ],
+      "fullyMatched": false,
+      "noOverlap": false
+    },
+    {
+      "itemId": 1003797,
+      "itemName": "Royal Warrior Helm",
+      "commonPoints": 3753,
+      "seriesLenA": 3753,
+      "seriesLenB": 3753,
+      "mismatchCount": 685,
+      "mismatchesSample": [
+        {
+          "priceAt": "2026-02-26T17:00:00Z",
+          "endPrice20": 1232744.748016,
+          "endPrice21": 1209338.202167
+        },
+        {
+          "priceAt": "2026-02-26T18:00:00Z",
+          "endPrice20": 1213239.293142,
+          "endPrice21": 1189832.747294
+        },
+        {
+          "priceAt": "2026-02-26T19:00:00Z",
+          "endPrice20": 1193733.838268,
+          "endPrice21": 1170327.29242
+        },
+        {
+          "priceAt": "2026-02-26T20:00:00Z",
+          "endPrice20": 1174228.383395,
+          "endPrice21": 1150821.837546
+        },
+        {
+          "priceAt": "2026-02-26T21:00:00Z",
+          "endPrice20": 1154722.928521,
+          "endPrice21": 1131316.382673
+        },
+        {
+          "priceAt": "2026-02-26T22:00:00Z",
+          "endPrice20": 1135217.473647,
+          "endPrice21": 1111810.927799
+        },
+        {
+          "priceAt": "2026-02-26T23:00:00Z",
+          "endPrice20": 1115712.018774,
+          "endPrice21": 1092305.472925
+        },
+        {
+          "priceAt": "2026-03-09T17:00:00Z",
+          "endPrice20": 1645188.444373,
+          "endPrice21": 1526971.310646
+        },
+        {
+          "priceAt": "2026-03-09T18:00:00Z",
+          "endPrice20": 1620559.874846,
+          "endPrice21": 1502342.741119
+        },
+        {
+          "priceAt": "2026-03-09T19:00:00Z",
+          "endPrice20": 1595931.30532,
+          "endPrice21": 1477714.171593
+        }
+      ],
+      "fullyMatched": false,
+      "noOverlap": false
+    },
+    {
+      "itemId": 1012757,
+      "itemName": "Twilight Mark",
+      "commonPoints": 3525,
+      "seriesLenA": 3609,
+      "seriesLenB": 3525,
+      "mismatchCount": 1880,
+      "mismatchesSample": [
+        {
+          "priceAt": "2026-03-07T10:00:00Z",
+          "endPrice20": 111472.411616,
+          "endPrice21": 335534.228764
+        },
+        {
+          "priceAt": "2026-03-07T11:00:00Z",
+          "endPrice20": 109856.869418,
+          "endPrice21": 330671.413854
+        },
+        {
+          "priceAt": "2026-03-07T12:00:00Z",
+          "endPrice20": 108241.327221,
+          "endPrice21": 325808.598944
+        },
+        {
+          "priceAt": "2026-03-07T13:00:00Z",
+          "endPrice20": 106625.785024,
+          "endPrice21": 320945.784035
+        },
+        {
+          "priceAt": "2026-03-07T14:00:00Z",
+          "endPrice20": 105010.242826,
+          "endPrice21": 316082.969125
+        },
+        {
+          "priceAt": "2026-03-07T15:00:00Z",
+          "endPrice20": 103394.700629,
+          "endPrice21": 311220.154216
+        },
+        {
+          "priceAt": "2026-03-07T16:00:00Z",
+          "endPrice20": 101779.158432,
+          "endPrice21": 306357.339306
+        },
+        {
+          "priceAt": "2026-03-07T17:00:00Z",
+          "endPrice20": 100163.616234,
+          "endPrice21": 301494.524396
+        },
+        {
+          "priceAt": "2026-03-07T18:00:00Z",
+          "endPrice20": 98548.074037,
+          "endPrice21": 296631.709487
+        },
+        {
+          "priceAt": "2026-03-07T19:00:00Z",
+          "endPrice20": 96932.53184,
+          "endPrice21": 291768.894577
+        }
+      ],
+      "fullyMatched": false,
+      "noOverlap": false
+    },
+    {
+      "itemId": 1022232,
+      "itemName": "Black Bean Mark",
+      "commonPoints": 0,
+      "seriesLenA": 0,
+      "seriesLenB": 0,
+      "mismatchCount": 0,
+      "mismatchesSample": [],
+      "fullyMatched": false,
+      "noOverlap": true
+    },
+    {
+      "itemId": 1022277,
+      "itemName": "Papulatus Mark",
+      "commonPoints": 3753,
+      "seriesLenA": 3753,
+      "seriesLenB": 3753,
+      "mismatchCount": 717,
+      "mismatchesSample": [
+        {
+          "priceAt": "2026-02-27T20:00:00Z",
+          "endPrice20": 630343.333517,
+          "endPrice21": 582919.38366
+        },
+        {
+          "priceAt": "2026-02-27T21:00:00Z",
+          "endPrice20": 620463.343963,
+          "endPrice21": 573039.394106
+        },
+        {
+          "priceAt": "2026-02-27T22:00:00Z",
+          "endPrice20": 610583.35441,
+          "endPrice21": 563159.404553
+        },
+        {
+          "priceAt": "2026-02-27T23:00:00Z",
+          "endPrice20": 600703.364856,
+          "endPrice21": 553279.414999
+        },
+        {
+          "priceAt": "2026-03-06T23:00:00Z",
+          "endPrice20": 503935.560353,
+          "endPrice21": 493363.48566
+        },
+        {
+          "priceAt": "2026-03-07T06:00:00Z",
+          "endPrice20": 504988.362791,
+          "endPrice21": 496821.43509
+        },
+        {
+          "priceAt": "2026-03-07T07:00:00Z",
+          "endPrice20": 498182.589707,
+          "endPrice21": 490015.662007
+        },
+        {
+          "priceAt": "2026-03-07T08:00:00Z",
+          "endPrice20": 491376.816624,
+          "endPrice21": 483209.888924
+        },
+        {
+          "priceAt": "2026-03-07T09:00:00Z",
+          "endPrice20": 484571.04354,
+          "endPrice21": 476404.11584
+        },
+        {
+          "priceAt": "2026-03-07T10:00:00Z",
+          "endPrice20": 477765.270457,
+          "endPrice21": 469598.342757
+        }
+      ],
+      "fullyMatched": false,
+      "noOverlap": false
+    },
+    {
+      "itemId": 1032241,
+      "itemName": "Dea Sidus Earring",
+      "commonPoints": 0,
+      "seriesLenA": 0,
+      "seriesLenB": 0,
+      "mismatchCount": 0,
+      "mismatchesSample": [],
+      "fullyMatched": false,
+      "noOverlap": true
+    },
+    {
+      "itemId": 1042257,
+      "itemName": "Eagle Eye Assassin Shirt",
+      "commonPoints": 3753,
+      "seriesLenA": 3753,
+      "seriesLenB": 3753,
+      "mismatchCount": 800,
+      "mismatchesSample": [
+        {
+          "priceAt": "2026-02-26T14:00:00Z",
+          "endPrice20": 1990666.522305,
+          "endPrice21": 1954581.932777
+        },
+        {
+          "priceAt": "2026-02-28T03:00:00Z",
+          "endPrice20": 2663030.868792,
+          "endPrice21": 2552582.583911
+        },
+        {
+          "priceAt": "2026-02-28T04:00:00Z",
+          "endPrice20": 2632350.789658,
+          "endPrice21": 2521902.504777
+        },
+        {
+          "priceAt": "2026-02-28T05:00:00Z",
+          "endPrice20": 2601670.710525,
+          "endPrice21": 2491222.425644
+        },
+        {
+          "priceAt": "2026-02-28T06:00:00Z",
+          "endPrice20": 2570990.631391,
+          "endPrice21": 2460542.34651
+        },
+        {
+          "priceAt": "2026-02-28T07:00:00Z",
+          "endPrice20": 2540310.552257,
+          "endPrice21": 2429862.267377
+        },
+        {
+          "priceAt": "2026-02-28T08:00:00Z",
+          "endPrice20": 2509630.473124,
+          "endPrice21": 2399182.188243
+        },
+        {
+          "priceAt": "2026-02-28T09:00:00Z",
+          "endPrice20": 2478950.39399,
+          "endPrice21": 2368502.10911
+        },
+        {
+          "priceAt": "2026-02-28T10:00:00Z",
+          "endPrice20": 2448270.314857,
+          "endPrice21": 2337822.029976
+        },
+        {
+          "priceAt": "2026-02-28T11:00:00Z",
+          "endPrice20": 2417590.235723,
+          "endPrice21": 2307141.950842
+        }
+      ],
+      "fullyMatched": false,
+      "noOverlap": false
+    },
+    {
+      "itemId": 1072485,
+      "itemName": "Lionheart Battle Boots",
+      "commonPoints": 3753,
+      "seriesLenA": 3753,
+      "seriesLenB": 3753,
+      "mismatchCount": 1249,
+      "mismatchesSample": [
+        {
+          "priceAt": "2026-02-25T19:00:00Z",
+          "endPrice20": 249675.051825,
+          "endPrice21": 244779.462574
+        },
+        {
+          "priceAt": "2026-02-25T20:00:00Z",
+          "endPrice20": 245595.394116,
+          "endPrice21": 240699.804864
+        },
+        {
+          "priceAt": "2026-02-25T21:00:00Z",
+          "endPrice20": 241515.736406,
+          "endPrice21": 236620.147155
+        },
+        {
+          "priceAt": "2026-02-25T22:00:00Z",
+          "endPrice20": 237436.078697,
+          "endPrice21": 232540.489445
+        },
+        {
+          "priceAt": "2026-02-25T23:00:00Z",
+          "endPrice20": 233356.420987,
+          "endPrice21": 228460.831736
+        },
+        {
+          "priceAt": "2026-02-26T17:00:00Z",
+          "endPrice20": 371670.881316,
+          "endPrice21": 357819.792571
+        },
+        {
+          "priceAt": "2026-02-26T18:00:00Z",
+          "endPrice20": 365899.594339,
+          "endPrice21": 352048.505594
+        },
+        {
+          "priceAt": "2026-02-26T19:00:00Z",
+          "endPrice20": 360128.307362,
+          "endPrice21": 346277.218617
+        },
+        {
+          "priceAt": "2026-02-26T20:00:00Z",
+          "endPrice20": 354357.020385,
+          "endPrice21": 340505.93164
+        },
+        {
+          "priceAt": "2026-02-26T21:00:00Z",
+          "endPrice20": 348585.733408,
+          "endPrice21": 334734.644663
+        }
+      ],
+      "fullyMatched": false,
+      "noOverlap": false
+    },
+    {
+      "itemId": 1072972,
+      "itemName": "Royal Von Leon Warrior Boots",
+      "commonPoints": 0,
+      "seriesLenA": 0,
+      "seriesLenB": 0,
+      "mismatchCount": 0,
+      "mismatchesSample": [],
+      "fullyMatched": false,
+      "noOverlap": true
+    },
+    {
+      "itemId": 1073035,
+      "itemName": "AbsoLab Pirate Shoes",
+      "commonPoints": 3753,
+      "seriesLenA": 3753,
+      "seriesLenB": 3753,
+      "mismatchCount": 540,
+      "mismatchesSample": [
+        {
+          "priceAt": "2026-02-25T19:00:00Z",
+          "endPrice20": 932945.555906,
+          "endPrice21": 914652.505791
+        },
+        {
+          "priceAt": "2026-02-25T20:00:00Z",
+          "endPrice20": 917701.347476,
+          "endPrice21": 899408.297361
+        },
+        {
+          "priceAt": "2026-02-25T21:00:00Z",
+          "endPrice20": 902457.139047,
+          "endPrice21": 884164.088931
+        },
+        {
+          "priceAt": "2026-02-25T22:00:00Z",
+          "endPrice20": 887212.930617,
+          "endPrice21": 868919.880501
+        },
+        {
+          "priceAt": "2026-02-25T23:00:00Z",
+          "endPrice20": 871968.722187,
+          "endPrice21": 853675.672071
+        },
+        {
+          "priceAt": "2026-02-28T20:00:00Z",
+          "endPrice20": 925984.065885,
+          "endPrice21": 857603.704097
+        },
+        {
+          "priceAt": "2026-02-28T21:00:00Z",
+          "endPrice20": 911738.15718,
+          "endPrice21": 843357.795391
+        },
+        {
+          "priceAt": "2026-02-28T22:00:00Z",
+          "endPrice20": 897492.248474,
+          "endPrice21": 829111.886685
+        },
+        {
+          "priceAt": "2026-02-28T23:00:00Z",
+          "endPrice20": 883246.339768,
+          "endPrice21": 814865.977979
+        },
+        {
+          "priceAt": "2026-03-03T19:00:00Z",
+          "endPrice20": 887296.610251,
+          "endPrice21": 869898.637501
+        }
+      ],
+      "fullyMatched": false,
+      "noOverlap": false
+    },
+    {
+      "itemId": 1073160,
+      "itemName": "Arcane Umbra Archer Shoes",
+      "commonPoints": 3496,
+      "seriesLenA": 3496,
+      "seriesLenB": 3496,
+      "mismatchCount": 669,
+      "mismatchesSample": [
+        {
+          "priceAt": "2026-03-10T17:00:00Z",
+          "endPrice20": 1107385.357923,
+          "endPrice21": 1086359.053659
+        },
+        {
+          "priceAt": "2026-03-10T18:00:00Z",
+          "endPrice20": 1237047.567554,
+          "endPrice21": 1131916.046232
+        },
+        {
+          "priceAt": "2026-03-10T19:00:00Z",
+          "endPrice20": 1219525.647333,
+          "endPrice21": 1114394.126011
+        },
+        {
+          "priceAt": "2026-03-10T20:00:00Z",
+          "endPrice20": 1202003.727113,
+          "endPrice21": 1096872.205791
+        },
+        {
+          "priceAt": "2026-03-10T21:00:00Z",
+          "endPrice20": 1184481.806893,
+          "endPrice21": 1079350.285571
+        },
+        {
+          "priceAt": "2026-03-10T23:00:00Z",
+          "endPrice20": 1149437.966452,
+          "endPrice21": 1044306.44513
+        },
+        {
+          "priceAt": "2026-03-11T11:00:00Z",
+          "endPrice20": 2803507.23525,
+          "endPrice21": 2382981.149962
+        },
+        {
+          "priceAt": "2026-03-11T12:00:00Z",
+          "endPrice20": 2768463.394809,
+          "endPrice21": 2347937.309521
+        },
+        {
+          "priceAt": "2026-03-11T13:00:00Z",
+          "endPrice20": 2733419.554368,
+          "endPrice21": 2312893.469081
+        },
+        {
+          "priceAt": "2026-03-11T14:00:00Z",
+          "endPrice20": 2698375.713928,
+          "endPrice21": 2277849.62864
+        }
+      ],
+      "fullyMatched": false,
+      "noOverlap": false
+    },
+    {
+      "itemId": 1082297,
+      "itemName": "Falcon Wing Sentinel Gloves",
+      "commonPoints": 3753,
+      "seriesLenA": 3753,
+      "seriesLenB": 3753,
+      "mismatchCount": 807,
+      "mismatchesSample": [
+        {
+          "priceAt": "2026-03-12T23:00:00Z",
+          "endPrice20": 534370.42205,
+          "endPrice21": 512409.993746
+        },
+        {
+          "priceAt": "2026-03-14T17:00:00Z",
+          "endPrice20": 341759.344496,
+          "endPrice21": 323004.258517
+        },
+        {
+          "priceAt": "2026-03-14T18:00:00Z",
+          "endPrice20": 355304.684369,
+          "endPrice21": 317794.512412
+        },
+        {
+          "priceAt": "2026-03-14T19:00:00Z",
+          "endPrice20": 350094.938264,
+          "endPrice21": 312584.766307
+        },
+        {
+          "priceAt": "2026-03-14T20:00:00Z",
+          "endPrice20": 344885.192159,
+          "endPrice21": 307375.020202
+        },
+        {
+          "priceAt": "2026-03-14T21:00:00Z",
+          "endPrice20": 339675.446054,
+          "endPrice21": 302165.274097
+        },
+        {
+          "priceAt": "2026-03-14T22:00:00Z",
+          "endPrice20": 334465.699949,
+          "endPrice21": 296955.527992
+        },
+        {
+          "priceAt": "2026-03-14T23:00:00Z",
+          "endPrice20": 329255.953843,
+          "endPrice21": 291745.781886
+        },
+        {
+          "priceAt": "2026-03-15T07:00:00Z",
+          "endPrice20": 772115.321765,
+          "endPrice21": 735347.925491
+        },
+        {
+          "priceAt": "2026-03-15T08:00:00Z",
+          "endPrice20": 761902.156134,
+          "endPrice21": 725134.759859
+        }
+      ],
+      "fullyMatched": false,
+      "noOverlap": false
+    },
+    {
+      "itemId": 1082613,
+      "itemName": "Royal Von Leon Warrior Hands",
+      "commonPoints": 0,
+      "seriesLenA": 0,
+      "seriesLenB": 0,
+      "mismatchCount": 0,
+      "mismatchesSample": [],
+      "fullyMatched": false,
+      "noOverlap": true
+    },
+    {
+      "itemId": 1082637,
+      "itemName": "AbsoLab Mage Gloves",
+      "commonPoints": 3753,
+      "seriesLenA": 3753,
+      "seriesLenB": 3753,
+      "mismatchCount": 407,
+      "mismatchesSample": [
+        {
+          "priceAt": "2026-03-04T13:00:00Z",
+          "endPrice20": 2575618.036368,
+          "endPrice21": 2284822.451617
+        },
+        {
+          "priceAt": "2026-03-04T14:00:00Z",
+          "endPrice20": 2540999.514374,
+          "endPrice21": 2250203.929623
+        },
+        {
+          "priceAt": "2026-03-04T15:00:00Z",
+          "endPrice20": 2506380.99238,
+          "endPrice21": 2215585.407628
+        },
+        {
+          "priceAt": "2026-03-04T16:00:00Z",
+          "endPrice20": 2471762.470385,
+          "endPrice21": 2180966.885634
+        },
+        {
+          "priceAt": "2026-03-04T17:00:00Z",
+          "endPrice20": 2437143.948391,
+          "endPrice21": 2146348.36364
+        },
+        {
+          "priceAt": "2026-03-04T18:00:00Z",
+          "endPrice20": 2402525.426397,
+          "endPrice21": 2111729.841646
+        },
+        {
+          "priceAt": "2026-03-04T19:00:00Z",
+          "endPrice20": 2367906.904403,
+          "endPrice21": 2077111.319652
+        },
+        {
+          "priceAt": "2026-03-04T20:00:00Z",
+          "endPrice20": 2333288.382409,
+          "endPrice21": 2042492.797657
+        },
+        {
+          "priceAt": "2026-03-04T21:00:00Z",
+          "endPrice20": 2298669.860414,
+          "endPrice21": 2007874.275663
+        },
+        {
+          "priceAt": "2026-03-04T22:00:00Z",
+          "endPrice20": 2264051.33842,
+          "endPrice21": 1973255.753669
+        }
+      ],
+      "fullyMatched": false,
+      "noOverlap": false
+    },
+    {
+      "itemId": 1082698,
+      "itemName": "Arcane Umbra Thief Gloves",
+      "commonPoints": 3662,
+      "seriesLenA": 3662,
+      "seriesLenB": 3662,
+      "mismatchCount": 523,
+      "mismatchesSample": [
+        {
+          "priceAt": "2026-03-07T23:00:00Z",
+          "endPrice20": 1287014.44956,
+          "endPrice21": 1185408.045647
+        },
+        {
+          "priceAt": "2026-03-08T12:00:00Z",
+          "endPrice20": 1298381.884157,
+          "endPrice21": 1232175.442471
+        },
+        {
+          "priceAt": "2026-03-08T13:00:00Z",
+          "endPrice20": 1279991.205911,
+          "endPrice21": 1213784.764226
+        },
+        {
+          "priceAt": "2026-03-08T14:00:00Z",
+          "endPrice20": 1261600.527665,
+          "endPrice21": 1195394.08598
+        },
+        {
+          "priceAt": "2026-03-08T15:00:00Z",
+          "endPrice20": 1243209.849419,
+          "endPrice21": 1177003.407734
+        },
+        {
+          "priceAt": "2026-03-08T16:00:00Z",
+          "endPrice20": 1291025.612858,
+          "endPrice21": 1158612.729488
+        },
+        {
+          "priceAt": "2026-03-08T18:00:00Z",
+          "endPrice20": 1254244.256366,
+          "endPrice21": 1121831.372996
+        },
+        {
+          "priceAt": "2026-03-08T19:00:00Z",
+          "endPrice20": 1235853.578121,
+          "endPrice21": 1103440.694751
+        },
+        {
+          "priceAt": "2026-03-08T21:00:00Z",
+          "endPrice20": 1199072.221629,
+          "endPrice21": 1066659.338259
+        },
+        {
+          "priceAt": "2026-03-08T23:00:00Z",
+          "endPrice20": 1625735.956933,
+          "endPrice21": 1206428.492927
+        }
+      ],
+      "fullyMatched": false,
+      "noOverlap": false
+    },
+    {
+      "itemId": 1102276,
+      "itemName": "Dragon Tail Mage Cape",
+      "commonPoints": 3753,
+      "seriesLenA": 3753,
+      "seriesLenB": 3753,
+      "mismatchCount": 938,
+      "mismatchesSample": [
+        {
+          "priceAt": "2026-03-01T18:00:00Z",
+          "endPrice20": 238166.815036,
+          "endPrice21": 233571.956869
+        },
+        {
+          "priceAt": "2026-03-01T19:00:00Z",
+          "endPrice20": 234337.766563,
+          "endPrice21": 229742.908395
+        },
+        {
+          "priceAt": "2026-03-01T20:00:00Z",
+          "endPrice20": 230508.71809,
+          "endPrice21": 225913.859922
+        },
+        {
+          "priceAt": "2026-03-01T21:00:00Z",
+          "endPrice20": 226679.669617,
+          "endPrice21": 222084.811449
+        },
+        {
+          "priceAt": "2026-03-01T22:00:00Z",
+          "endPrice20": 222850.621143,
+          "endPrice21": 218255.762975
+        },
+        {
+          "priceAt": "2026-03-01T23:00:00Z",
+          "endPrice20": 219021.57267,
+          "endPrice21": 214426.714502
+        },
+        {
+          "priceAt": "2026-03-03T01:00:00Z",
+          "endPrice20": 387051.745379,
+          "endPrice21": 369975.933083
+        },
+        {
+          "priceAt": "2026-03-03T02:00:00Z",
+          "endPrice20": 382308.464186,
+          "endPrice21": 365232.651889
+        },
+        {
+          "priceAt": "2026-03-03T03:00:00Z",
+          "endPrice20": 377565.182992,
+          "endPrice21": 360489.370696
+        },
+        {
+          "priceAt": "2026-03-03T04:00:00Z",
+          "endPrice20": 412665.463823,
+          "endPrice21": 367129.964367
+        }
+      ],
+      "fullyMatched": false,
+      "noOverlap": false
+    },
+    {
+      "itemId": 1102713,
+      "itemName": "Royal Von Leon Warrior Cape",
+      "commonPoints": 0,
+      "seriesLenA": 0,
+      "seriesLenB": 0,
+      "mismatchCount": 0,
+      "mismatchesSample": [],
+      "fullyMatched": false,
+      "noOverlap": true
+    },
+    {
+      "itemId": 1102775,
+      "itemName": "AbsoLab Knight Cape",
+      "commonPoints": 3753,
+      "seriesLenA": 3753,
+      "seriesLenB": 3753,
+      "mismatchCount": 658,
+      "mismatchesSample": [
+        {
+          "priceAt": "2026-02-27T14:00:00Z",
+          "endPrice20": 1483369.978192,
+          "endPrice21": 1510755.270097
+        },
+        {
+          "priceAt": "2026-02-27T15:00:00Z",
+          "endPrice20": 1460548.901604,
+          "endPrice21": 1487934.193509
+        },
+        {
+          "priceAt": "2026-02-27T16:00:00Z",
+          "endPrice20": 1437727.825017,
+          "endPrice21": 1465113.116922
+        },
+        {
+          "priceAt": "2026-02-27T17:00:00Z",
+          "endPrice20": 1414906.748429,
+          "endPrice21": 1442292.040334
+        },
+        {
+          "priceAt": "2026-02-27T18:00:00Z",
+          "endPrice20": 1392085.671842,
+          "endPrice21": 1419470.963747
+        },
+        {
+          "priceAt": "2026-02-27T19:00:00Z",
+          "endPrice20": 1369264.595254,
+          "endPrice21": 1396649.887159
+        },
+        {
+          "priceAt": "2026-02-27T20:00:00Z",
+          "endPrice20": 1346443.518666,
+          "endPrice21": 1373828.810572
+        },
+        {
+          "priceAt": "2026-02-27T21:00:00Z",
+          "endPrice20": 1323622.442079,
+          "endPrice21": 1351007.733984
+        },
+        {
+          "priceAt": "2026-02-27T22:00:00Z",
+          "endPrice20": 1300801.365491,
+          "endPrice21": 1328186.657396
+        },
+        {
+          "priceAt": "2026-02-27T23:00:00Z",
+          "endPrice20": 1277980.288904,
+          "endPrice21": 1305365.580809
+        }
+      ],
+      "fullyMatched": false,
+      "noOverlap": false
+    },
+    {
+      "itemId": 1102940,
+      "itemName": "Arcane Umbra Knight Cape",
+      "commonPoints": 3490,
+      "seriesLenA": 3505,
+      "seriesLenB": 3490,
+      "mismatchCount": 572,
+      "mismatchesSample": [
+        {
+          "priceAt": "2026-03-14T00:00:00Z",
+          "endPrice20": 1484718.053975,
+          "endPrice21": 1462502.821248
+        },
+        {
+          "priceAt": "2026-03-14T01:00:00Z",
+          "endPrice20": 1466205.360036,
+          "endPrice21": 1443990.127308
+        },
+        {
+          "priceAt": "2026-03-14T02:00:00Z",
+          "endPrice20": 1447692.666096,
+          "endPrice21": 1425477.433368
+        },
+        {
+          "priceAt": "2026-03-14T03:00:00Z",
+          "endPrice20": 1429179.972156,
+          "endPrice21": 1406964.739428
+        },
+        {
+          "priceAt": "2026-03-14T04:00:00Z",
+          "endPrice20": 1410667.278216,
+          "endPrice21": 1388452.045488
+        },
+        {
+          "priceAt": "2026-03-14T05:00:00Z",
+          "endPrice20": 1392154.584276,
+          "endPrice21": 1369939.351548
+        },
+        {
+          "priceAt": "2026-03-14T06:00:00Z",
+          "endPrice20": 1373641.890336,
+          "endPrice21": 1351426.657609
+        },
+        {
+          "priceAt": "2026-03-14T07:00:00Z",
+          "endPrice20": 1355129.196397,
+          "endPrice21": 1332913.963669
+        },
+        {
+          "priceAt": "2026-03-14T08:00:00Z",
+          "endPrice20": 1336616.502457,
+          "endPrice21": 1314401.269729
+        },
+        {
+          "priceAt": "2026-03-14T09:00:00Z",
+          "endPrice20": 1318103.808517,
+          "endPrice21": 1295888.575789
+        }
+      ],
+      "fullyMatched": false,
+      "noOverlap": false
+    },
+    {
+      "itemId": 1113313,
+      "itemName": "Guardian Angel Ring",
+      "commonPoints": 3753,
+      "seriesLenA": 3753,
+      "seriesLenB": 3753,
+      "mismatchCount": 765,
+      "mismatchesSample": [
+        {
+          "priceAt": "2026-02-25T19:00:00Z",
+          "endPrice20": 1252079.10391,
+          "endPrice21": 1159332.503621
+        },
+        {
+          "priceAt": "2026-02-25T20:00:00Z",
+          "endPrice20": 1232756.895517,
+          "endPrice21": 1140010.295227
+        },
+        {
+          "priceAt": "2026-02-25T21:00:00Z",
+          "endPrice20": 1213434.687123,
+          "endPrice21": 1120688.086833
+        },
+        {
+          "priceAt": "2026-02-25T22:00:00Z",
+          "endPrice20": 1194112.478729,
+          "endPrice21": 1101365.87844
+        },
+        {
+          "priceAt": "2026-02-25T23:00:00Z",
+          "endPrice20": 1174790.270336,
+          "endPrice21": 1082043.670046
+        },
+        {
+          "priceAt": "2026-02-26T17:00:00Z",
+          "endPrice20": 1341099.278295,
+          "endPrice21": 1315635.367948
+        },
+        {
+          "priceAt": "2026-02-26T18:00:00Z",
+          "endPrice20": 1319879.353006,
+          "endPrice21": 1294415.442658
+        },
+        {
+          "priceAt": "2026-02-26T19:00:00Z",
+          "endPrice20": 1298659.427716,
+          "endPrice21": 1273195.517369
+        },
+        {
+          "priceAt": "2026-02-26T20:00:00Z",
+          "endPrice20": 1277439.502427,
+          "endPrice21": 1251975.592079
+        },
+        {
+          "priceAt": "2026-02-26T21:00:00Z",
+          "endPrice20": 1256219.577137,
+          "endPrice21": 1230755.66679
+        }
+      ],
+      "fullyMatched": false,
+      "noOverlap": false
+    },
+    {
+      "itemId": 1122150,
+      "itemName": "Dominator Pendant",
+      "commonPoints": 3753,
+      "seriesLenA": 3753,
+      "seriesLenB": 3753,
+      "mismatchCount": 862,
+      "mismatchesSample": [
+        {
+          "priceAt": "2026-02-27T14:00:00Z",
+          "endPrice20": 1395113.564446,
+          "endPrice21": 1420402.63208
+        },
+        {
+          "priceAt": "2026-02-27T15:00:00Z",
+          "endPrice20": 1374039.341419,
+          "endPrice21": 1399328.409052
+        },
+        {
+          "priceAt": "2026-02-27T16:00:00Z",
+          "endPrice20": 1352965.118391,
+          "endPrice21": 1378254.186024
+        },
+        {
+          "priceAt": "2026-02-27T17:00:00Z",
+          "endPrice20": 1331890.895363,
+          "endPrice21": 1357179.962996
+        },
+        {
+          "priceAt": "2026-02-27T18:00:00Z",
+          "endPrice20": 1310816.672335,
+          "endPrice21": 1336105.739968
+        },
+        {
+          "priceAt": "2026-02-27T19:00:00Z",
+          "endPrice20": 1289742.449307,
+          "endPrice21": 1315031.51694
+        },
+        {
+          "priceAt": "2026-02-27T20:00:00Z",
+          "endPrice20": 1268668.226279,
+          "endPrice21": 1293957.293913
+        },
+        {
+          "priceAt": "2026-02-27T21:00:00Z",
+          "endPrice20": 1247594.003251,
+          "endPrice21": 1272883.070885
+        },
+        {
+          "priceAt": "2026-02-27T22:00:00Z",
+          "endPrice20": 1226519.780223,
+          "endPrice21": 1251808.847857
+        },
+        {
+          "priceAt": "2026-02-27T23:00:00Z",
+          "endPrice20": 1205445.557195,
+          "endPrice21": 1230734.624829
+        }
+      ],
+      "fullyMatched": false,
+      "noOverlap": false
+    },
+    {
+      "itemId": 1132272,
+      "itemName": "Golden Clover Belt",
+      "commonPoints": 3753,
+      "seriesLenA": 3753,
+      "seriesLenB": 3753,
+      "mismatchCount": 552,
+      "mismatchesSample": [
+        {
+          "priceAt": "2026-02-26T10:00:00Z",
+          "endPrice20": 1104106.610775,
+          "endPrice21": 1085856.914729
+        },
+        {
+          "priceAt": "2026-02-26T11:00:00Z",
+          "endPrice20": 1088898.530736,
+          "endPrice21": 1070648.834691
+        },
+        {
+          "priceAt": "2026-02-26T12:00:00Z",
+          "endPrice20": 1073690.450698,
+          "endPrice21": 1055440.754652
+        },
+        {
+          "priceAt": "2026-02-26T13:00:00Z",
+          "endPrice20": 1058482.37066,
+          "endPrice21": 1040232.674614
+        },
+        {
+          "priceAt": "2026-02-26T14:00:00Z",
+          "endPrice20": 1043274.290622,
+          "endPrice21": 1025024.594576
+        },
+        {
+          "priceAt": "2026-02-26T15:00:00Z",
+          "endPrice20": 1028066.210584,
+          "endPrice21": 1009816.514538
+        },
+        {
+          "priceAt": "2026-02-26T16:00:00Z",
+          "endPrice20": 1012858.130545,
+          "endPrice21": 994608.434499
+        },
+        {
+          "priceAt": "2026-02-26T17:00:00Z",
+          "endPrice20": 997650.050507,
+          "endPrice21": 979400.354461
+        },
+        {
+          "priceAt": "2026-02-26T18:00:00Z",
+          "endPrice20": 982441.970469,
+          "endPrice21": 964192.274423
+        },
+        {
+          "priceAt": "2026-02-26T19:00:00Z",
+          "endPrice20": 967233.890431,
+          "endPrice21": 948984.194385
+        }
+      ],
+      "fullyMatched": false,
+      "noOverlap": false
+    },
+    {
+      "itemId": 1152108,
+      "itemName": "Lionheart Battle Shoulder",
+      "commonPoints": 3753,
+      "seriesLenA": 3753,
+      "seriesLenB": 3753,
+      "mismatchCount": 1377,
+      "mismatchesSample": [
+        {
+          "priceAt": "2026-02-26T23:00:00Z",
+          "endPrice20": 450867.793297,
+          "endPrice21": 434065.266839
+        },
+        {
+          "priceAt": "2026-03-01T04:00:00Z",
+          "endPrice20": 387892.036137,
+          "endPrice21": 326240.321784
+        },
+        {
+          "priceAt": "2026-03-01T05:00:00Z",
+          "endPrice20": 383610.667084,
+          "endPrice21": 321958.952732
+        },
+        {
+          "priceAt": "2026-03-01T06:00:00Z",
+          "endPrice20": 379329.298032,
+          "endPrice21": 317677.583679
+        },
+        {
+          "priceAt": "2026-03-01T07:00:00Z",
+          "endPrice20": 375047.92898,
+          "endPrice21": 313396.214627
+        },
+        {
+          "priceAt": "2026-03-01T08:00:00Z",
+          "endPrice20": 370766.559928,
+          "endPrice21": 309114.845575
+        },
+        {
+          "priceAt": "2026-03-01T09:00:00Z",
+          "endPrice20": 366485.190875,
+          "endPrice21": 304833.476522
+        },
+        {
+          "priceAt": "2026-03-01T10:00:00Z",
+          "endPrice20": 362203.821823,
+          "endPrice21": 300552.10747
+        },
+        {
+          "priceAt": "2026-03-01T11:00:00Z",
+          "endPrice20": 357922.452771,
+          "endPrice21": 296270.738418
+        },
+        {
+          "priceAt": "2026-03-01T12:00:00Z",
+          "endPrice20": 353641.083718,
+          "endPrice21": 291989.369366
+        }
+      ],
+      "fullyMatched": false,
+      "noOverlap": false
+    },
+    {
+      "itemId": 1152176,
+      "itemName": "AbsoLab Mage Shoulder",
+      "commonPoints": 3753,
+      "seriesLenA": 3753,
+      "seriesLenB": 3753,
+      "mismatchCount": 532,
+      "mismatchesSample": [
+        {
+          "priceAt": "2026-03-01T02:00:00Z",
+          "endPrice20": 1062930.313993,
+          "endPrice21": 1046619.362883
+        },
+        {
+          "priceAt": "2026-03-01T03:00:00Z",
+          "endPrice20": 1049337.854734,
+          "endPrice21": 1033026.903625
+        },
+        {
+          "priceAt": "2026-03-01T04:00:00Z",
+          "endPrice20": 1035745.395476,
+          "endPrice21": 1019434.444366
+        },
+        {
+          "priceAt": "2026-03-01T05:00:00Z",
+          "endPrice20": 1022152.936218,
+          "endPrice21": 1005841.985108
+        },
+        {
+          "priceAt": "2026-03-01T06:00:00Z",
+          "endPrice20": 1008560.47696,
+          "endPrice21": 992249.52585
+        },
+        {
+          "priceAt": "2026-03-01T07:00:00Z",
+          "endPrice20": 994968.017702,
+          "endPrice21": 978657.066592
+        },
+        {
+          "priceAt": "2026-03-01T08:00:00Z",
+          "endPrice20": 981375.558443,
+          "endPrice21": 965064.607333
+        },
+        {
+          "priceAt": "2026-03-01T09:00:00Z",
+          "endPrice20": 967783.099185,
+          "endPrice21": 951472.148075
+        },
+        {
+          "priceAt": "2026-03-01T10:00:00Z",
+          "endPrice20": 954190.639927,
+          "endPrice21": 937879.688817
+        },
+        {
+          "priceAt": "2026-03-01T11:00:00Z",
+          "endPrice20": 940598.180669,
+          "endPrice21": 924287.229559
+        }
+      ],
+      "fullyMatched": false,
+      "noOverlap": false
+    },
+    {
+      "itemId": 1212102,
+      "itemName": "Royal Von Leon Glorier",
+      "commonPoints": 0,
+      "seriesLenA": 0,
+      "seriesLenB": 0,
+      "mismatchCount": 0,
+      "mismatchesSample": [],
+      "fullyMatched": false,
+      "noOverlap": true
+    },
+    {
+      "itemId": 1212115,
+      "itemName": "AbsoLab Shining Rod",
+      "commonPoints": 3754,
+      "seriesLenA": 3754,
+      "seriesLenB": 3754,
+      "mismatchCount": 73,
+      "mismatchesSample": [
+        {
+          "priceAt": "2026-06-04T08:00:00Z",
+          "endPrice20": 1334032.974321,
+          "endPrice21": 1290413.367531
+        },
+        {
+          "priceAt": "2026-06-04T09:00:00Z",
+          "endPrice20": 1315858.138158,
+          "endPrice21": 1272238.531368
+        },
+        {
+          "priceAt": "2026-06-04T10:00:00Z",
+          "endPrice20": 1297683.301996,
+          "endPrice21": 1254063.695206
+        },
+        {
+          "priceAt": "2026-06-04T11:00:00Z",
+          "endPrice20": 1279508.465833,
+          "endPrice21": 1235888.859044
+        },
+        {
+          "priceAt": "2026-06-04T12:00:00Z",
+          "endPrice20": 1261333.629671,
+          "endPrice21": 1217714.022881
+        },
+        {
+          "priceAt": "2026-06-04T13:00:00Z",
+          "endPrice20": 1243158.793509,
+          "endPrice21": 1199539.186719
+        },
+        {
+          "priceAt": "2026-06-04T14:00:00Z",
+          "endPrice20": 1224983.957346,
+          "endPrice21": 1181364.350556
+        },
+        {
+          "priceAt": "2026-06-04T15:00:00Z",
+          "endPrice20": 1206809.121184,
+          "endPrice21": 1163189.514394
+        },
+        {
+          "priceAt": "2026-06-04T16:00:00Z",
+          "endPrice20": 1297683.301996,
+          "endPrice21": 1188634.285021
+        },
+        {
+          "priceAt": "2026-06-04T17:00:00Z",
+          "endPrice20": 1279508.465833,
+          "endPrice21": 1170459.448859
+        }
+      ],
+      "fullyMatched": false,
+      "noOverlap": false
+    },
+    {
+      "itemId": 1332225,
+      "itemName": "Fafnir Damascus",
+      "commonPoints": 3754,
+      "seriesLenA": 3754,
+      "seriesLenB": 3754,
+      "mismatchCount": 111,
+      "mismatchesSample": [
+        {
+          "priceAt": "2026-03-07T16:00:00Z",
+          "endPrice20": 1493144.828236,
+          "endPrice21": 1387435.459865
+        },
+        {
+          "priceAt": "2026-03-07T17:00:00Z",
+          "endPrice20": 1471122.043159,
+          "endPrice21": 1365412.674788
+        },
+        {
+          "priceAt": "2026-03-07T18:00:00Z",
+          "endPrice20": 1449099.258082,
+          "endPrice21": 1343389.889711
+        },
+        {
+          "priceAt": "2026-03-07T19:00:00Z",
+          "endPrice20": 1453503.815097,
+          "endPrice21": 1321367.104634
+        },
+        {
+          "priceAt": "2026-03-07T20:00:00Z",
+          "endPrice20": 1431481.03002,
+          "endPrice21": 1299344.319557
+        },
+        {
+          "priceAt": "2026-03-07T21:00:00Z",
+          "endPrice20": 1409458.244943,
+          "endPrice21": 1277321.534479
+        },
+        {
+          "priceAt": "2026-03-07T22:00:00Z",
+          "endPrice20": 1387435.459865,
+          "endPrice21": 1255298.749402
+        },
+        {
+          "priceAt": "2026-03-07T23:00:00Z",
+          "endPrice20": 1365412.674788,
+          "endPrice21": 1233275.964325
+        },
+        {
+          "priceAt": "2026-04-06T11:00:00Z",
+          "endPrice20": 2169870.538524,
+          "endPrice21": 1993935.089454
+        },
+        {
+          "priceAt": "2026-04-06T12:00:00Z",
+          "endPrice20": 2140547.963679,
+          "endPrice21": 1964612.514609
+        }
+      ],
+      "fullyMatched": false,
+      "noOverlap": false
+    },
+    {
+      "itemId": 1382265,
+      "itemName": "Arcane Umbra Staff",
+      "commonPoints": 3504,
+      "seriesLenA": 3504,
+      "seriesLenB": 3504,
+      "mismatchCount": 251,
+      "mismatchesSample": [
+        {
+          "priceAt": "2026-03-25T02:00:00Z",
+          "endPrice20": 5157688.55758,
+          "endPrice21": 4863663.556673
+        },
+        {
+          "priceAt": "2026-03-25T03:00:00Z",
+          "endPrice20": 5096433.349058,
+          "endPrice21": 4802408.348151
+        },
+        {
+          "priceAt": "2026-03-25T04:00:00Z",
+          "endPrice20": 5035178.140536,
+          "endPrice21": 4741153.139628
+        },
+        {
+          "priceAt": "2026-03-25T05:00:00Z",
+          "endPrice20": 4973922.932013,
+          "endPrice21": 4679897.931106
+        },
+        {
+          "priceAt": "2026-03-25T06:00:00Z",
+          "endPrice20": 4912667.723491,
+          "endPrice21": 4618642.722584
+        },
+        {
+          "priceAt": "2026-03-25T07:00:00Z",
+          "endPrice20": 4851412.514969,
+          "endPrice21": 4557387.514061
+        },
+        {
+          "priceAt": "2026-03-25T08:00:00Z",
+          "endPrice20": 4790157.306446,
+          "endPrice21": 4496132.305539
+        },
+        {
+          "priceAt": "2026-03-25T09:00:00Z",
+          "endPrice20": 4728902.097924,
+          "endPrice21": 4434877.097017
+        },
+        {
+          "priceAt": "2026-03-25T10:00:00Z",
+          "endPrice20": 4667646.889402,
+          "endPrice21": 4373621.888494
+        },
+        {
+          "priceAt": "2026-03-25T11:00:00Z",
+          "endPrice20": 4606391.680879,
+          "endPrice21": 4312366.679972
+        }
+      ],
+      "fullyMatched": false,
+      "noOverlap": false
+    }
+  ]
+}

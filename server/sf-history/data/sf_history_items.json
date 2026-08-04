@@ -1,0 +1,371 @@
+{
+  "generatedAt": "2026-08-04T17:44:32.517546+00:00",
+  "sourceRepo": "maplenEnhancebot",
+  "sourceCommit": "a9f534b4d1292fd580780a22344198f46027ae38",
+  "excluded": [
+    {
+      "itemId": 1113282,
+      "reason": "Noble Ifia's Ring -- design directive (DESIGN_SF_COST_HISTORY.md §7, IMPL_PLAN_SH2 §4) excludes this item. Reconstructed rationale: only RANGE_118_TO_127 item in the priority representative set (all 28 kept items are RANGE_128_TO_137+); enters maplenEnhancebot's priority set only via a manual low-band override (EXTRA_PRIORITY_GROUPS, SNAP-1 S0) for gear-sim's own worn-item coverage, not as part of the endgame boss-accessory lineup this chart targets."
+    },
+    {
+      "itemId": 1122254,
+      "reason": "Mechanator Pendant -- design directive (DESIGN_SF_COST_HISTORY.md §7, IMPL_PLAN_SH2 §4) excludes this item. Reconstructed rationale: same as 1113282 (Noble Ifia's Ring) -- only RANGE_118_TO_127 item besides it in the priority representative set; manual low-band override in maplenEnhancebot, not part of the RANGE_128_TO_137+ endgame lineup."
+    }
+  ],
+  "items": [
+    {
+      "itemId": 1003720,
+      "itemName": "Chaos Von Bon Helmet",
+      "aliasItemIds": [
+        1003719,
+        1003720
+      ]
+    },
+    {
+      "itemId": 1003797,
+      "itemName": "Royal Warrior Helm",
+      "aliasItemIds": [
+        1003797,
+        1003798,
+        1003799,
+        1003800,
+        1003801
+      ]
+    },
+    {
+      "itemId": 1012757,
+      "itemName": "Twilight Mark",
+      "aliasItemIds": [
+        1012757
+      ]
+    },
+    {
+      "itemId": 1022232,
+      "itemName": "Black Bean Mark",
+      "aliasItemIds": [
+        1022232
+      ]
+    },
+    {
+      "itemId": 1022277,
+      "itemName": "Papulatus Mark",
+      "aliasItemIds": [
+        1022277
+      ]
+    },
+    {
+      "itemId": 1032241,
+      "itemName": "Dea Sidus Earring",
+      "aliasItemIds": [
+        1032136,
+        1032241
+      ]
+    },
+    {
+      "itemId": 1042257,
+      "itemName": "Eagle Eye Assassin Shirt",
+      "aliasItemIds": [
+        1042254,
+        1042255,
+        1042256,
+        1042257,
+        1042258,
+        1062165,
+        1062166,
+        1062167,
+        1062168,
+        1062169
+      ]
+    },
+    {
+      "itemId": 1072485,
+      "itemName": "Lionheart Battle Boots",
+      "aliasItemIds": [
+        1072485,
+        1072486,
+        1072487,
+        1072488,
+        1072489
+      ]
+    },
+    {
+      "itemId": 1072972,
+      "itemName": "Royal Von Leon Warrior Boots",
+      "aliasItemIds": [
+        1072972,
+        1072973,
+        1072974,
+        1072975,
+        1072976
+      ]
+    },
+    {
+      "itemId": 1073035,
+      "itemName": "AbsoLab Pirate Shoes",
+      "aliasItemIds": [
+        1073030,
+        1073032,
+        1073033,
+        1073034,
+        1073035
+      ]
+    },
+    {
+      "itemId": 1073160,
+      "itemName": "Arcane Umbra Archer Shoes",
+      "aliasItemIds": [
+        1073158,
+        1073159,
+        1073160,
+        1073161,
+        1073162
+      ]
+    },
+    {
+      "itemId": 1082297,
+      "itemName": "Falcon Wing Sentinel Gloves",
+      "aliasItemIds": [
+        1082295,
+        1082296,
+        1082297,
+        1082298,
+        1082299
+      ]
+    },
+    {
+      "itemId": 1082613,
+      "itemName": "Royal Von Leon Warrior Hands",
+      "aliasItemIds": [
+        1082613,
+        1082614,
+        1082615,
+        1082616,
+        1082617
+      ]
+    },
+    {
+      "itemId": 1082637,
+      "itemName": "AbsoLab Mage Gloves",
+      "aliasItemIds": [
+        1082636,
+        1082637,
+        1082638,
+        1082639,
+        1082640
+      ]
+    },
+    {
+      "itemId": 1082698,
+      "itemName": "Arcane Umbra Thief Gloves",
+      "aliasItemIds": [
+        1082695,
+        1082696,
+        1082697,
+        1082698,
+        1082699
+      ]
+    },
+    {
+      "itemId": 1102276,
+      "itemName": "Dragon Tail Mage Cape",
+      "aliasItemIds": [
+        1102275,
+        1102276,
+        1102277,
+        1102278,
+        1102279
+      ]
+    },
+    {
+      "itemId": 1102713,
+      "itemName": "Royal Von Leon Warrior Cape",
+      "aliasItemIds": [
+        1102713,
+        1102714,
+        1102715,
+        1102716,
+        1102717
+      ]
+    },
+    {
+      "itemId": 1102775,
+      "itemName": "AbsoLab Knight Cape",
+      "aliasItemIds": [
+        1102775,
+        1102794,
+        1102795,
+        1102796,
+        1102797
+      ]
+    },
+    {
+      "itemId": 1102940,
+      "itemName": "Arcane Umbra Knight Cape",
+      "aliasItemIds": [
+        1102940,
+        1102941,
+        1102942,
+        1102943,
+        1102944
+      ]
+    },
+    {
+      "itemId": 1113313,
+      "itemName": "Guardian Angel Ring",
+      "aliasItemIds": [
+        1113313
+      ]
+    },
+    {
+      "itemId": 1122150,
+      "itemName": "Dominator Pendant",
+      "aliasItemIds": [
+        1122150
+      ]
+    },
+    {
+      "itemId": 1132272,
+      "itemName": "Golden Clover Belt",
+      "aliasItemIds": [
+        1132272
+      ]
+    },
+    {
+      "itemId": 1152108,
+      "itemName": "Lionheart Battle Shoulder",
+      "aliasItemIds": [
+        1152108,
+        1152110,
+        1152111,
+        1152112,
+        1152113
+      ]
+    },
+    {
+      "itemId": 1152176,
+      "itemName": "AbsoLab Mage Shoulder",
+      "aliasItemIds": [
+        1152174,
+        1152176,
+        1152177,
+        1152178,
+        1152179
+      ]
+    },
+    {
+      "itemId": 1212102,
+      "itemName": "Royal Von Leon Glorier",
+      "aliasItemIds": [
+        1212102,
+        1213013,
+        1302316,
+        1312186,
+        1322237,
+        1332261,
+        1362122,
+        1372208,
+        1382246,
+        1402237,
+        1412179,
+        1422186,
+        1432201,
+        1442255,
+        1452239,
+        1462226,
+        1472248,
+        1482203,
+        1492213,
+        1522125,
+        1532131,
+        1592013
+      ]
+    },
+    {
+      "itemId": 1212115,
+      "itemName": "AbsoLab Shining Rod",
+      "aliasItemIds": [
+        1212115,
+        1213017,
+        1302333,
+        1312199,
+        1322250,
+        1332274,
+        1342101,
+        1362135,
+        1372222,
+        1382259,
+        1402251,
+        1412177,
+        1422184,
+        1432214,
+        1442268,
+        1452252,
+        1462239,
+        1472261,
+        1482216,
+        1492231,
+        1522138,
+        1532144,
+        1592019
+      ]
+    },
+    {
+      "itemId": 1332225,
+      "itemName": "Fafnir Damascus",
+      "aliasItemIds": [
+        1212063,
+        1213016,
+        1302275,
+        1312153,
+        1322203,
+        1332225,
+        1342082,
+        1362090,
+        1372177,
+        1382208,
+        1402196,
+        1412135,
+        1422140,
+        1432167,
+        1442223,
+        1452205,
+        1462193,
+        1472214,
+        1482168,
+        1492179,
+        1522094,
+        1532098,
+        1592018
+      ]
+    },
+    {
+      "itemId": 1382265,
+      "itemName": "Arcane Umbra Staff",
+      "aliasItemIds": [
+        1212120,
+        1213018,
+        1302343,
+        1312203,
+        1322255,
+        1332279,
+        1342104,
+        1362140,
+        1372228,
+        1382265,
+        1402259,
+        1412181,
+        1422189,
+        1432218,
+        1442274,
+        1452257,
+        1462243,
+        1472265,
+        1482221,
+        1492235,
+        1522143,
+        1532150,
+        1592020
+      ]
+    }
+  ]
+}
