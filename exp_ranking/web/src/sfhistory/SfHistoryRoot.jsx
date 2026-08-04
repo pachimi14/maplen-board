@@ -2,15 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { SiteHeader } from "../components/BoardHeader.jsx";
 import { useTranslation } from "../i18n/I18nContext.jsx";
 import { sfHistorySource } from "./integrations/sfHistorySource.js";
-import {
-  buildExpectedSeries,
-  computeCurrentExpected,
-  computeStats,
-  currentPercentile,
-  defaultPresetForMaxStar,
-  isValidStarRange,
-  sliceByPeriod,
-} from "./domain/series.js";
+import { defaultPresetForMaxStar, isValidStarRange } from "./domain/series.js";
+import { buildScreenModel, isRangeReady } from "./domain/viewModel.js";
 import EquipmentSelector from "./components/EquipmentSelector.jsx";
 import StarRangeSelector from "./components/StarRangeSelector.jsx";
 import PeriodTabs from "./components/PeriodTabs.jsx";
@@ -65,9 +58,15 @@ export default function SfHistoryRoot() {
   // design §7.1: if switching equipment makes the current range invalid
   // for the new item's maxStar (e.g. 19->21 on a maxStar=20 device), clamp
   // to a valid default instead of letting the chart render all-null.
+  //
+  // Uses `isRangeReady` (not a bare `!range` truthiness check) so that a
+  // malformed-but-truthy `range` (the exact shape of the crash this effect
+  // now also guards against -- see domain/viewModel.js's header) is
+  // re-clamped here too, rather than only being caught downstream in
+  // buildScreenModel.
   useEffect(() => {
-    if (!selectedItem || !range) return;
-    if (!isValidStarRange(range.startStar, range.targetStar, selectedItem.maxStar)) {
+    if (!selectedItem) return;
+    if (!isRangeReady(range) || !isValidStarRange(range.startStar, range.targetStar, selectedItem.maxStar)) {
       setRange(defaultPresetForMaxStar(selectedItem.maxStar));
     }
   }, [selectedItem, range]);
@@ -106,25 +105,19 @@ export default function SfHistoryRoot() {
     };
   }, [selectedItemId]);
 
-  const fullSeries = useMemo(() => {
-    if (!range || pricesState.status !== "ready") return [];
-    return buildExpectedSeries(pricesState.points, range.startStar, range.targetStar);
-  }, [pricesState.points, pricesState.status, range]);
-
-  const periodSeries = useMemo(() => sliceByPeriod(fullSeries, period), [fullSeries, period]);
-
-  // design §6.1: stats are built only from `periodSeries` (confirmed 4h
-  // bars) -- the live current value below is never appended to this array.
-  const stats = useMemo(() => computeStats(periodSeries), [periodSeries]);
-
-  const currentExpected = useMemo(() => {
-    if (!range || latestState.status !== "ready") return null;
-    return computeCurrentExpected(latestState.prices, range.startStar, range.targetStar);
-  }, [latestState.prices, latestState.status, range]);
-
-  const percentile = useMemo(
-    () => currentPercentile(periodSeries, currentExpected),
-    [periodSeries, currentExpected],
+  // Post-review fix (統括 P0): all derived-from-async-state computation
+  // goes through this single pure function (domain/viewModel.js) instead
+  // of being inlined here across several useMemos. That function is the
+  // one domain/viewModel.test.js exercises directly (including the exact
+  // "range is truthy but malformed" / "one async piece resolved before
+  // another" scenarios that crashed this screen) -- keeping the gating
+  // logic in one place, called from here, is what makes those tests a
+  // real regression guard on production code rather than a parallel
+  // reimplementation that could silently drift from what SfHistoryRoot
+  // actually does.
+  const { periodSeries, stats, currentExpected, percentile } = useMemo(
+    () => buildScreenModel({ range, period, pricesState, latestState }),
+    [range, period, pricesState, latestState],
   );
 
   return (
@@ -140,7 +133,7 @@ export default function SfHistoryRoot() {
           <p className="text-sm text-slate-400">{t("sfhistory.loading")}</p>
         ) : equipmentState.status === "error" ? (
           <p className="text-sm text-amber-400">{t("sfhistory.equipment.loadError")}</p>
-        ) : selectedItem && range ? (
+        ) : selectedItem && isRangeReady(range) ? (
           <>
             <div className="flex flex-wrap items-end gap-6">
               <EquipmentSelector
