@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-08-04T17:44:32.517546+00:00",
+  "generatedAt": "2026-08-04T18:30:54.510806+00:00",
   "sourceRepo": "maplenEnhancebot",
   "sourceCommit": "a9f534b4d1292fd580780a22344198f46027ae38",
   "excluded": [
     {
       "itemId": 1113282,
-      "reason": "Noble Ifia's Ring -- design directive (DESIGN_SF_COST_HISTORY.md §7, IMPL_PLAN_SH2 §4) excludes this item. Reconstructed rationale: only RANGE_118_TO_127 item in the priority representative set (all 28 kept items are RANGE_128_TO_137+); enters maplenEnhancebot's priority set only via a manual low-band override (EXTRA_PRIORITY_GROUPS, SNAP-1 S0) for gear-sim's own worn-item coverage, not as part of the endgame boss-accessory lineup this chart targets."
+      "reason": "Noble Ifia's Ring -- one of the two items the user explicitly named for exclusion in the original 28-item draft list (design directive, DESIGN_SF_COST_HISTORY.md §7 / IMPL_PLAN_SH3 §4(m)). Corroborating context (not the reason): this is the only RANGE_118_TO_127 item in maplenEnhancebot's priority representative set (all 28 kept items are RANGE_128_TO_137+); it enters maplenEnhancebot's priority set only via a manual low-band override (EXTRA_PRIORITY_GROUPS, SNAP-1 S0) for gear-sim's own worn-item coverage, not as part of the endgame boss-accessory lineup this chart targets."
     },
     {
       "itemId": 1122254,
-      "reason": "Mechanator Pendant -- design directive (DESIGN_SF_COST_HISTORY.md §7, IMPL_PLAN_SH2 §4) excludes this item. Reconstructed rationale: same as 1113282 (Noble Ifia's Ring) -- only RANGE_118_TO_127 item besides it in the priority representative set; manual low-band override in maplenEnhancebot, not part of the RANGE_128_TO_137+ endgame lineup."
+      "reason": "Mechanator Pendant -- one of the two items the user explicitly named for exclusion in the original 28-item draft list (design directive, DESIGN_SF_COST_HISTORY.md §7 / IMPL_PLAN_SH3 §4(m)). Corroborating context (not the reason): same level-band outlier evidence as 1113282 (Noble Ifia's Ring) -- only RANGE_118_TO_127 item besides it in the priority representative set; manual low-band override in maplenEnhancebot, not part of the RANGE_128_TO_137+ endgame lineup."
     }
   ],
   "items": [
@@ -19,7 +19,8 @@
       "aliasItemIds": [
         1003719,
         1003720
-      ]
+      ],
+      "maxStar": 22
     },
     {
       "itemId": 1003797,
@@ -30,28 +31,32 @@
         1003799,
         1003800,
         1003801
-      ]
+      ],
+      "maxStar": 22
     },
     {
       "itemId": 1012757,
       "itemName": "Twilight Mark",
       "aliasItemIds": [
         1012757
-      ]
+      ],
+      "maxStar": 22
     },
     {
       "itemId": 1022232,
       "itemName": "Black Bean Mark",
       "aliasItemIds": [
         1022232
-      ]
+      ],
+      "maxStar": 20
     },
     {
       "itemId": 1022277,
       "itemName": "Papulatus Mark",
       "aliasItemIds": [
         1022277
-      ]
+      ],
+      "maxStar": 22
     },
     {
       "itemId": 1032241,
@@ -59,7 +64,8 @@
       "aliasItemIds": [
         1032136,
         1032241
-      ]
+      ],
+      "maxStar": 20
     },
     {
       "itemId": 1042257,
@@ -75,7 +81,8 @@
         1062167,
         1062168,
         1062169
-      ]
+      ],
+      "maxStar": 22
     },
     {
       "itemId": 1072485,
@@ -86,7 +93,8 @@
         1072487,
         1072488,
         1072489
-      ]
+      ],
+      "maxStar": 22
     },
     {
       "itemId": 1072972,
@@ -97,7 +105,8 @@
         1072974,
         1072975,
         1072976
-      ]
+      ],
+      "maxStar": 20
     },
     {
       "itemId": 1073035,
@@ -108,7 +117,8 @@
         1073033,
         1073034,
         1073035
-      ]
+      ],
+      "maxStar": 22
     },
     {
       "itemId": 1073160,
@@ -119,7 +129,8 @@
         1073160,
         1073161,
         1073162
-      ]
+      ],
+      "maxStar": 22
     },
     {
       "itemId": 1082297,
@@ -130,7 +141,8 @@
         1082297,
         1082298,
         1082299
-      ]
+      ],
+      "maxStar": 22
     },
     {
       "itemId": 1082613,
@@ -141,7 +153,8 @@
         1082615,
         1082616,
         1082617
-      ]
+      ],
+      "maxStar": 20
     },
     {
       "itemId": 1082637,
@@ -152,7 +165,8 @@
         1082638,
         1082639,
         1082640
-      ]
+      ],
+      "maxStar": 22
     },
     {
       "itemId": 1082698,
@@ -163,7 +177,8 @@
         1082697,
         1082698,
         1082699
-      ]
+      ],
+      "maxStar": 22
     },
     {
       "itemId": 1102276,
@@ -174,7 +189,8 @@
         1102277,
         1102278,
         1102279
-      ]
+      ],
+      "maxStar": 22
     },
     {
       "itemId": 1102713,
@@ -185,7 +201,8 @@
         1102715,
         1102716,
         1102717
-      ]
+      ],
+      "maxStar": 20
     },
     {
       "itemId": 1102775,
@@ -196,7 +213,8 @@
         1102795,
         1102796,
         1102797
-      ]
+      ],
+      "maxStar": 22
     },
     {
       "itemId": 1102940,
@@ -207,28 +225,32 @@
         1102942,
         1102943,
         1102944
-      ]
+      ],
+      "maxStar": 22
     },
     {
       "itemId": 1113313,
       "itemName": "Guardian Angel Ring",
       "aliasItemIds": [
         1113313
-      ]
+      ],
+      "maxStar": 22
     },
     {
       "itemId": 1122150,
       "itemName": "Dominator Pendant",
       "aliasItemIds": [
         1122150
-      ]
+      ],
+      "maxStar": 22
     },
     {
       "itemId": 1132272,
       "itemName": "Golden Clover Belt",
       "aliasItemIds": [
         1132272
-      ]
+      ],
+      "maxStar": 22
     },
     {
       "itemId": 1152108,
@@ -239,7 +261,8 @@
         1152111,
         1152112,
         1152113
-      ]
+      ],
+      "maxStar": 22
     },
     {
       "itemId": 1152176,
@@ -250,7 +273,8 @@
         1152177,
         1152178,
         1152179
-      ]
+      ],
+      "maxStar": 22
     },
     {
       "itemId": 1212102,
@@ -278,7 +302,8 @@
         1522125,
         1532131,
         1592013
-      ]
+      ],
+      "maxStar": 20
     },
     {
       "itemId": 1212115,
@@ -307,7 +332,8 @@
         1522138,
         1532144,
         1592019
-      ]
+      ],
+      "maxStar": 22
     },
     {
       "itemId": 1332225,
@@ -336,7 +362,8 @@
         1522094,
         1532098,
         1592018
-      ]
+      ],
+      "maxStar": 22
     },
     {
       "itemId": 1382265,
@@ -365,7 +392,8 @@
         1522143,
         1532150,
         1592020
-      ]
+      ],
+      "maxStar": 22
     }
   ]
 }
