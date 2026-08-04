@@ -398,5 +398,65 @@
     "postText": "{{name}} Lv.{{level}} {{percent}}% | Lulumi Tools",
     "main7d": "Ganancia 7 d?as",
     "main30d": "Ganancia 30 d?as"
+  },
+  "sfhistory": {
+    "pageTitle": "Historial de coste de mejora StarForce",
+    "pageDescription": "Elige un equipo y un rango de estrellas para ver cómo ha evolucionado su coste esperado de mejora y en qué nivel se sitúa el valor actual frente a ese historial.",
+    "loading": "Cargando...",
+    "equipment": {
+      "label": "Equipo",
+      "searchPlaceholder": "Buscar por nombre de objeto o ID",
+      "noMatch": "No se encontró ningún equipo coincidente",
+      "maxStarBadge": "hasta ☆{{maxStar}}",
+      "loadError": "No se pudo cargar la lista de equipo. Vuelve a intentarlo más tarde."
+    },
+    "starRange": {
+      "startLabel": "Inicio ☆",
+      "targetLabel": "Objetivo ☆",
+      "presetsLabel": "Preajustes",
+      "presetDisabledHint": "Este objeto solo tiene datos hasta ☆{{maxStar}}"
+    },
+    "period": {
+      "label": "Período",
+      "d7": "7D",
+      "d30": "30D",
+      "d90": "90D",
+      "d150": "150D"
+    },
+    "summary": {
+      "current": "Actual",
+      "currentUnavailable": "Precio actual no disponible",
+      "currentUnavailableHint": "No se pudo obtener el precio de origen. No se sustituye por el último valor histórico.",
+      "periodAverage": "Media del período",
+      "periodHigh": "Máximo del período",
+      "periodLow": "Mínimo del período",
+      "currentPosition": "Posición actual",
+      "percentileValue": "Percentil {{percentile}} de este período",
+      "noConfirmedData": "No hay datos confirmados en este período"
+    },
+    "chart": {
+      "legendExpected": "Esperado",
+      "legendAverage": "Media del período",
+      "legendHigh": "Máximo del período",
+      "legendLow": "Mínimo del período",
+      "gapNote": "La línea se interrumpe donde faltan datos (no se muestran valores estimados).",
+      "tooltipDeltaFromPrev": "vs anterior {{delta}}",
+      "tooltipDeltaFromAverage": "vs media del período {{delta}}",
+      "tooltipBucketNote": "Barra de 4 horas (valor de cierre del intervalo)",
+      "loadError": "No se pudo cargar el historial de precios. Vuelve a intentarlo más tarde.",
+      "empty": "No hay datos para mostrar"
+    },
+    "conditions": {
+      "title": "Condiciones de cálculo",
+      "starCatch": "Star Catch activado",
+      "chanceTime": "Chance Time activado",
+      "safeguard": "Protección desactivada",
+      "eventAdjustment": "Sin ajuste de eventos",
+      "metric": "Métrica = Valor esperado",
+      "interval": "Intervalo = 4 horas",
+      "historyUpdatedAt": "Última actualización del historial: {{date}}",
+      "currentFetchedAt": "Hora de obtención del precio actual: {{date}}",
+      "policyVersion": "Política de cálculo: {{version}}"
+    }
   }
 }

@@ -398,5 +398,65 @@
     "postText": "{{name}} Lv.{{level}} {{percent}}% | Lulumi Tools",
     "main7d": "7-day gain",
     "main30d": "30-day gain"
+  },
+  "sfhistory": {
+    "pageTitle": "StarForce Enhancement Cost History",
+    "pageDescription": "Pick a piece of gear and a star range to see how its Expected enhancement cost has moved, and where the current value sits against that history.",
+    "loading": "Loading...",
+    "equipment": {
+      "label": "Equipment",
+      "searchPlaceholder": "Search by item name or item ID",
+      "noMatch": "No matching equipment found",
+      "maxStarBadge": "up to ☆{{maxStar}}",
+      "loadError": "Could not load the equipment list. Please reload later."
+    },
+    "starRange": {
+      "startLabel": "Start ☆",
+      "targetLabel": "Target ☆",
+      "presetsLabel": "Presets",
+      "presetDisabledHint": "This item only has data up to ☆{{maxStar}}"
+    },
+    "period": {
+      "label": "Period",
+      "d7": "7D",
+      "d30": "30D",
+      "d90": "90D",
+      "d150": "150D"
+    },
+    "summary": {
+      "current": "Current",
+      "currentUnavailable": "Current price unavailable",
+      "currentUnavailableHint": "Fetching the upstream price failed. We do not substitute the last historical value for it.",
+      "periodAverage": "Period Average",
+      "periodHigh": "Period High",
+      "periodLow": "Period Low",
+      "currentPosition": "Current Position",
+      "percentileValue": "{{percentile}} percentile in this period",
+      "noConfirmedData": "No confirmed data in this period"
+    },
+    "chart": {
+      "legendExpected": "Expected",
+      "legendAverage": "Period average",
+      "legendHigh": "Period high",
+      "legendLow": "Period low",
+      "gapNote": "The line breaks where data is missing (no guessed values are shown).",
+      "tooltipDeltaFromPrev": "vs previous {{delta}}",
+      "tooltipDeltaFromAverage": "vs period average {{delta}}",
+      "tooltipBucketNote": "4-hour bar (bucket-end value)",
+      "loadError": "Could not load the price history. Please reload later.",
+      "empty": "No data to display"
+    },
+    "conditions": {
+      "title": "Calculation Conditions",
+      "starCatch": "Star Catch ON",
+      "chanceTime": "Chance Time ON",
+      "safeguard": "Safeguard OFF",
+      "eventAdjustment": "No event adjustment",
+      "metric": "Metric = Expected value",
+      "interval": "Interval = 4 hours",
+      "historyUpdatedAt": "History last updated: {{date}}",
+      "currentFetchedAt": "Current price fetched: {{date}}",
+      "policyVersion": "Calculation policy: {{version}}"
+    }
   }
 }

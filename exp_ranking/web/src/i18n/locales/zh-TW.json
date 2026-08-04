@@ -398,5 +398,65 @@
     "postText": "{{name}} Lv.{{level}} {{percent}}% | Lulumi Tools",
     "main7d": "7???",
     "main30d": "30???"
+  },
+  "sfhistory": {
+    "pageTitle": "星力強化費用 歷史紀錄",
+    "pageDescription": "選擇裝備與強化星數範圍，即可查看期望強化費用的走勢，以及目前價格在這段歷史中處於什麼水準。",
+    "loading": "載入中...",
+    "equipment": {
+      "label": "裝備",
+      "searchPlaceholder": "以裝備名稱或 Item ID 搜尋",
+      "noMatch": "找不到符合的裝備",
+      "maxStarBadge": "最高 ☆{{maxStar}}",
+      "loadError": "無法取得裝備清單，請稍後再重新整理。"
+    },
+    "starRange": {
+      "startLabel": "起始 ☆",
+      "targetLabel": "目標 ☆",
+      "presetsLabel": "預設範圍",
+      "presetDisabledHint": "此裝備僅有到 ☆{{maxStar}} 的資料"
+    },
+    "period": {
+      "label": "期間",
+      "d7": "7天",
+      "d30": "30天",
+      "d90": "90天",
+      "d150": "150天"
+    },
+    "summary": {
+      "current": "目前價格",
+      "currentUnavailable": "無法取得目前價格",
+      "currentUnavailableHint": "取得來源價格失敗。不會以最後一筆歷史資料代替。",
+      "periodAverage": "期間平均",
+      "periodHigh": "期間高點",
+      "periodLow": "期間低點",
+      "currentPosition": "目前位置",
+      "percentileValue": "此期間的第 {{percentile}} 百分位",
+      "noConfirmedData": "此期間沒有已確認的資料"
+    },
+    "chart": {
+      "legendExpected": "期望值",
+      "legendAverage": "期間平均",
+      "legendHigh": "期間高點",
+      "legendLow": "期間低點",
+      "gapNote": "資料缺漏的區間會呈現斷線（不會顯示推測值）。",
+      "tooltipDeltaFromPrev": "較前次 {{delta}}",
+      "tooltipDeltaFromAverage": "與期間平均相差 {{delta}}",
+      "tooltipBucketNote": "4 小時 K 線（區間收盤值）",
+      "loadError": "無法取得價格歷史資料，請稍後再重新整理。",
+      "empty": "沒有可顯示的資料"
+    },
+    "conditions": {
+      "title": "計算條件",
+      "starCatch": "星力捕捉 開啟",
+      "chanceTime": "機會時間 開啟",
+      "safeguard": "防爆 關閉",
+      "eventAdjustment": "未套用活動加成",
+      "metric": "指標 = 期望值",
+      "interval": "K 線週期 = 4 小時",
+      "historyUpdatedAt": "歷史資料最後更新：{{date}}",
+      "currentFetchedAt": "目前價格取得時間：{{date}}",
+      "policyVersion": "計算策略：{{version}}"
+    }
   }
 }

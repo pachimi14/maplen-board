@@ -398,5 +398,65 @@
     "postText": "{{name}} Lv.{{level}} {{percent}}% | Lulumi Tools",
     "main7d": "7日増加量",
     "main30d": "30日増加量"
+  },
+  "sfhistory": {
+    "pageTitle": "スターフォース強化費用 履歴",
+    "pageDescription": "装備と強化範囲を選ぶと、期待強化費用の推移と、現在値が過去のどの水準かを確認できます。",
+    "loading": "読み込み中...",
+    "equipment": {
+      "label": "装備",
+      "searchPlaceholder": "装備名・アイテムIDで検索",
+      "noMatch": "該当する装備が見つかりません",
+      "maxStarBadge": "☆{{maxStar}}まで",
+      "loadError": "装備一覧を取得できませんでした。時間をおいて再読み込みしてください。"
+    },
+    "starRange": {
+      "startLabel": "開始 ☆",
+      "targetLabel": "目標 ☆",
+      "presetsLabel": "プリセット",
+      "presetDisabledHint": "この装備は☆{{maxStar}}までのため選択できません"
+    },
+    "period": {
+      "label": "期間",
+      "d7": "7日",
+      "d30": "30日",
+      "d90": "90日",
+      "d150": "150日"
+    },
+    "summary": {
+      "current": "現在値",
+      "currentUnavailable": "現在価格を取得できません",
+      "currentUnavailableHint": "上流の価格取得に失敗しました。履歴の最終値で代用はしません。",
+      "periodAverage": "期間平均",
+      "periodHigh": "期間高値",
+      "periodLow": "期間安値",
+      "currentPosition": "現在の位置",
+      "percentileValue": "この期間の{{percentile}}パーセンタイル",
+      "noConfirmedData": "この期間に確定データがありません"
+    },
+    "chart": {
+      "legendExpected": "期待値",
+      "legendAverage": "期間平均",
+      "legendHigh": "期間高値",
+      "legendLow": "期間安値",
+      "gapNote": "データが欠けている期間は線が途切れます（推測値は表示しません）",
+      "tooltipDeltaFromPrev": "前回比 {{delta}}",
+      "tooltipDeltaFromAverage": "期間平均との差 {{delta}}",
+      "tooltipBucketNote": "4時間足（区間終値）",
+      "loadError": "価格履歴を取得できませんでした。時間をおいて再読み込みしてください。",
+      "empty": "表示できるデータがありません"
+    },
+    "conditions": {
+      "title": "計算条件",
+      "starCatch": "スターキャッチ ON",
+      "chanceTime": "チャンスタイム ON",
+      "safeguard": "破壊防止 OFF",
+      "eventAdjustment": "イベント補正なし",
+      "metric": "指標 = 期待値",
+      "interval": "足 = 4時間",
+      "historyUpdatedAt": "履歴の最終更新: {{date}}",
+      "currentFetchedAt": "現在価格の取得時刻: {{date}}",
+      "policyVersion": "計算ポリシー: {{version}}"
+    }
   }
 }
