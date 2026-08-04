@@ -216,14 +216,28 @@ describe("maxStar-bounded star selection (design §7.1: the most safety-critical
     expect(STAR_RANGE_PRESETS.every((p) => isPresetEnabled(p, 22))).toBe(true);
   });
 
-  it("defaultPresetForMaxStar never picks a preset above maxStar", () => {
-    expect(defaultPresetForMaxStar(20)).toEqual({ from: 0, to: 17 });
-    expect(defaultPresetForMaxStar(22)).toEqual({ from: 0, to: 22 });
+  it("defaultPresetForMaxStar returns a `{ startStar, targetStar }` range object (the SAME shape `range` state uses everywhere else), never picking a span above maxStar", () => {
+    // Post-review fix (統括 P0, 2026-08-05): this function's whole purpose
+    // is "give me a default `range`" -- returning the raw preset's
+    // `{ from, to }` shape instead was the root cause of a production
+    // crash (SfHistoryRoot.jsx passed `range.startStar`/`range.targetStar`,
+    // which were `undefined` on a `{ from, to }` object, straight into
+    // `computeCurrentExpected`). `{ from, to }` is intentionally NOT
+    // accepted here, even though it would satisfy `.toMatchObject` -- this
+    // must be the exact, only shape.
+    expect(defaultPresetForMaxStar(20)).toEqual({ startStar: 0, targetStar: 17 });
+    expect(defaultPresetForMaxStar(22)).toEqual({ startStar: 0, targetStar: 22 });
+    expect(defaultPresetForMaxStar(20)).not.toHaveProperty("from");
+    expect(defaultPresetForMaxStar(20)).not.toHaveProperty("to");
   });
 
   it("defaultPresetForMaxStar(20)'s pick is itself a valid range for that device", () => {
-    const preset = defaultPresetForMaxStar(20);
-    expect(isValidStarRange(preset.from, preset.to, 20)).toBe(true);
+    const range = defaultPresetForMaxStar(20);
+    expect(isValidStarRange(range.startStar, range.targetStar, 20)).toBe(true);
+  });
+
+  it("returns null when no preset fits (maxStar below every preset's `to`)", () => {
+    expect(defaultPresetForMaxStar(0)).toBeNull();
   });
 });
 

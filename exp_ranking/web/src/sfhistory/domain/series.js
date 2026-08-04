@@ -58,14 +58,23 @@ export function startStarOptions(maxStar) {
   return Array.from({ length: maxStar }, (_, i) => i); // 0..maxStar-1
 }
 
-/** Deterministic default range for a device: the *widest* enabled preset
- * (by span size). This is a mechanical tie-break, not a recommendation
- * (design §11 forbids recommending a course of action) -- it only decides
- * which valid preset the screen opens with. */
+/**
+ * Deterministic default *range* for a device: the *widest* enabled preset
+ * (by span size), converted to the `{ startStar, targetStar }` shape
+ * `range` state uses everywhere in SfHistoryRoot (NOT the `{ from, to }`
+ * shape `STAR_RANGE_PRESETS` entries use -- returning that raw shape here
+ * was the root cause of a production crash: `range.startStar` /
+ * `range.targetStar` were `undefined` on a `{ from, to }` object, which is
+ * still truthy, so a `!range` guard did not catch it before the value
+ * reached `computeCurrentExpected`). This is a mechanical tie-break, not a
+ * recommendation (design §11 forbids recommending a course of action) --
+ * it only decides which valid range the screen opens with.
+ */
 export function defaultPresetForMaxStar(maxStar) {
   const enabled = STAR_RANGE_PRESETS.filter((preset) => isPresetEnabled(preset, maxStar));
   if (!enabled.length) return null;
-  return enabled.reduce((best, preset) => ((preset.to - preset.from > best.to - best.from) ? preset : best));
+  const widest = enabled.reduce((best, preset) => ((preset.to - preset.from > best.to - best.from) ? preset : best));
+  return { startStar: widest.from, targetStar: widest.to };
 }
 
 /**
