@@ -398,5 +398,65 @@
     "postText": "{{name}} Lv.{{level}} {{percent}}% | Lulumi Tools",
     "main7d": "T?ng 7 ng?y",
     "main30d": "T?ng 30 ng?y"
+  },
+  "sfhistory": {
+    "pageTitle": "Lịch sử chi phí nâng cấp StarForce",
+    "pageDescription": "Chọn một trang bị và khoảng sao để xem chi phí nâng cấp kỳ vọng đã thay đổi thế nào, và giá trị hiện tại đang ở mức nào so với lịch sử đó.",
+    "loading": "Đang tải...",
+    "equipment": {
+      "label": "Trang bị",
+      "searchPlaceholder": "Tìm theo tên vật phẩm hoặc Item ID",
+      "noMatch": "Không tìm thấy trang bị phù hợp",
+      "maxStarBadge": "tối đa ☆{{maxStar}}",
+      "loadError": "Không thể tải danh sách trang bị. Vui lòng tải lại sau."
+    },
+    "starRange": {
+      "startLabel": "Bắt đầu ☆",
+      "targetLabel": "Mục tiêu ☆",
+      "presetsLabel": "Mẫu có sẵn",
+      "presetDisabledHint": "Vật phẩm này chỉ có dữ liệu đến ☆{{maxStar}}"
+    },
+    "period": {
+      "label": "Khoảng thời gian",
+      "d7": "7 ngày",
+      "d30": "30 ngày",
+      "d90": "90 ngày",
+      "d150": "150 ngày"
+    },
+    "summary": {
+      "current": "Hiện tại",
+      "currentUnavailable": "Không lấy được giá hiện tại",
+      "currentUnavailableHint": "Lấy giá từ nguồn thất bại. Chúng tôi không thay thế bằng giá trị lịch sử gần nhất.",
+      "periodAverage": "Trung bình kỳ",
+      "periodHigh": "Cao nhất kỳ",
+      "periodLow": "Thấp nhất kỳ",
+      "currentPosition": "Vị trí hiện tại",
+      "percentileValue": "Phân vị {{percentile}} trong kỳ này",
+      "noConfirmedData": "Không có dữ liệu đã xác nhận trong kỳ này"
+    },
+    "chart": {
+      "legendExpected": "Kỳ vọng",
+      "legendAverage": "Trung bình kỳ",
+      "legendHigh": "Cao nhất kỳ",
+      "legendLow": "Thấp nhất kỳ",
+      "gapNote": "Đường biểu đồ bị đứt ở nơi thiếu dữ liệu (không hiển thị giá trị suy đoán).",
+      "tooltipDeltaFromPrev": "so với lần trước {{delta}}",
+      "tooltipDeltaFromAverage": "so với trung bình kỳ {{delta}}",
+      "tooltipBucketNote": "Nến 4 giờ (giá trị cuối khoảng)",
+      "loadError": "Không thể tải lịch sử giá. Vui lòng tải lại sau.",
+      "empty": "Không có dữ liệu để hiển thị"
+    },
+    "conditions": {
+      "title": "Điều kiện tính toán",
+      "starCatch": "Star Catch BẬT",
+      "chanceTime": "Chance Time BẬT",
+      "safeguard": "Bảo vệ TẮT",
+      "eventAdjustment": "Không điều chỉnh theo sự kiện",
+      "metric": "Chỉ số = Giá trị kỳ vọng",
+      "interval": "Chu kỳ nến = 4 giờ",
+      "historyUpdatedAt": "Lịch sử cập nhật lần cuối: {{date}}",
+      "currentFetchedAt": "Thời điểm lấy giá hiện tại: {{date}}",
+      "policyVersion": "Chính sách tính toán: {{version}}"
+    }
   }
 }

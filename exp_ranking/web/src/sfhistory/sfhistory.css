@@ -1,0 +1,120 @@
+/* IMPL_PLAN_SH5 §1/§11: small set of utility classes for the SF history
+   screen. Dark, finance-chart-leaning, low-decoration tone matching the
+   existing dark cards elsewhere (CharacterDetail.jsx's slate-950/800
+   palette) -- this screen does not opt into the taskManager `.site-theme`
+   CSS-variable theme system (that system is wired to the dashboard/tasks/
+   schedule trio in App.jsx/TaskManagerRoot.jsx, neither of which this
+   plan may touch), so it is intentionally self-contained here instead. */
+
+.sfh-root {
+  background: #020617;
+  color: #e2e8f0;
+}
+
+.sfh-field-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.sfh-select-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.sfh-select {
+  border-radius: 0.5rem;
+  border: 1px solid #334155;
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.875rem;
+}
+
+.sfh-preset-chip {
+  border-radius: 999px;
+  border: 1px solid #334155;
+  background: #0f172a;
+  color: #cbd5e1;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.8rem;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.sfh-preset-chip:not(:disabled):hover {
+  background: #1e293b;
+}
+
+.sfh-preset-chip:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.sfh-preset-chip-active {
+  background: #0e7490;
+  border-color: #22d3ee;
+  color: #ecfeff;
+}
+
+.sfh-period-tabs {
+  display: inline-flex;
+  border-radius: 0.6rem;
+  background: #0f172a;
+  padding: 0.2rem;
+  gap: 0.15rem;
+}
+
+.sfh-period-tab {
+  border-radius: 0.45rem;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.sfh-period-tab:hover {
+  color: #e2e8f0;
+}
+
+.sfh-period-tab-active {
+  background: #164e63;
+  color: #67e8f9;
+}
+
+.sfh-summary-card {
+  border-radius: 1rem;
+  background: #0f172a;
+  padding: 0.9rem 1rem;
+  min-width: 0;
+}
+
+.sfh-summary-label {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.sfh-summary-value {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin-top: 0.2rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.sfh-conditions-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+.sfh-conditions-list dt {
+  display: none;
+}
+
+.sfh-conditions-list dd {
+  margin: 0;
+}

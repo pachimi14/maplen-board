@@ -398,5 +398,65 @@
     "postText": "{{name}} Lv.{{level}} {{percent}}% | Lulumi Tools",
     "main7d": "????? 7 ???",
     "main30d": "????? 30 ???"
+  },
+  "sfhistory": {
+    "pageTitle": "ประวัติค่าใช้จ่ายในการอัปเกรด StarForce",
+    "pageDescription": "เลือกอุปกรณ์และช่วงดาวเพื่อดูการเปลี่ยนแปลงของค่าใช้จ่ายคาดการณ์ในการอัปเกรด และดูว่าค่าปัจจุบันอยู่ในระดับใดเมื่อเทียบกับประวัติ",
+    "loading": "กำลังโหลด...",
+    "equipment": {
+      "label": "อุปกรณ์",
+      "searchPlaceholder": "ค้นหาด้วยชื่อไอเทมหรือ Item ID",
+      "noMatch": "ไม่พบอุปกรณ์ที่ตรงกัน",
+      "maxStarBadge": "สูงสุด ☆{{maxStar}}",
+      "loadError": "ไม่สามารถโหลดรายการอุปกรณ์ได้ โปรดลองอีกครั้งภายหลัง"
+    },
+    "starRange": {
+      "startLabel": "เริ่ม ☆",
+      "targetLabel": "เป้าหมาย ☆",
+      "presetsLabel": "ค่าที่ตั้งไว้ล่วงหน้า",
+      "presetDisabledHint": "อุปกรณ์นี้มีข้อมูลถึง ☆{{maxStar}} เท่านั้น"
+    },
+    "period": {
+      "label": "ช่วงเวลา",
+      "d7": "7 วัน",
+      "d30": "30 วัน",
+      "d90": "90 วัน",
+      "d150": "150 วัน"
+    },
+    "summary": {
+      "current": "ค่าปัจจุบัน",
+      "currentUnavailable": "ไม่สามารถดึงราคาปัจจุบันได้",
+      "currentUnavailableHint": "การดึงราคาจากต้นทางล้มเหลว เราจะไม่ใช้ค่าประวัติล่าสุดแทน",
+      "periodAverage": "ค่าเฉลี่ยของช่วงเวลา",
+      "periodHigh": "ค่าสูงสุดของช่วงเวลา",
+      "periodLow": "ค่าต่ำสุดของช่วงเวลา",
+      "currentPosition": "ตำแหน่งปัจจุบัน",
+      "percentileValue": "เปอร์เซ็นไทล์ที่ {{percentile}} ของช่วงเวลานี้",
+      "noConfirmedData": "ไม่มีข้อมูลที่ยืนยันแล้วในช่วงเวลานี้"
+    },
+    "chart": {
+      "legendExpected": "ค่าคาดการณ์",
+      "legendAverage": "ค่าเฉลี่ยของช่วงเวลา",
+      "legendHigh": "ค่าสูงสุดของช่วงเวลา",
+      "legendLow": "ค่าต่ำสุดของช่วงเวลา",
+      "gapNote": "เส้นกราฟจะขาดในช่วงที่ข้อมูลขาดหาย (ไม่มีการแสดงค่าที่คาดเดา)",
+      "tooltipDeltaFromPrev": "เทียบกับครั้งก่อน {{delta}}",
+      "tooltipDeltaFromAverage": "เทียบกับค่าเฉลี่ยของช่วงเวลา {{delta}}",
+      "tooltipBucketNote": "แท่ง 4 ชั่วโมง (ค่าปิดของช่วง)",
+      "loadError": "ไม่สามารถโหลดประวัติราคาได้ โปรดลองอีกครั้งภายหลัง",
+      "empty": "ไม่มีข้อมูลที่จะแสดง"
+    },
+    "conditions": {
+      "title": "เงื่อนไขการคำนวณ",
+      "starCatch": "Star Catch เปิด",
+      "chanceTime": "Chance Time เปิด",
+      "safeguard": "การป้องกันการทำลาย ปิด",
+      "eventAdjustment": "ไม่มีการปรับตามอีเวนต์",
+      "metric": "ตัวชี้วัด = ค่าคาดการณ์",
+      "interval": "ช่วงแท่งราคา = 4 ชั่วโมง",
+      "historyUpdatedAt": "อัปเดตประวัติล่าสุด: {{date}}",
+      "currentFetchedAt": "เวลาที่ดึงราคาปัจจุบัน: {{date}}",
+      "policyVersion": "นโยบายการคำนวณ: {{version}}"
+    }
   }
 }

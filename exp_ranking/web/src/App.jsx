@@ -7,6 +7,7 @@ import CharacterDetailView from "./pages/CharacterDetailView";
 import GroupCompareView from "./pages/GroupCompareView";
 import TaskManagerRoot from "./taskManager/TaskManagerRoot.jsx";
 import { useDashboardStore } from "./taskManager/storage/useDashboardStore.js";
+import SfHistoryRoot from "./sfhistory/SfHistoryRoot.jsx";
 const RANKING_THEME_STORAGE_KEY = "maplen-board-ranking-theme-v1";
 const RANKING_THEME_DEFAULT = Object.freeze({ themeColor: "green", themeDepth: "deep" });
 const RANKING_THEME_COLORS = new Set(["green", "blue", "purple", "orange"]);
@@ -64,6 +65,13 @@ function AppShell() {
 
   if (isTaskManagerRoute) {
     return <TaskManagerRoot route={route} />;
+  }
+
+  // IMPL_PLAN_SH5 §1: `#/starforce` -- new route, own root component, does
+  // not join isTaskManagerRoute (that flag is specifically the
+  // dashboard/tasks/schedule trio's theme wiring above).
+  if (route.name === "starforce") {
+    return <SfHistoryRoot />;
   }
 
   if (loading) {
