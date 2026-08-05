@@ -279,20 +279,72 @@ function localizedDateTimeParts(date, timeZone) {
   return map;
 }
 
+// IMPL_PLAN_SH31 (2026-08-06, user decision): a small static lookup of the
+// only two zones whose named abbreviation is safe to show unconditionally
+// (docs/reports/SH31_ZONE_ABBREVIATION.md has the full record). A zone
+// qualifies only if it satisfies *both*:
+//  1. no DST -- the abbreviation never changes with the season, so a static
+//     table is never a seasonal lie (this is why "EST"/"PST" etc. are
+//     deliberately NOT here: they'd become wrong as "EDT"/"PDT" every
+//     summer)
+//  2. the abbreviation is globally unique -- no collision with another
+//     zone's abbreviation (this is why "CST" -- China / US Central / Cuba
+//     -- and "IST" -- India / Israel / Ireland -- are deliberately NOT
+//     here)
+// Every zone not in this table keeps the exact "UTC+9"-style offset output
+// this function already produced before SH-31 (plan §3/(d): 1 bit of
+// existing behavior may not change).
+//
+// Deliberately NOT sourced from `Intl`'s own `timeZoneName: "short"`:
+// measured that it resolves a named abbreviation only for *some* locales --
+// `Asia/Tokyo` returns "JST" under the `ja` locale but "GMT+9" under
+// `en`/`ko`/`es`/`th`/`vi`/`zh-TW`. A viewer's UI language and the timezone
+// they physically live in are unrelated (a Japan-based reader may well use
+// an English UI), so keying the abbreviation off UI locale would show
+// "UTC+9" to exactly the audience this table exists for. This table is
+// keyed by IANA zone name only and its values are never translated
+// (`i18n/locales/*.json` is untouched by this plan -- same string in every
+// locale, like the literal "UTC"/"NESO" units elsewhere in this file).
+const ZONE_ABBREVIATIONS = {
+  "Asia/Tokyo": "JST",
+  "Asia/Seoul": "KST",
+};
+
 /** plan §1/§2-1: a short "UTC+9"-style label for `timeZone` (or the
  * viewer's own zone when omitted) -- so a local-time display never leaves
- * the viewer guessing which zone they're looking at. Uses `Intl`'s own
- * `shortOffset` (a numeric offset, e.g. "GMT+9") rather than a named
- * abbreviation ("JST") -- ICU only resolves abbreviations for a subset of
- * zones/environments, while every environment resolves an offset, so this
- * is the one form guaranteed never to fall back to something less useful
- * than the zone name itself. `referenceDate` only matters for a
- * DST-observing zone; defaults to "now" for display, pinnable for tests.
- * Falls back to the raw IANA zone name (never a guessed offset) if `Intl`
- * cannot resolve one. Ported from IMPL_PLAN_SH11 §2/(c) (removed by SH-14,
- * reinstated verbatim here). */
+ * the viewer guessing which zone they're looking at. SH-31: for the two
+ * zones in `ZONE_ABBREVIATIONS` above, returns that static abbreviation
+ * instead (measured to normalize IANA aliases like "Japan"/"ROK" to their
+ * canonical "Asia/Tokyo"/"Asia/Seoul" first -- see
+ * docs/reports/SH31_ZONE_ABBREVIATION.md §(i) -- so the table only lists
+ * canonical names). Every other zone keeps this function's pre-SH-31
+ * behavior verbatim: `Intl`'s own `shortOffset` (a numeric offset, e.g.
+ * "GMT+9") rather than a named abbreviation -- ICU only resolves
+ * abbreviations for a subset of zones/environments, while every
+ * environment resolves an offset, so this is the one form guaranteed never
+ * to fall back to something less useful than the zone name itself.
+ * `referenceDate` only matters for a DST-observing zone; defaults to "now"
+ * for display, pinnable for tests. Falls back to the raw IANA zone name
+ * (never a guessed offset) if `Intl` cannot resolve one. Ported from
+ * IMPL_PLAN_SH11 §2/(c) (removed by SH-14, reinstated verbatim here; SH-31
+ * layers the table lookup on top). */
 export function formatTimeZoneLabel(timeZone, referenceDate = new Date()) {
   const tz = timeZone || localTimeZone();
+  // SH-31 §1-4: normalize a legacy IANA alias (e.g. "Japan" -> "Asia/Tokyo")
+  // to its canonical name before checking the table above. Falls through
+  // with `canonical === tz` for a zone `Intl` cannot resolve at all -- the
+  // offset branch below already has its own fallback for that case, so this
+  // normalization attempt never needs to change what an unresolvable zone
+  // renders.
+  let canonical = tz;
+  try {
+    canonical = new Intl.DateTimeFormat(undefined, { timeZone: tz }).resolvedOptions().timeZone;
+  } catch {
+    // Unresolvable zone name -- leave `canonical` as the raw `tz`.
+  }
+  if (Object.prototype.hasOwnProperty.call(ZONE_ABBREVIATIONS, canonical)) {
+    return ZONE_ABBREVIATIONS[canonical];
+  }
   try {
     const parts = new Intl.DateTimeFormat("en-US", {
       timeZone: tz,
