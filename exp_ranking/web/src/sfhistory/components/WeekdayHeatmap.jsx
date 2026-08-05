@@ -1,30 +1,29 @@
 import { Fragment, useMemo } from "react";
 import { useTranslation } from "../../i18n/I18nContext.jsx";
 import { buildWeekdayHeatmap, extremeHeatmapCells, totalHeatmapCount } from "../domain/weekdayStats.js";
-import { formatClockTime, formatCompactNeso, formatExactNeso, localTimeZone, weekdayShortLabel } from "../domain/format.js";
+import { formatClockTime, formatCompactNeso, formatExactNeso, weekdayShortLabel } from "../domain/format.js";
 
 const WEEKDAY_ORDER = [0, 1, 2, 3, 4, 5, 6]; // Sun..Sat -- Date#getUTCDay() order
 const LOW_N_THRESHOLD = 5; // plan §3-3: "n が少ないセルは視覚的に弱める（例 n<5）"
 
-// IMPL_PLAN_SH11 §2/§3: resolved once per module load, same as the other
-// two components that need the viewer's own zone (SfHistoryChart /
-// CalcConditions) -- stable for the whole session.
-const HEATMAP_TIME_ZONE = localTimeZone();
-
 /**
- * design/plan §3: 7 (local weekday) x 6 (UTC-anchored 4h slot) grid of the
- * *median* Expected cost, from `series` = SfHistoryRoot's `fullSeries`
- * (IMPL_PLAN_SH11 §3-2: always the full ~150-day series, deliberately never
- * the period-tab-sliced one -- passing `periodSeries` here would be the
- * exact regression the plan warns about: a 7-day slice puts n=1 in every
- * cell). `buildWeekdayHeatmap` (domain/weekdayStats.js) does all the actual
+ * design/plan §3: 7 (UTC weekday) x 6 (UTC 4h slot) grid of the *median*
+ * Expected cost, from `series` = SfHistoryRoot's `fullSeries` (IMPL_PLAN_SH11
+ * §3-2: always the full ~150-day series, deliberately never the
+ * period-tab-sliced one -- passing `periodSeries` here would be the exact
+ * regression the plan warns about: a 7-day slice puts n=1 in every cell).
+ * `buildWeekdayHeatmap` (domain/weekdayStats.js) does all the actual
  * aggregation; this component only lays it out and colors it.
+ *
+ * IMPL_PLAN_SH14 §0-1/§2 (2026-08-05, user decision): reverts IMPL_PLAN_SH11
+ * §2's viewer-local-time basis back to a fixed UTC (both the weekday
+ * grouping and the column time-of-day labels).
  */
 export default function WeekdayHeatmap({ series }) {
   const { t, language } = useTranslation();
 
   const { cells, columns, total, extremes } = useMemo(() => {
-    const { cells, columns } = buildWeekdayHeatmap(series, HEATMAP_TIME_ZONE);
+    const { cells, columns } = buildWeekdayHeatmap(series);
     return { cells, columns, total: totalHeatmapCount(cells), extremes: extremeHeatmapCells(cells) };
   }, [series]);
 
@@ -53,7 +52,7 @@ export default function WeekdayHeatmap({ series }) {
             <div className="sfh-heatmap-corner" />
             {columns.map((column) => (
               <div key={column.bucketSlot} className="sfh-heatmap-col-header">
-                {formatClockTime(column.localHour, column.localMinute)}
+                {formatClockTime(column.hour, column.minute)}
               </div>
             ))}
             {WEEKDAY_ORDER.map((weekdayIndex) => (

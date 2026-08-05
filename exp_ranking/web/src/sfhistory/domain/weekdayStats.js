@@ -11,69 +11,18 @@
 // `currentPercentile` in series.js already exclude them -- this keeps the
 // heatmap's "n" and median reproducible on reload, and never invents a
 // number for a gap.
+//
+// IMPL_PLAN_SH14 §2 (2026-08-05, user decision): reverts IMPL_PLAN_SH11 §2's
+// local-timezone grouping back to a fixed UTC basis. `series[].date` is
+// already a UTC instant (design §9's 4h bucketing: every point's UTC hour is
+// one of {0,4,8,12,16,20}), so grouping by weekday/time-of-day no longer
+// needs any `Intl`/timezone-conversion machinery at all -- `Date#getUTCDay`/
+// `getUTCHours` read the grouping key directly. `buildWeekdayHeatmap` no
+// longer takes a `timeZone` argument; there is nothing left to parameterize.
 
 const WEEKDAY_COUNT = 7; // Sun..Sat
 const BUCKET_COUNT = 6; // 4h buckets (design §9), same cadence series.js uses
-
-// Constructing an `Intl.DateTimeFormat` is comparatively expensive (it loads
-// locale/zone data); `wallClockParts` below is called once per confirmed
-// point (~900 for a full 150-day series) plus once per column, so this
-// caches one formatter per `timeZone` string rather than rebuilding it on
-// every call -- pure perf, no behavior change (plan §3-4 / (g): keep the
-// full recompute well under the 200ms stop condition).
-const wallClockFormatterCache = new Map();
-function wallClockFormatter(timeZone) {
-  let formatter = wallClockFormatterCache.get(timeZone);
-  if (!formatter) {
-    formatter = new Intl.DateTimeFormat("en-US", {
-      timeZone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: false,
-    });
-    wallClockFormatterCache.set(timeZone, formatter);
-  }
-  return formatter;
-}
-
-/**
- * Converts a UTC instant into the wall-clock numbers a clock in `timeZone`
- * would show, without ever consulting a hardcoded weekday/locale table:
- * format the instant's *numeric* y/m/d/h/min/s in that zone (the "en-US"
- * locale here is only used to parse ASCII digits back out, never shown to a
- * user), then rebuild those same numbers as a synthetic UTC date so
- * `getUTCDay()`/`getUTCHours()`/`getUTCMinutes()` read back the *local*
- * weekday/time directly. This is what correctly moves a point across a
- * local midnight -- e.g. a UTC Wednesday 20:00 point is JST Thursday 05:00,
- * and must land in the "Thu" row, not "Wed" (plan §2's own worked example).
- */
-function wallClockParts(date, timeZone) {
-  const parts = wallClockFormatter(timeZone).formatToParts(date);
-  const map = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-  const hour = map.hour === "24" ? "00" : map.hour; // some ICU builds emit "24" for local midnight
-  const synthetic = new Date(
-    Date.UTC(Number(map.year), Number(map.month) - 1, Number(map.day), Number(hour), Number(map.minute), Number(map.second)),
-  );
-  return { weekdayIndex: synthetic.getUTCDay(), hour: synthetic.getUTCHours(), minute: synthetic.getUTCMinutes() };
-}
-
-/**
- * plan §3-2/§2: the column key is the *original UTC* 4h-slot index (0..5,
- * `floor(utcHour / 4)`) -- not a re-derived local hour rounded to the
- * nearest 4h mark ("丸めたり詰めたりしない"). Every server point's UTC hour
- * is already one of {0,4,8,12,16,20} (design §9's 4h bucketing), so this is
- * an exact, lossless grouping key -- the column's *displayed* local time
- * (computed separately below from the most recent point in the slot) is
- * free to be a non-round local hour (plan's own JST example: 09/13/17/21/
- * 01/05).
- */
-function utcBucketSlot(isoDate) {
-  return Math.floor(new Date(isoDate).getUTCHours() / 4);
-}
+const HOURS_PER_BUCKET = 24 / BUCKET_COUNT; // 4
 
 function median(values) {
   const sorted = [...values].sort((a, b) => a - b);
@@ -82,12 +31,7 @@ function median(values) {
 }
 
 /**
- * Builds the 7 (local weekday) x 6 (UTC-anchored 4h slot) grid.
- *
- * `timeZone` is required and explicit (never resolved internally) so this
- * stays a pure, deterministic function -- callers pass `localTimeZone()`
- * from `./format.js` (production: the viewer's own zone) or a pinned IANA
- * zone (tests).
+ * Builds the 7 (UTC weekday) x 6 (UTC 4h slot) grid.
  *
  * Returns `{ cells, columns }`:
  * - `cells`: one entry per (weekdayIndex, bucketSlot) pair, always exactly
@@ -95,34 +39,29 @@ function median(values) {
  *   (weekday 0..6, each with bucketSlot 0..5) -- `{ weekdayIndex,
  *   bucketSlot, median, n, values }`. An empty cell (`n === 0`) still gets
  *   an entry (`median: null`) so the grid is always fully rectangular.
+ *   `weekdayIndex` matches `Date#getUTCDay()` (0=Sun..6=Sat); which order the
+ *   caller *displays* those 7 rows in (IMPL_PLAN_SH14 §4: Thu-first) is a
+ *   presentation concern of `WeekdayHeatmap.jsx`, not of this aggregation.
  * - `columns`: exactly `BUCKET_COUNT` (=6) entries describing each
- *   `bucketSlot`'s column header, `{ bucketSlot, localHour, localMinute }`
- *   -- the *actual* local wall-clock start time (plan §2: never rounded),
- *   taken from the single most recent confirmed point observed anywhere in
- *   that slot (so a mid-window DST shift, if any, is reflected by the
- *   *current* label rather than blended across two different offsets).
- *   Sorted ascending by local time-of-day for a left-to-right, small-to-
- *   large layout. `localHour`/`localMinute` are `null` for a slot with no
- *   data at all (never invented).
+ *   `bucketSlot`'s column header, `{ bucketSlot, hour, minute }` -- always
+ *   `hour: bucketSlot * 4, minute: 0` (IMPL_PLAN_SH14 §4: a fixed UTC
+ *   00/04/08/12/16/20, never derived from which points happened to be
+ *   observed -- unlike SH-11's local-time columns, a UTC bucket's start time
+ *   is already fully determined by its `bucketSlot`, data or no data).
  */
-export function buildWeekdayHeatmap(series, timeZone) {
+export function buildWeekdayHeatmap(series) {
   const cellGroups = new Map(); // `${weekdayIndex}-${bucketSlot}` -> number[]
-  const columnLatest = new Map(); // bucketSlot -> { date, time }
 
   for (const point of series) {
     if (point?.provisional || point?.expected == null) continue;
     const date = new Date(point.date);
     if (Number.isNaN(date.getTime())) continue;
 
-    const { weekdayIndex } = wallClockParts(date, timeZone);
-    const bucketSlot = utcBucketSlot(point.date);
+    const weekdayIndex = date.getUTCDay();
+    const bucketSlot = Math.floor(date.getUTCHours() / HOURS_PER_BUCKET);
     const key = `${weekdayIndex}-${bucketSlot}`;
     if (!cellGroups.has(key)) cellGroups.set(key, []);
     cellGroups.get(key).push(point.expected);
-
-    const time = date.getTime();
-    const latest = columnLatest.get(bucketSlot);
-    if (!latest || time > latest.time) columnLatest.set(bucketSlot, { date, time });
   }
 
   const cells = [];
@@ -141,19 +80,8 @@ export function buildWeekdayHeatmap(series, timeZone) {
 
   const columns = [];
   for (let bucketSlot = 0; bucketSlot < BUCKET_COUNT; bucketSlot++) {
-    const latest = columnLatest.get(bucketSlot);
-    if (!latest) {
-      columns.push({ bucketSlot, localHour: null, localMinute: null });
-      continue;
-    }
-    const { hour, minute } = wallClockParts(latest.date, timeZone);
-    columns.push({ bucketSlot, localHour: hour, localMinute: minute });
+    columns.push({ bucketSlot, hour: bucketSlot * HOURS_PER_BUCKET, minute: 0 });
   }
-  columns.sort((a, b) => {
-    if (a.localHour == null) return 1;
-    if (b.localHour == null) return -1;
-    return a.localHour * 60 + a.localMinute - (b.localHour * 60 + b.localMinute);
-  });
 
   return { cells, columns };
 }
