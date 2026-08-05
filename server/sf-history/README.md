@@ -19,7 +19,7 @@ schema.sql                          sf_price_history_hourly + sf_history_backfil
 db.py                                connect / apply_schema / hourly + 4h read-write / progress read-write
 fetcher.py                           rate-limited, 429-backoff HTTP GET for `history` (backfill.py / update.py)
 aggregate.py                         SH-3 §3: deterministic hourly -> 4h derivation (design §9)
-fetch_latest.py                      SH-3 §5: TTL-60s, single-flight `enhance-price/latest` proxy (design §6)
+fetch_latest.py                      SH-3 §5 / SH-7 §2: TTL (default 300s), single-flight `enhance-price/latest` proxy (design §6)
 app.py                               SH-3 §4: FastAPI app (health / equipment / prices / latest)
 scripts/gen_item_list.py             generates data/sf_history_items.json (reads maplenEnhancebot, read-only)
 scripts/backfill.py                  resumable backfill: 28 items x itemUpgrade 0..21 x ~150 days
@@ -72,8 +72,11 @@ python scripts/update.py
 ```text
 GET /sf-history/health                liveness check
 GET /sf-history/equipment             28-item list + aliasItemIds + data-derived maxStar (design §7.1)
-GET /sf-history/prices?itemId=        4h series, up to 150 days, 22-wide prices[] per point (null = missing)
-GET /sf-history/latest?itemId=        current price (official `latest` proxied, TTL 60s, no historical fallback)
+GET /sf-history/prices?itemId=        4h series, up to 150 days, 22-wide prices[] per point (null = missing).
+                                       SH-7: may append one trailing point with `"provisional": true`, sourced
+                                       from the same `latest` cache as below -- never persisted, degrades to
+                                       confirmed-history-only (still 200) if the upstream `latest` call fails.
+GET /sf-history/latest?itemId=        current price (official `latest` proxied, TTL default 300s, no historical fallback)
 ```
 
 `itemId` must be one of `data/sf_history_items.json`'s **representative**
@@ -88,6 +91,9 @@ itemId、取得・表示は代表"). Unknown `itemId` -> `404`; missing/non-inte
 SF_HISTORY_DB_PATH=./data/sf_price_history.sqlite
 SF_HISTORY_ITEMS_PATH=./data/sf_history_items.json
 SF_HISTORY_ALLOWED_ORIGINS=https://lulumi-tools.com
+SF_HISTORY_LATEST_TTL_SECONDS=300          # SH-7 §2: default 300 (was 60). Read once at process
+                                            # startup (app.py builds the LatestPriceCache singleton
+                                            # from it) -- changing it requires a process restart.
 ```
 
 ## Offline by design

@@ -29,7 +29,9 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 
+import aggregate
 import db
+import fetch_latest
 from fetch_latest import LatestPriceCache, UpstreamLatestError
 
 APP_DIR = Path(__file__).resolve().parent
@@ -40,9 +42,31 @@ DEFAULT_ALLOWED_ORIGINS = ("https://lulumi-tools.com",)
 DISPLAY_WINDOW_DAYS = 150  # design §10: "4時間足・最大150日"
 UPGRADE_COUNT = 22  # itemUpgrade 0..21 (plan §8 condition 6)
 
+
+def _latest_ttl_seconds() -> float:
+    """IMPL_PLAN_SH7 §2: `SF_HISTORY_LATEST_TTL_SECONDS` overrides
+    `fetch_latest.DEFAULT_TTL_SECONDS` (300s). Read once, at cache
+    construction time -- unlike the per-request settings above, the TTL is
+    baked into a long-lived `LatestPriceCache` instance's own state, so
+    re-reading the env var on every request would not actually change
+    anything after the cache has already been built.
+    """
+    raw = os.getenv("SF_HISTORY_LATEST_TTL_SECONDS")
+    if not raw:
+        return fetch_latest.DEFAULT_TTL_SECONDS
+    try:
+        return float(raw)
+    except ValueError:
+        return fetch_latest.DEFAULT_TTL_SECONDS
+
+
+def _build_latest_cache() -> LatestPriceCache:
+    return LatestPriceCache(ttl_seconds=_latest_ttl_seconds())
+
+
 app = FastAPI(title="Lulumi Tools SF price history", docs_url=None, redoc_url=None)
 app.add_middleware(GZipMiddleware, minimum_size=500)
-app.state.latest_cache = LatestPriceCache()
+app.state.latest_cache = _build_latest_cache()
 
 
 # --- settings (env read per-request, like img-proxy's proxy_core.load_settings_from_env) ---
@@ -214,13 +238,41 @@ def prices(request: Request, itemId: str | None = None) -> JSONResponse:
     dates = sorted(by_date)
     points = [{"date": d, "prices": by_date[d]} for d in dates]
 
+    # SH-7 §3: append the in-progress 4h bucket as a *provisional* point,
+    # sourced from the same shared `latest` cache as `/sf-history/latest`
+    # (§3-1: "同じ出どころ" -- never a second, independent notion of "now").
+    # Never written to sf_price_history_4h (design §9 is unchanged: the
+    # stored/aggregated table only ever holds buckets whose window has
+    # fully elapsed) -- this point exists only in this one response.
+    provisional_date: str | None = None
+    now = datetime.now(timezone.utc)
+    candidate_date = aggregate.bucket_start(_format_iso_utc(now))
+    if candidate_date not in by_date:
+        cache: LatestPriceCache = request.app.state.latest_cache
+        try:
+            latest_result = cache.get(item_id)
+        except UpstreamLatestError:
+            # §3-3: degrade -- `prices` stays 200 with confirmed history
+            # only. Unlike `/sf-history/latest` (still 503 on failure),
+            # losing the ability to read *history* on an upstream hiccup
+            # would be a strictly worse regression than just omitting the
+            # one provisional point.
+            latest_result = None
+        if latest_result is not None:
+            provisional_prices = [
+                round(p, 2) if p is not None else None for p in latest_result["prices"]
+            ]
+            points.append({"date": candidate_date, "prices": provisional_prices, "provisional": True})
+            provisional_date = candidate_date
+
     return _json(
         {
             "itemId": item_id,
             "interval": "4h",
             "labelIs": "bucketStart",
             "startDate": dates[0] if dates else None,
-            "endDate": dates[-1] if dates else None,
+            "endDate": dates[-1] if dates else None,  # unchanged: last CONFIRMED bucket (plan §3-2/(c))
+            "provisionalDate": provisional_date,
             "priceVersion": price_version,
             "upgradeCount": UPGRADE_COUNT,
             "points": points,

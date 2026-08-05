@@ -151,6 +151,26 @@ def test_concurrent_requests_for_the_same_item_are_coalesced_to_one_upstream_cal
     assert all(r == results[0] for r in results)
 
 
+def test_default_ttl_is_300_seconds() -> None:
+    """IMPL_PLAN_SH7 (f): DEFAULT_TTL_SECONDS == 300.0 (was 60.0)."""
+    assert fetch_latest.DEFAULT_TTL_SECONDS == 300.0
+
+
+def test_cache_uses_the_default_300s_ttl_when_not_overridden() -> None:
+    clock = {"t": 0.0}
+    session = FakeSession(lambda params: FakeResponse(200, _star_force_payload({0: 10.0})))
+    cache = fetch_latest.LatestPriceCache(session=session, clock=lambda: clock["t"])  # ttl_seconds left at default
+
+    cache.get(1001)
+    clock["t"] = 299.0  # just inside the 300s default TTL
+    cache.get(1001)
+    assert cache.upstream_call_count == 1
+
+    clock["t"] = 301.0  # just past it
+    cache.get(1001)
+    assert cache.upstream_call_count == 2
+
+
 def test_different_item_ids_do_not_block_each_other() -> None:
     session = FakeSession(lambda params: FakeResponse(200, _star_force_payload({0: 1.0})))
     cache = fetch_latest.LatestPriceCache(session=session)
