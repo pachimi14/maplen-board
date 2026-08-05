@@ -4,6 +4,7 @@
   },
   "app": {
     "openDailyDashboard": "Task Manager",
+    "openSfHistory": "Enhance History",
     "pageTitle": "Bảng xếp hạng EXP MSU",
     "pageDescription": "Xếp hạng cấp độ và lượng EXP tăng hằng ngày, tuần và tháng cho các nhân vật cấp 225 trở lên, dựa trên bảng xếp hạng MSU chính thức.",
     "metaTitle": "Lulumi Tools | Bảng xếp hạng EXP MapleStory N",
@@ -398,5 +399,69 @@
     "postText": "{{name}} Lv.{{level}} {{percent}}% | Lulumi Tools",
     "main7d": "T?ng 7 ng?y",
     "main30d": "T?ng 30 ng?y"
+  },
+  "sfhistory": {
+    "pageTitle": "Enhance History",
+    "pageDescription": "Chọn một trang bị và khoảng sao để xem chi phí nâng cấp kỳ vọng đã thay đổi thế nào, và giá trị hiện tại đang ở mức nào so với lịch sử đó.",
+    "loading": "Đang tải...",
+    "equipment": {
+      "label": "Trang bị",
+      "searchPlaceholder": "Tìm theo tên vật phẩm hoặc Item ID",
+      "noMatch": "Không tìm thấy trang bị phù hợp",
+      "maxStarBadge": "tối đa ☆{{maxStar}}",
+      "loadError": "Không thể tải danh sách trang bị. Vui lòng tải lại sau."
+    },
+    "starRange": {
+      "startLabel": "Bắt đầu ☆",
+      "targetLabel": "Mục tiêu ☆",
+      "presetsLabel": "Mẫu có sẵn",
+      "presetDisabledHint": "Vật phẩm này chỉ có thể nâng cấp đến ☆{{maxStar}} nên không thể chọn"
+    },
+    "period": {
+      "label": "Khoảng thời gian",
+      "d7": "7 ngày",
+      "d14": "14 ngày",
+      "d30": "30 ngày",
+      "d90": "90 ngày",
+      "d150": "150 ngày"
+    },
+    "summary": {
+      "current": "Hiện tại",
+      "currentUnavailable": "Không lấy được giá hiện tại",
+      "currentUnavailableHint": "Lấy giá từ nguồn thất bại. Chúng tôi không thay thế bằng giá trị lịch sử gần nhất.",
+      "currentAsOf": "Tính đến {{timestamp}}",
+      "periodAverage": "Trung bình kỳ",
+      "periodHigh": "Cao nhất kỳ",
+      "periodLow": "Thấp nhất kỳ",
+      "currentPosition": "Vị trí hiện tại",
+      "percentileCheaperThan": "Rẻ hơn {{percent}}% của kỳ này",
+      "percentileLowest": "Rẻ nhất trong kỳ này",
+      "percentileHighest": "Đắt nhất trong kỳ này",
+      "noConfirmedData": "Không có dữ liệu đã xác nhận trong kỳ này"
+    },
+    "chart": {
+      "legendExpected": "Kỳ vọng",
+      "legendAverage": "Trung bình kỳ",
+      "legendHigh": "Cao nhất kỳ",
+      "legendLow": "Thấp nhất kỳ",
+      "tooltipDeltaFromPrev": "so với lần trước {{delta}}",
+      "tooltipDeltaFromAverage": "so với trung bình kỳ {{delta}}",
+      "tooltipBucketRange": "Nến {{start}}–{{end}}",
+      "tooltipBucketRangeOpen": "Nến {{start}}–{{end}} (chưa kết thúc)",
+      "provisionalLegend": "Đoạn nét đứt là giá trị tạm thời của nến 4 giờ hiện tại, khoảng này chưa kết thúc.",
+      "loadError": "Không thể tải lịch sử giá. Vui lòng tải lại sau.",
+      "empty": "Không có dữ liệu để hiển thị"
+    },
+    "heatmap": {
+      "title": "Thứ trong tuần x Khung giờ",
+      "axisNote": "Hàng: thứ trong tuần (UTC). Cột: giờ địa phương ({{zone}}; UTC hiển thị bên dưới mỗi cột)",
+      "periodNote": "Tổng hợp theo khoảng thời gian đã chọn -- khoảng {{sampleRange}} điểm mỗi ô",
+      "empty": "Chưa đủ dữ liệu để tổng hợp",
+      "cellTooltip": "{{value}}",
+      "noData": "Không có dữ liệu",
+      "lowestBadge": "Thấp nhất",
+      "highestBadge": "Cao nhất",
+      "disclaimer": "Chỉ hiển thị giá trị trung vị, không khuyến nghị nâng cấp vào một thứ hoặc khung giờ cụ thể."
+    }
   }
 }

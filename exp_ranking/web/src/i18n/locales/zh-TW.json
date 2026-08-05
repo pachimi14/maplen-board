@@ -4,6 +4,7 @@
   },
   "app": {
     "openDailyDashboard": "Task Manager",
+    "openSfHistory": "Enhance History",
     "pageTitle": "MSU 經驗值排行榜",
     "pageDescription": "依據 MSU 官方排行榜，提供 Lv.225 以上角色的等級排名與每日、每週及每月經驗值增加量。",
     "metaTitle": "Lulumi Tools | MapleStory N 經驗值排行榜",
@@ -398,5 +399,69 @@
     "postText": "{{name}} Lv.{{level}} {{percent}}% | Lulumi Tools",
     "main7d": "7???",
     "main30d": "30???"
+  },
+  "sfhistory": {
+    "pageTitle": "Enhance History",
+    "pageDescription": "選擇裝備與強化星數範圍，即可查看期望強化費用的走勢，以及目前價格在這段歷史中處於什麼水準。",
+    "loading": "載入中...",
+    "equipment": {
+      "label": "裝備",
+      "searchPlaceholder": "以裝備名稱或 Item ID 搜尋",
+      "noMatch": "找不到符合的裝備",
+      "maxStarBadge": "最高 ☆{{maxStar}}",
+      "loadError": "無法取得裝備清單，請稍後再重新整理。"
+    },
+    "starRange": {
+      "startLabel": "起始 ☆",
+      "targetLabel": "目標 ☆",
+      "presetsLabel": "預設範圍",
+      "presetDisabledHint": "此裝備最高只能強化到 ☆{{maxStar}}，因此無法選擇"
+    },
+    "period": {
+      "label": "期間",
+      "d7": "7天",
+      "d14": "14天",
+      "d30": "30天",
+      "d90": "90天",
+      "d150": "150天"
+    },
+    "summary": {
+      "current": "目前價格",
+      "currentUnavailable": "無法取得目前價格",
+      "currentUnavailableHint": "取得來源價格失敗。不會以最後一筆歷史資料代替。",
+      "currentAsOf": "截至 {{timestamp}}",
+      "periodAverage": "期間平均",
+      "periodHigh": "期間高點",
+      "periodLow": "期間低點",
+      "currentPosition": "目前位置",
+      "percentileCheaperThan": "比此期間 {{percent}}% 的時間點便宜",
+      "percentileLowest": "此期間最低價",
+      "percentileHighest": "此期間最高價",
+      "noConfirmedData": "此期間沒有已確認的資料"
+    },
+    "chart": {
+      "legendExpected": "期望值",
+      "legendAverage": "期間平均",
+      "legendHigh": "期間高點",
+      "legendLow": "期間低點",
+      "tooltipDeltaFromPrev": "較前次 {{delta}}",
+      "tooltipDeltaFromAverage": "與期間平均相差 {{delta}}",
+      "tooltipBucketRange": "{{start}}–{{end}} 的 4 小時 K 線",
+      "tooltipBucketRangeOpen": "{{start}}–{{end}} 的 4 小時 K 線（尚未結束）",
+      "provisionalLegend": "虛線區段是目前尚未結束的 4 小時 K 線暫定值。",
+      "loadError": "無法取得價格歷史資料，請稍後再重新整理。",
+      "empty": "沒有可顯示的資料"
+    },
+    "heatmap": {
+      "title": "星期 × 時段",
+      "axisNote": "列（星期）為 UTC，欄（時段）為當地時間（{{zone}}；每欄下方併列 UTC）",
+      "periodNote": "依所選期間彙總 -- 每格約 {{sampleRange}} 筆",
+      "empty": "目前尚無足夠資料可供彙整",
+      "cellTooltip": "{{value}}",
+      "noData": "無資料",
+      "lowestBadge": "最低",
+      "highestBadge": "最高",
+      "disclaimer": "僅顯示中位數，並非建議在特定星期或時段進行強化。"
+    }
   }
 }

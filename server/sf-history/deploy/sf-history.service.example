@@ -1,0 +1,21 @@
+[Unit]
+Description=Lulumi Tools SF price history service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=botuser
+Group=botuser
+WorkingDirectory=/home/botuser/apps/lulumi-tools-sf-history
+Environment=SF_HISTORY_ALLOWED_ORIGINS=https://lulumi-tools.com
+Environment=SF_HISTORY_DB_PATH=/home/botuser/apps/lulumi-tools-sf-history/data/sf_price_history.sqlite
+Environment=SF_HISTORY_ITEMS_PATH=/home/botuser/apps/lulumi-tools-sf-history/data/sf_history_items.json
+ExecStart=/home/botuser/apps/lulumi-tools-sf-history/.venv/bin/uvicorn app:app --host 127.0.0.1 --port 8785 --workers 1
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

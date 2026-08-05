@@ -2,6 +2,25 @@ import LanguageSwitcher from "../LanguageSwitcher";
 import { useTranslation } from "../i18n/I18nContext.jsx";
 import { ThemePicker } from "../taskManager/components/AppToolbar.jsx";
 
+// SH-24: on the VPS-only sf.lulumi-tools.com build, EXP Ranking / Task
+// Manager are dead links (same-origin relative fetches 404 there). When
+// VITE_SITE_BASE_URL is set at build time, those two links (and the brand
+// link) point at the absolute main-site URL instead. Unset (default) =
+// current same-origin hash links, byte-for-byte unchanged.
+//
+// SF履歴 (#/starforce) is intentionally NOT routed through this helper --
+// it must always stay same-origin, since it's the one screen that works on
+// the VPS build.
+const SITE_BASE_URL = import.meta.env.VITE_SITE_BASE_URL || "";
+
+export function resolveSiteNavHref(hashPath, siteBaseUrl = SITE_BASE_URL) {
+  if (!siteBaseUrl) {
+    return hashPath;
+  }
+  const normalizedBase = String(siteBaseUrl).replace(/\/+$/, "");
+  return `${normalizedBase}/${hashPath}`;
+}
+
 export function SiteHeader({ active = "", variant = "light", theme = null, onThemeChange = null }) {
   const { t } = useTranslation();
   const dark = variant === "dark";
@@ -14,10 +33,11 @@ export function SiteHeader({ active = "", variant = "light", theme = null, onThe
     <header className={`relative z-[100] overflow-visible border-b backdrop-blur ${shell}`}>
       <div className="mx-auto flex min-h-14 max-w-7xl flex-wrap items-center justify-between gap-2 px-4 py-2 sm:flex-nowrap sm:gap-3 sm:px-6 lg:px-8">
         <div className="flex min-w-0 items-center gap-3 sm:gap-5">
-          <a href="#/" className={`shrink-0 text-[12.75px] font-bold tracking-[0.26em] ${brand}`}>LULUMI TOOLS</a>
+          <a href={resolveSiteNavHref("#/")} className={`shrink-0 text-[12.75px] font-bold tracking-[0.26em] ${brand}`}>LULUMI TOOLS</a>
           <nav aria-label="Lulumi Tools" className="flex min-w-0 items-center gap-1">
-            <a href="#/" aria-current={active === "ranking" ? "page" : undefined} className={`rounded-lg px-2.5 py-2 text-xs font-semibold transition sm:px-3 sm:text-sm ${active === "ranking" ? selected : idle}`}>EXP Ranking</a>
-            <a href="#/dashboard" aria-current={active === "daily" ? "page" : undefined} className={`rounded-lg px-2.5 py-2 text-xs font-semibold transition sm:px-3 sm:text-sm ${active === "daily" ? selected : idle}`}>{t("app.openDailyDashboard")}</a>
+            <a href={resolveSiteNavHref("#/")} aria-current={active === "ranking" ? "page" : undefined} className={`rounded-lg px-2.5 py-2 text-xs font-semibold transition sm:px-3 sm:text-sm ${active === "ranking" ? selected : idle}`}>EXP Ranking</a>
+            <a href={resolveSiteNavHref("#/dashboard")} aria-current={active === "daily" ? "page" : undefined} className={`rounded-lg px-2.5 py-2 text-xs font-semibold transition sm:px-3 sm:text-sm ${active === "daily" ? selected : idle}`}>{t("app.openDailyDashboard")}</a>
+            <a href="#/starforce" aria-current={active === "sfhistory" ? "page" : undefined} className={`rounded-lg px-2.5 py-2 text-xs font-semibold transition sm:px-3 sm:text-sm ${active === "sfhistory" ? selected : idle}`}>{t("app.openSfHistory")}</a>
           </nav>
         </div>
         <div className="flex shrink-0 items-center gap-2">

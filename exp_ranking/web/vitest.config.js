@@ -15,6 +15,7 @@ export default defineConfig({
       "src/components/**/*.test.js",
       "src/board/**/*.test.js",
       "src/taskManager/**/*.test.js",
+      "src/sfhistory/**/*.test.js",
       "src/*.test.js",
     ],
   },

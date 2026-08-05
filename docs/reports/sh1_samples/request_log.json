@@ -1,0 +1,211 @@
+{
+ "total_requests": 14,
+ "entries": [
+  {
+   "seq": 1,
+   "endpoint": "latest",
+   "params": {
+    "itemId": 1382265,
+    "period": 0
+   },
+   "status_code": 200,
+   "elapsed_ms": 328.0,
+   "at": "2026-08-04T17:14:49.392955+00:00",
+   "note": "M1/M4 snapshot"
+  },
+  {
+   "seq": 2,
+   "endpoint": "history",
+   "params": {
+    "itemId": 1382265,
+    "period": 2,
+    "minTimestamp": 1768583689,
+    "maxTimestamp": 1785863689,
+    "itemUpgrade": 0
+   },
+   "status_code": 200,
+   "elapsed_ms": 156.0,
+   "at": "2026-08-04T17:14:50.552466+00:00",
+   "note": "M3/M5/M6 wide window run 1/5 (itemUpgrade=0)"
+  },
+  {
+   "seq": 3,
+   "endpoint": "history",
+   "params": {
+    "itemId": 1382265,
+    "period": 2,
+    "minTimestamp": 1768583690,
+    "maxTimestamp": 1785863690,
+    "itemUpgrade": 0
+   },
+   "status_code": 200,
+   "elapsed_ms": 125.0,
+   "at": "2026-08-04T17:14:51.681718+00:00",
+   "note": "M3/M5/M6 wide window run 2/5 (itemUpgrade=0)"
+  },
+  {
+   "seq": 4,
+   "endpoint": "history",
+   "params": {
+    "itemId": 1382265,
+    "period": 2,
+    "minTimestamp": 1768583691,
+    "maxTimestamp": 1785863691,
+    "itemUpgrade": 0
+   },
+   "status_code": 200,
+   "elapsed_ms": 141.0,
+   "at": "2026-08-04T17:14:52.814537+00:00",
+   "note": "M3/M5/M6 wide window run 3/5 (itemUpgrade=0)"
+  },
+  {
+   "seq": 5,
+   "endpoint": "history",
+   "params": {
+    "itemId": 1382265,
+    "period": 2,
+    "minTimestamp": 1768583692,
+    "maxTimestamp": 1785863692,
+    "itemUpgrade": 0
+   },
+   "status_code": 200,
+   "elapsed_ms": 140.0,
+   "at": "2026-08-04T17:14:53.965199+00:00",
+   "note": "M3/M5/M6 wide window run 4/5 (itemUpgrade=0)"
+  },
+  {
+   "seq": 6,
+   "endpoint": "history",
+   "params": {
+    "itemId": 1382265,
+    "period": 2,
+    "minTimestamp": 1768583693,
+    "maxTimestamp": 1785863693,
+    "itemUpgrade": 0
+   },
+   "status_code": 200,
+   "elapsed_ms": 125.0,
+   "at": "2026-08-04T17:14:55.087267+00:00",
+   "note": "M3/M5/M6 wide window run 5/5 (itemUpgrade=0)"
+  },
+  {
+   "seq": 7,
+   "endpoint": "history",
+   "params": {
+    "itemId": 1382265,
+    "period": 2,
+    "minTimestamp": 1784999695,
+    "maxTimestamp": 1785863695,
+    "itemUpgrade": 10
+   },
+   "status_code": 200,
+   "elapsed_ms": 47.0,
+   "at": "2026-08-04T17:14:56.132601+00:00",
+   "note": "M1 cross-check (itemUpgrade=10)"
+  },
+  {
+   "seq": 8,
+   "endpoint": "history",
+   "params": {
+    "itemId": 1382265,
+    "period": 2,
+    "minTimestamp": 1784999696,
+    "maxTimestamp": 1785863696,
+    "itemUpgrade": 17
+   },
+   "status_code": 200,
+   "elapsed_ms": 63.0,
+   "at": "2026-08-04T17:14:57.188178+00:00",
+   "note": "M1 cross-check (itemUpgrade=17)"
+  },
+  {
+   "seq": 9,
+   "endpoint": "history",
+   "params": {
+    "itemId": 1382265,
+    "period": 2,
+    "minTimestamp": 1784999697,
+    "maxTimestamp": 1785863697,
+    "itemUpgrade": 21
+   },
+   "status_code": 200,
+   "elapsed_ms": 62.0,
+   "at": "2026-08-04T17:14:58.253800+00:00",
+   "note": "M1 cross-check (itemUpgrade=21)"
+  },
+  {
+   "seq": 10,
+   "endpoint": "history",
+   "params": {
+    "itemId": 1382265,
+    "period": 2,
+    "minTimestamp": 1784999698,
+    "maxTimestamp": 1785863698
+   },
+   "status_code": 200,
+   "elapsed_ms": 63.0,
+   "at": "2026-08-04T17:14:59.314704+00:00",
+   "note": "M2 itemUpgrade omitted"
+  },
+  {
+   "seq": 11,
+   "endpoint": "history",
+   "params": {
+    "itemId": 1382265,
+    "period": 2,
+    "minTimestamp": 1784999699,
+    "maxTimestamp": 1785863699,
+    "itemUpgrade": 22
+   },
+   "status_code": 200,
+   "elapsed_ms": 62.0,
+   "at": "2026-08-04T17:15:00.373578+00:00",
+   "note": "M4 boundary probe (itemUpgrade=22)"
+  },
+  {
+   "seq": 12,
+   "endpoint": "history",
+   "params": {
+    "itemId": 1382265,
+    "period": 2,
+    "minTimestamp": 1784999700,
+    "maxTimestamp": 1785863700,
+    "itemUpgrade": 23
+   },
+   "status_code": 200,
+   "elapsed_ms": 47.0,
+   "at": "2026-08-04T17:15:01.419523+00:00",
+   "note": "M4 boundary probe (itemUpgrade=23)"
+  },
+  {
+   "seq": 13,
+   "endpoint": "history",
+   "params": {
+    "itemId": 1382265,
+    "period": 2,
+    "minTimestamp": 1784999701,
+    "maxTimestamp": 1785863701,
+    "itemUpgrade": 24
+   },
+   "status_code": 200,
+   "elapsed_ms": 47.0,
+   "at": "2026-08-04T17:15:02.469334+00:00",
+   "note": "M4 boundary probe (itemUpgrade=24)"
+  },
+  {
+   "seq": 14,
+   "endpoint": "history",
+   "params": {
+    "itemId": 1382265,
+    "period": 2,
+    "minTimestamp": 1784999702,
+    "maxTimestamp": 1785863702,
+    "itemUpgrade": 25
+   },
+   "status_code": 500,
+   "elapsed_ms": 47.0,
+   "at": "2026-08-04T17:15:03.518173+00:00",
+   "note": "M4 boundary probe (itemUpgrade=25)"
+  }
+ ]
+}
