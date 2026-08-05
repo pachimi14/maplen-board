@@ -152,6 +152,56 @@ export function formatBucketRange(isoDate) {
   };
 }
 
+/** IMPL_PLAN_SH18 §3: which *instant* to feed into
+ * `formatAxisDate`/`formatTooltipDate` for one series point -- not what to
+ * store. The server/DB keep the bucket-*start* convention unchanged
+ * (design §9; SH-18 plan §2 "サーバー・DB は触らない": `price_at` / the
+ * `date` field's meaning is untouched by this plan). But the stored value
+ * is the bucket's *last observed* price (design §9: "代表値=区間内で
+ * 最後に存在する時刻のendPrice"), so labeling it with the bucket's
+ * *start* was the exact mismatch the user reported (`8/5 0:00` shown for
+ * a value that is really `4:00`'s). This is the client-side "+4h" shift
+ * that fixes that display, with one carve-out:
+ *
+ *  - a point carrying `asOf` (SH-17's still-open "未終了の足", the one
+ *    point sourced from the live `latest` cache) keeps showing `asOf`
+ *    itself (the real current instant) -- unchanged from SH-16/SH-17,
+ *    and SH-18 plan §3 keeps this rule as-is ("← SH-17 のまま").
+ *  - every other point -- a confirmed bucket, or a "暫定の足(完成済み
+ *    未保存)" (a fully elapsed bucket the 4h aggregation job hasn't
+ *    persisted to `sf_price_history_4h` yet, `app.py`'s
+ *    `derived_by_date` loop) -- shows the bucket's *end* (`date + 4h`).
+ *    For either of those two kinds that end is guaranteed to already be
+ *    in the past (the bucket has, by construction, fully elapsed).
+ *  - the one state neither of the above two bullets is written for: a
+ *    still-open bucket whose upstream `latest` call failed, so the
+ *    server fell back to a partial hourly value with no `asOf` at all
+ *    (`app.py`'s `in_progress_prices` fallback) -- would otherwise
+ *    compute a bucket end that has not happened yet. Guarded explicitly
+ *    so this never surfaces a future instant (SH-18 plan's "未来の時刻
+ *    を表示しないでください"): falls back to the bucket's own *start*,
+ *    the exact value every non-`asOf` point displayed before this plan.
+ *
+ * Accepts an injectable `now` (default `new Date()`) purely so the above
+ * boundary is deterministically testable -- the result never actually
+ * depends on `now` for a confirmed/elapsed point (its bucket end is
+ * necessarily already in the past whenever a real point exists to check
+ * it against a realistic `now`); `now` only matters for the still-open,
+ * no-`asOf` edge case. Returns `null` for a missing point, and the raw
+ * (unparsable) `date` string back unchanged rather than inventing a
+ * result -- same "never invent a value" stance as `formatBucketRange`
+ * above, left for the caller's own `formatAxisDate`/`formatTooltipDate`
+ * (which already return `""` for an unparsable date) to handle. */
+export function bucketDisplayDate(point, { now = new Date() } = {}) {
+  if (!point) return null;
+  if (typeof point.asOf === "string" && point.asOf) return point.asOf;
+  if (point.date == null) return null;
+  const start = new Date(point.date);
+  if (Number.isNaN(start.getTime())) return point.date;
+  const end = new Date(start.getTime() + BUCKET_HOURS * 60 * 60 * 1000);
+  return end.getTime() <= now.getTime() ? end.toISOString() : point.date;
+}
+
 const WEEKDAY_REFERENCE_SUNDAY_UTC = Date.UTC(2023, 0, 1); // a known Sunday, UTC
 
 /** Localized short weekday name for a bare `weekdayIndex` (0=Sun..6=Sat,
