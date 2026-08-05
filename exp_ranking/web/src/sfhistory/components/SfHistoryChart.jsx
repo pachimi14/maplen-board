@@ -7,6 +7,13 @@ import { formatAxisDate, formatCompactNeso, formatExactNeso, formatSignedCompact
 // p50/p70/p90). ReferenceLine = period average; high/low are read off the
 // summary cards rather than duplicated as extra chart lines (design's own
 // "装飾控えめ" -- avoids clutter on a series that can already have gaps).
+//
+// IMPL_PLAN_SH9 §4 scope note: the line/dot/axis colors below stay a fixed
+// cyan (#22d3ee) regardless of the 4-color theme picker -- a deliberate,
+// documented choice (data-series color locked for readability/consistency
+// across theme switches, same rationale many finance dashboards use), not
+// an oversight. Only the surrounding chrome (backgrounds, borders, tabs,
+// summary text -- sfhistory.css) responds to the picker.
 function ChartTooltipContent({ active, payload, average, t }) {
   if (!active || !payload?.length) return null;
   const point = payload[0]?.payload;

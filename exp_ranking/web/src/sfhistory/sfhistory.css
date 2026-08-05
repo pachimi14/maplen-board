@@ -1,14 +1,57 @@
 /* IMPL_PLAN_SH5 §1/§11: small set of utility classes for the SF history
    screen. Dark, finance-chart-leaning, low-decoration tone matching the
    existing dark cards elsewhere (CharacterDetail.jsx's slate-950/800
-   palette) -- this screen does not opt into the taskManager `.site-theme`
-   CSS-variable theme system (that system is wired to the dashboard/tasks/
-   schedule trio in App.jsx/TaskManagerRoot.jsx, neither of which this
-   plan may touch), so it is intentionally self-contained here instead. */
+   palette).
+
+   IMPL_PLAN_SH9 §4 update: this screen *does* now opt into the shared
+   `.site-theme` CSS-variable system (SfHistoryRoot.jsx adds the
+   `site-theme` class to its root, same convention as
+   TaskManagerRoot.jsx's `site-theme tm-app ...`). The rules below follow
+   `taskManager.css`'s own `.ranking-root` block -- another always-dark-
+   authored screen that layers onto `.site-theme` -- rather than rewriting
+   this file's own dark palette into light-by-default markup: this screen's
+   Tailwind utility classes (`bg-slate-*`, `text-slate-*`, ...) and its own
+   `.sfh-*` custom classes stay dark-first, and the blocks below remap them
+   toward the shared `--theme-*` custom properties for Light/Standard depth,
+   plus the 4-color accent (`--theme-focus` / `--theme-card-border`) at every
+   depth. This is why edits to `--theme-*` in `taskManager.css`'s `.site-theme`
+   base rule are picked up here without any new mechanism: custom properties
+   inherit down the DOM regardless of which stylesheet declared them. */
 
 .sfh-root {
-  background: #020617;
+  background:
+    radial-gradient(circle at 12% -8%, var(--theme-glow-primary), transparent 28rem),
+    radial-gradient(circle at 88% 2%, var(--theme-glow-secondary), transparent 24rem),
+    linear-gradient(180deg, var(--theme-bg-start) 0%, var(--theme-bg-mid) 48%, var(--theme-bg-end) 100%);
   color: #e2e8f0;
+}
+
+html:not([data-theme-depth="deep"]) .sfh-root {
+  color: #1e293b;
+}
+
+html:not([data-theme-depth="deep"]) .sfh-root :is([class*="bg-slate-900"], [class*="bg-slate-950"], [class*="bg-slate-800"]) {
+  background-color: var(--theme-card-bg) !important;
+}
+
+html:not([data-theme-depth="deep"]) .sfh-root [class*="border-slate-"] {
+  border-color: var(--theme-card-border) !important;
+}
+
+html:not([data-theme-depth="deep"]) .sfh-root :is([class*="text-slate-100"], [class*="text-slate-200"]) {
+  color: #1e293b !important;
+}
+
+html:not([data-theme-depth="deep"]) .sfh-root [class*="text-slate-300"] {
+  color: #334155 !important;
+}
+
+html:not([data-theme-depth="deep"]) .sfh-root :is([class*="text-slate-400"], [class*="text-slate-500"]) {
+  color: #64748b !important;
+}
+
+.sfh-root :is([class*="text-cyan-"], [class*="text-sky-"]) {
+  color: var(--theme-focus) !important;
 }
 
 .sfh-field-label {
@@ -19,11 +62,15 @@
   letter-spacing: 0.05em;
 }
 
+html:not([data-theme-depth="deep"]) .sfh-field-label {
+  color: #64748b;
+}
+
 .sfh-group-shared-note {
   border-radius: 0.6rem;
-  border: 1px solid #0e7490;
-  background: #083344;
-  color: #a5f3fc;
+  border: 1px solid var(--theme-card-border);
+  background: var(--theme-card-bg);
+  color: var(--theme-focus);
   padding: 0.5rem 0.85rem;
   font-size: 0.8rem;
   max-width: 42rem;
@@ -37,25 +84,25 @@
 
 .sfh-select {
   border-radius: 0.5rem;
-  border: 1px solid #334155;
-  background: #0f172a;
-  color: #e2e8f0;
+  border: 1px solid var(--theme-card-border);
+  background: var(--theme-card-bg);
+  color: inherit;
   padding: 0.4rem 0.6rem;
   font-size: 0.875rem;
 }
 
 .sfh-preset-chip {
   border-radius: 999px;
-  border: 1px solid #334155;
-  background: #0f172a;
-  color: #cbd5e1;
+  border: 1px solid var(--theme-card-border);
+  background: var(--theme-card-bg);
+  color: inherit;
   padding: 0.25rem 0.75rem;
   font-size: 0.8rem;
   transition: background-color 0.15s, color 0.15s, border-color 0.15s;
 }
 
 .sfh-preset-chip:not(:disabled):hover {
-  background: #1e293b;
+  background: color-mix(in srgb, var(--theme-focus) 16%, var(--theme-card-bg));
 }
 
 .sfh-preset-chip:disabled {
@@ -64,15 +111,15 @@
 }
 
 .sfh-preset-chip-active {
-  background: #0e7490;
-  border-color: #22d3ee;
-  color: #ecfeff;
+  background: var(--theme-focus);
+  border-color: var(--theme-focus);
+  color: #04121b;
 }
 
 .sfh-period-tabs {
   display: inline-flex;
   border-radius: 0.6rem;
-  background: #0f172a;
+  background: var(--theme-card-bg);
   padding: 0.2rem;
   gap: 0.15rem;
 }
@@ -85,18 +132,22 @@
   color: #94a3b8;
 }
 
+html:not([data-theme-depth="deep"]) .sfh-period-tab {
+  color: #64748b;
+}
+
 .sfh-period-tab:hover {
-  color: #e2e8f0;
+  color: var(--theme-focus);
 }
 
 .sfh-period-tab-active {
-  background: #164e63;
-  color: #67e8f9;
+  background: color-mix(in srgb, var(--theme-focus) 22%, var(--theme-card-bg));
+  color: var(--theme-focus);
 }
 
 .sfh-summary-card {
   border-radius: 1rem;
-  background: #0f172a;
+  background: var(--theme-card-bg);
   padding: 0.9rem 1rem;
   min-width: 0;
 }
@@ -104,6 +155,10 @@
 .sfh-summary-label {
   font-size: 0.75rem;
   color: #94a3b8;
+}
+
+html:not([data-theme-depth="deep"]) .sfh-summary-label {
+  color: #64748b;
 }
 
 .sfh-summary-value {
@@ -119,6 +174,10 @@
   gap: 0.4rem 1rem;
   font-size: 0.78rem;
   color: #94a3b8;
+}
+
+html:not([data-theme-depth="deep"]) .sfh-conditions-list {
+  color: #64748b;
 }
 
 .sfh-conditions-list dt {

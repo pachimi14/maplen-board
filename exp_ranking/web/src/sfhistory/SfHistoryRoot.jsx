@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { SiteHeader } from "../components/BoardHeader.jsx";
 import { useTranslation } from "../i18n/I18nContext.jsx";
+import { useDashboardStore } from "../taskManager/storage/useDashboardStore.js";
+import { setDashboardThemeColor, setDashboardThemeDepth } from "../taskManager/domain/dashboardModel.js";
 import { sfHistorySource } from "./integrations/sfHistorySource.js";
 import { defaultPresetForMaxStar, isValidStarRange } from "./domain/series.js";
 import { buildScreenModel, isRangeReady } from "./domain/viewModel.js";
@@ -21,6 +23,42 @@ import "./sfhistory.css";
  */
 export default function SfHistoryRoot() {
   const { t } = useTranslation();
+
+  // IMPL_PLAN_SH9 §4: reuses TaskManagerRoot's own theme storage
+  // (`useDashboardStore` + `setDashboardThemeColor`/`setDashboardThemeDepth`
+  // from taskManager/domain/dashboardModel.js) rather than inventing a
+  // second theme store -- "新しい仕組みを発明しない". Read-only import of an
+  // already-exported hook/pair of functions; no taskManager/ file is
+  // modified by this slice.
+  //
+  // Known limitation (reported, not silently hidden): App.jsx's own
+  // `document.documentElement.dataset.themeColor/themeDepth` effect runs
+  // unconditionally on every AppShell render, including while this
+  // component is mounted, and -- being the parent -- fires *after* this
+  // effect on the very first commit. On the very first navigation to
+  // `#/starforce` in a session, that one-time effect ordering can overwrite
+  // this page's stored color/depth with whatever the ranking page's own
+  // theme happens to be, before a user has touched this page's picker.
+  // Defaults for both stores are the same (green/deep), so this is only
+  // observable if a visitor has *previously* set the ranking page and the
+  // Task Manager's shared theme to two different combinations. Fixing this
+  // fully would mean teaching App.jsx's effect about the `starforce` route,
+  // which is outside this plan's file list (App.jsx is not in §1's "変更
+  // してよい"); every *interaction* with this page's own picker afterward
+  // applies immediately and is not re-clobbered (App.jsx does not re-render
+  // from this page's own state changes).
+  const dashboardStore = useDashboardStore();
+  const theme = useMemo(
+    () => ({ themeColor: dashboardStore.state.themeColor, themeDepth: dashboardStore.state.themeDepth }),
+    [dashboardStore.state.themeColor, dashboardStore.state.themeDepth],
+  );
+  const handleThemeChange = (next) => {
+    dashboardStore.update((state) => setDashboardThemeDepth(setDashboardThemeColor(state, next.themeColor), next.themeDepth));
+  };
+  useEffect(() => {
+    document.documentElement.dataset.themeColor = theme.themeColor;
+    document.documentElement.dataset.themeDepth = theme.themeDepth;
+  }, [theme.themeColor, theme.themeDepth]);
 
   const [equipmentState, setEquipmentState] = useState({ status: "loading", items: [] });
   const [selectedItemId, setSelectedItemId] = useState(null); // representative id -- drives prices/latest
@@ -141,8 +179,8 @@ export default function SfHistoryRoot() {
   );
 
   return (
-    <div className="sfh-root min-h-screen">
-      <SiteHeader active="sfhistory" variant="dark" />
+    <div className="site-theme sfh-root min-h-screen">
+      <SiteHeader active="sfhistory" theme={theme} onThemeChange={handleThemeChange} />
       <main className="mx-auto max-w-6xl space-y-5 px-4 py-6 md:px-8">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{t("sfhistory.pageTitle")}</h1>
