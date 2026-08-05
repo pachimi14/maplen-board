@@ -99,6 +99,20 @@ export function defaultPresetForMaxStar(maxStar) {
  * Only ever set when `provisional` is true, matching the design's "確定点
  * には asOf を付けない" -- a display-only pass-through, not a change to the
  * missing-data gating or Expected calculation above.
+ *
+ * IMPL_PLAN_SH19 §1/§4: `point.closed` is passed through the same way, as a
+ * SEPARATE flag from `provisional` -- do not confuse the two. `closed`
+ * (server: app.py) answers "has this bucket's time window ended?" and is
+ * what SfHistoryChart now uses to decide dashed-vs-solid / hollow marker
+ * (always exactly one open point). `provisional` still answers "is this
+ * persisted in sf_price_history_4h?" and is what computeStats/
+ * currentPercentile below still key off of, UNCHANGED by this plan -- an
+ * elapsed-but-unaggregated bucket is `closed: true` (drawn solid) but stays
+ * `provisional: true` (still excluded from statistics, so a later
+ * aggregation-job correction of its value can never make average/percentile/
+ * heatmap numbers un-reproduce on reload). Defaults to `true` when the
+ * server omits the field (a confirmed point never carries it explicitly --
+ * see app.py -- but "no flag" must mean "closed", not "open").
  */
 export function buildExpectedSeries(points, startStar, targetStar) {
   const required = requiredPriceStars(startStar, targetStar);
@@ -107,14 +121,16 @@ export function buildExpectedSeries(points, startStar, targetStar) {
     const hasAllRequired = required.every((star) => prices[star] != null);
     const provisional = point?.provisional === true;
     const asOf = provisional && typeof point?.asOf === "string" ? point.asOf : null;
+    const closed = point?.closed !== false;
     if (!hasAllRequired) {
-      return { date: point.date, expected: null, provisional, asOf };
+      return { date: point.date, expected: null, provisional, asOf, closed };
     }
     return {
       date: point.date,
       expected: expectedStarforceCostExact({ startStar, targetStar, sfPrices: prices }),
       provisional,
       asOf,
+      closed,
     };
   });
 }
