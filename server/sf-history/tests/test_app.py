@@ -408,6 +408,91 @@ def test_prices_provisional_point_is_never_persisted_to_the_4h_table(_env: Path)
     assert after_hash == before_hash
 
 
+def test_prices_fills_a_completed_but_unaggregated_bucket_from_hourly_data(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """IMPL_PLAN_SH13 §2/(b): reproduces the exact real-world gap -- the 4h
+    aggregation job has not run for one fully-elapsed bucket. The response
+    must fill that bucket from `sf_price_history_hourly` (never written back
+    to `sf_price_history_4h`), tagged `provisional`, with the still-open
+    current bucket appended after it (unchanged SH-7 sourcing from the
+    shared `latest` cache) -- 3 points, exactly 4h apart, no gap."""
+    items_path = _write_items(tmp_path)
+    db_path = tmp_path / "x.sqlite"
+    conn = db.connect(db_path)
+    db.apply_schema(conn)
+
+    now = datetime.now(timezone.utc)
+    current_bucket = aggregate.parse_iso_utc(aggregate.bucket_start(now.strftime("%Y-%m-%dT%H:%M:%SZ")))
+    missing_bucket = current_bucket - timedelta(hours=4)  # fully elapsed, never aggregated
+    confirmed_bucket = missing_bucket - timedelta(hours=4)  # already in sf_price_history_4h
+
+    confirmed_iso = aggregate.format_iso_utc(confirmed_bucket)
+    missing_iso = aggregate.format_iso_utc(missing_bucket)
+    current_iso = aggregate.format_iso_utc(current_bucket)
+
+    db.replace_4h_rows(
+        conn, 1001, 0,
+        [{"price_at": confirmed_iso, "end_price": 100.0, "source_hour_at": confirmed_iso, "generated_at": "2026-08-05T01:00:00Z"}],
+    )
+    # Hourly data reaches one hour into the missing (now fully-elapsed, but
+    # never re-aggregated) bucket -- the exact shape of the outage this
+    # slice fixes.
+    hourly_at_missing = aggregate.format_iso_utc(missing_bucket + timedelta(hours=1))
+    for upgrade in range(22):
+        db.upsert_hourly_rows(
+            conn, 1001, upgrade,
+            [{"date": hourly_at_missing, "endPrice": 200.0 + upgrade, "sumEnhanceCnt": 0}],
+            "irrelevant",
+        )
+    before_count = db.count_4h_rows(conn)
+    before_hash = aggregate.content_hash(conn)
+    conn.close()
+
+    monkeypatch.setenv("SF_HISTORY_DB_PATH", str(db_path))
+    monkeypatch.setenv("SF_HISTORY_ITEMS_PATH", str(items_path))
+    app_module._items_cache = None
+    app_module._items_cache_key = None
+
+    class FakeCache:
+        def get(self, item_id: int) -> dict[str, Any]:
+            return {"itemId": item_id, "latestUpdatedAt": "now-ish", "prices": [999.0] + [None] * 21}
+
+    app_module.app.state.latest_cache = FakeCache()
+    try:
+        response = app_module.prices(_request(), itemId="1001")
+        assert response.status_code == 200
+        body = json.loads(response.body)
+
+        dates = [p["date"] for p in body["points"]]
+        assert dates == [confirmed_iso, missing_iso, current_iso]  # (b): no gap, 4h apart
+
+        assert body["endDate"] == confirmed_iso  # (c): last CONFIRMED bucket, unaffected
+
+        provisional_points = [p for p in body["points"] if p.get("provisional") is True]
+        assert len(provisional_points) == 2  # (b): one completed-but-unaggregated + one in-progress
+
+        completed, live = provisional_points
+        assert completed["date"] == missing_iso
+        assert completed["prices"][0] == 200.0  # last hourly end_price inside that bucket
+        assert "asOf" not in completed  # SH-13 §2-2: only the live point ever carries asOf
+
+        assert live["date"] == current_iso
+        assert live["prices"][0] == 999.0
+        assert live["asOf"] == "now-ish"
+
+        assert body["provisionalDate"] == current_iso  # most recent provisional point
+    finally:
+        app_module.app.state.latest_cache = app_module._build_latest_cache()
+
+    conn = db.connect(db_path)
+    after_count = db.count_4h_rows(conn)
+    after_hash = aggregate.content_hash(conn)
+    conn.close()
+    assert after_count == before_count  # (c): sf_price_history_4h untouched
+    assert after_hash == before_hash
+
+
 def test_latest_cache_ttl_defaults_to_300_seconds(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("SF_HISTORY_LATEST_TTL_SECONDS", raising=False)
     cache = app_module._build_latest_cache()

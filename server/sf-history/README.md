@@ -74,9 +74,20 @@ GET /sf-history/health                liveness check
 GET /sf-history/equipment             28-item list + aliasItemIds + aliases (itemId+itemName per group
                                        member, IMPL_PLAN_SH9 §3-2) + data-derived maxStar (design §7.1)
 GET /sf-history/prices?itemId=        4h series, up to 150 days, 22-wide prices[] per point (null = missing).
-                                       SH-7: may append one trailing point with `"provisional": true`, sourced
-                                       from the same `latest` cache as below -- never persisted, degrades to
-                                       confirmed-history-only (still 200) if the upstream `latest` call fails.
+                                       IMPL_PLAN_SH13 §2-2 (supersedes SH-7's "one trailing point"): the rule is
+                                       now simply "in `sf_price_history_4h` = confirmed; not there but derivable
+                                       from `sf_price_history_hourly` = provisional (`"provisional": true`)".
+                                       There can be MORE THAN ONE provisional point: any bucket whose window has
+                                       already fully elapsed but that the periodic 4h-aggregation job has not
+                                       re-run for yet (derived here from hourly data, last `end_price` in the
+                                       bucket, never written back to `sf_price_history_4h`), followed by the one
+                                       bucket still in progress (unchanged SH-7 sourcing: the shared `latest`
+                                       cache also used by `/sf-history/latest` below). `provisionalDate` is the
+                                       MOST RECENT provisional point's date (previously: the only one that could
+                                       exist) -- this is a breaking change to that field's meaning from SH-7/SH-8,
+                                       not just an added case. Degrades to confirmed-history-only (still 200) if
+                                       the upstream `latest` call fails; the hourly-derived provisional points are
+                                       unaffected by that failure (they never call upstream at all).
 GET /sf-history/latest?itemId=        current price (official `latest` proxied, TTL default 300s, no historical fallback)
 ```
 

@@ -221,36 +221,71 @@ def prices(request: Request, itemId: str | None = None) -> JSONResponse:
     try:
         rows = db.four_h_rows_for_item(conn, item_id)
         price_version = db.latest_generated_at_for_item(conn, item_id)
+
+        cutoff = _format_iso_utc(datetime.now(timezone.utc) - timedelta(days=DISPLAY_WINDOW_DAYS))
+        by_date: dict[str, list[float | None]] = {}
+        for upgrade, price_at, end_price in rows:
+            if price_at < cutoff:
+                continue
+            if not (0 <= upgrade < UPGRADE_COUNT):
+                continue
+            slot = by_date.setdefault(price_at, [None] * UPGRADE_COUNT)
+            # Rounded to 2 decimals at the transport boundary only (the stored
+            # sf_price_history_4h.end_price keeps full precision) -- values here
+            # are NESO prices in the hundreds-of-thousands to low-millions range,
+            # so sub-cent digits are display noise, not signal. This is what
+            # keeps gzip'd response size under the plan §7(d) 100KB budget: full
+            # precision measured ~117-127KB gzip'd, 2 decimals ~80-90KB.
+            slot[upgrade] = round(end_price, 2)
+
+        dates = sorted(by_date)
+        points = [{"date": d, "prices": by_date[d]} for d in dates]
+        last_confirmed_date = dates[-1] if dates else None
+
+        # IMPL_PLAN_SH13 §2-2: the simplified rule is "in sf_price_history_4h
+        # = confirmed; not there but derivable from hourly = provisional" --
+        # this closes the gap that used to appear whenever the 4h aggregation
+        # job hadn't run yet for a bucket that had already fully elapsed
+        # (previously: the response just stopped at the last row the 4h
+        # table happened to hold, with nothing standing in for the completed
+        # buckets in between). `sf_price_history_4h` itself is only ever read
+        # here -- never written -- so (c)'s determinism guarantee (row
+        # count/hash unchanged) holds no matter how many times this route runs.
+        provisional_points: list[dict[str, Any]] = []
+        max_upgrade_by_item = db.max_upgrade_by_item(conn)
+        confirmed_max_upgrade = max_upgrade_by_item.get(item_id)
+        now = datetime.now(timezone.utc)
+        if confirmed_max_upgrade is not None:
+            derived_by_date: dict[str, list[float | None]] = {}
+            for upgrade in range(confirmed_max_upgrade + 1):
+                hourly_rows = db.hourly_series(conn, item_id, upgrade, since=last_confirmed_date)
+                # `aggregate.compute_buckets` already excludes any bucket
+                # whose window has not fully elapsed as of `now` -- the
+                # still-open "current" bucket below is deliberately never
+                # produced by this call, so it always comes from the shared
+                # `latest` cache instead, exactly as SH-7 already did.
+                for bucket in aggregate.compute_buckets(hourly_rows, now=now):
+                    bucket_date = bucket["price_at"]
+                    if last_confirmed_date is not None and bucket_date <= last_confirmed_date:
+                        continue  # already confirmed -- sf_price_history_4h stays authoritative
+                    if bucket_date < cutoff:
+                        continue  # same 150-day display window as the confirmed points above
+                    if not (0 <= upgrade < UPGRADE_COUNT):
+                        continue
+                    slot = derived_by_date.setdefault(bucket_date, [None] * UPGRADE_COUNT)
+                    slot[upgrade] = round(bucket["end_price"], 2)
+            for bucket_date in sorted(derived_by_date):
+                provisional_points.append(
+                    {"date": bucket_date, "prices": derived_by_date[bucket_date], "provisional": True}
+                )
     finally:
         conn.close()
 
-    cutoff = _format_iso_utc(datetime.now(timezone.utc) - timedelta(days=DISPLAY_WINDOW_DAYS))
-    by_date: dict[str, list[float | None]] = {}
-    for upgrade, price_at, end_price in rows:
-        if price_at < cutoff:
-            continue
-        if not (0 <= upgrade < UPGRADE_COUNT):
-            continue
-        slot = by_date.setdefault(price_at, [None] * UPGRADE_COUNT)
-        # Rounded to 2 decimals at the transport boundary only (the stored
-        # sf_price_history_4h.end_price keeps full precision) -- values here
-        # are NESO prices in the hundreds-of-thousands to low-millions range,
-        # so sub-cent digits are display noise, not signal. This is what
-        # keeps gzip'd response size under the plan §7(d) 100KB budget: full
-        # precision measured ~117-127KB gzip'd, 2 decimals ~80-90KB.
-        slot[upgrade] = round(end_price, 2)
-
-    dates = sorted(by_date)
-    points = [{"date": d, "prices": by_date[d]} for d in dates]
-
-    # SH-7 §3: append the in-progress 4h bucket as a *provisional* point,
-    # sourced from the same shared `latest` cache as `/sf-history/latest`
-    # (§3-1: "同じ出どころ" -- never a second, independent notion of "now").
-    # Never written to sf_price_history_4h (design §9 is unchanged: the
-    # stored/aggregated table only ever holds buckets whose window has
-    # fully elapsed) -- this point exists only in this one response.
-    provisional_date: str | None = None
-    now = datetime.now(timezone.utc)
+    # SH-7 §3 (sourcing unchanged): the one bucket that has not fully
+    # elapsed yet -- "in progress" as of `now` -- is still sourced from the
+    # same shared `latest` cache as `/sf-history/latest` (§3-1: "同じ出どこ
+    # ろ" -- never a second, independent notion of "now"), never from
+    # hourly. Also never written to sf_price_history_4h.
     candidate_date = aggregate.bucket_start(_format_iso_utc(now))
     if candidate_date not in by_date:
         cache: LatestPriceCache = request.app.state.latest_cache
@@ -281,12 +316,24 @@ def prices(request: Request, itemId: str | None = None) -> JSONResponse:
             # lookup. Omitted entirely (not `null`) when the upstream payload
             # didn't carry one, per "無い数字を発明しない" -- falling back to
             # `candidate_date` here would silently reintroduce the "looks
-            # stale" bug this slice exists to fix.
+            # stale" bug this slice exists to fix. Not applicable to the
+            # hourly-derived provisional points above (their `date` is
+            # already a real, fully-elapsed bucket boundary, same as a
+            # confirmed point's) -- `asOf` is only ever attached to this one
+            # live point.
             as_of = latest_result.get("latestUpdatedAt")
             if isinstance(as_of, str) and as_of:
                 provisional_point["asOf"] = as_of
-            points.append(provisional_point)
-            provisional_date = candidate_date
+            provisional_points.append(provisional_point)
+
+    points.extend(provisional_points)
+    # IMPL_PLAN_SH13 §2-2: "暫定点は複数になりうる" -- `provisionalDate` now
+    # means the MOST RECENT provisional point (previously: the only one that
+    # could ever exist). `provisional_points` is always chronologically
+    # ascending (hourly-derived buckets sorted, then the live bucket last,
+    # since it is always the most recent one), so the last entry is exactly
+    # that.
+    provisional_date = provisional_points[-1]["date"] if provisional_points else None
 
     return _json(
         {
