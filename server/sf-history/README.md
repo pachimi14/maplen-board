@@ -29,8 +29,36 @@ scripts/audit_high_star_plateau.py   design §9.2: do the ☆20/☆21 end_price 
 data/sf_history_items.json           committed snapshot of the target equipment list (incl. maxStar)
 data/.gitignore                      *.sqlite* is never committed (SH-2 §8)
 deploy/                              Caddyfile / systemd .service / .timer *.example files (SH-6 reads these)
+contract/response_fields.json        IMPL_PLAN_SH20: the response/normalization field contract (see below)
 tests/                                offline pytest (no network -- see "Offline by design" below)
 ```
+
+## Response/normalization field contract (IMPL_PLAN_SH20)
+
+`contract/response_fields.json` is the single, shared source of truth for
+which JSON keys `equipment`/`prices`/`latest` above may return. **Both**
+sides read the same file -- nobody duplicates the field list:
+
+- `tests/test_response_contract.py` asserts the ACTUAL response key sets
+  from this app against the contract (a key the response returns that is
+  not in the contract fails; a key the contract lists that the response
+  stops returning also fails).
+- The frontend's `exp_ranking/web/src/sfhistory/integrations/
+  contract.test.js` asserts `normalizeEquipmentPayload`/`normalizePricesPayload`/
+  `normalizeLatestPayload`'s output keeps every field the contract lists,
+  unless that field is explicitly listed in that file's own
+  `INTENTIONALLY_DROPPED` map (documented, never silent).
+
+This exists because the frontend's normalizer used to be a hand-written
+whitelist with no cross-check against this server: three separate times
+(`provisional`/`provisionalDate` in SH-9, `asOf` in SH-16, `closed` in
+SH-19 -- the last one shipped a P0, an entirely empty dashed-line series)
+a new field landed here and the frontend silently dropped it because
+nothing forced anyone to update the whitelist. Adding a field to this
+service's response now requires adding it to `contract/response_fields.json`
+first, which fails `test_response_contract.py` until the field is actually
+present, and fails the frontend's `contract.test.js` until the frontend
+either passes the new field through or documents the drop.
 
 ## Local run
 
