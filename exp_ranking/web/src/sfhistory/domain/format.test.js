@@ -6,6 +6,7 @@ import {
   formatClockTime,
   formatCompactNeso,
   formatExactNeso,
+  formatLocalClockTime,
   formatSignedCompactNeso,
   formatTimestamp,
   formatTimeZoneLabel,
@@ -284,3 +285,40 @@ describe("formatTooltipDateLocal (plan §1: the chart tooltip's secondary local-
   });
 });
 
+// IMPL_PLAN_SH29 §2/(b)/(c): the heatmap's local-time column header. Plan's
+// own worked example: "JSTなら9:00を左上のUTC0:00のところに表示する" -- the
+// column itself always represents UTC 00:00/04:00/.../20:00 (unchanged,
+// `formatClockTime` above); this is the *added* local reading of that same
+// fixed hour.
+describe("formatLocalClockTime (plan §2/(b): heatmap column header, local reading of a fixed UTC hour)", () => {
+  it("(b): UTC 00:00 renders as 09:00 in JST -- the plan's own worked example", () => {
+    expect(
+      formatLocalClockTime(0, 0, { timeZone: "Asia/Tokyo", referenceDate: new Date("2026-08-05T00:00:00Z") }),
+    ).toBe("09:00");
+  });
+
+  it("covers the full fixed UTC column sequence -> JST equivalents", () => {
+    const referenceDate = new Date("2026-08-05T00:00:00Z");
+    const cases = [
+      [0, "09:00"],
+      [4, "13:00"],
+      [8, "17:00"],
+      [12, "21:00"],
+      [16, "01:00"],
+      [20, "05:00"],
+    ];
+    for (const [hour, expected] of cases) {
+      expect(formatLocalClockTime(hour, 0, { timeZone: "Asia/Tokyo", referenceDate })).toBe(expected);
+    }
+  });
+
+  it("a different timezone renders a different local hour for the same fixed UTC column", () => {
+    const referenceDate = new Date("2026-08-05T00:00:00Z");
+    expect(formatLocalClockTime(0, 0, { timeZone: "UTC", referenceDate })).toBe("00:00");
+    expect(formatLocalClockTime(0, 0, { timeZone: "America/New_York", referenceDate })).toBe("20:00");
+  });
+
+  it("never invents a time for an empty column (null/null), same as formatClockTime", () => {
+    expect(formatLocalClockTime(null, null, { timeZone: "Asia/Tokyo" })).toBe("--:--");
+  });
+});

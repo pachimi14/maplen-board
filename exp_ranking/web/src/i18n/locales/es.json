@@ -452,7 +452,8 @@
       "empty": "No hay datos para mostrar"
     },
     "heatmap": {
-      "title": "Día de la semana x Franja horaria (UTC)",
+      "title": "Día de la semana x Franja horaria",
+      "axisNote": "Filas: día de la semana (UTC). Columnas: hora local ({{zone}}; UTC debajo de cada columna)",
       "periodNote": "Tendencia de los últimos ~150 días completos (no está vinculado a la pestaña de período de arriba)",
       "empty": "Todavía no hay suficientes datos para resumir",
       "cellTooltip": "{{value}}",

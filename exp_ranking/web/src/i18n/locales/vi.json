@@ -452,7 +452,8 @@
       "empty": "Không có dữ liệu để hiển thị"
     },
     "heatmap": {
-      "title": "Thứ trong tuần x Khung giờ (UTC)",
+      "title": "Thứ trong tuần x Khung giờ",
+      "axisNote": "Hàng: thứ trong tuần (UTC). Cột: giờ địa phương ({{zone}}; UTC hiển thị bên dưới mỗi cột)",
       "periodNote": "Xu hướng trong khoảng ~150 ngày dữ liệu (không liên kết với tab khoảng thời gian phía trên)",
       "empty": "Chưa đủ dữ liệu để tổng hợp",
       "cellTooltip": "{{value}}",
