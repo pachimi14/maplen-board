@@ -75,19 +75,32 @@ GET /sf-history/equipment             28-item list + aliasItemIds + aliases (ite
                                        member, IMPL_PLAN_SH9 §3-2) + data-derived maxStar (design §7.1)
 GET /sf-history/prices?itemId=        4h series, up to 150 days, 22-wide prices[] per point (null = missing).
                                        IMPL_PLAN_SH13 §2-2 (supersedes SH-7's "one trailing point"): the rule is
-                                       now simply "in `sf_price_history_4h` = confirmed; not there but derivable
-                                       from `sf_price_history_hourly` = provisional (`"provisional": true`)".
-                                       There can be MORE THAN ONE provisional point: any bucket whose window has
-                                       already fully elapsed but that the periodic 4h-aggregation job has not
-                                       re-run for yet (derived here from hourly data, last `end_price` in the
-                                       bucket, never written back to `sf_price_history_4h`), followed by the one
-                                       bucket still in progress (unchanged SH-7 sourcing: the shared `latest`
-                                       cache also used by `/sf-history/latest` below). `provisionalDate` is the
-                                       MOST RECENT provisional point's date (previously: the only one that could
-                                       exist) -- this is a breaking change to that field's meaning from SH-7/SH-8,
-                                       not just an added case. Degrades to confirmed-history-only (still 200) if
-                                       the upstream `latest` call fails; the hourly-derived provisional points are
-                                       unaffected by that failure (they never call upstream at all).
+                                       "in `sf_price_history_4h` = confirmed; not there but derivable from
+                                       `sf_price_history_hourly` = provisional (`"provisional": true`)". There can
+                                       be MORE THAN ONE provisional point, in this order:
+                                         1. any bucket whose window has already fully elapsed but that the
+                                            periodic 4h-aggregation job has not re-run for yet (derived here from
+                                            hourly data, last `end_price` in the bucket, never written back to
+                                            `sf_price_history_4h`)
+                                         2. IMPL_PLAN_SH16 §3: the one bucket still in progress, IF hourly data has
+                                            already landed inside its own (not-yet-elapsed) window -- same
+                                            "latest `end_price` inside the window" rule as (1), just without the
+                                            elapse gate, still drawn at the bucket's own start time
+                                         3. the live current-value point, sourced from the shared `latest` cache
+                                            also used by `/sf-history/latest` below (unchanged SH-7 sourcing).
+                                            IMPL_PLAN_SH16 §1/§3 (revises SH-8): its `date` is the upstream `asOf`
+                                            timestamp itself -- not a bucket-start position -- so this point's x
+                                            position and its displayed time can never disagree. Tagged
+                                            `"current": true` to distinguish it from a real bucket. Falls back to
+                                            the in-progress bucket's own start only when the upstream payload
+                                            carried no usable `latestUpdatedAt` at all ("無い数字を発明しない" --
+                                            `asOf` is omitted entirely in that case, never invented)
+                                       `provisionalDate` is the MOST RECENT provisional point's date (previously:
+                                       the only one that could exist) -- unchanged definition from SH-13, now just
+                                       resolves to whichever of the three kinds above is present and latest.
+                                       Degrades to confirmed-history-only (still 200) if the upstream `latest`
+                                       call fails; the hourly-derived provisional points (1)/(2) are unaffected by
+                                       that failure (they never call upstream at all).
 GET /sf-history/latest?itemId=        current price (official `latest` proxied, TTL default 300s, no historical fallback)
 ```
 

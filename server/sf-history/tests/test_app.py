@@ -277,9 +277,10 @@ def test_prices_appends_a_provisional_point_from_the_shared_latest_cache(_env: P
 
 
 def test_prices_provisional_point_carries_asOf_from_latestUpdatedAt(_env: Path) -> None:
-    """IMPL_PLAN_SH8 (a)/(e): the provisional point's `asOf` is the shared
-    `latest` cache's own `latestUpdatedAt` -- the same value `/sf-history
-    /latest` returns -- never the bucket-start `date`."""
+    """IMPL_PLAN_SH16 §1/§3 (refines IMPL_PLAN_SH8): the live point's `asOf`
+    is the shared `latest` cache's own `latestUpdatedAt` -- the same value
+    `/sf-history/latest` returns -- and (SH-16's core fix) `date` now EQUALS
+    `asOf`, not the bucket-start position SH-8 used to leave it at."""
 
     class FakeCache:
         def get(self, item_id: int) -> dict[str, Any]:
@@ -292,7 +293,8 @@ def test_prices_provisional_point_carries_asOf_from_latestUpdatedAt(_env: Path) 
         provisional_points = [p for p in body["points"] if p.get("provisional") is True]
         assert len(provisional_points) == 1
         assert provisional_points[0]["asOf"] == "2026-08-05T01:40:00Z"
-        assert provisional_points[0]["asOf"] != provisional_points[0]["date"]
+        assert provisional_points[0]["date"] == provisional_points[0]["asOf"]  # (b): position == asOf, SH-16
+        assert provisional_points[0]["current"] is True
 
         # (b): confirmed points never carry `asOf` -- 0 of them do.
         confirmed_points = [p for p in body["points"] if not p.get("provisional")]
@@ -302,10 +304,12 @@ def test_prices_provisional_point_carries_asOf_from_latestUpdatedAt(_env: Path) 
 
 
 def test_prices_provisional_point_omits_asOf_when_upstream_did_not_provide_one(_env: Path) -> None:
-    """IMPL_PLAN_SH8 §2-1: "無い数字を発明しない" -- if the shared cache's
-    `latestUpdatedAt` is missing/None, `asOf` must be omitted entirely, never
-    filled in with the bucket-start `date` (that fallback is exactly the
-    "looks stale" bug this slice exists to fix)."""
+    """IMPL_PLAN_SH8 §2-1 (position rule refined by SH-16 §3): "無い数字を発
+    明しない" -- if the shared cache's `latestUpdatedAt` is missing/None,
+    `asOf` must be omitted entirely, never invented. With no real "as of"
+    instant to place the point at, `date` falls back to the in-progress
+    bucket's own start (the same position every provisional point used
+    before `asOf` existed at all) -- the point is still `current: true`."""
 
     class FakeCache:
         def get(self, item_id: int) -> dict[str, Any]:
@@ -318,8 +322,73 @@ def test_prices_provisional_point_omits_asOf_when_upstream_did_not_provide_one(_
         provisional_points = [p for p in body["points"] if p.get("provisional") is True]
         assert len(provisional_points) == 1
         assert "asOf" not in provisional_points[0]
+        assert provisional_points[0]["current"] is True
+        current_bucket_start = aggregate.bucket_start(app_module._format_iso_utc(datetime.now(timezone.utc)))
+        assert provisional_points[0]["date"] == current_bucket_start
     finally:
         app_module.app.state.latest_cache = app_module._build_latest_cache()
+
+
+def test_prices_in_progress_bucket_with_hourly_data_is_its_own_provisional_point(_env: Path) -> None:
+    """IMPL_PLAN_SH16 §3: if hourly rows have already landed inside the
+    still-open (in-progress) bucket's own window, that bucket gets its own
+    provisional-bucket point -- at the bucket's start time, distinct from
+    the separate live current-value point (at `asOf`). Reproduces the
+    ticket's 4-point sequence: confirmed -> elapsed-provisional ->
+    in-progress-bucket-provisional -> live (SH-16 §5(a))."""
+    now = datetime.now(timezone.utc)
+    current_bucket_start = aggregate.bucket_start(app_module._format_iso_utc(now))
+    hourly_inside_current_bucket = aggregate.format_iso_utc(
+        aggregate.parse_iso_utc(current_bucket_start) + timedelta(hours=1)
+    )
+
+    conn = db.connect(_env)
+    for upgrade in range(22):
+        db.upsert_hourly_rows(
+            conn, 1001, upgrade,
+            [{"date": hourly_inside_current_bucket, "endPrice": 300.0 + upgrade, "sumEnhanceCnt": 0}],
+            "irrelevant",
+        )
+    before_count = db.count_4h_rows(conn)
+    before_hash = aggregate.content_hash(conn)
+    conn.close()
+
+    class FakeCache:
+        def get(self, item_id: int) -> dict[str, Any]:
+            return {"itemId": item_id, "latestUpdatedAt": "2026-08-05T06:20:00Z", "prices": [999.0] + [None] * 21}
+
+    app_module.app.state.latest_cache = FakeCache()
+    try:
+        response = app_module.prices(_request(), itemId="1001")
+        assert response.status_code == 200
+        body = json.loads(response.body)
+
+        provisional_points = [p for p in body["points"] if p.get("provisional") is True]
+        assert len(provisional_points) == 2  # (a): in-progress bucket + live, exactly one `current`
+
+        in_progress_point, live_point = provisional_points
+        assert in_progress_point["date"] == current_bucket_start  # (a)/(d): drawn at the bucket's own time
+        assert in_progress_point["prices"][0] == 300.0  # last hourly end_price inside that bucket
+        assert "current" not in in_progress_point or in_progress_point["current"] is not True
+        assert "asOf" not in in_progress_point  # SH-13 §2-2: only the live point ever carries asOf
+
+        assert live_point["current"] is True
+        assert live_point["date"] == "2026-08-05T06:20:00Z"  # (b): date == asOf
+        assert live_point["asOf"] == "2026-08-05T06:20:00Z"
+
+        current_points = [p for p in body["points"] if p.get("current") is True]
+        assert len(current_points) == 1  # (a): exactly one `current: true` point
+
+        assert body["provisionalDate"] == live_point["date"]  # most recent provisional point
+    finally:
+        app_module.app.state.latest_cache = app_module._build_latest_cache()
+
+    conn = db.connect(_env)
+    after_count = db.count_4h_rows(conn)
+    after_hash = aggregate.content_hash(conn)
+    conn.close()
+    assert after_count == before_count  # (f): sf_price_history_4h untouched
+    assert after_hash == before_hash
 
 
 def test_prices_has_no_provisional_point_when_the_current_bucket_is_already_confirmed(_env: Path) -> None:
@@ -414,9 +483,12 @@ def test_prices_fills_a_completed_but_unaggregated_bucket_from_hourly_data(
     """IMPL_PLAN_SH13 §2/(b): reproduces the exact real-world gap -- the 4h
     aggregation job has not run for one fully-elapsed bucket. The response
     must fill that bucket from `sf_price_history_hourly` (never written back
-    to `sf_price_history_4h`), tagged `provisional`, with the still-open
-    current bucket appended after it (unchanged SH-7 sourcing from the
-    shared `latest` cache) -- 3 points, exactly 4h apart, no gap."""
+    to `sf_price_history_4h`), tagged `provisional`, with the live
+    current-value point appended after it (unchanged SH-7 sourcing from the
+    shared `latest` cache) -- 3 points, no gap. IMPL_PLAN_SH16 §1: the live
+    point's own `date` is now `asOf`, not the in-progress bucket's start
+    (see `test_prices_in_progress_bucket_with_hourly_data_is_its_own_provisional_point`
+    for the case where the in-progress bucket ALSO gets its own point)."""
     items_path = _write_items(tmp_path)
     db_path = tmp_path / "x.sqlite"
     conn = db.connect(db_path)
@@ -464,24 +536,31 @@ def test_prices_fills_a_completed_but_unaggregated_bucket_from_hourly_data(
         assert response.status_code == 200
         body = json.loads(response.body)
 
+        # IMPL_PLAN_SH16 §1/§3: the live point's `date` is `asOf` itself
+        # ("now-ish" here), not the in-progress bucket's start (`current_iso`)
+        # -- this fixture has no hourly data landing inside the current
+        # bucket's own window, so there is no separate in-progress-bucket
+        # point either (still exactly 3 points total).
         dates = [p["date"] for p in body["points"]]
-        assert dates == [confirmed_iso, missing_iso, current_iso]  # (b): no gap, 4h apart
+        assert dates == [confirmed_iso, missing_iso, "now-ish"]  # no gap, 4h apart, then the live point
 
         assert body["endDate"] == confirmed_iso  # (c): last CONFIRMED bucket, unaffected
 
         provisional_points = [p for p in body["points"] if p.get("provisional") is True]
-        assert len(provisional_points) == 2  # (b): one completed-but-unaggregated + one in-progress
+        assert len(provisional_points) == 2  # (b): one completed-but-unaggregated + one live
 
         completed, live = provisional_points
         assert completed["date"] == missing_iso
         assert completed["prices"][0] == 200.0  # last hourly end_price inside that bucket
         assert "asOf" not in completed  # SH-13 §2-2: only the live point ever carries asOf
+        assert "current" not in completed
 
-        assert live["date"] == current_iso
+        assert live["date"] == "now-ish"  # (b): date == asOf, not current_iso (SH-16's core fix)
         assert live["prices"][0] == 999.0
         assert live["asOf"] == "now-ish"
+        assert live["current"] is True
 
-        assert body["provisionalDate"] == current_iso  # most recent provisional point
+        assert body["provisionalDate"] == "now-ish"  # most recent provisional point
     finally:
         app_module.app.state.latest_cache = app_module._build_latest_cache()
 
