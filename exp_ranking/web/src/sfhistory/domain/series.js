@@ -10,9 +10,11 @@ import { expectedStarforceCostExact, requiredPriceStars, STAR_FORCE_MAX } from "
 
 const BUCKETS_PER_DAY = 6; // 4h buckets (design §9)
 
-export const PERIOD_KEYS = ["7D", "30D", "90D", "150D"];
+// IMPL_PLAN_SH29 §3 (2026-08-06, user decision): adds "14D" between 7D and
+// 30D. `DEFAULT_PERIOD` below stays "30D" (unchanged by this plan).
+export const PERIOD_KEYS = ["7D", "14D", "30D", "90D", "150D"];
 
-export const PERIOD_DAYS = { "7D": 7, "30D": 30, "90D": 90, "150D": 150 };
+export const PERIOD_DAYS = { "7D": 7, "14D": 14, "30D": 30, "90D": 90, "150D": 150 };
 
 /** IMPL_PLAN_SH27 §1 (user decision, 2026-08-06): the period tab the screen
  * opens on. Named the same way as `DEFAULT_INITIAL_ITEM_ID` (SH-26) rather
@@ -22,10 +24,14 @@ export const PERIOD_DAYS = { "7D": 7, "30D": 30, "90D": 90, "150D": 150 };
  * `PeriodTabs`, which already renders whatever `period` state holds without
  * validating it against `PERIOD_KEYS` itself).
  *
- * IMPL_PLAN_SH11 §3-2: the heatmap does not read `period` at all (it always
- * aggregates the full ~150-day series), so changing this default does not
- * change one bit of heatmap output -- only which trailing slice of the chart/
- * stats series `sliceByPeriod` returns.
+ * IMPL_PLAN_SH29 §4 (2026-08-06, user decision, reverses IMPL_PLAN_SH11
+ * §3-2): the heatmap now DOES read `period` -- `SfHistoryRoot` passes it
+ * `periodSeries` (this same trailing `sliceByPeriod` slice), not
+ * `fullSeries`, so changing this default now also changes the heatmap's
+ * initial aggregation window, not just the chart/stats one. See
+ * `WeekdayHeatmap.jsx`'s own header comment for the full reversal
+ * rationale and the sample-count disclosure (`heatmapSampleRange`,
+ * weekdayStats.js) that change required.
  */
 export const DEFAULT_PERIOD = "30D";
 
@@ -192,11 +198,11 @@ export function computeCurrentExpected(latestPrices, startStar, targetStar) {
 }
 
 /**
- * Slices the trailing `periodKey` window (7D/30D/90D/150D) off a
- * chronologically-ascending series. The API's `points[]` is already capped
- * to 150 days, so a shorter period is just a shorter trailing slice of the
- * same series -- no re-fetch, no re-derivation (design §13: "常に全再計算
- * でよい").
+ * Slices the trailing `periodKey` window (7D/14D/30D/90D/150D --
+ * IMPL_PLAN_SH29 §3 added 14D) off a chronologically-ascending series. The
+ * API's `points[]` is already capped to 150 days, so a shorter period is
+ * just a shorter trailing slice of the same series -- no re-fetch, no
+ * re-derivation (design §13: "常に全再計算でよい").
  */
 export function sliceByPeriod(series, periodKey) {
   const days = PERIOD_DAYS[periodKey];

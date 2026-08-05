@@ -420,6 +420,7 @@
     "period": {
       "label": "期間",
       "d7": "7天",
+      "d14": "14天",
       "d30": "30天",
       "d90": "90天",
       "d150": "150天"
@@ -454,7 +455,7 @@
     "heatmap": {
       "title": "星期 × 時段",
       "axisNote": "列（星期）為 UTC，欄（時段）為當地時間（{{zone}}；每欄下方併列 UTC）",
-      "periodNote": "過去約150天整體趨勢（不隨上方期間分頁連動）",
+      "periodNote": "依所選期間彙總 -- 每格約 {{sampleRange}} 筆",
       "empty": "目前尚無足夠資料可供彙整",
       "cellTooltip": "{{value}}",
       "noData": "無資料",

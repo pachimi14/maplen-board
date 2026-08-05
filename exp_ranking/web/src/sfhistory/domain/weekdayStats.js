@@ -116,6 +116,28 @@ export function totalHeatmapCount(cells) {
 }
 
 /**
+ * IMPL_PLAN_SH29 §4-1: floor/ceil split of the average confirmed-point
+ * count per cell (`totalHeatmapCount(cells) / cells.length`) -- the single
+ * aggregate "1セルあたり約N点" disclosure the now period-linked heatmap
+ * (plan §4) needs, so a period whose cells mostly hold one point does not
+ * silently call that one point a "median" without saying so. NOT a
+ * per-cell `n=` revival (SH-13 already removed printing that on all 42
+ * cells) -- one number (well, one range) for the whole grid.
+ *
+ * `low`/`high` differ rather than a single rounded average because 42
+ * cells rarely divides a period's confirmed-point count evenly, so some
+ * cells naturally hold one more point than others -- `Math.floor`/
+ * `Math.ceil` of the average is exactly that spread (verified in
+ * `weekdayStats.test.js` against the統括's own measured 7D/14D/30D/90D/
+ * 150D figures from the plan's §4-1 table).
+ */
+export function heatmapSampleRange(cells) {
+  if (!cells.length) return { low: 0, high: 0 };
+  const average = totalHeatmapCount(cells) / cells.length;
+  return { low: Math.floor(average), high: Math.ceil(average) };
+}
+
+/**
  * The lowest/highest-median cell among cells that actually have data (plan
  * §3-3: "最安セル・最高セルを視覚的に示す"). Both `null` if no cell has any
  * data. Not a recommendation (§3-3/§11 forbids one) -- purely which cell to

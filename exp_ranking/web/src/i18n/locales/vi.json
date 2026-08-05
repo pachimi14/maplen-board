@@ -420,6 +420,7 @@
     "period": {
       "label": "Khoảng thời gian",
       "d7": "7 ngày",
+      "d14": "14 ngày",
       "d30": "30 ngày",
       "d90": "90 ngày",
       "d150": "150 ngày"
@@ -454,7 +455,7 @@
     "heatmap": {
       "title": "Thứ trong tuần x Khung giờ",
       "axisNote": "Hàng: thứ trong tuần (UTC). Cột: giờ địa phương ({{zone}}; UTC hiển thị bên dưới mỗi cột)",
-      "periodNote": "Xu hướng trong khoảng ~150 ngày dữ liệu (không liên kết với tab khoảng thời gian phía trên)",
+      "periodNote": "Tổng hợp theo khoảng thời gian đã chọn -- khoảng {{sampleRange}} điểm mỗi ô",
       "empty": "Chưa đủ dữ liệu để tổng hợp",
       "cellTooltip": "{{value}}",
       "noData": "Không có dữ liệu",
