@@ -432,7 +432,9 @@
       "periodHigh": "期間高値",
       "periodLow": "期間安値",
       "currentPosition": "現在の位置",
-      "percentileValue": "この期間の{{percentile}}パーセンタイル",
+      "percentileCheaperThan": "この期間の{{percent}}%より安い",
+      "percentileLowest": "この期間で最も安い",
+      "percentileHighest": "この期間で最も高い",
       "noConfirmedData": "この期間に確定データがありません"
     },
     "chart": {

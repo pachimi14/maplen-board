@@ -432,7 +432,9 @@
       "periodHigh": "Cao nhất kỳ",
       "periodLow": "Thấp nhất kỳ",
       "currentPosition": "Vị trí hiện tại",
-      "percentileValue": "Phân vị {{percentile}} trong kỳ này",
+      "percentileCheaperThan": "Rẻ hơn {{percent}}% của kỳ này",
+      "percentileLowest": "Rẻ nhất trong kỳ này",
+      "percentileHighest": "Đắt nhất trong kỳ này",
       "noConfirmedData": "Không có dữ liệu đã xác nhận trong kỳ này"
     },
     "chart": {

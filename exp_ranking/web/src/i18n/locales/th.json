@@ -432,7 +432,9 @@
       "periodHigh": "ค่าสูงสุดของช่วงเวลา",
       "periodLow": "ค่าต่ำสุดของช่วงเวลา",
       "currentPosition": "ตำแหน่งปัจจุบัน",
-      "percentileValue": "เปอร์เซ็นไทล์ที่ {{percentile}} ของช่วงเวลานี้",
+      "percentileCheaperThan": "ถูกกว่า {{percent}}% ของช่วงเวลานี้",
+      "percentileLowest": "ถูกที่สุดในช่วงเวลานี้",
+      "percentileHighest": "แพงที่สุดในช่วงเวลานี้",
       "noConfirmedData": "ไม่มีข้อมูลที่ยืนยันแล้วในช่วงเวลานี้"
     },
     "chart": {

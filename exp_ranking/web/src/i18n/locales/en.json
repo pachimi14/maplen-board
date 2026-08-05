@@ -432,7 +432,9 @@
       "periodHigh": "Period High",
       "periodLow": "Period Low",
       "currentPosition": "Current Position",
-      "percentileValue": "{{percentile}} percentile in this period",
+      "percentileCheaperThan": "Cheaper than {{percent}}% of this period",
+      "percentileLowest": "The cheapest in this period",
+      "percentileHighest": "The most expensive in this period",
       "noConfirmedData": "No confirmed data in this period"
     },
     "chart": {
