@@ -4,7 +4,7 @@ import { useTranslation } from "../i18n/I18nContext.jsx";
 import { useDashboardStore } from "../taskManager/storage/useDashboardStore.js";
 import { setDashboardThemeColor, setDashboardThemeDepth } from "../taskManager/domain/dashboardModel.js";
 import { sfHistorySource } from "./integrations/sfHistorySource.js";
-import { defaultPresetForMaxStar, isValidStarRange, selectInitialItem } from "./domain/series.js";
+import { DEFAULT_PERIOD, defaultPresetForMaxStar, isValidStarRange, selectInitialItem } from "./domain/series.js";
 import { buildScreenModel, isRangeReady } from "./domain/viewModel.js";
 import EquipmentSelector from "./components/EquipmentSelector.jsx";
 import StarRangeSelector from "./components/StarRangeSelector.jsx";
@@ -58,7 +58,7 @@ export default function SfHistoryRoot() {
   // "shared group" note below; never used for API calls.
   const [selectedAlias, setSelectedAlias] = useState(null); // { itemId, itemName }
   const [range, setRange] = useState(null); // { startStar, targetStar }
-  const [period, setPeriod] = useState("150D");
+  const [period, setPeriod] = useState(DEFAULT_PERIOD); // IMPL_PLAN_SH27 §1
 
   const [pricesState, setPricesState] = useState({ status: "idle", points: [], priceVersion: null, endDate: null });
   const [latestState, setLatestState] = useState({ status: "idle", prices: null, latestUpdatedAt: null });

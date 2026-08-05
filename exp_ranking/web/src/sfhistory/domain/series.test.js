@@ -10,6 +10,7 @@ import {
   currentPercentile,
   defaultPresetForMaxStar,
   DEFAULT_INITIAL_ITEM_ID,
+  DEFAULT_PERIOD,
   describeCurrentPercentile,
   isPresetEnabled,
   isValidStarRange,
@@ -308,6 +309,16 @@ describe("sliceByPeriod (design §13: period tabs cut a trailing window of the s
   it("PERIOD_KEYS and PERIOD_DAYS agree on the same four periods", () => {
     expect(PERIOD_KEYS).toEqual(["7D", "30D", "90D", "150D"]);
     expect(Object.keys(PERIOD_DAYS)).toEqual(PERIOD_KEYS);
+  });
+
+  // IMPL_PLAN_SH27 §4(c): pins the default itself, alongside pinning that it
+  // stays a valid PERIOD_KEYS entry -- so a future rename of the keys (e.g.
+  // "30D" -> "1M") cannot silently strand the default outside PERIOD_KEYS
+  // without failing a test (same "停止せず穏当に劣化する" concern SH-26 §1(c)
+  // applied to DEFAULT_INITIAL_ITEM_ID).
+  it("DEFAULT_PERIOD is 30D and is a member of PERIOD_KEYS", () => {
+    expect(DEFAULT_PERIOD).toBe("30D");
+    expect(PERIOD_KEYS).toContain(DEFAULT_PERIOD);
   });
 });
 
