@@ -134,3 +134,18 @@ describe("matchesEquipmentQuery + flattenCandidates together (design §7: search
     expect(all.filter((row) => matchesEquipmentQuery(row, ""))).toHaveLength(all.length);
   });
 });
+
+// IMPL_PLAN_SH28 §1-1/(b) (2026-08-06 user decision): the candidate display
+// in EquipmentSelector.jsx no longer shows `#<itemId>`, but the match
+// condition here is untouched -- searching by the bare numeric itemId must
+// still find the item. Uses the plan's own worked example (1382265 ->
+// Arcane Umbra Staff) so this fails loudly if a future edit ever couples
+// matching to the (now ID-less) display string.
+describe("SH28: ID search survives removing the id from the display (IMPL_PLAN_SH28 §1-1/(b))", () => {
+  it("finds an item by its bare numeric itemId even though it is never shown", () => {
+    const items = [{ itemId: 1382265, itemName: "Arcane Umbra Staff", maxStar: 22, aliases: [] }];
+    const rows = flattenCandidates(items).filter((row) => matchesEquipmentQuery(row, "1382265"));
+    expect(rows).toHaveLength(1);
+    expect(rows[0].itemName).toBe("Arcane Umbra Staff");
+  });
+});
