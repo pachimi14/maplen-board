@@ -82,25 +82,27 @@ GET /sf-history/prices?itemId=        4h series, up to 150 days, 22-wide prices[
                                             periodic 4h-aggregation job has not re-run for yet (derived here from
                                             hourly data, last `end_price` in the bucket, never written back to
                                             `sf_price_history_4h`)
-                                         2. IMPL_PLAN_SH16 §3: the one bucket still in progress, IF hourly data has
-                                            already landed inside its own (not-yet-elapsed) window -- same
-                                            "latest `end_price` inside the window" rule as (1), just without the
-                                            elapse gate, still drawn at the bucket's own start time
-                                         3. the live current-value point, sourced from the shared `latest` cache
-                                            also used by `/sf-history/latest` below (unchanged SH-7 sourcing).
-                                            IMPL_PLAN_SH16 §1/§3 (revises SH-8): its `date` is the upstream `asOf`
-                                            timestamp itself -- not a bucket-start position -- so this point's x
-                                            position and its displayed time can never disagree. Tagged
-                                            `"current": true` to distinguish it from a real bucket. Falls back to
-                                            the in-progress bucket's own start only when the upstream payload
-                                            carried no usable `latestUpdatedAt` at all ("無い数字を発明しない" --
-                                            `asOf` is omitted entirely in that case, never invented)
+                                         2. IMPL_PLAN_SH17 §1/§3 (supersedes SH-16 §1/§3, per the 2026-08-05 user
+                                            decision): the ONE still-open ("未終了") bucket -- SH-16 used to split
+                                            this into a separate hourly-derived point plus a second, independent
+                                            live-value point (`"current": true`, drawn at `asOf`); SH-17 merges
+                                            those back into a single point, always drawn at the bucket's own start
+                                            (`date` == bucket start, matching every other point's x-position
+                                            rule), with `asOf` attached (not used for position) whenever the
+                                            shared `latest` cache -- also used by `/sf-history/latest` below,
+                                            unchanged SH-7 sourcing -- carries a `latestUpdatedAt`. Its `prices`
+                                            come from that same `latest` cache when available; only when the
+                                            upstream call raises `UpstreamLatestError` does it fall back to the
+                                            hourly-derived value (last `end_price` inside the bucket's own window,
+                                            no `asOf` in that case -- "無い数字を発明しない"). If neither source
+                                            has anything, no point is produced for the still-open bucket at all.
                                        `provisionalDate` is the MOST RECENT provisional point's date (previously:
                                        the only one that could exist) -- unchanged definition from SH-13, now just
-                                       resolves to whichever of the three kinds above is present and latest.
+                                       resolves to whichever of the two kinds above is present and latest.
                                        Degrades to confirmed-history-only (still 200) if the upstream `latest`
-                                       call fails; the hourly-derived provisional points (1)/(2) are unaffected by
-                                       that failure (they never call upstream at all).
+                                       call fails and no hourly fallback is available; the hourly-derived
+                                       elapsed-bucket points (1) are unaffected by that failure (they never call
+                                       upstream at all).
 GET /sf-history/latest?itemId=        current price (official `latest` proxied, TTL default 300s, no historical fallback)
 ```
 
