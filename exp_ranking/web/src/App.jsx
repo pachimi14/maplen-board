@@ -43,11 +43,24 @@ function AppShell() {
   const dashboardStore = useDashboardStore();
   const [rankingTheme, setRankingTheme] = useState(loadRankingTheme);
   const isTaskManagerRoute = route.name === "dashboard" || route.name === "tasks" || route.name === "schedule";
-  const activeTheme = isTaskManagerRoute
+  // IMPL_PLAN_SH10 §1-2: `#/starforce` (SfHistoryRoot) reads/writes the same
+  // `useDashboardStore` theme as the Task Manager trio (see
+  // SfHistoryRoot.jsx's own comment), so it must share this effect's theme
+  // *source* too -- otherwise this effect (which runs on every AppShell
+  // render regardless of route, since it can't conditionally skip a Hook)
+  // overwrites the dataset with `rankingTheme` right after SfHistoryRoot
+  // mounts. This flag only decides which store this dataset-write effect
+  // reads from; it does not change which routes render TaskManagerRoot
+  // (`isTaskManagerRoute` above still gates that, unchanged).
+  const usesDashboardTheme = isTaskManagerRoute || route.name === "starforce";
+  const activeTheme = usesDashboardTheme
     ? { themeColor: dashboardStore.state.themeColor || "green", themeDepth: dashboardStore.state.themeDepth || "deep" }
     : rankingTheme;
   const siteHeaderVariant = rankingTheme.themeDepth === "deep" ? "dark" : "light";
 
+  // Sole writer of `data-theme-color` / `data-theme-depth` (IMPL_PLAN_SH10
+  // §1-2: "正が2箇所に住まない") -- SfHistoryRoot no longer has its own copy
+  // of this effect.
   useEffect(() => {
     document.documentElement.dataset.themeColor = activeTheme.themeColor;
     document.documentElement.dataset.themeDepth = activeTheme.themeDepth;
