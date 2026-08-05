@@ -282,15 +282,22 @@ def prices(request: Request, itemId: str | None = None) -> JSONResponse:
         max_upgrade_by_item = db.max_upgrade_by_item(conn)
         confirmed_max_upgrade = max_upgrade_by_item.get(item_id)
         now = datetime.now(timezone.utc)
+        # IMPL_PLAN_SH16 §1/§3: the bucket that has not fully elapsed yet --
+        # "in progress" as of `now` -- is computed up front so both the
+        # hourly-derived loop below and the live current-value block further
+        # down can share the exact same notion of "which bucket is this".
+        candidate_date = aggregate.bucket_start(_format_iso_utc(now))
+        candidate_bucket_end = aggregate.bucket_end(candidate_date)
         if confirmed_max_upgrade is not None:
             derived_by_date: dict[str, list[float | None]] = {}
+            in_progress_prices: list[float | None] = [None] * UPGRADE_COUNT
+            in_progress_has_data = False
             for upgrade in range(confirmed_max_upgrade + 1):
                 hourly_rows = db.hourly_series(conn, item_id, upgrade, since=last_confirmed_date)
                 # `aggregate.compute_buckets` already excludes any bucket
                 # whose window has not fully elapsed as of `now` -- the
-                # still-open "current" bucket below is deliberately never
-                # produced by this call, so it always comes from the shared
-                # `latest` cache instead, exactly as SH-7 already did.
+                # still-open "current" bucket is deliberately never produced
+                # by this call (design §9: "進行中の区間は確定しない").
                 for bucket in aggregate.compute_buckets(hourly_rows, now=now):
                     bucket_date = bucket["price_at"]
                     if last_confirmed_date is not None and bucket_date <= last_confirmed_date:
@@ -301,19 +308,51 @@ def prices(request: Request, itemId: str | None = None) -> JSONResponse:
                         continue
                     slot = derived_by_date.setdefault(bucket_date, [None] * UPGRADE_COUNT)
                     slot[upgrade] = round(bucket["end_price"], 2)
+
+                # IMPL_PLAN_SH16 §3: "進行中バケットに hourly があれば暫定バ
+                # ケットとして出す(足の時刻で)" -- the still-open bucket
+                # itself, if any hourly rows have already landed inside its
+                # window, also gets its own provisional-bucket point at the
+                # bucket's own start time. This is the exact same "latest
+                # price_at inside the window wins" rule
+                # `aggregate.compute_buckets` uses internally, just without
+                # its elapse gate (that gate is precisely what makes this one
+                # bucket "in progress" rather than confirmable). Deliberately
+                # kept separate from the live current-value point below --
+                # SH-16's core fix is that those two are never the same point.
+                if 0 <= upgrade < UPGRADE_COUNT:
+                    in_progress_rows = [
+                        (price_at, end_price)
+                        for price_at, end_price in hourly_rows
+                        if candidate_date <= price_at < candidate_bucket_end
+                    ]
+                    if in_progress_rows:
+                        _, latest_end_price = max(in_progress_rows, key=lambda row: row[0])
+                        in_progress_prices[upgrade] = round(latest_end_price, 2)
+                        in_progress_has_data = True
             for bucket_date in sorted(derived_by_date):
                 provisional_points.append(
                     {"date": bucket_date, "prices": derived_by_date[bucket_date], "provisional": True}
                 )
+            if in_progress_has_data and candidate_date not in by_date:
+                provisional_points.append(
+                    {"date": candidate_date, "prices": in_progress_prices, "provisional": True}
+                )
     finally:
         conn.close()
 
-    # SH-7 §3 (sourcing unchanged): the one bucket that has not fully
-    # elapsed yet -- "in progress" as of `now` -- is still sourced from the
-    # same shared `latest` cache as `/sf-history/latest` (§3-1: "同じ出どこ
-    # ろ" -- never a second, independent notion of "now"), never from
-    # hourly. Also never written to sf_price_history_4h.
-    candidate_date = aggregate.bucket_start(_format_iso_utc(now))
+    # SH-7 §3 (sourcing unchanged): the live current-value point is still
+    # sourced from the same shared `latest` cache as `/sf-history/latest`
+    # (§3-1: "同じ出どころ" -- never a second, independent notion of "now"),
+    # never from hourly. Also never written to sf_price_history_4h.
+    #
+    # IMPL_PLAN_SH16 §1/§3: unlike the (now separate) in-progress-bucket
+    # point above, this point is deliberately NOT drawn at `candidate_date`
+    # (the bucket-start position) -- its `date` IS the upstream `asOf`
+    # timestamp itself, so its x position and its displayed time can never
+    # disagree (the bug this slice fixes: SH-8 correctly showed `asOf` as the
+    # *label* while the point still sat at the bucket-start *position*).
+    # `current: true` marks it as "not a bucket" for any caller that cares.
     if candidate_date not in by_date:
         cache: LatestPriceCache = request.app.state.latest_cache
         try:
@@ -323,33 +362,30 @@ def prices(request: Request, itemId: str | None = None) -> JSONResponse:
             # only. Unlike `/sf-history/latest` (still 503 on failure),
             # losing the ability to read *history* on an upstream hiccup
             # would be a strictly worse regression than just omitting the
-            # one provisional point.
+            # one live point.
             latest_result = None
         if latest_result is not None:
             provisional_prices = [
                 round(p, 2) if p is not None else None for p in latest_result["prices"]
             ]
+            # IMPL_PLAN_SH8 §2-1 (refined by SH-16): `asOf` is the official
+            # API's own as-of timestamp for the *value* -- sourced from the
+            # same shared `latest_cache` entry `/sf-history/latest` returns
+            # as `latestUpdatedAt`, so the two can never disagree. "無い数字
+            # を発明しない": when the upstream payload carried no usable
+            # `latestUpdatedAt`, there is no real "as of" instant to place
+            # this point at, so it falls back to `candidate_date` (the same
+            # position every provisional point used before `asOf` existed at
+            # all) and `asOf` itself is omitted entirely, never invented.
+            as_of = latest_result.get("latestUpdatedAt")
+            has_as_of = isinstance(as_of, str) and bool(as_of)
             provisional_point: dict[str, Any] = {
-                "date": candidate_date,
+                "date": as_of if has_as_of else candidate_date,
                 "prices": provisional_prices,
                 "provisional": True,
+                "current": True,
             }
-            # IMPL_PLAN_SH8 §2-1: `asOf` is the official API's own as-of
-            # timestamp for the *value* (when the price was current), never
-            # the bucket-start `date` above (which is only a draw position).
-            # Sourced from the same shared `latest_cache` entry `/sf-history
-            # /latest` returns as `latestUpdatedAt` -- §2-1/(e): the two must
-            # never disagree, since both come from the exact same cache
-            # lookup. Omitted entirely (not `null`) when the upstream payload
-            # didn't carry one, per "無い数字を発明しない" -- falling back to
-            # `candidate_date` here would silently reintroduce the "looks
-            # stale" bug this slice exists to fix. Not applicable to the
-            # hourly-derived provisional points above (their `date` is
-            # already a real, fully-elapsed bucket boundary, same as a
-            # confirmed point's) -- `asOf` is only ever attached to this one
-            # live point.
-            as_of = latest_result.get("latestUpdatedAt")
-            if isinstance(as_of, str) and as_of:
+            if has_as_of:
                 provisional_point["asOf"] = as_of
             provisional_points.append(provisional_point)
 
@@ -357,9 +393,11 @@ def prices(request: Request, itemId: str | None = None) -> JSONResponse:
     # IMPL_PLAN_SH13 §2-2: "暫定点は複数になりうる" -- `provisionalDate` now
     # means the MOST RECENT provisional point (previously: the only one that
     # could ever exist). `provisional_points` is always chronologically
-    # ascending (hourly-derived buckets sorted, then the live bucket last,
-    # since it is always the most recent one), so the last entry is exactly
-    # that.
+    # ascending: (1) elapsed-but-unaggregated buckets, sorted, (2) the
+    # in-progress bucket's own provisional point (IMPL_PLAN_SH16 §3, if it
+    # has any hourly data), (3) the live current-value point last (its
+    # `date` is `asOf`, at or after the in-progress bucket's own start) --
+    # so the last entry is always the most recent one.
     provisional_date = provisional_points[-1]["date"] if provisional_points else None
 
     return _json(
