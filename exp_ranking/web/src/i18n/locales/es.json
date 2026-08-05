@@ -409,8 +409,7 @@
       "searchPlaceholder": "Buscar por nombre de objeto o ID",
       "noMatch": "No se encontró ningún equipo coincidente",
       "maxStarBadge": "hasta ☆{{maxStar}}",
-      "loadError": "No se pudo cargar la lista de equipo. Vuelve a intentarlo más tarde.",
-      "groupSharedNote": "El coste de mejora es compartido en este grupo (objeto representativo: {{representativeName}})."
+      "loadError": "No se pudo cargar la lista de equipo. Vuelve a intentarlo más tarde."
     },
     "starRange": {
       "startLabel": "Inicio ☆",
@@ -441,7 +440,6 @@
       "legendAverage": "Media del período",
       "legendHigh": "Máximo del período",
       "legendLow": "Mínimo del período",
-      "gapNote": "La línea se interrumpe donde faltan datos (no se muestran valores estimados).",
       "tooltipDeltaFromPrev": "vs anterior {{delta}}",
       "tooltipDeltaFromAverage": "vs media del período {{delta}}",
       "tooltipBucketNote": "Barra de 4 horas (valor de cierre del intervalo)",
@@ -454,25 +452,11 @@
       "title": "Día de la semana x Franja horaria",
       "periodNote": "Tendencia de los últimos ~150 días completos (no está vinculado a la pestaña de período de arriba)",
       "empty": "Todavía no hay suficientes datos para resumir",
-      "cellTooltip": "{{value}} ({{n}} puntos)",
-      "sampleCount": "n={{count}}",
+      "cellTooltip": "{{value}}",
       "noData": "Sin datos",
       "lowestBadge": "Más bajo",
       "highestBadge": "Más alto",
-      "disclaimer": "Solo muestra la mediana y el número de muestras (n); no es una recomendación para mejorar en un día o franja horaria concretos."
-    },
-    "conditions": {
-      "title": "Condiciones de cálculo",
-      "starCatch": "Star Catch activado",
-      "chanceTime": "Chance Time activado",
-      "safeguard": "Protección desactivada",
-      "eventAdjustment": "Sin ajuste de eventos",
-      "metric": "Métrica = Valor esperado",
-      "interval": "Intervalo = 4 horas",
-      "displayTimeZone": "Hora mostrada: la zona horaria de tu dispositivo ({{zone}})",
-      "historyUpdatedAt": "Última actualización del historial: {{date}}",
-      "currentFetchedAt": "Hora de obtención del precio actual: {{date}}",
-      "policyVersion": "Política de cálculo: {{version}}"
+      "disclaimer": "Solo muestra la mediana; no es una recomendación para mejorar en un día o franja horaria concretos."
     }
   }
 }

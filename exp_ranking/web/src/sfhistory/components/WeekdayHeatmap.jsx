@@ -76,7 +76,7 @@ export default function WeekdayHeatmap({ series }) {
                     ? `color-mix(in srgb, var(--theme-focus) ${Math.round(8 + ratio * 62)}%, var(--theme-card-bg))`
                     : "var(--theme-card-bg)";
                   const title = hasData
-                    ? t("sfhistory.heatmap.cellTooltip", { value: formatExactNeso(cell.median), n: cell.n })
+                    ? t("sfhistory.heatmap.cellTooltip", { value: formatExactNeso(cell.median) })
                     : t("sfhistory.heatmap.noData");
                   return (
                     <div
@@ -95,7 +95,6 @@ export default function WeekdayHeatmap({ series }) {
                       {hasData ? (
                         <>
                           <span className="sfh-heatmap-cell-value">{formatCompactNeso(cell.median)}</span>
-                          <span className="sfh-heatmap-cell-n">{t("sfhistory.heatmap.sampleCount", { count: cell.n })}</span>
                           {isLowest ? <span className="sfh-heatmap-cell-badge sfh-heatmap-cell-badge-low">{t("sfhistory.heatmap.lowestBadge")}</span> : null}
                           {isHighest ? <span className="sfh-heatmap-cell-badge sfh-heatmap-cell-badge-high">{t("sfhistory.heatmap.highestBadge")}</span> : null}
                         </>

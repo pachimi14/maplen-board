@@ -12,7 +12,6 @@ import PeriodTabs from "./components/PeriodTabs.jsx";
 import SfHistoryChart from "./components/SfHistoryChart.jsx";
 import SummaryCards from "./components/SummaryCards.jsx";
 import WeekdayHeatmap from "./components/WeekdayHeatmap.jsx";
-import CalcConditions from "./components/CalcConditions.jsx";
 import "./sfhistory.css";
 
 /**
@@ -98,11 +97,6 @@ export default function SfHistoryRoot() {
     setSelectedItemId(candidate.representativeItemId);
     setSelectedAlias({ itemId: candidate.itemId, itemName: candidate.itemName });
   }
-
-  // "強化費用はこのグループ共通(代表: ○○)" (plan §3-3 (d), design §7):
-  // shown exactly when the picked alias isn't the representative itself, so
-  // the numbers-vs-label mismatch is never silent.
-  const isAliasSelection = Boolean(selectedItem && selectedAlias && selectedAlias.itemId !== selectedItem.itemId);
 
   // design §7.1: if switching equipment makes the current range invalid
   // for the new item's maxStar (e.g. 19->21 on a maxStar=20 device), clamp
@@ -192,15 +186,6 @@ export default function SfHistoryRoot() {
                   selectedItemName={selectedAlias?.itemName ?? selectedItem.itemName}
                   onSelect={handleSelectEquipment}
                 />
-                {/* IMPL_PLAN_SH10 §2: directly under the equipment selector
-                    (not after the star-range preset row below). Content,
-                    i18n key, and the alias-only visibility condition are
-                    unchanged from SH-9 -- position only. */}
-                {isAliasSelection ? (
-                  <p className="sfh-group-shared-note">
-                    {t("sfhistory.equipment.groupSharedNote", { representativeName: selectedItem.itemName })}
-                  </p>
-                ) : null}
               </div>
               <StarRangeSelector
                 maxStar={selectedItem.maxStar}
@@ -233,8 +218,6 @@ export default function SfHistoryRoot() {
                 the heatmap is deliberately not connected to the period tab
                 above (7D would put n=1 in every cell). */}
             <WeekdayHeatmap series={fullSeries} />
-
-            <CalcConditions historyUpdatedAt={pricesState.endDate} currentFetchedAt={latestState.latestUpdatedAt} />
           </>
         ) : null}
       </main>

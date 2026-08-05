@@ -409,8 +409,7 @@
       "searchPlaceholder": "以裝備名稱或 Item ID 搜尋",
       "noMatch": "找不到符合的裝備",
       "maxStarBadge": "最高 ☆{{maxStar}}",
-      "loadError": "無法取得裝備清單，請稍後再重新整理。",
-      "groupSharedNote": "強化費用為此群組共用(代表裝備:{{representativeName}})。"
+      "loadError": "無法取得裝備清單，請稍後再重新整理。"
     },
     "starRange": {
       "startLabel": "起始 ☆",
@@ -441,7 +440,6 @@
       "legendAverage": "期間平均",
       "legendHigh": "期間高點",
       "legendLow": "期間低點",
-      "gapNote": "資料缺漏的區間會呈現斷線（不會顯示推測值）。",
       "tooltipDeltaFromPrev": "較前次 {{delta}}",
       "tooltipDeltaFromAverage": "與期間平均相差 {{delta}}",
       "tooltipBucketNote": "4 小時 K 線（區間收盤值）",
@@ -454,25 +452,11 @@
       "title": "星期 × 時段",
       "periodNote": "過去約150天整體趨勢（不隨上方期間分頁連動）",
       "empty": "目前尚無足夠資料可供彙整",
-      "cellTooltip": "{{value}}（{{n}} 筆）",
-      "sampleCount": "n={{count}}",
+      "cellTooltip": "{{value}}",
       "noData": "無資料",
       "lowestBadge": "最低",
       "highestBadge": "最高",
-      "disclaimer": "僅顯示中位數與樣本數（n），並非建議在特定星期或時段進行強化。"
-    },
-    "conditions": {
-      "title": "計算條件",
-      "starCatch": "星力捕捉 開啟",
-      "chanceTime": "機會時間 開啟",
-      "safeguard": "防爆 關閉",
-      "eventAdjustment": "未套用活動加成",
-      "metric": "指標 = 期望值",
-      "interval": "K 線週期 = 4 小時",
-      "displayTimeZone": "顯示時間：您裝置的時區（{{zone}}）",
-      "historyUpdatedAt": "歷史資料最後更新：{{date}}",
-      "currentFetchedAt": "目前價格取得時間：{{date}}",
-      "policyVersion": "計算策略：{{version}}"
+      "disclaimer": "僅顯示中位數，並非建議在特定星期或時段進行強化。"
     }
   }
 }
