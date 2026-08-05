@@ -4,7 +4,7 @@
   },
   "app": {
     "openDailyDashboard": "Task Manager",
-    "openSfHistory": "SF History",
+    "openSfHistory": "Enhance History",
     "pageTitle": "MSU EXP Rankings",
     "pageDescription": "Level rankings and daily, weekly, and monthly EXP gains for Lv.225+ characters, based on the official MSU rankings.",
     "metaTitle": "Lulumi Tools | MapleStory N EXP Ranking",
@@ -401,7 +401,7 @@
     "main30d": "30-day gain"
   },
   "sfhistory": {
-    "pageTitle": "StarForce Enhancement Cost History",
+    "pageTitle": "Enhance History",
     "pageDescription": "Pick a piece of gear and a star range to see how its Expected enhancement cost has moved, and where the current value sits against that history.",
     "loading": "Loading...",
     "equipment": {

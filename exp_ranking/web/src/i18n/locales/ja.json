@@ -4,7 +4,7 @@
   },
   "app": {
     "openDailyDashboard": "Task Manager",
-    "openSfHistory": "SF履歴",
+    "openSfHistory": "Enhance History",
     "pageTitle": "MSU 経験値ランキング",
     "pageDescription": "MSU公式ランキングをもとに、Lv225以上のキャラクターのレベル順位と日間・週間・月間の経験値増加量を掲載しています。",
     "metaTitle": "Lulumi Tools | MapleStory N 経験値ランキング",
@@ -401,7 +401,7 @@
     "main30d": "30日増加量"
   },
   "sfhistory": {
-    "pageTitle": "スターフォース強化費用 履歴",
+    "pageTitle": "Enhance History",
     "pageDescription": "装備と強化範囲を選ぶと、期待強化費用の推移と、現在値が過去のどの水準かを確認できます。",
     "loading": "読み込み中...",
     "equipment": {
