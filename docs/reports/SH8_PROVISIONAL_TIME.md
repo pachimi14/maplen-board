@@ -5,8 +5,8 @@
 
 ## コミット
 
-- コード変更(サーバー+フロント)を1コミットにまとめた(小さな1点修正、§0の裁定どおり)。
-  ハッシュは本コミット確定後にここへ追記。
+1. `bf2292a` -- `feat(sf-history): SH-8 -- provisional point tooltip shows fetch time, not bucket start`
+2. `856332c` -- `docs(sf-history): SH-8 plan + completion report`(本ファイル + 計画書)
 
 変更ファイル:
 - `server/sf-history/app.py` -- 暫定点に `asOf`(`latest` の `latestUpdatedAt`)を追加
