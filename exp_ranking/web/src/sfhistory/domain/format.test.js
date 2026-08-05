@@ -8,7 +8,10 @@ import {
   formatExactNeso,
   formatSignedCompactNeso,
   formatTimestamp,
+  formatTimeZoneLabel,
   formatTooltipDate,
+  formatTooltipDateLocal,
+  localTimeZone,
   weekdayShortLabel,
 } from "./format.js";
 
@@ -220,3 +223,64 @@ describe("formatClockTime (heatmap column headers)", () => {
     expect(formatClockTime(null, null)).toBe("--:--");
   });
 });
+
+// IMPL_PLAN_SH29 §1/§2 (2026-08-06, user decision): re-introduces the
+// viewer's local time as an *additive* secondary display -- every case
+// below pins an explicit `timeZone` (this repo sets no global `TZ`, so
+// relying on the machine's own zone would be flaky by construction, same
+// caution SH-11's original tests took).
+describe("localTimeZone (plan §1: drives the tooltip/heatmap local display when no explicit zone is given)", () => {
+  it("resolves to a non-empty IANA zone name (or the documented UTC fallback)", () => {
+    expect(typeof localTimeZone()).toBe("string");
+    expect(localTimeZone().length).toBeGreaterThan(0);
+  });
+});
+
+describe("formatTimeZoneLabel (plan §1/§2-1: 'UTC+9' style zone disclosure)", () => {
+  it("renders JST as UTC+9", () => {
+    expect(formatTimeZoneLabel("Asia/Tokyo", new Date("2026-08-04T00:00:00Z"))).toBe("UTC+9");
+  });
+
+  it("renders UTC as UTC (no explicit +0)", () => {
+    expect(formatTimeZoneLabel("UTC", new Date("2026-08-04T00:00:00Z"))).toBe("UTC");
+  });
+
+  it("renders a negative-offset zone with the sign preserved", () => {
+    expect(formatTimeZoneLabel("America/New_York", new Date("2026-08-04T00:00:00Z"))).toBe("UTC-4");
+  });
+
+  it("falls back to the raw zone name for an unresolvable zone rather than inventing an offset", () => {
+    expect(formatTimeZoneLabel("Not/AZone", new Date("2026-08-04T00:00:00Z"))).toBe("Not/AZone");
+  });
+});
+
+describe("formatTooltipDateLocal (plan §1: the chart tooltip's secondary local-time line)", () => {
+  it("renders the same instant as formatTooltipDate, converted to the given zone, with the zone label and weekday", () => {
+    // 2026-08-04T11:00:00Z + 9h -> 2026-08-04 20:00 JST, a Tuesday.
+    expect(formatTooltipDateLocal("2026-08-04T11:00:00Z", { locale: "en", timeZone: "Asia/Tokyo" })).toBe(
+      "2026-08-04 20:00 UTC+9 (Tue)",
+    );
+    expect(formatTooltipDateLocal("2026-08-04T11:00:00Z", { locale: "ja", timeZone: "Asia/Tokyo" })).toBe(
+      "2026-08-04 20:00 UTC+9 (火)",
+    );
+  });
+
+  it("a different timezone renders a different wall-clock time for the same instant, and never leaves the zone unlabeled", () => {
+    expect(formatTooltipDateLocal("2026-08-04T11:00:00Z", { locale: "en", timeZone: "UTC" })).toBe(
+      "2026-08-04 11:00 UTC (Tue)",
+    );
+    expect(formatTooltipDateLocal("2026-08-04T11:00:00Z", { locale: "en", timeZone: "America/New_York" })).toBe(
+      "2026-08-04 07:00 UTC-4 (Tue)",
+    );
+  });
+
+  it("returns an empty string for an unparsable date, same as formatTooltipDate", () => {
+    expect(formatTooltipDateLocal("not-a-date", { timeZone: "UTC" })).toBe("");
+    expect(formatTooltipDateLocal(undefined, { timeZone: "UTC" })).toBe("");
+  });
+
+  it("falls back to the runtime's own local zone when no timeZone is given (no crash, still a valid-looking string)", () => {
+    expect(formatTooltipDateLocal("2026-08-04T11:00:00Z")).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2} .+ \(.+\)$/);
+  });
+});
+

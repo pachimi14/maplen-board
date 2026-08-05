@@ -10,14 +10,29 @@ import {
   formatExactNeso,
   formatSignedCompactNeso,
   formatTooltipDate,
+  formatTooltipDateLocal,
 } from "../domain/format.js";
 
 // IMPL_PLAN_SH14 §2 (2026-08-05, user decision): reverts IMPL_PLAN_SH11 §2's
 // viewer-local-time axis ticks / tooltip time line back to a fixed UTC --
 // `data` itself (the `date` ISO strings) is unchanged, only unaffected by
 // the choice of display zone as it always was. `formatAxisDate`/
-// `formatTooltipDate` (domain/format.js) no longer take a `timeZone` option
-// at all, so there is nothing left to resolve here.
+// `formatTooltipDate` (domain/format.js) still take no `timeZone` option --
+// the X axis below stays UTC-only by this plan's own choice (IMPL_PLAN_SH29
+// §1: "軸ラベルは場所が狭いので UTC のみでよい" -- the axis has materially
+// less width than a tooltip, and `minTickGap={24}` already thins ticks
+// aggressively; a second stacked line per tick would either overlap or
+// force ticks sparser than the single-line UTC axis already needs. This
+// implementer's judgment call, made explicit here as the plan's §1 asked
+// for regardless of which way it landed).
+//
+// IMPL_PLAN_SH29 §1 (2026-08-06, user decision): the tooltip now shows a
+// *second* line under the UTC one -- the viewer's own local time, via the
+// new `formatTooltipDateLocal` (domain/format.js), which is additive to
+// `formatTooltipDate`/`bucketDisplayDate` here, not a replacement of either.
+// UTC stays primary/authoritative (SH-14's decision, unchanged); local is
+// always the smaller, secondary line, always zone-labeled (never shown
+// unlabeled) -- see `ChartTooltipContent` below.
 //
 // IMPL_PLAN_SH18 §1/§3 (2026-08-05, user decision, reverses design §8's
 // "ラベルは区間開始"): a row's own `date` (bucket start, still what
@@ -64,6 +79,13 @@ function ChartTooltipContent({ active, payload, average, t, language }) {
   // doc comment for the full three-way rule and its future-time guard).
   const dateOptions = { locale: language };
   const timeLabel = formatTooltipDate(bucketDisplayDate(point), dateOptions);
+  // IMPL_PLAN_SH29 §1: same instant as `timeLabel` above, read on the
+  // viewer's own local clock instead -- rendered directly under it (smaller,
+  // dimmer) so UTC stays the primary/authoritative reading (SH-14) while
+  // the local time is always available right next to it, always explicitly
+  // zone-labeled (`formatTooltipDateLocal` -> `formatTimeZoneLabel`, never
+  // an unlabeled local time).
+  const localTimeLabel = formatTooltipDateLocal(bucketDisplayDate(point), dateOptions);
   // IMPL_PLAN_SH17 §4-2: replaces SH-7's static `tooltipBucketNote`/
   // `tooltipProvisional` pair with the bucket's own `HH:MM–HH:MM` range,
   // always derived from `point.date` (the bucket-start position, never
@@ -77,7 +99,14 @@ function ChartTooltipContent({ active, payload, average, t, language }) {
   const isOpenBucket = point.asOf != null;
   return (
     <div className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm shadow-lg">
-      {timeLabel != null ? <div className="text-slate-400">{timeLabel}</div> : null}
+      {timeLabel != null ? (
+        <div className="text-slate-400">
+          <div>{timeLabel}</div>
+          {/* IMPL_PLAN_SH29 §1: the secondary local-time line -- UTC above
+              stays primary. */}
+          {localTimeLabel ? <div className="text-[11px] text-slate-500">{localTimeLabel}</div> : null}
+        </div>
+      ) : null}
       <div className="mt-0.5 font-bold text-cyan-300 tabular-nums">{formatExactNeso(point.expected)}</div>
       {/* IMPL_PLAN_SH12 §2: `.sfh-delta-up`/`.sfh-delta-down` (sfhistory.css)
           instead of Tailwind's `text-rose-400`/`text-emerald-400` -- the

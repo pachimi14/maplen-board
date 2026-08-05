@@ -82,9 +82,9 @@ function utcDateTimeParts(date) {
  * locale table -- resolved purely via `Intl.DateTimeFormat`. Returns ""
  * (never a hardcoded fallback name) if `Intl` cannot format the given
  * locale. */
-function weekdayShort(date, locale) {
+function weekdayShort(date, locale, timeZone = "UTC") {
   try {
-    return new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" }).format(date);
+    return new Intl.DateTimeFormat(locale, { weekday: "short", timeZone }).format(date);
   } catch {
     return "";
   }
@@ -227,4 +227,100 @@ export function weekdayShortLabel(weekdayIndex, locale = "en") {
 export function formatClockTime(hour, minute) {
   if (hour == null || minute == null) return "--:--";
   return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
+// IMPL_PLAN_SH29 §1/§2 (2026-08-06, user decision): re-introduces the
+// viewer's own local time as a *secondary*, explicitly-labeled display next
+// to the UTC one SH-14 made primary/authoritative. This is NOT a revert of
+// SH-14 -- every UTC function above (`formatAxisDate`/`formatTooltipDate`/
+// `formatTimestamp`/`weekdayShortLabel`/`formatClockTime`) is untouched and
+// stays what production reads as "the" time; the functions below are
+// additive, always paired with an explicit UTC value at the call site
+// (SfHistoryChart's tooltip, WeekdayHeatmap's column headers), never a
+// silent replacement of it (plan §2-1's "正直さの要求": never leave the
+// viewer unable to tell which zone a number belongs to).
+//
+// `timeZone` mirrors the exact parameterized shape IMPL_PLAN_SH11 §2 used
+// (and SH-14 removed): defaults to `localTimeZone()` so every production
+// call site can omit it, while a test can pin a specific IANA zone instead
+// of depending on whatever zone the machine running it happens to be in
+// (this repo sets no global `TZ` -- vitest.config.js).
+
+/** The runtime's local IANA time zone, e.g. "Asia/Tokyo" -- in a browser,
+ * the viewer's own OS/browser timezone. Falls back to "UTC" if `Intl`
+ * cannot resolve one. Ported from IMPL_PLAN_SH11 §2/(c) (removed by SH-14,
+ * reinstated verbatim here). */
+export function localTimeZone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  } catch {
+    return "UTC";
+  }
+}
+
+/** Numeric y/m/d/h/min parts of `date` as read on a wall clock in
+ * `timeZone` -- the parameterized counterpart of `utcDateTimeParts` above.
+ * Kept as a separate function (rather than adding a `timeZone` parameter to
+ * `utcDateTimeParts` itself) so every existing UTC call site above stays a
+ * zero-argument, always-UTC call -- nothing above this comment needed to
+ * change to add this. */
+function localizedDateTimeParts(date, timeZone) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+  const map = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  if (map.hour === "24") map.hour = "00"; // some ICU builds emit "24" for local midnight
+  return map;
+}
+
+/** plan §1/§2-1: a short "UTC+9"-style label for `timeZone` (or the
+ * viewer's own zone when omitted) -- so a local-time display never leaves
+ * the viewer guessing which zone they're looking at. Uses `Intl`'s own
+ * `shortOffset` (a numeric offset, e.g. "GMT+9") rather than a named
+ * abbreviation ("JST") -- ICU only resolves abbreviations for a subset of
+ * zones/environments, while every environment resolves an offset, so this
+ * is the one form guaranteed never to fall back to something less useful
+ * than the zone name itself. `referenceDate` only matters for a
+ * DST-observing zone; defaults to "now" for display, pinnable for tests.
+ * Falls back to the raw IANA zone name (never a guessed offset) if `Intl`
+ * cannot resolve one. Ported from IMPL_PLAN_SH11 §2/(c) (removed by SH-14,
+ * reinstated verbatim here). */
+export function formatTimeZoneLabel(timeZone, referenceDate = new Date()) {
+  const tz = timeZone || localTimeZone();
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: tz,
+      timeZoneName: "shortOffset",
+      hour: "numeric",
+    }).formatToParts(referenceDate);
+    const offsetPart = parts.find((part) => part.type === "timeZoneName");
+    if (offsetPart?.value) return offsetPart.value.replace(/^GMT/, "UTC");
+  } catch {
+    // Unresolvable/invalid IANA zone name -- fall through to the raw name
+    // rather than inventing an offset.
+  }
+  return tz;
+}
+
+/** plan §1: the chart tooltip's *secondary* local-time line -- same shape
+ * as `formatTooltipDate` (full date+time+weekday) but read in `timeZone`
+ * (defaults to the viewer's own), with `formatTimeZoneLabel` appended so
+ * the line is self-explaining on its own without needing the UTC line
+ * above it for context (e.g. "2026-08-05 21:00 UTC+9 (Thu)"). Returns "" for
+ * an unparsable date, same as `formatTooltipDate`. */
+export function formatTooltipDateLocal(isoDate, { locale = "en", timeZone } = {}) {
+  const date = new Date(isoDate);
+  if (Number.isNaN(date.getTime())) return "";
+  const tz = timeZone || localTimeZone();
+  const parts = localizedDateTimeParts(date, tz);
+  const weekday = weekdayShort(date, locale, tz);
+  const zoneLabel = formatTimeZoneLabel(tz, date);
+  const base = `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute} ${zoneLabel}`;
+  return weekday ? `${base} (${weekday})` : base;
 }
