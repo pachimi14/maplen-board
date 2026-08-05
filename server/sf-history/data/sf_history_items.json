@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-05T16:22:54.676544+00:00",
+  "generatedAt": "2026-08-05T16:29:39.788056+00:00",
   "sourceRepo": "maplenEnhancebot",
   "sourceCommit": "a9f534b4d1292fd580780a22344198f46027ae38",
   "excluded": [
@@ -1229,7 +1229,7 @@
       "aliasItemIds": [
         1132308
       ],
-      "maxStar": null,
+      "maxStar": 22,
       "aliases": [
         {
           "itemId": 1132308,
