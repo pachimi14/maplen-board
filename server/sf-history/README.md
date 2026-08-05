@@ -125,10 +125,34 @@ itemId (and prints a warning to stderr) rather than crashing the generator.
 SF_HISTORY_DB_PATH=./data/sf_price_history.sqlite
 SF_HISTORY_ITEMS_PATH=./data/sf_history_items.json
 SF_HISTORY_ALLOWED_ORIGINS=https://lulumi-tools.com
-SF_HISTORY_LATEST_TTL_SECONDS=300          # SH-7 §2: default 300 (was 60). Read once at process
-                                            # startup (app.py builds the LatestPriceCache singleton
-                                            # from it) -- changing it requires a process restart.
+SF_HISTORY_LATEST_PUBLISH_INTERVAL_SECONDS=1200  # IMPL_PLAN_SH15 §4: default 1200 (20min) -- the
+                                                  # observed upstream `latestUpdatedAt` publish cadence
+                                                  # (04:00/04:20/04:40/05:00, all on a 20-min grid; 4
+                                                  # samples, not a guarantee -- see MAX_TTL_SECONDS
+                                                  # below for the safety rail if reality differs).
+SF_HISTORY_LATEST_GRACE_SECONDS=60               # IMPL_PLAN_SH15 §4: default 60 -- slack added after
+                                                  # `latestUpdatedAt + interval`, in case upstream
+                                                  # publishes a little late.
 ```
+
+Both are read once at process startup (app.py builds the `LatestPriceCache` singleton from
+them) -- changing either requires a process restart.
+
+**IMPL_PLAN_SH15 §4 (replaces SH-7 §2's fixed `SF_HISTORY_LATEST_TTL_SECONDS`)**: each cache
+entry now gets its own TTL, computed from *that response's own* `latestUpdatedAt` --
+`next_publish = latestUpdatedAt + PUBLISH_INTERVAL`, `expiry = next_publish + GRACE` -- instead
+of a single fixed TTL applied to every entry regardless of when upstream actually published. The
+old `SF_HISTORY_LATEST_TTL_SECONDS` env var is **removed outright** (not reinterpreted as an
+upper bound): the upper bound is `fetch_latest.MAX_TTL_SECONDS` (1200s / "at most 20 minutes"),
+and the lower bound is `fetch_latest.MIN_TTL_SECONDS` (60s) -- both are **hard-coded, non-
+configurable safety rails**, deliberately not exposed as env vars, so a misconfigured or future
+upstream change cannot push the cache past "always re-check within 20 minutes" or down to
+"re-checks on every single request" (the latter being this slice's most dangerous failure mode: a
+stale/old `latestUpdatedAt` must never make `expiry` land in the past).
+
+A missing, unparsable, or future `latestUpdatedAt` never causes the cache to poll *more*
+aggressively -- it falls back to the plain `PUBLISH_INTERVAL_SECONDS` outright (no
+finer-than-usual guessing).
 
 ## Offline by design
 
