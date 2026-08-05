@@ -428,6 +428,7 @@
       "current": "Current",
       "currentUnavailable": "Current price unavailable",
       "currentUnavailableHint": "Fetching the upstream price failed. We do not substitute the last historical value for it.",
+      "currentAsOf": "As of {{timestamp}}",
       "periodAverage": "Period Average",
       "periodHigh": "Period High",
       "periodLow": "Period Low",

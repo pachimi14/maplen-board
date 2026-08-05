@@ -428,6 +428,7 @@
       "current": "ค่าปัจจุบัน",
       "currentUnavailable": "ไม่สามารถดึงราคาปัจจุบันได้",
       "currentUnavailableHint": "การดึงราคาจากต้นทางล้มเหลว เราจะไม่ใช้ค่าประวัติล่าสุดแทน",
+      "currentAsOf": "ณ เวลา {{timestamp}}",
       "periodAverage": "ค่าเฉลี่ยของช่วงเวลา",
       "periodHigh": "ค่าสูงสุดของช่วงเวลา",
       "periodLow": "ค่าต่ำสุดของช่วงเวลา",

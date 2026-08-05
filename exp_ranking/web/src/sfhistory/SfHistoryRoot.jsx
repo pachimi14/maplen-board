@@ -200,6 +200,7 @@ export default function SfHistoryRoot() {
             <SummaryCards
               currentStatus={latestState.status}
               currentExpected={currentExpected}
+              currentUpdatedAt={latestState.latestUpdatedAt}
               stats={stats}
               percentile={percentile}
             />

@@ -205,6 +205,22 @@ html:not([data-theme-depth="deep"]) .sfh-summary-label {
   font-variant-numeric: tabular-nums;
 }
 
+/* IMPL_PLAN_SH15 §3: the official 20-minute stamp attached to the
+   current-value card. Small/muted, secondary to the value above it -- this
+   is a freshness disclosure, not the calc-conditions block SH-13 removed
+   (that summarized the whole screen's inputs; this is per-card and only
+   ever describes the "Current" card's own value). */
+.sfh-summary-stamp {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  margin-top: 0.2rem;
+  font-variant-numeric: tabular-nums;
+}
+
+html:not([data-theme-depth="deep"]) .sfh-summary-stamp {
+  color: #64748b;
+}
+
 .sfh-conditions-list {
   display: flex;
   flex-wrap: wrap;

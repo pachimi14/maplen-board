@@ -5,6 +5,7 @@ import {
   formatCompactNeso,
   formatExactNeso,
   formatSignedCompactNeso,
+  formatTimestamp,
   formatTooltipDate,
   weekdayShortLabel,
 } from "./format.js";
@@ -101,6 +102,16 @@ describe("date formatting (IMPL_PLAN_SH14 §2: fixed UTC + weekday)", () => {
   it("both fall back to the default 'en' locale when no options are given (no crash, still a valid-looking string)", () => {
     expect(formatAxisDate("2026-03-08T00:00:00Z")).toMatch(/^\d{2}\/\d{2} \(.+\)$/);
     expect(formatTooltipDate("2026-03-08T00:00:00Z")).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC \(.+\)$/);
+  });
+
+  // IMPL_PLAN_SH15 §3: the current-value card's 20-minute official stamp
+  // uses this function -- same UTC + weekday formatting as the tooltip
+  // (SH-14's regulation carries forward unchanged), just a distinct export
+  // name for that call site.
+  it("formatTimestamp: same UTC date+time+weekday formatting as formatTooltipDate", () => {
+    expect(formatTimestamp("2026-08-04T18:20:00Z", { locale: "en" })).toBe("2026-08-04 18:20 UTC (Tue)");
+    expect(formatTimestamp("2026-08-04T18:20:00Z", { locale: "ja" })).toBe("2026-08-04 18:20 UTC (火)");
+    expect(formatTimestamp("not-a-date")).toBe("");
   });
 });
 
