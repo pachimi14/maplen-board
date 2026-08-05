@@ -458,6 +458,7 @@
       "eventAdjustment": "No event adjustment",
       "metric": "Metric = Expected value",
       "interval": "Interval = 4 hours",
+      "displayTimeZone": "Displayed time: your device's timezone ({{zone}})",
       "historyUpdatedAt": "History last updated: {{date}}",
       "currentFetchedAt": "Current price fetched: {{date}}",
       "policyVersion": "Calculation policy: {{version}}"

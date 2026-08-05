@@ -458,6 +458,7 @@
       "eventAdjustment": "Sin ajuste de eventos",
       "metric": "Métrica = Valor esperado",
       "interval": "Intervalo = 4 horas",
+      "displayTimeZone": "Hora mostrada: la zona horaria de tu dispositivo ({{zone}})",
       "historyUpdatedAt": "Última actualización del historial: {{date}}",
       "currentFetchedAt": "Hora de obtención del precio actual: {{date}}",
       "policyVersion": "Política de cálculo: {{version}}"

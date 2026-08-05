@@ -458,6 +458,7 @@
       "eventAdjustment": "Không điều chỉnh theo sự kiện",
       "metric": "Chỉ số = Giá trị kỳ vọng",
       "interval": "Chu kỳ nến = 4 giờ",
+      "displayTimeZone": "Thời gian hiển thị: múi giờ thiết bị của bạn ({{zone}})",
       "historyUpdatedAt": "Lịch sử cập nhật lần cuối: {{date}}",
       "currentFetchedAt": "Thời điểm lấy giá hiện tại: {{date}}",
       "policyVersion": "Chính sách tính toán: {{version}}"

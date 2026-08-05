@@ -458,6 +458,7 @@
       "eventAdjustment": "ไม่มีการปรับตามอีเวนต์",
       "metric": "ตัวชี้วัด = ค่าคาดการณ์",
       "interval": "ช่วงแท่งราคา = 4 ชั่วโมง",
+      "displayTimeZone": "เวลาที่แสดง: เขตเวลาของอุปกรณ์คุณ ({{zone}})",
       "historyUpdatedAt": "อัปเดตประวัติล่าสุด: {{date}}",
       "currentFetchedAt": "เวลาที่ดึงราคาปัจจุบัน: {{date}}",
       "policyVersion": "นโยบายการคำนวณ: {{version}}"
