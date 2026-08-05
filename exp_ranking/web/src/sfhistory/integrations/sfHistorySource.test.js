@@ -92,6 +92,19 @@ describe("normalizePricesPayload", () => {
       provisional: true,
     });
   });
+
+  it("IMPL_PLAN_SH8 §2-2: passes through a provisional point's `asOf`, omitting the key when absent", () => {
+    const payloadWithAsOf = {
+      ...pricesPayload,
+      points: [
+        ...pricesPayload.points,
+        { date: "2026-08-05T00:00:00Z", prices: [9, 8, 7, 6], provisional: true, asOf: "2026-08-05T01:40:00Z" },
+      ],
+    };
+    const result = normalizePricesPayload(payloadWithAsOf, 1003720);
+    expect(result.points[1].asOf).toBe("2026-08-05T01:40:00Z");
+    expect(result.points[0]).not.toHaveProperty("asOf"); // confirmed point never had one to begin with
+  });
 });
 
 describe("normalizeLatestPayload", () => {

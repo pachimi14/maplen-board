@@ -12,9 +12,16 @@ function ChartTooltipContent({ active, payload, average, t }) {
   const point = payload[0]?.payload;
   if (!point || point.expected == null) return null;
   const diffFromAverage = average != null ? point.expected - average : null;
+  // IMPL_PLAN_SH8: a provisional point's `date` is only the bucket-start
+  // draw position (still needed for the x-axis -- untouched), not when the
+  // value was actually current. Showing `date` there is exactly the "looks
+  // stale" bug this slice fixes (design §2-2/§0). Show `asOf` instead for a
+  // provisional point; when it is absent, show no time line at all rather
+  // than falling back to `date` (that fallback reintroduces the same bug).
+  const timeLabel = point.provisional ? (point.asOf ? formatTooltipDate(point.asOf) : null) : formatTooltipDate(point.date);
   return (
     <div className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm shadow-lg">
-      <div className="text-slate-400">{formatTooltipDate(point.date)}</div>
+      {timeLabel != null ? <div className="text-slate-400">{timeLabel}</div> : null}
       <div className="mt-0.5 font-bold text-cyan-300 tabular-nums">{formatExactNeso(point.expected)}</div>
       {point.delta != null ? (
         <div className={`mt-1 tabular-nums ${point.delta >= 0 ? "text-rose-400" : "text-emerald-400"}`}>

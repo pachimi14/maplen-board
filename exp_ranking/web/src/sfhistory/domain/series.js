@@ -94,6 +94,13 @@ export function defaultPresetForMaxStar(maxStar) {
  * apart from confirmed points -- this function does not otherwise treat a
  * provisional point any differently (same missing-data gating, same
  * Expected calculation).
+ *
+ * IMPL_PLAN_SH8 §2-2: a provisional point may also carry `point.asOf` (the
+ * official API's as-of timestamp for the value -- see SfHistoryChart's
+ * tooltip, which shows this instead of `date` for a provisional point).
+ * Only ever set when `provisional` is true, matching the design's "確定点
+ * には asOf を付けない" -- a display-only pass-through, not a change to the
+ * missing-data gating or Expected calculation above.
  */
 export function buildExpectedSeries(points, startStar, targetStar) {
   const required = requiredPriceStars(startStar, targetStar);
@@ -101,13 +108,15 @@ export function buildExpectedSeries(points, startStar, targetStar) {
     const prices = point?.prices ?? [];
     const hasAllRequired = required.every((star) => prices[star] != null);
     const provisional = point?.provisional === true;
+    const asOf = provisional && typeof point?.asOf === "string" ? point.asOf : null;
     if (!hasAllRequired) {
-      return { date: point.date, expected: null, provisional };
+      return { date: point.date, expected: null, provisional, asOf };
     }
     return {
       date: point.date,
       expected: expectedStarforceCostExact({ startStar, targetStar, sfPrices: prices }),
       provisional,
+      asOf,
     };
   });
 }

@@ -262,7 +262,25 @@ def prices(request: Request, itemId: str | None = None) -> JSONResponse:
             provisional_prices = [
                 round(p, 2) if p is not None else None for p in latest_result["prices"]
             ]
-            points.append({"date": candidate_date, "prices": provisional_prices, "provisional": True})
+            provisional_point: dict[str, Any] = {
+                "date": candidate_date,
+                "prices": provisional_prices,
+                "provisional": True,
+            }
+            # IMPL_PLAN_SH8 §2-1: `asOf` is the official API's own as-of
+            # timestamp for the *value* (when the price was current), never
+            # the bucket-start `date` above (which is only a draw position).
+            # Sourced from the same shared `latest_cache` entry `/sf-history
+            # /latest` returns as `latestUpdatedAt` -- §2-1/(e): the two must
+            # never disagree, since both come from the exact same cache
+            # lookup. Omitted entirely (not `null`) when the upstream payload
+            # didn't carry one, per "無い数字を発明しない" -- falling back to
+            # `candidate_date` here would silently reintroduce the "looks
+            # stale" bug this slice exists to fix.
+            as_of = latest_result.get("latestUpdatedAt")
+            if isinstance(as_of, str) and as_of:
+                provisional_point["asOf"] = as_of
+            points.append(provisional_point)
             provisional_date = candidate_date
 
     return _json(
