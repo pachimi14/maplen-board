@@ -74,6 +74,19 @@ export function normalizeEquipmentPayload(payload) {
  * present as a non-empty string; omitted otherwise so downstream code can
  * tell "no asOf" apart from an empty one without an extra null-vs-missing
  * check ("無い数字を発明しない" -- never invent a fallback value here).
+ *
+ * IMPL_PLAN_SH19 §1/§4 (2026-08-05 P0 fix, 統括 review): `point.closed`
+ * (has this bucket's time window ended? -- separate axis from
+ * `provisional`, see app.py/domain/series.js's own header comments) is
+ * passed through the same always-present way `provisional` already is,
+ * defaulting to `true` when the server omits the field. Before this fix
+ * this normalizer silently dropped `closed` (it was not in this function's
+ * explicit field whitelist), so `domain/series.js#buildExpectedSeries`
+ * never saw anything but `undefined` and treated EVERY point as closed --
+ * the still-open bucket rendered on the solid line instead of the dashed
+ * one, and the dashed/bridge series (SfHistoryChart's `ProvisionalDot`)
+ * was empty (0 points), the exact bug this comment now guards against
+ * (see `sfHistorySource.test.js`'s own regression test for this).
  */
 export function normalizePricesPayload(payload, expectedItemId) {
   if (!payload || payload.itemId !== expectedItemId || !Array.isArray(payload.points)) {
@@ -94,6 +107,12 @@ export function normalizePricesPayload(payload, expectedItemId) {
         date: point.date,
         prices: point.prices.map(toFiniteOrNull),
         provisional: point.provisional === true,
+        // IMPL_PLAN_SH19 §1/§4: always present, same convention as
+        // `provisional` above -- defaults to `true` (closed) unless the
+        // server explicitly sent `closed: false` (the one still-open
+        // bucket). Mirrors `domain/series.js#buildExpectedSeries`'s own
+        // `point?.closed !== false` default, applied one layer earlier.
+        closed: point.closed !== false,
       };
       if (typeof point.asOf === "string" && point.asOf) {
         normalized.asOf = point.asOf;
