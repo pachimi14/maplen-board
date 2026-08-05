@@ -63,6 +63,51 @@ describe("flattenCandidates (IMPL_PLAN_SH9 §3-3)", () => {
   });
 });
 
+// IMPL_PLAN_SH14 §3 (2026-08-05, user decision): candidates are now sorted
+// alphabetically by `itemName` via `localeCompare`, across the *whole*
+// mixed representative+alias list (a group's aliases no longer stay
+// clumped together by their group's original position in `items`).
+describe("flattenCandidates: alphabetical order (IMPL_PLAN_SH14 §3)", () => {
+  it("sorts the mixed representative+alias rows by itemName ascending, not grouped by their source item", () => {
+    const rows = flattenCandidates(ITEMS);
+    const names = rows.map((r) => r.itemName);
+    expect(names).toEqual([
+      "AbsoLab Archer Gloves",
+      "AbsoLab Bandit Gloves",
+      "AbsoLab Knight Gloves",
+      "AbsoLab Mage Gloves",
+      "AbsoLab Pirate Gloves",
+      "Black Bean Mark",
+    ]);
+    // Confirms via `localeCompare` (not a bare `<`) and never assumes the
+    // rows are already grouped by their originating `items` entry.
+    const sorted = [...names].sort((a, b) => a.localeCompare(b));
+    expect(names).toEqual(sorted);
+  });
+
+  it("interleaves aliases from two different representative groups purely by name (not clumped by group)", () => {
+    const items = [
+      {
+        itemId: 1,
+        itemName: "Zebra Coat",
+        maxStar: 20,
+        aliases: [
+          { itemId: 1, itemName: "Zebra Coat" },
+          { itemId: 2, itemName: "Apple Coat" }, // alias of group 1, but alphabetically first
+        ],
+      },
+      {
+        itemId: 3,
+        itemName: "Mango Hat",
+        maxStar: 20,
+        aliases: [{ itemId: 3, itemName: "Mango Hat" }],
+      },
+    ];
+    const names = flattenCandidates(items).map((r) => r.itemName);
+    expect(names).toEqual(["Apple Coat", "Mango Hat", "Zebra Coat"]);
+  });
+});
+
 describe("matchesEquipmentQuery + flattenCandidates together (design §7: search all, resolve to representative)", () => {
   it("finds a non-representative item by its own name (the plan's (c) example)", () => {
     const rows = flattenCandidates(ITEMS).filter((row) => matchesEquipmentQuery(row, "AbsoLab Knight Gloves"));

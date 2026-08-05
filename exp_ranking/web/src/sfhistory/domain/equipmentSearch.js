@@ -18,6 +18,13 @@
 // `aliases` at all (a pre-SH9 `/sf-history/equipment` response --
 // sfHistorySource.js's own normalizer already guarantees at least that one
 // row, so this is defense in depth, not the primary path).
+// IMPL_PLAN_SH14 §3 (2026-08-05, user decision): the flattened rows are
+// sorted alphabetically by `itemName` -- via `localeCompare` (not a bare `<`
+// comparison, which does a byte-order compare and mis-sorts e.g. combined
+// diacritics or case) -- across the *whole* mixed representative+alias list,
+// so a group's aliases don't stay clumped together by their group's
+// original position (design §7's search-matching logic itself, above, is
+// unchanged -- only the resulting rows' order).
 export function flattenCandidates(items) {
   const rows = [];
   for (const item of items) {
@@ -33,6 +40,7 @@ export function flattenCandidates(items) {
       });
     }
   }
+  rows.sort((a, b) => a.itemName.localeCompare(b.itemName));
   return rows;
 }
 
