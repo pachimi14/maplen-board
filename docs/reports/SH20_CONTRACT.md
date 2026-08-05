@@ -134,3 +134,78 @@ SF_HISTORY_ALLOWED_ORIGINS="http://localhost:5183" python -m uvicorn app:app --h
 
 本スライスのテストはすべてオフラインのため、上記サーバー起動は検証に使っていない
 (統括の実機検収で使う場合の参考として記載)。
+
+---
+
+# 統括検収(2026-08-05)— **合格**
+
+## ★負のテストを統括が自分で再現
+
+**契約テストは「落ちることを確認していなければ意味がない」**ので、両方向を実際に壊して確認した。
+
+### ① 契約に項目を足す → JS が落ちるか
+
+```
+server/sf-history/contract/response_fields.json の prices.root に "ORCHESTRATOR_TAMPER" を追加
+→ npx vitest run src/sfhistory/integrations/contract.test.js
+→ Test Files 1 failed (1) / Tests 1 failed | 4 passed (5)   ★落ちた
+```
+
+### ② 応答に項目を足す → Python が落ちるか
+
+```
+app.py の /sf-history/prices 応答に "ORCHESTRATOR_TAMPER": True を差し込む
+→ python -m pytest tests/test_response_contract.py -q
+→ FAILED test_prices_root_keys_match_contract
+   E  Extra items in the left set:
+   E  'ORCHESTRATOR_TAMPER'                                 ★落ちた
+```
+
+### ③ 復元
+
+```
+git checkout -- (両ファイル) → git status clean
+pytest tests/ → 97 passed
+contract.test.js → 5 passed
+```
+
+## (a) 契約は1箇所
+
+```
+Python: tests/test_response_contract.py:43
+        CONTRACT = json.loads((ROOT / "contract" / "response_fields.json").read_text(...))
+JS    : integrations/contract.test.js:20
+        readFileSync(new URL("../../../../../server/sf-history/contract/response_fields.json", ...))
+```
+
+**同じファイルを両側が読んでいる。**項目リストが2箇所に無い。
+
+## (c) 現時点で正規化が落としているフィールド(意図的ドロップとして明示済み)
+
+```
+prices.root    : itemId(検証専用) / interval / labelIs / upgradeCount
+latest.root    : itemId(検証専用)
+equipment.root : generatedAt / excluded
+point / item   : 落としているものは無い
+```
+
+**すべて `contract.test.js` の `INTENTIONALLY_DROPPED` に列挙されている。**
+∴ **「黙って落ちている」ものはもう無い。**落とすなら、落とすと書いてある。
+
+## (f) 挙動不変
+
+`sfHistorySource.js` は **1行も変更していない**(`git diff -w` 差分0)。
+本スライスはテストと契約の追加のみで、**画面の見え方は変わらない**。
+
+## これで何が防げるようになったか
+
+```
+サーバーにフィールドを足す
+  → Python の契約テストが落ちる(契約と応答がずれた)
+  → 契約を更新する
+  → JS の契約テストが落ちる(正規化が新項目を落としている)
+  → 正規化を直す
+```
+
+**SH-9 / SH-16 / SH-19 で3回起きた「黙って落ちる」経路が、必ずどこかで止まる。**
+SH-19 は `npm run test` が緑のまま P0 になったが、**同じことはもう起こらない**。
