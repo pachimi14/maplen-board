@@ -35,14 +35,36 @@ export function normalizeEquipmentPayload(payload) {
   return { ok: true, code: "ok", items };
 }
 
-/** `/sf-history/prices?itemId=` -> the 4h-bucketed price series (design §10). */
+/** `/sf-history/prices?itemId=` -> the 4h-bucketed price series (design §10).
+ *
+ * IMPL_PLAN_SH7 §3-2: the server may append one trailing *provisional*
+ * point (`point.provisional === true`) plus a top-level `provisionalDate`.
+ * Both are passed straight through -- `domain/series.js`'s
+ * `buildExpectedSeries` is what actually reads `point.provisional`
+ * (SfHistoryChart / computeStats / currentPercentile downstream of that).
+ * Without this pass-through the flag would be silently dropped here before
+ * it ever reached the domain layer, and the provisional point would look
+ * exactly like an ordinary confirmed one everywhere else in the app.
+ */
 export function normalizePricesPayload(payload, expectedItemId) {
   if (!payload || payload.itemId !== expectedItemId || !Array.isArray(payload.points)) {
-    return { ok: false, code: "invalidFormat", points: [], priceVersion: null, startDate: null, endDate: null };
+    return {
+      ok: false,
+      code: "invalidFormat",
+      points: [],
+      priceVersion: null,
+      startDate: null,
+      endDate: null,
+      provisionalDate: null,
+    };
   }
   const points = payload.points
     .filter((point) => typeof point?.date === "string" && Array.isArray(point?.prices))
-    .map((point) => ({ date: point.date, prices: point.prices.map(toFiniteOrNull) }));
+    .map((point) => ({
+      date: point.date,
+      prices: point.prices.map(toFiniteOrNull),
+      provisional: point.provisional === true,
+    }));
   return {
     ok: true,
     code: "ok",
@@ -50,6 +72,7 @@ export function normalizePricesPayload(payload, expectedItemId) {
     priceVersion: typeof payload.priceVersion === "string" ? payload.priceVersion : null,
     startDate: typeof payload.startDate === "string" ? payload.startDate : null,
     endDate: typeof payload.endDate === "string" ? payload.endDate : null,
+    provisionalDate: typeof payload.provisionalDate === "string" ? payload.provisionalDate : null,
   };
 }
 

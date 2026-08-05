@@ -62,14 +62,35 @@ describe("normalizePricesPayload", () => {
   it("passes through points, converting non-finite prices entries to null", () => {
     const result = normalizePricesPayload(pricesPayload, 1003720);
     expect(result.ok).toBe(true);
-    expect(result.points).toEqual([{ date: "2026-03-08T00:00:00Z", prices: [1, 2, null, 4] }]);
+    expect(result.points).toEqual([{ date: "2026-03-08T00:00:00Z", prices: [1, 2, null, 4], provisional: false }]);
     expect(result.priceVersion).toBe("2026-08-05T20:00:00Z");
     expect(result.endDate).toBe("2026-08-04T16:00:00Z");
+    expect(result.provisionalDate).toBeNull();
   });
 
   it("is invalidFormat if the response itemId does not match the request", () => {
     const result = normalizePricesPayload(pricesPayload, 1234);
     expect(result.ok).toBe(false);
+  });
+
+  it("IMPL_PLAN_SH7 §3-2: passes through a trailing provisional point and provisionalDate", () => {
+    const payloadWithProvisional = {
+      ...pricesPayload,
+      provisionalDate: "2026-08-05T00:00:00Z",
+      points: [
+        ...pricesPayload.points,
+        { date: "2026-08-05T00:00:00Z", prices: [9, 8, 7, 6], provisional: true },
+      ],
+    };
+    const result = normalizePricesPayload(payloadWithProvisional, 1003720);
+    expect(result.ok).toBe(true);
+    expect(result.provisionalDate).toBe("2026-08-05T00:00:00Z");
+    expect(result.points[0].provisional).toBe(false);
+    expect(result.points[1]).toEqual({
+      date: "2026-08-05T00:00:00Z",
+      prices: [9, 8, 7, 6],
+      provisional: true,
+    });
   });
 });
 

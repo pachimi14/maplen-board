@@ -66,6 +66,27 @@ describe("buildExpectedSeries (design §9.1: missing-data gating)", () => {
   });
 });
 
+describe("buildExpectedSeries carries the `provisional` flag through (IMPL_PLAN_SH7 §3/§4)", () => {
+  it("tags a point with provisional:true when the server marked it provisional", () => {
+    const points = [
+      { date: "2026-01-01T00:00:00Z", prices: flatPrices() },
+      { date: "2026-01-01T04:00:00Z", prices: flatPrices(), provisional: true },
+    ];
+    const series = buildExpectedSeries(points, 19, 21);
+    expect(series[0].provisional).toBe(false);
+    expect(series[1].provisional).toBe(true);
+  });
+
+  it("a provisional point still goes through the exact same missing-data gating as a confirmed one", () => {
+    const missing = flatPrices();
+    missing[18] = null; // (19,21) requires stars 10..20
+    const points = [{ date: "d", prices: missing, provisional: true }];
+    const series = buildExpectedSeries(points, 19, 21);
+    expect(series[0].expected).toBeNull();
+    expect(series[0].provisional).toBe(true);
+  });
+});
+
 describe("computeCurrentExpected (design §6: same missing-data gating, single point)", () => {
   it("returns null (not a fallback value) when latestPrices is absent", () => {
     expect(computeCurrentExpected(null, 19, 21)).toBeNull();
@@ -114,6 +135,16 @@ describe("percentile (design §11: Current Position)", () => {
     expect(currentPercentile([], 30)).toBeNull();
     expect(currentPercentile([{ date: "a", expected: 10 }], null)).toBeNull();
   });
+
+  it("IMPL_PLAN_SH7 (e): a provisional point never changes the percentile, however extreme its value", () => {
+    const confirmed = [10, 20, 30, 40, 50].map((expected, i) => ({ date: `d${i}`, expected, provisional: false }));
+    const withoutProvisional = currentPercentile(confirmed, 30);
+    const withProvisional = currentPercentile(
+      [...confirmed, { date: "p", expected: 999999, provisional: true }],
+      30,
+    );
+    expect(withProvisional).toBe(withoutProvisional);
+  });
 });
 
 describe("computeStats (design §6.1: confirmed-only statistics)", () => {
@@ -144,6 +175,19 @@ describe("computeStats (design §6.1: confirmed-only statistics)", () => {
     const withLiveValueMixedIn = [...confirmedOnly, { date: "live", expected: 999999 }];
     expect(computeStats(confirmedOnly).high).toBe(20);
     expect(computeStats(withLiveValueMixedIn).high).toBe(999999); // proves mixing in changes the answer -- callers must not do this
+  });
+
+  it("IMPL_PLAN_SH7 (e): a provisional point never changes average/high/low/count, however extreme its value", () => {
+    const confirmed = [
+      { date: "a", expected: 10, provisional: false },
+      { date: "b", expected: 20, provisional: false },
+      { date: "c", expected: 30, provisional: false },
+    ];
+    const withoutProvisional = computeStats(confirmed);
+    const withProvisionalLow = computeStats([...confirmed, { date: "p", expected: 0.01, provisional: true }]);
+    const withProvisionalHigh = computeStats([...confirmed, { date: "p", expected: 999999, provisional: true }]);
+    expect(withProvisionalLow).toEqual(withoutProvisional);
+    expect(withProvisionalHigh).toEqual(withoutProvisional);
   });
 });
 
