@@ -9,6 +9,7 @@ import {
   computeStats,
   currentPercentile,
   defaultPresetForMaxStar,
+  describeCurrentPercentile,
   isPresetEnabled,
   isValidStarRange,
   PERIOD_DAYS,
@@ -168,6 +169,48 @@ describe("percentile (design §11: Current Position)", () => {
       30,
     );
     expect(withProvisional).toBe(withoutProvisional);
+  });
+});
+
+describe("describeCurrentPercentile (IMPL_PLAN_SH15 §2: display-only wording, currentPercentile formula unchanged)", () => {
+  it("is null when there is no percentile (no current value / no confirmed data)", () => {
+    expect(describeCurrentPercentile(null)).toBeNull();
+  });
+
+  it("percentile=0 (current undercuts the whole period) -> the dedicated 'lowest' sentence, not '0%より安い'", () => {
+    expect(describeCurrentPercentile(0)).toEqual({ kind: "lowest" });
+  });
+
+  it("percentile=100 (current is at/above the whole period) -> the dedicated 'highest' sentence, not '100%より安い'", () => {
+    expect(describeCurrentPercentile(100)).toEqual({ kind: "highest" });
+  });
+
+  it("percentile=13 -> 'cheaper than 87% of this period' (plan §0's worked example)", () => {
+    expect(describeCurrentPercentile(13)).toEqual({ kind: "cheaperThan", percent: 87 });
+  });
+
+  it("percentile=60 -> cheaper than 40%", () => {
+    expect(describeCurrentPercentile(60)).toEqual({ kind: "cheaperThan", percent: 40 });
+  });
+
+  it("rounds the displayed percent (percentile=66.666...)", () => {
+    expect(describeCurrentPercentile((2 / 3) * 100)).toEqual({ kind: "cheaperThan", percent: 33 });
+  });
+
+  it("clamps a near-highest, non-exact percentile away from the meaningless '0%より安い'", () => {
+    // percentile=99.6 (not exactly 100) would round 100-99.6=0.4 -> 0.
+    // Must not fall into "cheaperThan 0" or the "highest" sentence.
+    const result = describeCurrentPercentile(99.6);
+    expect(result.kind).toBe("cheaperThan");
+    expect(result.percent).toBe(1);
+  });
+
+  it("clamps a near-lowest, non-exact percentile away from overclaiming 'cheaper than 100%' (the 'lowest' claim)", () => {
+    // percentile=0.4 (not exactly 0) would round 100-0.4=99.6 -> 100.
+    // Must not fall into "cheaperThan 100" or the "lowest" sentence.
+    const result = describeCurrentPercentile(0.4);
+    expect(result.kind).toBe("cheaperThan");
+    expect(result.percent).toBe(99);
   });
 });
 

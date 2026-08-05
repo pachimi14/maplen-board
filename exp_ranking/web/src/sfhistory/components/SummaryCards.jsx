@@ -1,5 +1,6 @@
 import { useTranslation } from "../../i18n/I18nContext.jsx";
 import { formatCompactNeso, formatExactNeso } from "../domain/format.js";
+import { describeCurrentPercentile } from "../domain/series.js";
 
 // IMPL_PLAN_SH5 §2 / design §11: Current / Period Average / Period High /
 // Period Low / Current Position(percentile). Design §11 forbids any
@@ -14,6 +15,19 @@ function SummaryCard({ label, value, title, tone = "" }) {
       </div>
     </div>
   );
+}
+
+// IMPL_PLAN_SH15 §2: `describeCurrentPercentile` (domain/series.js) turns the
+// unchanged `currentPercentile` number into the "この期間の N% より安い" /
+// "最も安い" / "最も高い" wording the user asked for -- this component only
+// picks which of the three i18n keys to render, it does not compute
+// anything itself.
+function percentileText(t, percentile) {
+  const described = describeCurrentPercentile(percentile);
+  if (described == null) return "--";
+  if (described.kind === "lowest") return t("sfhistory.summary.percentileLowest");
+  if (described.kind === "highest") return t("sfhistory.summary.percentileHighest");
+  return t("sfhistory.summary.percentileCheaperThan", { percent: described.percent });
 }
 
 export default function SummaryCards({ currentStatus, currentExpected, stats, percentile }) {
@@ -53,11 +67,7 @@ export default function SummaryCards({ currentStatus, currentExpected, stats, pe
       />
       <SummaryCard
         label={t("sfhistory.summary.currentPosition")}
-        value={
-          percentile != null
-            ? t("sfhistory.summary.percentileValue", { percentile: Math.round(percentile) })
-            : "--"
-        }
+        value={percentile != null ? percentileText(t, percentile) : "--"}
         tone="text-sm"
       />
     </div>

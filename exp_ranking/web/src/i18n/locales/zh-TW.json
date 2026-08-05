@@ -432,7 +432,9 @@
       "periodHigh": "期間高點",
       "periodLow": "期間低點",
       "currentPosition": "目前位置",
-      "percentileValue": "此期間的第 {{percentile}} 百分位",
+      "percentileCheaperThan": "比此期間 {{percent}}% 的時間點便宜",
+      "percentileLowest": "此期間最低價",
+      "percentileHighest": "此期間最高價",
       "noConfirmedData": "此期間沒有已確認的資料"
     },
     "chart": {

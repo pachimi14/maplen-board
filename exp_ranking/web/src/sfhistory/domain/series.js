@@ -207,6 +207,42 @@ export function currentPercentile(series, currentValue) {
 }
 
 /**
+ * IMPL_PLAN_SH15 §2: display-only derivation of `currentPercentile`'s raw
+ * number into the "この期間の N% より安い" phrasing the user asked for
+ * (§0/§2-2: "数値としては正しいが、読み手が方向を自分で反転しないと意味が
+ * 取れない" -- `currentPercentile` itself is unchanged, this only flips how
+ * it is worded for display). Takes the exact (unrounded) `percentile` from
+ * `currentPercentile` and returns a small discriminated result describing
+ * which sentence to render:
+ *
+ *  - `null` -- no current value / no confirmed points (caller shows "--",
+ *    same as before this plan).
+ *  - `{ kind: "lowest" }` -- `percentile === 0` *exactly* (zero confirmed
+ *    points are at-or-below current -- current undercuts the whole period).
+ *  - `{ kind: "highest" }` -- `percentile === 100` *exactly* (every
+ *    confirmed point is at-or-below current).
+ *  - `{ kind: "cheaperThan", percent }` -- otherwise, `percent =
+ *    round(100 - percentile)`, clamped to `[1, 99]`.
+ *
+ * The clamp (not just the `=== 0` / `=== 100` branches above) is why this
+ * is a separate function instead of an inline `100 - Math.round(...)` at
+ * the call site: rounding alone can land exactly on 0 or 100 for a
+ * percentile that is *not* exactly 0 or 100 (e.g. percentile=0.4 rounds to
+ * "100% より安い", which reads as the `lowest` claim without actually being
+ * it). Deciding `lowest`/`highest` from the *exact* percentile first, then
+ * clamping the leftover cases away from 0/100, is what keeps every rendered
+ * sentence meaningful (design's own example of the failure mode to avoid:
+ * "0% より安い").
+ */
+export function describeCurrentPercentile(percentile) {
+  if (percentile == null) return null;
+  if (percentile <= 0) return { kind: "lowest" };
+  if (percentile >= 100) return { kind: "highest" };
+  const percent = Math.min(99, Math.max(1, Math.round(100 - percentile)));
+  return { kind: "cheaperThan", percent };
+}
+
+/**
  * Annotates each point with `delta`: the change from the previous
  * *non-null* Expected value (design §11: chart tooltip shows "前回比"). A
  * point right after a gap is diffed against the last value seen before the
