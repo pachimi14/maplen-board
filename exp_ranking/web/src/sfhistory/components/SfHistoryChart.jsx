@@ -26,14 +26,61 @@ function ChartTooltipContent({ active, payload, average, t }) {
           {t("sfhistory.chart.tooltipDeltaFromAverage", { delta: formatSignedCompactNeso(diffFromAverage) })}
         </div>
       ) : null}
-      <div className="mt-1.5 text-xs text-slate-500">{t("sfhistory.chart.tooltipBucketNote")}</div>
+      {/* IMPL_PLAN_SH7 §4: "ツールチップに「暫定値(区間未終了)」" -- shown
+          instead of (not in addition to) the confirmed-bucket note below,
+          since a provisional point is by definition not a closed bucket. */}
+      {point.provisional ? (
+        <div className="mt-1.5 text-xs text-amber-400">{t("sfhistory.chart.tooltipProvisional")}</div>
+      ) : (
+        <div className="mt-1.5 text-xs text-slate-500">{t("sfhistory.chart.tooltipBucketNote")}</div>
+      )}
     </div>
   );
 }
 
+// IMPL_PLAN_SH7 §4: only the *marker* for a provisional point is drawn (a
+// hollow/open circle -- "中抜き"), never for anything else on the `bridge`
+// series (its other end is the last confirmed point, already rendered,
+// undotted, by the solid `confirmed` line below).
+function ProvisionalDot({ cx, cy, payload }) {
+  if (!payload?.provisional || cx == null || cy == null) return null;
+  return <circle cx={cx} cy={cy} r={4} fill="none" stroke="#22d3ee" strokeWidth={2} />;
+}
+
+/**
+ * IMPL_PLAN_SH7 §4: derives two additional per-row columns from `series`
+ * (already tagged with `provisional` by domain/series.js's
+ * buildExpectedSeries) so recharts can draw "only the last confirmed point
+ * -> provisional point segment is dashed" with two <Line>s sharing the same
+ * category axis, rather than one line that would otherwise render that
+ * final segment in the same solid style as every other segment:
+ *
+ *   - `confirmed`: `expected`, but `null` at a provisional point -- this is
+ *     what stops the solid line one point short of the provisional one.
+ *   - `bridge`: `expected` at a provisional point AND at the confirmed point
+ *     immediately before it (`null` everywhere else) -- these two adjacent,
+ *     non-null values are exactly the one segment a second, dashed <Line>
+ *     needs to draw the connector.
+ *
+ * A row's own `expected` field is left untouched (the tooltip and the
+ * ReferenceLine/average comparison read `expected` directly, regardless of
+ * which of the two lines rendered it).
+ */
+function withChartColumns(rows) {
+  return rows.map((row, index) => {
+    const isProvisional = row.provisional === true;
+    const nextIsProvisional = rows[index + 1]?.provisional === true;
+    return {
+      ...row,
+      confirmed: isProvisional ? null : row.expected,
+      bridge: isProvisional || nextIsProvisional ? row.expected : null,
+    };
+  });
+}
+
 export default function SfHistoryChart({ series, average }) {
   const { t } = useTranslation();
-  const data = withDeltas(series);
+  const data = withChartColumns(withDeltas(series));
 
   if (!data.length) {
     return <div className="flex h-64 items-center justify-center text-sm text-slate-500">{t("sfhistory.chart.empty")}</div>;
@@ -65,7 +112,7 @@ export default function SfHistoryChart({ series, average }) {
             <Tooltip content={<ChartTooltipContent average={average} t={t} />} />
             <Line
               type="monotone"
-              dataKey="expected"
+              dataKey="confirmed"
               stroke="#22d3ee"
               strokeWidth={2}
               dot={false}
@@ -73,10 +120,27 @@ export default function SfHistoryChart({ series, average }) {
               connectNulls={false}
               isAnimationActive={false}
             />
+            {/* IMPL_PLAN_SH7 §4: dashed connector + hollow marker for the
+                last-confirmed -> provisional segment only. */}
+            <Line
+              type="monotone"
+              dataKey="bridge"
+              stroke="#22d3ee"
+              strokeWidth={2}
+              strokeDasharray="5 4"
+              dot={<ProvisionalDot />}
+              activeDot={{ r: 5, fill: "transparent", stroke: "#22d3ee", strokeWidth: 2 }}
+              connectNulls={false}
+              isAnimationActive={false}
+              legendType="none"
+            />
           </LineChart>
         </ResponsiveContainer>
       </div>
       <p className="mt-2 text-xs text-slate-500">{t("sfhistory.chart.gapNote")}</p>
+      {data.some((row) => row.provisional) ? (
+        <p className="mt-1 text-xs text-slate-500">{t("sfhistory.chart.provisionalLegend")}</p>
+      ) : null}
     </div>
   );
 }

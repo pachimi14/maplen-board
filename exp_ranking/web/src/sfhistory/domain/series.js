@@ -85,16 +85,30 @@ export function defaultPresetForMaxStar(maxStar) {
  * star level `requiredPriceStars(startStar, targetStar)` needs is missing
  * (`null`) at that point ("無い数字を発明しない"). The chart is expected to
  * render this as a broken line, not a bug.
+ *
+ * IMPL_PLAN_SH7 §3/§4: the server may append one trailing *provisional*
+ * point (`point.provisional === true`, design §0: the in-progress 4h bucket,
+ * sourced from the `latest` cache, never persisted to the 4h table). That
+ * flag is carried straight through onto the corresponding series entry so
+ * callers (computeStats/currentPercentile below, SfHistoryChart) can tell it
+ * apart from confirmed points -- this function does not otherwise treat a
+ * provisional point any differently (same missing-data gating, same
+ * Expected calculation).
  */
 export function buildExpectedSeries(points, startStar, targetStar) {
   const required = requiredPriceStars(startStar, targetStar);
   return points.map((point) => {
     const prices = point?.prices ?? [];
     const hasAllRequired = required.every((star) => prices[star] != null);
+    const provisional = point?.provisional === true;
     if (!hasAllRequired) {
-      return { date: point.date, expected: null };
+      return { date: point.date, expected: null, provisional };
     }
-    return { date: point.date, expected: expectedStarforceCostExact({ startStar, targetStar, sfPrices: prices }) };
+    return {
+      date: point.date,
+      expected: expectedStarforceCostExact({ startStar, targetStar, sfPrices: prices }),
+      provisional,
+    };
   });
 }
 
@@ -132,9 +146,21 @@ export function sliceByPeriod(series, periodKey) {
  * (live) value must never be mixed into this array -- callers must pass a
  * series built only from `/sf-history/prices` points, never with the
  * `/sf-history/latest` value appended.
+ *
+ * IMPL_PLAN_SH7 (e): `points` (and therefore `series`, via
+ * `buildExpectedSeries`) may now include one trailing provisional point
+ * (`point.provisional === true`). It is filtered out here alongside the
+ * pre-existing null-filter, so that its presence or absence never changes
+ * average/high/low/count by even one bit -- the provisional point's value
+ * moves every few minutes (it tracks the live `latest` cache), so mixing it
+ * into a statistic that is supposed to be reproducible on reload would
+ * silently break that reproducibility.
  */
 export function computeStats(series) {
-  const values = series.map((point) => point.expected).filter((value) => value != null);
+  const values = series
+    .filter((point) => !point.provisional)
+    .map((point) => point.expected)
+    .filter((value) => value != null);
   if (!values.length) {
     return { average: null, high: null, low: null, count: 0 };
   }
@@ -159,9 +185,15 @@ export function computeStats(series) {
  * at all -- see starforce.js's header). This is a rank-of-one-value
  * statistic computed from the exact same confirmed-only array already used
  * for average/high/low above; no extra data or heuristic is introduced.
+ *
+ * IMPL_PLAN_SH7 (e): a provisional point (`point.provisional === true`) is
+ * excluded from the distribution -- same reasoning as `computeStats` above.
  */
 export function currentPercentile(series, currentValue) {
-  const values = series.map((point) => point.expected).filter((value) => value != null);
+  const values = series
+    .filter((point) => !point.provisional)
+    .map((point) => point.expected)
+    .filter((value) => value != null);
   if (!values.length || currentValue == null) return null;
   const countAtOrBelow = values.filter((value) => value <= currentValue).length;
   return (countAtOrBelow / values.length) * 100;
