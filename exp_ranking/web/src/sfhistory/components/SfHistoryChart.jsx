@@ -48,13 +48,18 @@ function ChartTooltipContent({ active, payload, average, t, language }) {
     <div className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm shadow-lg">
       {timeLabel != null ? <div className="text-slate-400">{timeLabel}</div> : null}
       <div className="mt-0.5 font-bold text-cyan-300 tabular-nums">{formatExactNeso(point.expected)}</div>
+      {/* IMPL_PLAN_SH12 §2: `.sfh-delta-up`/`.sfh-delta-down` (sfhistory.css)
+          instead of Tailwind's `text-rose-400`/`text-emerald-400` -- the
+          latter silently failed to resolve inside `.sfh-root` and fell
+          through to `--theme-focus`, making a price *increase* render in
+          the same color as the Expected value on every non-green theme. */}
       {point.delta != null ? (
-        <div className={`mt-1 tabular-nums ${point.delta >= 0 ? "text-rose-400" : "text-emerald-400"}`}>
+        <div className={`mt-1 tabular-nums ${point.delta >= 0 ? "sfh-delta-up" : "sfh-delta-down"}`}>
           {t("sfhistory.chart.tooltipDeltaFromPrev", { delta: formatSignedCompactNeso(point.delta) })}
         </div>
       ) : null}
       {diffFromAverage != null ? (
-        <div className={`mt-1 tabular-nums ${diffFromAverage >= 0 ? "text-rose-400" : "text-emerald-400"}`}>
+        <div className={`mt-1 tabular-nums ${diffFromAverage >= 0 ? "sfh-delta-up" : "sfh-delta-down"}`}>
           {t("sfhistory.chart.tooltipDeltaFromAverage", { delta: formatSignedCompactNeso(diffFromAverage) })}
         </div>
       ) : null}
