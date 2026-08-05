@@ -2,42 +2,7 @@ import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useTranslation } from "../../i18n/I18nContext.jsx";
-
-// IMPL_PLAN_SH9 §3-3: search/select candidates are the flattened per-alias
-// rows (one per itemId in a group, design §7 -- "検索対象はグループ内の全
-// itemId"), each carrying both its own itemId/itemName *and* the group's
-// representative -- so a player wearing an alias piece (e.g. an AbsoLab
-// Knight Gloves wearer, the "AbsoLab Mage Gloves" group's representative
-// being a different piece) can find and select their own item by name, while
-// `onSelect` still resolves to the representative for `prices`/`latest`
-// (design §7: "取得・表示は代表"). Falls back to a single self-named row
-// when an item has no `aliases` at all (a pre-SH9 `/sf-history/equipment`
-// response -- sfHistorySource.js's own normalizer already guarantees at
-// least that one row, so this is defense in depth, not the primary path).
-function flattenCandidates(items) {
-  const rows = [];
-  for (const item of items) {
-    const aliases = item.aliases?.length ? item.aliases : [{ itemId: item.itemId, itemName: item.itemName }];
-    for (const alias of aliases) {
-      rows.push({
-        key: `${item.itemId}-${alias.itemId}`,
-        representativeItemId: item.itemId,
-        representativeItemName: item.itemName,
-        itemId: alias.itemId,
-        itemName: alias.itemName,
-        maxStar: item.maxStar,
-      });
-    }
-  }
-  return rows;
-}
-
-function matchesEquipmentQuery(candidate, query) {
-  const normalized = query.trim().toLowerCase();
-  if (!normalized) return true;
-  if (candidate.itemName.toLowerCase().includes(normalized)) return true;
-  return String(candidate.itemId).includes(normalized);
-}
+import { flattenCandidates, matchesEquipmentQuery } from "../domain/equipmentSearch.js";
 
 /**
  * `selectedItemId` / `selectedItemName` (IMPL_PLAN_SH9 §3-3): the specific
