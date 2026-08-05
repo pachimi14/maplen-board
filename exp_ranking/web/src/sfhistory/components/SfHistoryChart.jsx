@@ -1,7 +1,15 @@
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useTranslation } from "../../i18n/I18nContext.jsx";
 import { withDeltas } from "../domain/series.js";
-import { formatAxisDate, formatCompactNeso, formatExactNeso, formatSignedCompactNeso, formatTooltipDate } from "../domain/format.js";
+import { formatAxisDate, formatCompactNeso, formatExactNeso, formatSignedCompactNeso, formatTooltipDate, localTimeZone } from "../domain/format.js";
+
+// IMPL_PLAN_SH11 §2: axis ticks and the tooltip's time line are now the
+// viewer's own local time (+ weekday) rather than fixed UTC -- `data` itself
+// (the `date` ISO strings) is unchanged; only these two display call sites
+// changed. `timeZone` is resolved once per module load (stable for the
+// whole session, and equivalent -- in a browser -- to resolving it inside
+// the component on every render).
+const CHART_TIME_ZONE = localTimeZone();
 
 // IMPL_PLAN_SH5 §2: recharts LineChart, Expected only (design §12: no
 // p50/p70/p90). ReferenceLine = period average; high/low are read off the
@@ -14,7 +22,7 @@ import { formatAxisDate, formatCompactNeso, formatExactNeso, formatSignedCompact
 // across theme switches, same rationale many finance dashboards use), not
 // an oversight. Only the surrounding chrome (backgrounds, borders, tabs,
 // summary text -- sfhistory.css) responds to the picker.
-function ChartTooltipContent({ active, payload, average, t }) {
+function ChartTooltipContent({ active, payload, average, t, language }) {
   if (!active || !payload?.length) return null;
   const point = payload[0]?.payload;
   if (!point || point.expected == null) return null;
@@ -25,7 +33,17 @@ function ChartTooltipContent({ active, payload, average, t }) {
   // stale" bug this slice fixes (design §2-2/§0). Show `asOf` instead for a
   // provisional point; when it is absent, show no time line at all rather
   // than falling back to `date` (that fallback reintroduces the same bug).
-  const timeLabel = point.provisional ? (point.asOf ? formatTooltipDate(point.asOf) : null) : formatTooltipDate(point.date);
+  //
+  // IMPL_PLAN_SH11 §2: both branches render in the viewer's local time (+
+  // weekday) via `formatTooltipDate`'s `{ locale, timeZone }` -- the
+  // provisional-vs-confirmed choice of *which* ISO string to show is
+  // unchanged from SH8.
+  const dateOptions = { locale: language, timeZone: CHART_TIME_ZONE };
+  const timeLabel = point.provisional
+    ? point.asOf
+      ? formatTooltipDate(point.asOf, dateOptions)
+      : null
+    : formatTooltipDate(point.date, dateOptions);
   return (
     <div className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm shadow-lg">
       {timeLabel != null ? <div className="text-slate-400">{timeLabel}</div> : null}
@@ -93,7 +111,7 @@ function withChartColumns(rows) {
 }
 
 export default function SfHistoryChart({ series, average }) {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const data = withChartColumns(withDeltas(series));
 
   if (!data.length) {
@@ -108,7 +126,7 @@ export default function SfHistoryChart({ series, average }) {
             <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
             <XAxis
               dataKey="date"
-              tickFormatter={formatAxisDate}
+              tickFormatter={(value) => formatAxisDate(value, { locale: language, timeZone: CHART_TIME_ZONE })}
               tick={{ fill: "#94a3b8", fontSize: 11 }}
               minTickGap={24}
               axisLine={{ stroke: "#334155" }}
@@ -123,7 +141,7 @@ export default function SfHistoryChart({ series, average }) {
             {average != null ? (
               <ReferenceLine y={average} stroke="#fbbf24" strokeDasharray="4 4" strokeOpacity={0.7} />
             ) : null}
-            <Tooltip content={<ChartTooltipContent average={average} t={t} />} />
+            <Tooltip content={<ChartTooltipContent average={average} t={t} language={language} />} />
             <Line
               type="monotone"
               dataKey="confirmed"

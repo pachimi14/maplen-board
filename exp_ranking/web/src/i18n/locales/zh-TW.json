@@ -458,6 +458,7 @@
       "eventAdjustment": "未套用活動加成",
       "metric": "指標 = 期望值",
       "interval": "K 線週期 = 4 小時",
+      "displayTimeZone": "顯示時間：您裝置的時區（{{zone}}）",
       "historyUpdatedAt": "歷史資料最後更新：{{date}}",
       "currentFetchedAt": "目前價格取得時間：{{date}}",
       "policyVersion": "計算策略：{{version}}"

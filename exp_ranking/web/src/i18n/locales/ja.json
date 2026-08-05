@@ -458,6 +458,7 @@
       "eventAdjustment": "イベント補正なし",
       "metric": "指標 = 期待値",
       "interval": "足 = 4時間",
+      "displayTimeZone": "表示時刻: お使いの端末のタイムゾーン({{zone}})",
       "historyUpdatedAt": "履歴の最終更新: {{date}}",
       "currentFetchedAt": "現在価格の取得時刻: {{date}}",
       "policyVersion": "計算ポリシー: {{version}}"
