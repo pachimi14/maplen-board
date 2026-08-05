@@ -428,6 +428,7 @@
       "current": "目前價格",
       "currentUnavailable": "無法取得目前價格",
       "currentUnavailableHint": "取得來源價格失敗。不會以最後一筆歷史資料代替。",
+      "currentAsOf": "截至 {{timestamp}}",
       "periodAverage": "期間平均",
       "periodHigh": "期間高點",
       "periodLow": "期間低點",

@@ -428,6 +428,7 @@
       "current": "Hiện tại",
       "currentUnavailable": "Không lấy được giá hiện tại",
       "currentUnavailableHint": "Lấy giá từ nguồn thất bại. Chúng tôi không thay thế bằng giá trị lịch sử gần nhất.",
+      "currentAsOf": "Tính đến {{timestamp}}",
       "periodAverage": "Trung bình kỳ",
       "periodHigh": "Cao nhất kỳ",
       "periodLow": "Thấp nhất kỳ",

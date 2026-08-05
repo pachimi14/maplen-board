@@ -428,6 +428,7 @@
       "current": "Actual",
       "currentUnavailable": "Precio actual no disponible",
       "currentUnavailableHint": "No se pudo obtener el precio de origen. No se sustituye por el último valor histórico.",
+      "currentAsOf": "A fecha de {{timestamp}}",
       "periodAverage": "Media del período",
       "periodHigh": "Máximo del período",
       "periodLow": "Mínimo del período",
