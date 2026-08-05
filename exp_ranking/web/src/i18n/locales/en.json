@@ -450,6 +450,17 @@
       "loadError": "Could not load the price history. Please reload later.",
       "empty": "No data to display"
     },
+    "heatmap": {
+      "title": "Weekday x Time of Day",
+      "periodNote": "Trend across the full ~150-day history (not linked to the period tab above)",
+      "empty": "Not enough data to summarize yet",
+      "cellTooltip": "{{value}} ({{n}} points)",
+      "sampleCount": "n={{count}}",
+      "noData": "No data",
+      "lowestBadge": "Lowest",
+      "highestBadge": "Highest",
+      "disclaimer": "Shows the median and sample count (n) only -- not a recommendation to enhance on any particular weekday or time."
+    },
     "conditions": {
       "title": "Calculation Conditions",
       "starCatch": "Star Catch ON",

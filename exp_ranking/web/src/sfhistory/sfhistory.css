@@ -187,3 +187,104 @@ html:not([data-theme-depth="deep"]) .sfh-conditions-list {
 .sfh-conditions-list dd {
   margin: 0;
 }
+
+/* IMPL_PLAN_SH11 §3-3: the weekday x time-of-day heatmap. Cell background
+   is computed inline (per-cell `color-mix(var(--theme-focus), ...)`
+   proportional to that cell's median within the grid's min/max -- these
+   rules are just the fixed grid chrome/typography around that. */
+
+.sfh-heatmap-grid {
+  display: grid;
+  gap: 3px;
+  font-size: 0.72rem;
+}
+
+.sfh-heatmap-corner {
+  min-width: 2.6rem;
+}
+
+.sfh-heatmap-col-header,
+.sfh-heatmap-row-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  font-variant-numeric: tabular-nums;
+  padding: 0.15rem;
+}
+
+html:not([data-theme-depth="deep"]) .sfh-heatmap-col-header,
+html:not([data-theme-depth="deep"]) .sfh-heatmap-row-header {
+  color: #64748b;
+}
+
+.sfh-heatmap-row-header {
+  justify-content: flex-end;
+  padding-right: 0.5rem;
+  font-weight: 600;
+}
+
+.sfh-heatmap-cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.6rem;
+  border-radius: 0.35rem;
+  border: 1px solid var(--theme-card-border);
+  padding: 0.15rem 0.2rem;
+  color: #e2e8f0;
+  font-variant-numeric: tabular-nums;
+  transition: opacity 0.15s;
+}
+
+html:not([data-theme-depth="deep"]) .sfh-heatmap-cell {
+  color: #1e293b;
+}
+
+.sfh-heatmap-cell-value {
+  font-weight: 700;
+  font-size: 0.72rem;
+  line-height: 1.1;
+}
+
+.sfh-heatmap-cell-n {
+  font-size: 0.62rem;
+  opacity: 0.75;
+  line-height: 1.2;
+}
+
+/* plan §3-3: "n が少ないセルは視覚的に弱める（例 n<5）" -- dimmed, not
+   hidden: the number is still there, just visually de-emphasized so it is
+   not over-trusted. */
+.sfh-heatmap-cell-weak {
+  opacity: 0.55;
+}
+
+/* plan §3-3: "最安セル・最高セルを視覚的に示す". Same emerald/rose pairing
+   `SfHistoryChart`'s tooltip already uses for "cheaper" / "costlier". */
+.sfh-heatmap-cell-lowest {
+  box-shadow: inset 0 0 0 2px #34d399;
+}
+
+.sfh-heatmap-cell-highest {
+  box-shadow: inset 0 0 0 2px #fb7185;
+}
+
+.sfh-heatmap-cell-badge {
+  position: absolute;
+  top: 1px;
+  right: 2px;
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.sfh-heatmap-cell-badge-low {
+  color: #34d399;
+}
+
+.sfh-heatmap-cell-badge-high {
+  color: #fb7185;
+}

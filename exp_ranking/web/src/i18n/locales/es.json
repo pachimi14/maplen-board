@@ -450,6 +450,17 @@
       "loadError": "No se pudo cargar el historial de precios. Vuelve a intentarlo más tarde.",
       "empty": "No hay datos para mostrar"
     },
+    "heatmap": {
+      "title": "Día de la semana x Franja horaria",
+      "periodNote": "Tendencia de los últimos ~150 días completos (no está vinculado a la pestaña de período de arriba)",
+      "empty": "Todavía no hay suficientes datos para resumir",
+      "cellTooltip": "{{value}} ({{n}} puntos)",
+      "sampleCount": "n={{count}}",
+      "noData": "Sin datos",
+      "lowestBadge": "Más bajo",
+      "highestBadge": "Más alto",
+      "disclaimer": "Solo muestra la mediana y el número de muestras (n); no es una recomendación para mejorar en un día o franja horaria concretos."
+    },
     "conditions": {
       "title": "Condiciones de cálculo",
       "starCatch": "Star Catch activado",
