@@ -122,7 +122,7 @@ export default function SfHistoryRoot() {
 
   return (
     <div className="sfh-root min-h-screen">
-      <SiteHeader active="" variant="dark" />
+      <SiteHeader active="sfhistory" variant="dark" />
       <main className="mx-auto max-w-6xl space-y-5 px-4 py-6 md:px-8">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{t("sfhistory.pageTitle")}</h1>

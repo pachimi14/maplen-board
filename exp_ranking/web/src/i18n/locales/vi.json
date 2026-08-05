@@ -4,6 +4,7 @@
   },
   "app": {
     "openDailyDashboard": "Task Manager",
+    "openSfHistory": "Lịch sử SF",
     "pageTitle": "Bảng xếp hạng EXP MSU",
     "pageDescription": "Xếp hạng cấp độ và lượng EXP tăng hằng ngày, tuần và tháng cho các nhân vật cấp 225 trở lên, dựa trên bảng xếp hạng MSU chính thức.",
     "metaTitle": "Lulumi Tools | Bảng xếp hạng EXP MapleStory N",
