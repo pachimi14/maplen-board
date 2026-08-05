@@ -445,8 +445,8 @@
       "legendLow": "Thấp nhất kỳ",
       "tooltipDeltaFromPrev": "so với lần trước {{delta}}",
       "tooltipDeltaFromAverage": "so với trung bình kỳ {{delta}}",
-      "tooltipBucketNote": "Nến 4 giờ (giá trị cuối khoảng)",
-      "tooltipProvisional": "Giá trị tạm thời (khoảng thời gian chưa kết thúc)",
+      "tooltipBucketRange": "Nến {{start}}–{{end}}",
+      "tooltipBucketRangeOpen": "Nến {{start}}–{{end}} (chưa kết thúc)",
       "provisionalLegend": "Đoạn nét đứt là giá trị tạm thời của nến 4 giờ hiện tại, khoảng này chưa kết thúc.",
       "loadError": "Không thể tải lịch sử giá. Vui lòng tải lại sau.",
       "empty": "Không có dữ liệu để hiển thị"
