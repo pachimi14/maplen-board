@@ -66,8 +66,15 @@ export default function EquipmentSelector({ items, selectedItemId, selectedItemN
                     }`}
                   >
                     <span className="font-semibold">{candidate.itemName}</span>
+                    {/* IMPL_PLAN_SH28 §1: the `#<itemId>` shown here before
+                        was removed at the user's request (2026-08-06) -- ID
+                        search still works via matchesEquipmentQuery in
+                        equipmentSearch.js, which never depended on this
+                        display string (see equipmentSearch.test.js's SH28
+                        case). Only the `☆22まで` badge (SH-9's `maxStar`)
+                        remains. */}
                     <span className="text-slate-500 ml-2">
-                      #{candidate.itemId} · {t("sfhistory.equipment.maxStarBadge", { maxStar: candidate.maxStar })}
+                      {t("sfhistory.equipment.maxStarBadge", { maxStar: candidate.maxStar })}
                     </span>
                   </button>
                 </li>
