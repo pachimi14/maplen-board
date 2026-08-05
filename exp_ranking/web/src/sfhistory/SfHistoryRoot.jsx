@@ -31,22 +31,16 @@ export default function SfHistoryRoot() {
   // already-exported hook/pair of functions; no taskManager/ file is
   // modified by this slice.
   //
-  // Known limitation (reported, not silently hidden): App.jsx's own
-  // `document.documentElement.dataset.themeColor/themeDepth` effect runs
-  // unconditionally on every AppShell render, including while this
-  // component is mounted, and -- being the parent -- fires *after* this
-  // effect on the very first commit. On the very first navigation to
-  // `#/starforce` in a session, that one-time effect ordering can overwrite
-  // this page's stored color/depth with whatever the ranking page's own
-  // theme happens to be, before a user has touched this page's picker.
-  // Defaults for both stores are the same (green/deep), so this is only
-  // observable if a visitor has *previously* set the ranking page and the
-  // Task Manager's shared theme to two different combinations. Fixing this
-  // fully would mean teaching App.jsx's effect about the `starforce` route,
-  // which is outside this plan's file list (App.jsx is not in §1's "変更
-  // してよい"); every *interaction* with this page's own picker afterward
-  // applies immediately and is not re-clobbered (App.jsx does not re-render
-  // from this page's own state changes).
+  // IMPL_PLAN_SH10 §1-2: the actual `document.documentElement.dataset`
+  // write is App.jsx's sole responsibility (its one dataset-write effect
+  // now treats the `starforce` route the same as the Task Manager trio,
+  // reading from this same `useDashboardStore`). This component only reads
+  // the store for its own picker UI (`theme` below, passed to
+  // `SiteHeader`) and writes to it on user interaction
+  // (`handleThemeChange`); it does not touch the dataset itself, so there
+  // is exactly one place in the app that does. This also resolves SH-9's
+  // known first-navigation race (App.jsx's effect now reads the same
+  // source this page does, so there is nothing for it to clobber).
   const dashboardStore = useDashboardStore();
   const theme = useMemo(
     () => ({ themeColor: dashboardStore.state.themeColor, themeDepth: dashboardStore.state.themeDepth }),
@@ -55,10 +49,6 @@ export default function SfHistoryRoot() {
   const handleThemeChange = (next) => {
     dashboardStore.update((state) => setDashboardThemeDepth(setDashboardThemeColor(state, next.themeColor), next.themeDepth));
   };
-  useEffect(() => {
-    document.documentElement.dataset.themeColor = theme.themeColor;
-    document.documentElement.dataset.themeDepth = theme.themeDepth;
-  }, [theme.themeColor, theme.themeDepth]);
 
   const [equipmentState, setEquipmentState] = useState({ status: "loading", items: [] });
   const [selectedItemId, setSelectedItemId] = useState(null); // representative id -- drives prices/latest
