@@ -266,7 +266,12 @@ def prices(request: Request, itemId: str | None = None) -> JSONResponse:
             slot[upgrade] = round(end_price, 2)
 
         dates = sorted(by_date)
-        points = [{"date": d, "prices": by_date[d]} for d in dates]
+        # IMPL_PLAN_SH19 §1/§3: `closed` (line style) vs `provisional`
+        # (statistics eligibility) are deliberately DIFFERENT axes -- see the
+        # big note above `provisional_points` below for why. A confirmed,
+        # `sf_price_history_4h`-backed point is closed (its bucket has
+        # ended) and not provisional (it is persisted, safe to statisticize).
+        points = [{"date": d, "prices": by_date[d], "closed": True} for d in dates]
         last_confirmed_date = dates[-1] if dates else None
 
         # IMPL_PLAN_SH13 §2-2: the simplified rule is "in sf_price_history_4h
@@ -278,6 +283,26 @@ def prices(request: Request, itemId: str | None = None) -> JSONResponse:
         # buckets in between). `sf_price_history_4h` itself is only ever read
         # here -- never written -- so (c)'s determinism guarantee (row
         # count/hash unchanged) holds no matter how many times this route runs.
+        #
+        # IMPL_PLAN_SH19 §1/§3 (2026-08-05, user decision, corrects a 統括
+        # misreading of the original SH-17 instruction): every point below
+        # ALSO carries a `closed` flag, separate from `provisional`:
+        #   - `closed` = has the bucket's own time window ended as of `now`?
+        #     Drives ONLY the frontend's line style (dashed vs solid) / hollow
+        #     marker. True for every point except the one still-open bucket.
+        #   - `provisional` = is the value persisted in `sf_price_history_4h`?
+        #     Drives ONLY statistics eligibility (computeStats/
+        #     currentPercentile/heatmap keep excluding `provisional: True`,
+        #     unchanged). An elapsed-but-unaggregated bucket is `closed: True`
+        #     (nothing left to wait for -- its own 4h window is over) but
+        #     stays `provisional: True` (its value can still shift the next
+        #     time the 4h aggregation job runs, and folding an about-to-change
+        #     value into a statistic that must reproduce on reload would
+        #     silently break that reproducibility -- same reasoning
+        #     domain/series.js's `computeStats` docstring already gives for
+        #     excluding the live in-progress point). Do not merge these two
+        #     flags back into one: doing so is what produced the "two dashed
+        #     segments" bug this plan fixes.
         provisional_points: list[dict[str, Any]] = []
         max_upgrade_by_item = db.max_upgrade_by_item(conn)
         confirmed_max_upgrade = max_upgrade_by_item.get(item_id)
@@ -334,8 +359,28 @@ def prices(request: Request, itemId: str | None = None) -> JSONResponse:
                         in_progress_prices[upgrade] = round(latest_end_price, 2)
                         in_progress_has_data = True
             for bucket_date in sorted(derived_by_date):
+                # IMPL_PLAN_SH19 §1/§3: this bucket's window has already
+                # fully elapsed -- only its *persistence* to
+                # `sf_price_history_4h` is pending (the periodic aggregation
+                # job just has not run yet). `closed: True` (drawn as a solid
+                # line, matching a confirmed point) even though `provisional`
+                # stays True (still excluded from computeStats/
+                # currentPercentile/the heatmap -- its value can still change
+                # the next time this job runs, and mixing an
+                # about-to-change value into a "reproducible on reload"
+                # statistic would silently break that reproducibility, same
+                # reasoning as domain/series.js's computeStats docstring).
+                # `closed` and `provisional` are answering two different
+                # questions on purpose: "has the bucket's time window ended"
+                # (line style) vs. "is the value durably persisted" (stats
+                # eligibility) -- do not collapse them back into one flag.
                 provisional_points.append(
-                    {"date": bucket_date, "prices": derived_by_date[bucket_date], "provisional": True}
+                    {
+                        "date": bucket_date,
+                        "prices": derived_by_date[bucket_date],
+                        "provisional": True,
+                        "closed": True,
+                    }
                 )
     finally:
         conn.close()
@@ -378,10 +423,16 @@ def prices(request: Request, itemId: str | None = None) -> JSONResponse:
             # (the point still gets drawn at `candidate_date`, same as ever).
             as_of = latest_result.get("latestUpdatedAt")
             has_as_of = isinstance(as_of, str) and bool(as_of)
+            # IMPL_PLAN_SH19 §1/§3: `closed: False` -- the ONLY point this
+            # route ever marks as not-yet-ended. This is what makes the
+            # dashed line/hollow marker always exactly one point (§0 of that
+            # plan): every other point (confirmed or elapsed-but-unaggregated
+            # above) is `closed: True`.
             in_progress_point = {
                 "date": candidate_date,
                 "prices": provisional_prices,
                 "provisional": True,
+                "closed": False,
             }
             if has_as_of:
                 in_progress_point["asOf"] = as_of
@@ -394,6 +445,7 @@ def prices(request: Request, itemId: str | None = None) -> JSONResponse:
                 "date": candidate_date,
                 "prices": in_progress_prices,
                 "provisional": True,
+                "closed": False,  # IMPL_PLAN_SH19 §1/§3: still the in-progress bucket
             }
     if in_progress_point is not None:
         provisional_points.append(in_progress_point)
