@@ -169,3 +169,88 @@ SF_HISTORY_ALLOWED_ORIGINS="http://localhost:5183" python -m uvicorn app:app --h
   (本番では最大43分程度、計画 §0-1 参照)。統括の実機確認時にこの状態が既に解消している可能性が
   ある場合は、`scripts/update.py` の実行間隔の谷間(バケット境界直後)を狙うか、本レポートの実測記録
   (凍結コピー上の再現)を参照されたい。
+
+---
+
+## ★P0 追記(2026-08-05、統括検収での不合格 → 修正)
+
+### 事象
+
+統括がブラウザの SVG を直接測定し、**破線が1点ではなく0点**になっていることを検出:
+`.recharts-line-curve[1]`(破線=bridge 列)の `d` 属性が空文字列、中抜きマーカーが0個。
+実線側が右端(進行中の点)まで伸びていた。
+
+### 根本原因
+
+`exp_ranking/web/src/sfhistory/integrations/sfHistorySource.js#normalizePricesPayload` が、
+API レスポンスの各点を `{ date, prices, provisional, asOf? }` の**明示的なフィールド一覧**にだけ
+正規化しており、**`closed` フィールドがこの一覧に無かったため黙って捨てられていた**。
+
+その結果、`domain/series.js#buildExpectedSeries` が受け取る `point.closed` は常に `undefined` となり、
+そのデフォルト規約(`point?.closed !== false` → true)により**全点が `closed:true` 扱い**になった:
+- 進行中の点(本来 `closed:false`)が実線(`confirmed`)側に混入 → 実線が右端まで伸びる
+- `bridge`(破線)列は「`isOpen` または `nextIsOpen` が true の点」にのみ値が入る構造だが、
+  `isOpenPoint` が**どの点に対しても false** を返すため、`bridge` は**常に全点 null**(= 空)
+
+`app.py`(サーバー)・`domain/series.js`(統計)は正しく `closed` を扱っていたが、**中間層
+(`sfHistorySource.js`)が新フィールドのホワイトリストへの追加漏れでサイレントに落としていた** ——
+計画のスコープ表 §2 にこのファイルが明記されていなかったための見落とし。
+
+### 修正
+
+1. `sfHistorySource.js#normalizePricesPayload`: `closed` を `provisional` と同じ「常に存在・
+   `!== false` でデフォルト true」の規約で素通しするよう追加。
+2. `SfHistoryChart.jsx` の `isOpenPoint`/`withChartColumns`(実線/破線列を分岐させる、SVG `d` の
+   直接の入力元)を新規 `domain/chartColumns.js`(DOM 非依存の純粋関数)へ抽出し、
+   `chartColumns.test.js` で **`bridge` 列の実際の値**(=SVGの`d`を決める入力そのもの)を固定。
+   これが今回の再発防止(「`npm run test` が緑でも SVG が空」というクラスのバグ)の直接ガード:
+   - 進行中の点1つに対し `bridge` の非null要素が**常に2個**(直前の確定点+進行中の点)
+   - `confirmed` は進行中の点で**必ず null**
+   - `closed:true`/`provisional:true`(終了済み・未保存)の点は `bridge` に入らない
+   - `closed` フィールド自体が欠落している場合も `true`(実線側)にフォールバックする
+     (今回のサイレントドロップと同型のケースを直接再現)
+3. `sfHistorySource.test.js` に `closed:false` の素通し・`closed` 欠落時のデフォルトを固定する
+   回帰テストを追加。
+
+### ★修正後の実測(コミット `ae41b39`)
+
+生きた API(itemId `1382265`、2026-08-05 08:1x UTC 台、再実測)のレスポンスを、
+**実際のクライアントパイプライン**(`normalizePricesPayload` → `buildExpectedSeries` →
+`withChartColumns`、いずれも本番コードそのもの)にそのまま通した結果:
+
+```
+normalized.ok: true  points: 900
+last normalized point: {"date":"2026-08-05T08:00:00Z", ..., "provisional":true,"closed":false,"asOf":"2026-08-05T08:40:00Z"}
+
+total rows: 900
+bridge non-null count: 2   ["2026-08-05T04:00:00Z", "2026-08-05T08:00:00Z"]
+open rows (closed:false) count: 1
+last row confirmed (should be null): null
+last row bridge (should be non-null): 275079057.0738654
+```
+
+**破線列(bridge)の点数 = 2**(最後の確定点 + 進行中の点。SVG の `<path d="...">` はこの2点を
+結ぶ三次曲線1本を描く = 空文字列ではなくなる)。`confirmed` 列は進行中の点で `null` のため、
+実線は右端まで伸びない。
+
+この実測は実装担当の環境(ブラウザ操作ツール無し)で得られる**最も近い代替証跡**であり、
+**recharts が実際に描く SVG `d` のピクセル値そのものの確認は、引き続き統括のブラウザ実機確認が必要**。
+ただし今回追加した `chartColumns.test.js`(`domain/` の純粋関数への直接アサーション)は、
+`bridge`/`confirmed` の**値そのもの**を固定しているため、同型の「テストは緑・SVGは空」という
+すり抜けは今後は起きない設計になっている。
+
+### コミット(追加分)
+
+- `ae41b39` -- `fix(sh19): P0 -- integrations/sfHistorySource.js was silently dropping closed, emptying the dashed bridge series entirely`
+  (`exp_ranking/web/src/sfhistory/integrations/sfHistorySource.js` / `sfHistorySource.test.js` /
+  `exp_ranking/web/src/sfhistory/components/SfHistoryChart.jsx` /
+  `exp_ranking/web/src/sfhistory/domain/chartColumns.js`(新規)/ `chartColumns.test.js`(新規))
+
+単独 revert 可(直前3コミットとは独立)。
+
+### スコープについての率直な補足
+
+計画 §2 の「変更してよい」一覧に `integrations/sfHistorySource.js` は入っていなかった
+(この見落としが今回の P0 の直接原因)。統括の指示により診断・修正を実施したが、これは計画書
+自体の不備(スコープ漏れ)であり、実装担当の当初の作業が計画外に踏み込んだものではない旨を
+記録しておく。
