@@ -263,24 +263,22 @@ describe("maxStar-bounded star selection (design §7.1: the most safety-critical
     expect(isValidStarRange(19, 20, 20)).toBe(true);
   });
 
-  it("isPresetEnabled disables every preset whose `to` exceeds maxStar=20 (6-device case)", () => {
-    const enabled = STAR_RANGE_PRESETS.filter((p) => isPresetEnabled(p, 20));
-    expect(enabled).toEqual([
+  it("IMPL_PLAN_SH13 §3: exactly 3 presets, 0->21/0->22 disabled on a maxStar=20 device", () => {
+    expect(STAR_RANGE_PRESETS).toEqual([
       { from: 0, to: 17 },
-      { from: 17, to: 18 },
-      { from: 18, to: 19 },
-      { from: 19, to: 20 },
+      { from: 0, to: 21 },
+      { from: 0, to: 22 },
     ]);
+    const enabled = STAR_RANGE_PRESETS.filter((p) => isPresetEnabled(p, 20));
+    expect(enabled).toEqual([{ from: 0, to: 17 }]);
     const disabled = STAR_RANGE_PRESETS.filter((p) => !isPresetEnabled(p, 20));
     expect(disabled).toEqual([
-      { from: 20, to: 21 },
-      { from: 21, to: 22 },
-      { from: 19, to: 21 },
+      { from: 0, to: 21 },
       { from: 0, to: 22 },
     ]);
   });
 
-  it("isPresetEnabled allows all 8 presets for maxStar=22", () => {
+  it("isPresetEnabled allows all 3 presets for maxStar=22", () => {
     expect(STAR_RANGE_PRESETS.every((p) => isPresetEnabled(p, 22))).toBe(true);
   });
 

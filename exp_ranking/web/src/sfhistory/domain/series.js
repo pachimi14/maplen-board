@@ -14,15 +14,13 @@ export const PERIOD_KEYS = ["7D", "30D", "90D", "150D"];
 
 export const PERIOD_DAYS = { "7D": 7, "30D": 30, "90D": 90, "150D": 150 };
 
-/** design §7.1: presets a user can pick, before maxStar filtering. */
+/** IMPL_PLAN_SH13 §3: exactly three presets a user can pick, before maxStar
+ * filtering (design §7.1's own maxStar-disable rule is unchanged: a preset
+ * whose `to` exceeds the device's maxStar stays disabled, e.g. `0->21`/
+ * `0->22` on a ☆20-capped device). */
 export const STAR_RANGE_PRESETS = [
   { from: 0, to: 17 },
-  { from: 17, to: 18 },
-  { from: 18, to: 19 },
-  { from: 19, to: 20 },
-  { from: 20, to: 21 },
-  { from: 21, to: 22 },
-  { from: 19, to: 21 },
+  { from: 0, to: 21 },
   { from: 0, to: 22 },
 ];
 
