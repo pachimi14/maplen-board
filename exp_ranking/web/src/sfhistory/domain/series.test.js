@@ -9,11 +9,13 @@ import {
   computeStats,
   currentPercentile,
   defaultPresetForMaxStar,
+  DEFAULT_INITIAL_ITEM_ID,
   describeCurrentPercentile,
   isPresetEnabled,
   isValidStarRange,
   PERIOD_DAYS,
   PERIOD_KEYS,
+  selectInitialItem,
   sliceByPeriod,
   startStarOptions,
   STAR_RANGE_PRESETS,
@@ -373,6 +375,30 @@ describe("maxStar-bounded star selection (design §7.1: the most safety-critical
 
   it("returns null when no preset fits (maxStar below every preset's `to`)", () => {
     expect(defaultPresetForMaxStar(0)).toBeNull();
+  });
+});
+
+describe("selectInitialItem (IMPL_PLAN_SH26 §1: default-open item)", () => {
+  it("picks DEFAULT_INITIAL_ITEM_ID (Arcane Umbra Staff) when it is present, regardless of its position in the list", () => {
+    const items = [
+      { itemId: 111, itemName: "Some Other Weapon", maxStar: 22 },
+      { itemId: DEFAULT_INITIAL_ITEM_ID, itemName: "Arcane Umbra Staff", maxStar: 22 },
+      { itemId: 222, itemName: "Yet Another Weapon", maxStar: 22 },
+    ];
+    expect(selectInitialItem(items)).toEqual(items[1]);
+  });
+
+  it("(c) falls back to items[0] when DEFAULT_INITIAL_ITEM_ID is absent from the list -- must not throw or return undefined", () => {
+    const items = [
+      { itemId: 111, itemName: "Some Other Weapon", maxStar: 22 },
+      { itemId: 222, itemName: "Yet Another Weapon", maxStar: 20 },
+    ];
+    expect(selectInitialItem(items)).toEqual(items[0]);
+  });
+
+  it("falls back to items[0] on a single-item list without DEFAULT_INITIAL_ITEM_ID", () => {
+    const items = [{ itemId: 999, itemName: "Solo Item", maxStar: 17 }];
+    expect(selectInitialItem(items)).toEqual(items[0]);
   });
 });
 

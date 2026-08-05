@@ -43,6 +43,32 @@ export function isPresetEnabled(preset, maxStar) {
   return Number.isFinite(maxStar) && preset.to <= maxStar;
 }
 
+/** IMPL_PLAN_SH26 §1 (user decision, 2026-08-06): the item the screen opens
+ * on. Before this plan, `SfHistoryRoot` picked `items[0]` -- whatever
+ * `/sf-history/equipment`'s representative-id ordering happened to put
+ * first, never an intentional choice (this plan's own §0). Arcane Umbra
+ * Staff was picked by the user as a more meaningful, screenshot-friendly
+ * default (a high-star weapon whose price history is populated). Matched on
+ * `item.itemId`, the *representative* id -- same field `selectedItemId`
+ * drives everywhere else in SfHistoryRoot (prices/latest fetches).
+ */
+export const DEFAULT_INITIAL_ITEM_ID = 1382265; // Arcane Umbra Staff
+
+/**
+ * Picks the item `SfHistoryRoot`'s equipment-load effect selects first:
+ * `DEFAULT_INITIAL_ITEM_ID` if it is present in `items`, otherwise
+ * `items[0]` (IMPL_PLAN_SH26 §1(c): if the item list ever changes and
+ * `DEFAULT_INITIAL_ITEM_ID` drops out of it, the screen must not break --
+ * "停止せず穏当に劣化する"). Does not touch star-range selection at all;
+ * the caller still runs `defaultPresetForMaxStar` on whichever item this
+ * returns (IMPL_PLAN_SH26 §1: "初期の星範囲は... 任せる(変えない)").
+ * `items` is assumed non-empty -- `SfHistoryRoot`'s loadEquipment effect
+ * already treats an empty list as an error state before this is called.
+ */
+export function selectInitialItem(items) {
+  return items.find((item) => item.itemId === DEFAULT_INITIAL_ITEM_ID) ?? items[0];
+}
+
 /** Achievable target-star choices (1..maxStar), never above maxStar. */
 export function targetStarOptions(maxStar) {
   if (!Number.isFinite(maxStar) || maxStar < 1) return [];
