@@ -452,7 +452,8 @@
       "empty": "表示できるデータがありません"
     },
     "heatmap": {
-      "title": "曜日 × 時間帯（UTC）",
+      "title": "曜日 × 時間帯",
+      "axisNote": "行=UTCの曜日。列=ローカル時刻（{{zone}}。UTCは列見出しの下に併記）",
       "periodNote": "過去150日全体の傾向（期間タブとは連動しません）",
       "empty": "集計できるデータがまだありません",
       "cellTooltip": "{{value}}",

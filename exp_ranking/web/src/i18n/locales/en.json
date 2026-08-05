@@ -452,7 +452,8 @@
       "empty": "No data to display"
     },
     "heatmap": {
-      "title": "Weekday x Time of Day (UTC)",
+      "title": "Weekday x Time of Day",
+      "axisNote": "Rows: UTC weekday. Columns: your local time ({{zone}}; UTC shown below each column)",
       "periodNote": "Trend across the full ~150-day history (not linked to the period tab above)",
       "empty": "Not enough data to summarize yet",
       "cellTooltip": "{{value}}",

@@ -1,7 +1,14 @@
 import { Fragment, useMemo } from "react";
 import { useTranslation } from "../../i18n/I18nContext.jsx";
 import { buildWeekdayHeatmap, extremeHeatmapCells, totalHeatmapCount } from "../domain/weekdayStats.js";
-import { formatClockTime, formatCompactNeso, formatExactNeso, weekdayShortLabel } from "../domain/format.js";
+import {
+  formatClockTime,
+  formatCompactNeso,
+  formatExactNeso,
+  formatLocalClockTime,
+  formatTimeZoneLabel,
+  weekdayShortLabel,
+} from "../domain/format.js";
 
 // IMPL_PLAN_SH14 §4 (2026-08-05, user decision): the grid's origin is now
 // Thursday UTC 00:00 (top-left) -- rows Thu->Fri->Sat->Sun->Mon->Tue->Wed,
@@ -18,19 +25,32 @@ const WEEKDAY_ORDER = [4, 5, 6, 0, 1, 2, 3];
 const LOW_N_THRESHOLD = 5; // plan §3-3: "n が少ないセルは視覚的に弱める（例 n<5）"
 
 /**
- * design/plan §3: 7 (UTC weekday) x 6 (UTC 4h slot) grid of the *median*
- * Expected cost, from `series` = SfHistoryRoot's `fullSeries` (IMPL_PLAN_SH11
- * §3-2: always the full ~150-day series, deliberately never the
- * period-tab-sliced one -- passing `periodSeries` here would be the exact
- * regression the plan warns about: a 7-day slice puts n=1 in every cell).
- * `buildWeekdayHeatmap` (domain/weekdayStats.js) does all the actual
- * aggregation; this component only lays it out and colors it.
+ * design/plan §3: 7 (UTC weekday) x 6 (4h slot) grid of the *median*
+ * Expected cost. `buildWeekdayHeatmap` (domain/weekdayStats.js) does all
+ * the actual aggregation -- fixed UTC, unaffected by this component's
+ * display choices -- this component only lays it out, colors it, and picks
+ * which zone to *label* the columns in.
+ *
+ * IMPL_PLAN_SH11 §3-2: `series` is `SfHistoryRoot`'s `fullSeries`, always
+ * the full ~150-day series, deliberately never the period-tab-sliced one --
+ * passing `periodSeries` here would put n=1 in every cell for a 7-day tab.
  *
  * IMPL_PLAN_SH14 §0-1/§2 (2026-08-05, user decision): reverts IMPL_PLAN_SH11
- * §2's viewer-local-time basis back to a fixed UTC (both the weekday
- * grouping and the column time-of-day labels). §4: rows are ordered
- * Thu-first (see `WEEKDAY_ORDER` above) so the top-left cell is Thu 00:00
- * UTC.
+ * §2's viewer-local-time basis back to a fixed UTC for the *grouping*
+ * (weekday/hour a bucket lands in). §4: rows are ordered Thu-first (see
+ * `WEEKDAY_ORDER` above) so the top-left cell is Thu 00:00 UTC.
+ *
+ * IMPL_PLAN_SH29 §2 (2026-08-06, user decision, re-adds a viewer-local
+ * *display* on top of SH-14's fixed-UTC grouping -- NOT a revert of SH-14):
+ * column headers now show the viewer's own local time as the primary label
+ * (`formatLocalClockTime`), with the original fixed UTC value kept directly
+ * underneath in smaller text (`formatClockTime`, unchanged call). The
+ * *grouping* below (`buildWeekdayHeatmap`, `WEEKDAY_ORDER`, `columns`) is
+ * completely untouched by this -- only these header labels changed, per
+ * plan §2's "★集計は UTC 基準のまま変えない". Row (weekday) headers stay
+ * UTC-only (plan §2: "行の曜日ラベルは UTC 基準のまま") -- the axis note
+ * below the title (§2-1) is what discloses that split so a large-offset
+ * viewer is never left unable to tell which axis is in which zone.
  *
  * IMPL_PLAN_SH18 §4 (2026-08-05, user decision, reverses design §8):
  * `buildWeekdayHeatmap` now keys each cell by its bucket's *end* weekday/
@@ -53,6 +73,11 @@ export default function WeekdayHeatmap({ series }) {
     return { cells, columns, total: totalHeatmapCount(cells), extremes: extremeHeatmapCells(cells) };
   }, [series]);
 
+  // IMPL_PLAN_SH29 §1/§2-1: the viewer's own zone label, computed once per
+  // render (cheap, no network/DOM) -- shared by the axis note below and
+  // reused the same way SfHistoryChart's tooltip uses it.
+  const zoneLabel = formatTimeZoneLabel();
+
   const cellByKey = useMemo(() => new Map(cells.map((cell) => [`${cell.weekdayIndex}-${cell.bucketSlot}`, cell])), [cells]);
 
   const { min, max } = useMemo(() => {
@@ -65,9 +90,11 @@ export default function WeekdayHeatmap({ series }) {
     <div className="sfh-summary-card">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <h2 className="sfh-field-label">{t("sfhistory.heatmap.title")}</h2>
-        {/* plan §3-2: labeled as always-full-period so it never looks like
-            it tracks the period tab above it. */}
-        <span className="text-xs text-slate-500">{t("sfhistory.heatmap.periodNote")}</span>
+        {/* IMPL_PLAN_SH29 §2-1: discloses which axis is in which zone --
+            columns are now the viewer's local time (with the zone spelled
+            out here), rows stay the UTC weekday `buildWeekdayHeatmap`
+            actually grouped by. */}
+        <span className="text-xs text-slate-500">{t("sfhistory.heatmap.axisNote", { zone: zoneLabel })}</span>
       </div>
 
       {total === 0 ? (
@@ -77,8 +104,15 @@ export default function WeekdayHeatmap({ series }) {
           <div className="sfh-heatmap-grid mt-2" style={{ gridTemplateColumns: `auto repeat(${columns.length}, minmax(0, 1fr))` }}>
             <div className="sfh-heatmap-corner" />
             {columns.map((column) => (
+              // IMPL_PLAN_SH29 §2/§2-1: local time is the primary label (plan
+              // §2/(b): "JSTなら9:00を左上のUTC0:00のところに表示する"), the
+              // original fixed-UTC label (`formatClockTime`, unchanged) stays
+              // directly underneath, smaller -- §2-1's "UTC を消さない".
+              // Neither line changes which `column`/cell this header sits
+              // above; only the label text.
               <div key={column.bucketSlot} className="sfh-heatmap-col-header">
-                {formatClockTime(column.hour, column.minute)}
+                <span className="sfh-heatmap-col-header-local">{formatLocalClockTime(column.hour, column.minute)}</span>
+                <span className="sfh-heatmap-col-header-utc">{formatClockTime(column.hour, column.minute)} UTC</span>
               </div>
             ))}
             {WEEKDAY_ORDER.map((weekdayIndex) => (

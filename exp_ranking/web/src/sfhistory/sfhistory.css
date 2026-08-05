@@ -282,6 +282,21 @@ html:not([data-theme-depth="deep"]) .sfh-heatmap-row-header {
   font-weight: 600;
 }
 
+/* IMPL_PLAN_SH29 §2/§2-1: column headers now stack two lines -- local time
+   (primary) over the original fixed-UTC time (secondary, smaller/dimmer) --
+   instead of the single UTC-only line before this plan. Row headers are
+   unaffected (still single-line, still UTC only). */
+.sfh-heatmap-col-header {
+  flex-direction: column;
+  gap: 0.05rem;
+  line-height: 1.15;
+}
+
+.sfh-heatmap-col-header-utc {
+  font-size: 0.6rem;
+  opacity: 0.75;
+}
+
 .sfh-heatmap-cell {
   position: relative;
   display: flex;

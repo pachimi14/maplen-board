@@ -324,3 +324,25 @@ export function formatTooltipDateLocal(isoDate, { locale = "en", timeZone } = {}
   const base = `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute} ${zoneLabel}`;
   return weekday ? `${base} (${weekday})` : base;
 }
+
+/** plan §2: the heatmap's *local*-time column header -- the same fixed UTC
+ * hour every column already represents (`hour`/`minute`, the same values
+ * `formatClockTime` above receives), read on a local wall clock instead.
+ * Not tied to any specific calendar date -- the same UTC hour recurs every
+ * day (design §9's 4h grid) -- `referenceDate` exists purely to read
+ * `timeZone`'s *current* UTC offset (so a DST-observing zone shows today's
+ * actual offset), defaulting to "now" for display / pinnable for tests.
+ * Neither this function nor its result is read by
+ * `weekdayStats.js#buildWeekdayHeatmap` -- the cell grouping is computed
+ * entirely in fixed UTC before this ever runs, so this cannot move a single
+ * cell (plan §2: "集計は UTC 基準のまま変えない"). `null`/`null` (an empty
+ * column) still renders "--:--", matching `formatClockTime`. */
+export function formatLocalClockTime(hour, minute, { timeZone, referenceDate = new Date() } = {}) {
+  if (hour == null || minute == null) return "--:--";
+  const tz = timeZone || localTimeZone();
+  const reference = new Date(
+    Date.UTC(referenceDate.getUTCFullYear(), referenceDate.getUTCMonth(), referenceDate.getUTCDate(), hour, minute, 0),
+  );
+  const parts = localizedDateTimeParts(reference, tz);
+  return `${parts.hour}:${parts.minute}`;
+}
