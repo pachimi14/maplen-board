@@ -2,6 +2,7 @@ import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Too
 import { useTranslation } from "../../i18n/I18nContext.jsx";
 import { withDeltas } from "../domain/series.js";
 import {
+  bucketDisplayDate,
   formatAxisDate,
   formatBucketRange,
   formatCompactNeso,
@@ -16,6 +17,15 @@ import {
 // the choice of display zone as it always was. `formatAxisDate`/
 // `formatTooltipDate` (domain/format.js) no longer take a `timeZone` option
 // at all, so there is nothing left to resolve here.
+//
+// IMPL_PLAN_SH18 §1/§3 (2026-08-05, user decision, reverses design §8's
+// "ラベルは区間開始"): a row's own `date` (bucket start, still what
+// `formatBucketRange`'s range note reads -- SH-17's range note is
+// unchanged, plan (c)) is no longer what gets shown as *the* time -- see
+// `bucketDisplayDate` (domain/format.js) for the "+4h, except the still-
+// open bucket keeps `asOf`" rule this file now applies at both the axis
+// (`withChartColumns`'s new `displayDate` column) and the tooltip
+// (`ChartTooltipContent`'s `timeLabel`) below.
 
 // IMPL_PLAN_SH5 §2: recharts LineChart, Expected only (design §12: no
 // p50/p70/p90). ReferenceLine = period average; high/low are read off the
@@ -38,17 +48,21 @@ function ChartTooltipContent({ active, payload, average, t, language }) {
   // still-open ("未終了") bucket's point (server-side: app.py only attaches
   // it there). When present, it is the *time* to show -- the current
   // instant the value is as-of, even though the point's *position* stays at
-  // the bucket's own start (`point.date`, unchanged). Every other point
-  // kind (confirmed, elapsed-but-unaggregated) has no `asOf` at all, so
-  // `point.date` (their own real, displayable bucket time -- the property
-  // SH-16 fixed and this slice does not touch) is shown instead. Either way
-  // there is always a real time to show -- SH-16's "time missing entirely"
-  // fix is preserved.
+  // the bucket's own start (`point.date`, unchanged). Either way there is
+  // always a real time to show -- SH-16's "time missing entirely" fix is
+  // preserved.
   //
   // IMPL_PLAN_SH14 §2: still rendered in UTC (+ weekday) via
   // `formatTooltipDate`'s `{ locale }`, unchanged from SH8/SH14.
+  //
+  // IMPL_PLAN_SH18 §3 (2026-08-05, user decision, reverses design §8):
+  // every other point kind (confirmed, elapsed-but-unaggregated) no
+  // longer shows `point.date` (its own bucket *start*) here -- it shows
+  // the bucket's *end* instead, via `bucketDisplayDate(point)` (same
+  // `asOf` result as SH-17 for a still-open point; see that function's own
+  // doc comment for the full three-way rule and its future-time guard).
   const dateOptions = { locale: language };
-  const timeLabel = formatTooltipDate(point.asOf ?? point.date, dateOptions);
+  const timeLabel = formatTooltipDate(bucketDisplayDate(point), dateOptions);
   // IMPL_PLAN_SH17 §4-2: replaces SH-7's static `tooltipBucketNote`/
   // `tooltipProvisional` pair with the bucket's own `HH:MM–HH:MM` range,
   // always derived from `point.date` (the bucket-start position, never
@@ -118,6 +132,14 @@ function ProvisionalDot({ cx, cy, payload }) {
  * A row's own `expected` field is left untouched (the tooltip and the
  * ReferenceLine/average comparison read `expected` directly, regardless of
  * which of the two lines rendered it).
+ *
+ * IMPL_PLAN_SH18 §3: also adds `displayDate` -- `bucketDisplayDate(row)`,
+ * the axis's own dataKey below. Row order (and therefore each point's x
+ * position) is unaffected: this only changes which instant is *shown* at
+ * each already-ordered position, never the ordering itself (`series` is
+ * already chronologically ascending by `date`/bucket-start, which
+ * `bucketDisplayDate`'s "+4h or asOf" shift preserves the relative order
+ * of).
  */
 function withChartColumns(rows) {
   return rows.map((row, index) => {
@@ -127,6 +149,7 @@ function withChartColumns(rows) {
       ...row,
       confirmed: isProvisional ? null : row.expected,
       bridge: isProvisional || nextIsProvisional ? row.expected : null,
+      displayDate: bucketDisplayDate(row),
     };
   });
 }
@@ -145,8 +168,10 @@ export default function SfHistoryChart({ series, average }) {
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 12, right: 16, left: 8, bottom: 4 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+            {/* IMPL_PLAN_SH18 §3: `displayDate` (withChartColumns), not the
+                raw `date` (bucket start) -- see that function's doc comment. */}
             <XAxis
-              dataKey="date"
+              dataKey="displayDate"
               tickFormatter={(value) => formatAxisDate(value, { locale: language })}
               tick={{ fill: "#94a3b8", fontSize: 11 }}
               minTickGap={24}

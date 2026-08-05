@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  bucketDisplayDate,
   formatAxisDate,
   formatBucketRange,
   formatClockTime,
@@ -154,6 +155,58 @@ describe("formatBucketRange (IMPL_PLAN_SH17 §4-2: bucket range for the tooltip 
   it("returns null for an unparsable date (never invents a range)", () => {
     expect(formatBucketRange("not-a-date")).toBeNull();
     expect(formatBucketRange(undefined)).toBeNull();
+  });
+});
+
+// IMPL_PLAN_SH18 §3/(a)/(b): "the point is really the bucket's *end*
+// instant" -- `bucketDisplayDate` is the client-side "+4h" shift (server/DB
+// keep the bucket-start convention, plan §2). Cases mirror the plan §3
+// table verbatim.
+describe("bucketDisplayDate (IMPL_PLAN_SH18 §3: which instant a point displays)", () => {
+  it("(a) a confirmed point (no asOf, no provisional flag) shows the bucket's end -- plan's own worked example", () => {
+    // plan (a): "API の 2026-08-05T00:00:00Z の点が 04:00 と表示される".
+    const point = { date: "2026-08-05T00:00:00Z", provisional: false, expected: 1 };
+    const now = new Date("2026-08-06T00:00:00Z"); // safely after the bucket ended
+    expect(bucketDisplayDate(point, { now })).toBe("2026-08-05T04:00:00.000Z");
+    expect(formatAxisDate(bucketDisplayDate(point, { now }), { locale: "en" })).toBe("08/05 (Wed)");
+  });
+
+  it("a 暫定の足(完成済み未保存) point (provisional, no asOf) also shows the bucket's end", () => {
+    const point = { date: "2026-08-04T20:00:00Z", provisional: true, expected: 1 };
+    const now = new Date("2026-08-05T00:00:01Z"); // 1s after the bucket ended
+    expect(bucketDisplayDate(point, { now })).toBe("2026-08-05T00:00:00.000Z");
+  });
+
+  it("a bucket ending exactly at `now` counts as elapsed (boundary is inclusive)", () => {
+    const point = { date: "2026-08-05T04:00:00Z", provisional: true, expected: 1 };
+    const now = new Date("2026-08-05T08:00:00Z"); // == bucket end
+    expect(bucketDisplayDate(point, { now })).toBe("2026-08-05T08:00:00.000Z");
+  });
+
+  it("(b) a still-open point (has asOf) shows asOf verbatim, regardless of now -- SH-17 unchanged", () => {
+    const point = {
+      date: "2026-08-05T04:00:00Z",
+      provisional: true,
+      asOf: "2026-08-05T06:40:00Z",
+      expected: 1,
+    };
+    expect(bucketDisplayDate(point)).toBe("2026-08-05T06:40:00Z");
+    // even with a `now` far in the future, `asOf` still wins:
+    expect(bucketDisplayDate(point, { now: new Date("2099-01-01T00:00:00Z") })).toBe(
+      "2026-08-05T06:40:00Z",
+    );
+  });
+
+  it("(b) never invents a future instant: a still-open point with NO asOf (upstream fallback) falls back to the bucket's own start, not its (future) end", () => {
+    const point = { date: "2026-08-05T04:00:00Z", provisional: true, expected: 1 };
+    const now = new Date("2026-08-05T05:00:00Z"); // bucket [04:00,08:00) has not elapsed yet
+    expect(bucketDisplayDate(point, { now })).toBe("2026-08-05T04:00:00Z");
+  });
+
+  it("returns null for a missing point, and the raw string back for an unparsable date (never invents a value)", () => {
+    expect(bucketDisplayDate(null)).toBeNull();
+    expect(bucketDisplayDate({ date: null })).toBeNull();
+    expect(bucketDisplayDate({ date: "not-a-date" })).toBe("not-a-date");
   });
 });
 
