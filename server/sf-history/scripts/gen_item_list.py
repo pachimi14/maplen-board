@@ -56,12 +56,26 @@ DEFAULT_DB_PATH = Path(__file__).resolve().parent.parent / "data" / "sf_price_hi
 # catalog/main_equipment.json, IMPL_PLAN_SH22 §1):
 #   1022278  Magic Eyepatch  RANGE_160_TO_169 / EYE_ACC   / BOSS_PITCHED_BOSS_SET
 #   1012632  Berserked       RANGE_160_TO_169 / FOREHEAD  / BOSS_PITCHED_BOSS_SET
+#
+# SH-30 (2026-08-06, ユーザー指示): +1 -- Dreamy Belt (1132308). This one *is*
+# documented over there: maplenEnhancebot's priority_equipment.py excludes it
+# deliberately ("GS-263 (2026-07-21): ... BELT (Dreamy Belt 1132308)
+# deliberately excluded - high price, no liquidity (matches the GS-257
+# decision to drop it from preset candidates too)"). That verdict is about a
+# *different* question -- "should the bot recommend swapping into this
+# gear?" -- and stays untouched (maplenEnhancebot is read-only for this repo;
+# nothing there is edited by this addition). "Can a user look up its price
+# history here?" is a separate requirement the user asked for directly, and a
+# high-price/low-liquidity item is exactly the kind of gear where seeing cost
+# history matters most. Own catalog group, no aliases (verified against
+# catalog/main_equipment.json, same as the two SH-22 entries above):
+#   1132308  Dreamy Belt     RANGE_200_TO_209 / BELT
 # maplenEnhancebot is read-only for this repo -- this does NOT edit
-# EXCLUDED_REPRESENTATIVE_ITEM_IDS over there, it adds these two on top of
+# EXCLUDED_REPRESENTATIVE_ITEM_IDS over there, it adds these three on top of
 # whatever `load_priority_representative_item_ids()` already returns.
-ADDITIONAL_ITEM_IDS: set[int] = {1022278, 1012632}
+ADDITIONAL_ITEM_IDS: set[int] = {1022278, 1012632, 1132308}
 
-EXPECTED_ITEM_COUNT = 28 + len(ADDITIONAL_ITEM_IDS)  # SH-22: 28 priority + 2 additional = 30
+EXPECTED_ITEM_COUNT = 28 + len(ADDITIONAL_ITEM_IDS)  # SH-22: 28 priority + 2; SH-30: +1 -> 31
 
 # SH-3 correction (IMPL_PLAN_SH3 §4(m), design §7): SH-2's implementer could
 # not find the "原案" (original draft) text this exclusion traces back to in

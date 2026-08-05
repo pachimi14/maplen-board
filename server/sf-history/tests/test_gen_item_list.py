@@ -15,11 +15,12 @@ SOURCE_REPO_EXISTS = gen_item_list.DEFAULT_SOURCE_REPO.exists()
     not SOURCE_REPO_EXISTS,
     reason="maplenEnhancebot not present on this machine (SH-2 is a local-only tool, plan §4)",
 )
-def test_build_item_list_yields_exactly_30_items() -> None:
+def test_build_item_list_yields_exactly_31_items() -> None:
     """SH-22: 28 priority items + 2 explicit additions (Magic Eyepatch /
-    Berserked, IMPL_PLAN_SH22 §1) -- was 28 before SH-22."""
+    Berserked, IMPL_PLAN_SH22 §1) -- was 28 before SH-22. SH-30: +1 more
+    (Dreamy Belt, IMPL_PLAN_SH30 §2) -- 31 total."""
     payload = gen_item_list.build_item_list()
-    assert len(payload["items"]) == gen_item_list.EXPECTED_ITEM_COUNT == 30
+    assert len(payload["items"]) == gen_item_list.EXPECTED_ITEM_COUNT == 31
 
 
 @pytest.mark.skipif(not SOURCE_REPO_EXISTS, reason="maplenEnhancebot not present on this machine")
@@ -64,8 +65,9 @@ def test_build_item_list_aliases_cover_all_alias_ids_with_real_names() -> None:
         total_aliases += len(item["aliases"])
     # SH-22: 186 across the original 28 groups + 1 each for the 2 new
     # single-item additions (Magic Eyepatch / Berserked, no aliases of their
-    # own, IMPL_PLAN_SH22 §1) = 188.
-    assert total_aliases == 188
+    # own, IMPL_PLAN_SH22 §1) = 188. SH-30: +1 for Dreamy Belt (also a
+    # single-item group, no aliases of its own, IMPL_PLAN_SH30 §2) = 189.
+    assert total_aliases == 189
 
 
 @pytest.mark.skipif(not SOURCE_REPO_EXISTS, reason="maplenEnhancebot not present on this machine")
@@ -76,7 +78,6 @@ def test_build_item_list_includes_sh22_additions() -> None:
     payload = gen_item_list.build_item_list()
     by_id = {item["itemId"]: item for item in payload["items"]}
 
-    assert gen_item_list.ADDITIONAL_ITEM_IDS == {1022278, 1012632}
     for item_id, expected_name in {1022278: "Magic Eyepatch", 1012632: "Berserked"}.items():
         assert item_id in by_id, item_id
         item = by_id[item_id]
@@ -86,9 +87,28 @@ def test_build_item_list_includes_sh22_additions() -> None:
 
     # Appended after the priority-derived items, not merged/re-sorted into
     # them (plan §3-1 -- keeps the diff against the existing 28 a pure
-    # append).
+    # append). SH-30 appended Dreamy Belt after these two, so the tail is now
+    # 3 long, still in insertion order (Magic Eyepatch/Berserked/Dreamy Belt).
     ids_in_order = [item["itemId"] for item in payload["items"]]
-    assert ids_in_order[-2:] == [1012632, 1022278]
+    assert ids_in_order[-3:] == [1012632, 1022278, 1132308]
+
+
+@pytest.mark.skipif(not SOURCE_REPO_EXISTS, reason="maplenEnhancebot not present on this machine")
+def test_build_item_list_includes_sh30_dreamy_belt_addition() -> None:
+    """IMPL_PLAN_SH30 §2: Dreamy Belt (1132308) is appended after the SH-22
+    additions as its own single-item group (no aliases), name resolved from
+    the catalog -- NOT hardcoded, NOT touching maplenEnhancebot's own
+    deliberate exclusion of it from the priority set (GS-257/GS-263,
+    priority_equipment.py PARTS_BY_LEVEL["RANGE_200_TO_209"])."""
+    payload = gen_item_list.build_item_list()
+    by_id = {item["itemId"]: item for item in payload["items"]}
+
+    assert gen_item_list.ADDITIONAL_ITEM_IDS == {1022278, 1012632, 1132308}
+    assert 1132308 in by_id
+    item = by_id[1132308]
+    assert item["itemName"] == "Dreamy Belt"
+    assert item["aliasItemIds"] == [1132308]
+    assert item["aliases"] == [{"itemId": 1132308, "itemName": "Dreamy Belt"}]
 
     # Additions and exclusions never target the same item (plan §3-1).
     excluded_ids = {row["itemId"] for row in payload["excluded"]}
