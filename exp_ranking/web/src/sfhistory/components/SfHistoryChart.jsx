@@ -1,15 +1,14 @@
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useTranslation } from "../../i18n/I18nContext.jsx";
 import { withDeltas } from "../domain/series.js";
-import { formatAxisDate, formatCompactNeso, formatExactNeso, formatSignedCompactNeso, formatTooltipDate, localTimeZone } from "../domain/format.js";
+import { formatAxisDate, formatCompactNeso, formatExactNeso, formatSignedCompactNeso, formatTooltipDate } from "../domain/format.js";
 
-// IMPL_PLAN_SH11 §2: axis ticks and the tooltip's time line are now the
-// viewer's own local time (+ weekday) rather than fixed UTC -- `data` itself
-// (the `date` ISO strings) is unchanged; only these two display call sites
-// changed. `timeZone` is resolved once per module load (stable for the
-// whole session, and equivalent -- in a browser -- to resolving it inside
-// the component on every render).
-const CHART_TIME_ZONE = localTimeZone();
+// IMPL_PLAN_SH14 §2 (2026-08-05, user decision): reverts IMPL_PLAN_SH11 §2's
+// viewer-local-time axis ticks / tooltip time line back to a fixed UTC --
+// `data` itself (the `date` ISO strings) is unchanged, only unaffected by
+// the choice of display zone as it always was. `formatAxisDate`/
+// `formatTooltipDate` (domain/format.js) no longer take a `timeZone` option
+// at all, so there is nothing left to resolve here.
 
 // IMPL_PLAN_SH5 §2: recharts LineChart, Expected only (design §12: no
 // p50/p70/p90). ReferenceLine = period average; high/low are read off the
@@ -34,11 +33,10 @@ function ChartTooltipContent({ active, payload, average, t, language }) {
   // provisional point; when it is absent, show no time line at all rather
   // than falling back to `date` (that fallback reintroduces the same bug).
   //
-  // IMPL_PLAN_SH11 §2: both branches render in the viewer's local time (+
-  // weekday) via `formatTooltipDate`'s `{ locale, timeZone }` -- the
-  // provisional-vs-confirmed choice of *which* ISO string to show is
-  // unchanged from SH8.
-  const dateOptions = { locale: language, timeZone: CHART_TIME_ZONE };
+  // IMPL_PLAN_SH14 §2: both branches render in UTC (+ weekday) via
+  // `formatTooltipDate`'s `{ locale }` -- the provisional-vs-confirmed
+  // choice of *which* ISO string to show is unchanged from SH8.
+  const dateOptions = { locale: language };
   const timeLabel = point.provisional
     ? point.asOf
       ? formatTooltipDate(point.asOf, dateOptions)
@@ -131,7 +129,7 @@ export default function SfHistoryChart({ series, average }) {
             <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
             <XAxis
               dataKey="date"
-              tickFormatter={(value) => formatAxisDate(value, { locale: language, timeZone: CHART_TIME_ZONE })}
+              tickFormatter={(value) => formatAxisDate(value, { locale: language })}
               tick={{ fill: "#94a3b8", fontSize: 11 }}
               minTickGap={24}
               axisLine={{ stroke: "#334155" }}

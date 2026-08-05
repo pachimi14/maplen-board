@@ -44,35 +44,27 @@ export function formatExactNeso(value) {
   return `${value.toLocaleString("en-US", { maximumFractionDigits: 2 })} NESO`;
 }
 
-// IMPL_PLAN_SH11 §2: page-wide switch from UTC display to the *viewer's own
-// local time* (data itself stays UTC end-to-end -- server/, starforce.js and
-// series.js are untouched; only these display functions changed). Every
-// date/time function below now takes an optional `{ locale, timeZone }`:
-// `timeZone` defaults to the browser's own zone (`localTimeZone()`) so
-// production callers can omit it entirely, while tests can pin a specific
-// IANA zone to stay deterministic regardless of the machine running them
-// (this repo sets no global `TZ`, so relying on the *system* local zone in a
-// test would be flaky by construction).
+// IMPL_PLAN_SH14 §2 (2026-08-05, user decision): reverts IMPL_PLAN_SH11 §2's
+// page-wide switch to the *viewer's own local time*. This is a deliberate
+// reversal, not a bug fix -- see docs/reports/SH14_UTC_AND_ORDER.md for the
+// record, and docs/reports/SH11_LOCAL_TIME_HEATMAP.md's own addendum (that
+// report's original body is left untouched, per the plan's "旧文は書き換え
+// ない"). Every date/time function below is now a fixed UTC -- there is no
+// more `timeZone` option to pass or default, and SH-11's `localTimeZone()` /
+// `formatTimeZoneLabel()` are removed outright (no local-time trace left).
+// The weekday *name* is still resolved purely via `Intl` (never a hardcoded
+// 6-locale x 7-weekday table -- that regulation from SH-11 carries forward
+// unchanged), just with `timeZone: "UTC"` passed explicitly rather than left
+// to the runtime's own zone.
 
-/** The runtime's local IANA time zone, e.g. "Asia/Tokyo" -- in a browser,
- * this is the viewer's own OS/browser timezone (plan §2/(c)). Falls back to
- * "UTC" if `Intl` cannot resolve one (extremely old/unusual environments). */
-export function localTimeZone() {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
-  } catch {
-    return "UTC";
-  }
-}
-
-/** Numeric y/m/d/h/min parts of `date` as read on a wall clock in
- * `timeZone`. Uses `Intl.DateTimeFormat("en-CA", ...).formatToParts` purely
- * to pull out locale-agnostic ASCII digits (the "en-CA" locale is never
- * shown to a user) -- the actual localized weekday name is a separate call
- * in `weekdayShort` below, using whatever locale the caller asked for. */
-function localizedDateTimeParts(date, timeZone) {
+/** Numeric y/m/d/h/min parts of `date` as read on a UTC wall clock. Uses
+ * `Intl.DateTimeFormat("en-CA", ...).formatToParts` purely to pull out
+ * locale-agnostic ASCII digits (the "en-CA" locale is never shown to a
+ * user) -- the actual localized weekday name is a separate call in
+ * `weekdayShort` below, using whatever locale the caller asked for. */
+function utcDateTimeParts(date) {
   const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone,
+    timeZone: "UTC",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -81,75 +73,53 @@ function localizedDateTimeParts(date, timeZone) {
     hour12: false,
   }).formatToParts(date);
   const map = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-  if (map.hour === "24") map.hour = "00"; // some ICU builds emit "24" for local midnight
+  if (map.hour === "24") map.hour = "00"; // some ICU builds emit "24" for UTC midnight
   return map;
 }
 
-/** Localized short weekday name for the *instant* `date`, in `timeZone`.
- * design/plan §2: "曜日名は Intl.DateTimeFormat に現在のロケールを渡して得
- * る" -- never a hardcoded 6-locale x 7-weekday table. Returns "" (never a
- * hardcoded fallback name) if `Intl` cannot format the given locale/zone. */
-function weekdayShort(date, locale, timeZone) {
+/** Localized short weekday name for the *instant* `date`, computed in UTC
+ * (IMPL_PLAN_SH14 §2: "曜日もUTCで算出する"). Never a hardcoded weekday/
+ * locale table -- resolved purely via `Intl.DateTimeFormat`. Returns ""
+ * (never a hardcoded fallback name) if `Intl` cannot format the given
+ * locale. */
+function weekdayShort(date, locale) {
   try {
-    return new Intl.DateTimeFormat(locale, { weekday: "short", timeZone }).format(date);
+    return new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" }).format(date);
   } catch {
     return "";
   }
 }
 
-/** Short axis tick label from a bucket-start ISO date, in the viewer's local
- * time with the weekday appended (plan §2/(a): "08/04 (月)" style). */
-export function formatAxisDate(isoDate, { locale = "en", timeZone } = {}) {
+/** Short axis tick label from a bucket-start ISO date, in UTC with the
+ * weekday appended (plan §2/(a): "08/04 (Thu)" style). */
+export function formatAxisDate(isoDate, { locale = "en" } = {}) {
   const date = new Date(isoDate);
   if (Number.isNaN(date.getTime())) return "";
-  const tz = timeZone || localTimeZone();
-  const parts = localizedDateTimeParts(date, tz);
-  const weekday = weekdayShort(date, locale, tz);
+  const parts = utcDateTimeParts(date);
+  const weekday = weekdayShort(date, locale);
   return weekday ? `${parts.month}/${parts.day} (${weekday})` : `${parts.month}/${parts.day}`;
 }
 
-/** Full tooltip date label (design §9: "ラベルは区間開始時刻"), in the
- * viewer's local time with the weekday appended (plan §2/(a): "2026-08-04
- * 20:00 (月)" style). No timezone abbreviation here by design -- the plan
- * puts the one, explicit timezone disclosure in the calc-conditions row
- * (`formatTimeZoneLabel` below), not repeated on every tick/tooltip. */
-export function formatTooltipDate(isoDate, { locale = "en", timeZone } = {}) {
+/** Full tooltip date label (design §9: "ラベルは区間開始時刻"), in UTC with
+ * the weekday appended (plan §2/(a): "2026-08-04 20:00 UTC (Thu)" style).
+ * The literal "UTC" is embedded directly in the string here (IMPL_PLAN_SH14
+ * §0-1/#4): the page no longer has a calc-conditions block to disclose the
+ * timezone once elsewhere (SH-13 removed that block), so this tooltip is now
+ * the disclosure. "UTC" itself is not translated (same treatment as the
+ * "NESO" unit in `formatExactNeso` above). */
+export function formatTooltipDate(isoDate, { locale = "en" } = {}) {
   const date = new Date(isoDate);
   if (Number.isNaN(date.getTime())) return "";
-  const tz = timeZone || localTimeZone();
-  const parts = localizedDateTimeParts(date, tz);
-  const weekday = weekdayShort(date, locale, tz);
-  const base = `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}`;
+  const parts = utcDateTimeParts(date);
+  const weekday = weekdayShort(date, locale);
+  const base = `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute} UTC`;
   return weekday ? `${base} (${weekday})` : base;
 }
 
-/** Full label for the "取得時刻" / "最終更新" calc-condition rows. Same
- * local-time + weekday formatting as the tooltip. */
+/** Full label for timestamp displays. Same UTC + weekday formatting as the
+ * tooltip. */
 export function formatTimestamp(isoDate, options) {
   return formatTooltipDate(isoDate, options);
-}
-
-/** plan §2/(c): "タイムゾーンを画面に明示する" -- a short "UTC+9"-style
- * label for the viewer's own zone (or an explicit `timeZone` override, e.g.
- * for tests). `referenceDate` only affects the offset for zones that
- * observe DST; defaults to "now" for display, but tests can pin it. Falls
- * back to the raw IANA zone name (never a guessed offset) if `Intl` cannot
- * resolve one. */
-export function formatTimeZoneLabel(timeZone, referenceDate = new Date()) {
-  const tz = timeZone || localTimeZone();
-  try {
-    const parts = new Intl.DateTimeFormat("en-US", {
-      timeZone: tz,
-      timeZoneName: "shortOffset",
-      hour: "numeric",
-    }).formatToParts(referenceDate);
-    const offsetPart = parts.find((part) => part.type === "timeZoneName");
-    if (offsetPart?.value) return offsetPart.value.replace(/^GMT/, "UTC");
-  } catch {
-    // Unresolvable/invalid IANA zone name -- fall through to the raw name
-    // rather than inventing an offset.
-  }
-  return tz;
 }
 
 const WEEKDAY_REFERENCE_SUNDAY_UTC = Date.UTC(2023, 0, 1); // a known Sunday, UTC
@@ -158,7 +128,8 @@ const WEEKDAY_REFERENCE_SUNDAY_UTC = Date.UTC(2023, 0, 1); // a known Sunday, UT
  * matching `Date#getUTCDay()`) -- used by the heatmap's row headers
  * (`WeekdayHeatmap.jsx`). Computed the same `Intl`-only way as
  * `weekdayShort` above (a fixed, known-Sunday reference date formatted in
- * UTC), so it never needs its own hardcoded weekday-name table either. */
+ * UTC), so it never needs its own hardcoded weekday-name table either. This
+ * function was already UTC-only before IMPL_PLAN_SH14 (unchanged here). */
 export function weekdayShortLabel(weekdayIndex, locale = "en") {
   const date = new Date(WEEKDAY_REFERENCE_SUNDAY_UTC + weekdayIndex * 86_400_000);
   try {
@@ -169,10 +140,10 @@ export function weekdayShortLabel(weekdayIndex, locale = "en") {
 }
 
 /** "HH:MM" for a bare hour/minute pair -- used by the heatmap's column
- * headers, which already carry the real, resolved local wall-clock time
- * from `weekdayStats.js`'s `buildWeekdayHeatmap` (plan §2: never rounded).
- * `null`/`null` (an empty column, no data at all in that slot) renders as
- * "--:--" rather than "00:00" (never inventing a time that wasn't observed). */
+ * headers (IMPL_PLAN_SH14 §4: now always a fixed UTC hour -- 00/04/08/12/
+ * 16/20 -- rather than a resolved local wall-clock time). `null`/`null` (an
+ * empty column, no data at all in that slot) renders as "--:--" rather than
+ * "00:00" (never inventing a time that wasn't observed). */
 export function formatClockTime(hour, minute) {
   if (hour == null || minute == null) return "--:--";
   return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;

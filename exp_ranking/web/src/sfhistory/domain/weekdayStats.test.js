@@ -1,76 +1,65 @@
 import { describe, expect, it } from "vitest";
 import { buildWeekdayHeatmap, extremeHeatmapCells, totalHeatmapCount } from "./weekdayStats.js";
 
-// This project sets no global `TZ` (see vitest.config.js), so every test
-// below pins an explicit IANA `timeZone` -- relying on the *host machine's*
-// local zone here would make these tests non-deterministic depending on
-// who/where they run (exactly the trap IMPL_PLAN_SH11 §2's own note warns
-// about for format.js).
+// IMPL_PLAN_SH14 §2 (2026-08-05, user decision): reverts IMPL_PLAN_SH11 §2's
+// local-timezone grouping back to a fixed UTC basis. `buildWeekdayHeatmap`
+// no longer takes a `timeZone` argument -- `series[].date` is already a UTC
+// instant, so there is nothing left to convert.
 
 function point(date, expected, extra = {}) {
   return { date, expected, provisional: false, ...extra };
 }
 
 describe("buildWeekdayHeatmap: shape", () => {
-  it("always returns 42 cells (7 weekdays x 6 UTC slots) and 6 columns, even for an empty series", () => {
-    const { cells, columns } = buildWeekdayHeatmap([], "UTC");
+  it("always returns 42 cells (7 weekdays x 6 UTC slots) and 6 fixed UTC columns, even for an empty series", () => {
+    const { cells, columns } = buildWeekdayHeatmap([]);
     expect(cells).toHaveLength(42);
     expect(columns).toHaveLength(6);
     expect(cells.every((cell) => cell.n === 0 && cell.median === null)).toBe(true);
-    expect(columns.every((column) => column.localHour === null && column.localMinute === null)).toBe(true);
+    // IMPL_PLAN_SH14 §4: a column's UTC start time is fixed by its
+    // bucketSlot alone -- 00/04/08/12/16/20 -- whether or not any point was
+    // ever observed in it (unlike SH-11's local-time columns, which were
+    // `null`/`null` when empty).
+    expect(columns.map((c) => c.hour)).toEqual([0, 4, 8, 12, 16, 20]);
+    expect(columns.every((column) => column.minute === 0)).toBe(true);
   });
 
   it("covers every (weekdayIndex 0..6) x (bucketSlot 0..5) pair exactly once", () => {
-    const { cells } = buildWeekdayHeatmap([], "UTC");
+    const { cells } = buildWeekdayHeatmap([]);
     const keys = new Set(cells.map((cell) => `${cell.weekdayIndex}-${cell.bucketSlot}`));
     expect(keys.size).toBe(42);
     for (let w = 0; w < 7; w++) for (let b = 0; b < 6; b++) expect(keys.has(`${w}-${b}`)).toBe(true);
   });
 });
 
-describe("buildWeekdayHeatmap: UTC-basis grouping (no timezone conversion)", () => {
+describe("buildWeekdayHeatmap: UTC-basis grouping", () => {
   it("2026-03-08 is a Sunday (UTC): a 00:00 point lands in weekdayIndex=0, bucketSlot=0", () => {
-    const { cells } = buildWeekdayHeatmap([point("2026-03-08T00:00:00Z", 100)], "UTC");
+    const { cells } = buildWeekdayHeatmap([point("2026-03-08T00:00:00Z", 100)]);
     const cell = cells.find((c) => c.weekdayIndex === 0 && c.bucketSlot === 0);
     expect(cell.n).toBe(1);
     expect(cell.median).toBe(100);
   });
 
   it("groups a 20:00 UTC point into bucketSlot=5 (floor(20/4))", () => {
-    const { cells } = buildWeekdayHeatmap([point("2026-03-08T20:00:00Z", 100)], "UTC");
+    const { cells } = buildWeekdayHeatmap([point("2026-03-08T20:00:00Z", 100)]);
     const cell = cells.find((c) => c.weekdayIndex === 0 && c.bucketSlot === 5);
     expect(cell.n).toBe(1);
   });
-});
 
-describe("buildWeekdayHeatmap: local-timezone weekday shift across midnight", () => {
-  it("a UTC Sunday 20:00 point is JST Monday 05:00 -- must land in the Monday row, not Sunday (plan §2's own worked example)", () => {
-    // 2026-03-08 is a Sunday (UTC). +9h -> 2026-03-09 05:00, a Monday.
-    const { cells } = buildWeekdayHeatmap([point("2026-03-08T20:00:00Z", 100)], "Asia/Tokyo");
-    const mondayCell = cells.find((c) => c.weekdayIndex === 1 && c.bucketSlot === 5);
-    const sundayCell = cells.find((c) => c.weekdayIndex === 0 && c.bucketSlot === 5);
-    expect(mondayCell.n).toBe(1);
-    expect(sundayCell.n).toBe(0);
-  });
-
-  it("the same point's column (bucketSlot=5) is labeled with the real local hour, 05:00, not rounded to a 4h mark", () => {
-    const { columns } = buildWeekdayHeatmap([point("2026-03-08T20:00:00Z", 100)], "Asia/Tokyo");
-    const column = columns.find((c) => c.bucketSlot === 5);
-    expect(column.localHour).toBe(5);
-    expect(column.localMinute).toBe(0);
-  });
-
-  it("all 6 JST columns land on the plan's own worked example (09/13/17/21/01/05), sorted ascending", () => {
+  it("groups every one of the 6 fixed UTC slots to its own bucketSlot (00/04/08/12/16/20)", () => {
     const points = [0, 4, 8, 12, 16, 20].map((h) => point(`2026-03-08T${String(h).padStart(2, "0")}:00:00Z`, 100));
-    const { columns } = buildWeekdayHeatmap(points, "Asia/Tokyo");
-    expect(columns.map((c) => c.localHour)).toEqual([1, 5, 9, 13, 17, 21]);
+    const { cells } = buildWeekdayHeatmap(points);
+    for (let bucketSlot = 0; bucketSlot < 6; bucketSlot++) {
+      const cell = cells.find((c) => c.weekdayIndex === 0 && c.bucketSlot === bucketSlot);
+      expect(cell.n).toBe(1);
+    }
   });
 });
 
 describe("buildWeekdayHeatmap: exclusions (plan §3-1/(f) -- SH-7's regulation carried through)", () => {
   it("excludes a provisional point from both n and the median", () => {
     const points = [point("2026-03-08T00:00:00Z", 100), point("2026-03-15T00:00:00Z", 999999, { provisional: true })];
-    const { cells } = buildWeekdayHeatmap(points, "UTC");
+    const { cells } = buildWeekdayHeatmap(points);
     const cell = cells.find((c) => c.weekdayIndex === 0 && c.bucketSlot === 0);
     expect(cell.n).toBe(1);
     expect(cell.median).toBe(100);
@@ -78,7 +67,7 @@ describe("buildWeekdayHeatmap: exclusions (plan §3-1/(f) -- SH-7's regulation c
 
   it("excludes a point whose expected is null (a missing-data gap, design §9.1)", () => {
     const points = [point("2026-03-08T00:00:00Z", 100), point("2026-03-15T00:00:00Z", null)];
-    const { cells } = buildWeekdayHeatmap(points, "UTC");
+    const { cells } = buildWeekdayHeatmap(points);
     const cell = cells.find((c) => c.weekdayIndex === 0 && c.bucketSlot === 0);
     expect(cell.n).toBe(1);
   });
@@ -91,7 +80,7 @@ describe("buildWeekdayHeatmap: exclusions (plan §3-1/(f) -- SH-7's regulation c
       point("2026-03-17T00:00:00Z", 999, { provisional: true }),
       point("2026-03-11T12:00:00Z", null),
     ];
-    const { cells } = buildWeekdayHeatmap(points, "UTC");
+    const { cells } = buildWeekdayHeatmap(points);
     expect(totalHeatmapCount(cells)).toBe(3);
   });
 });
@@ -99,14 +88,14 @@ describe("buildWeekdayHeatmap: exclusions (plan §3-1/(f) -- SH-7's regulation c
 describe("median (representative value, not average -- plan §3-1: 'スパイクに引きずられないため')", () => {
   it("uses the middle value for an odd-length cell", () => {
     const points = [10, 20, 30].map((v) => point("2026-03-08T00:00:00Z", v * 1e6));
-    const { cells } = buildWeekdayHeatmap(points, "UTC");
+    const { cells } = buildWeekdayHeatmap(points);
     const cell = cells.find((c) => c.weekdayIndex === 0 && c.bucketSlot === 0);
     expect(cell.median).toBe(20e6);
   });
 
   it("averages the two middle values for an even-length cell", () => {
     const points = [10, 20, 30, 1000].map((v) => point("2026-03-08T00:00:00Z", v * 1e6));
-    const { cells } = buildWeekdayHeatmap(points, "UTC");
+    const { cells } = buildWeekdayHeatmap(points);
     const cell = cells.find((c) => c.weekdayIndex === 0 && c.bucketSlot === 0);
     // sorted: 10,20,30,1000 -> (20+30)/2 = 25, not skewed by the 1000 spike
     // the way an average (265) would be.
@@ -116,14 +105,14 @@ describe("median (representative value, not average -- plan §3-1: 'スパイク
 
 describe("extremeHeatmapCells (plan §3-3: '最安セル・最高セルを視覚的に示す')", () => {
   it("returns both null when no cell has data", () => {
-    const { lowest, highest } = extremeHeatmapCells(buildWeekdayHeatmap([], "UTC").cells);
+    const { lowest, highest } = extremeHeatmapCells(buildWeekdayHeatmap([]).cells);
     expect(lowest).toBeNull();
     expect(highest).toBeNull();
   });
 
   it("picks the lowest/highest-median cell among cells with data, ignoring empty ones", () => {
     const points = [point("2026-03-08T00:00:00Z", 100e6), point("2026-03-09T04:00:00Z", 500e6)];
-    const { cells } = buildWeekdayHeatmap(points, "UTC");
+    const { cells } = buildWeekdayHeatmap(points);
     const { lowest, highest } = extremeHeatmapCells(cells);
     expect(lowest.median).toBe(100e6);
     expect(highest.median).toBe(500e6);
