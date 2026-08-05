@@ -4,6 +4,7 @@
   },
   "app": {
     "openDailyDashboard": "Task Manager",
+    "openSfHistory": "Enhance History",
     "pageTitle": "MSU EXP Rankings",
     "pageDescription": "Level rankings and daily, weekly, and monthly EXP gains for Lv.225+ characters, based on the official MSU rankings.",
     "metaTitle": "Lulumi Tools | MapleStory N EXP Ranking",
@@ -398,5 +399,69 @@
     "postText": "{{name}} Lv.{{level}} {{percent}}% | Lulumi Tools",
     "main7d": "7-day gain",
     "main30d": "30-day gain"
+  },
+  "sfhistory": {
+    "pageTitle": "Enhance History",
+    "pageDescription": "Pick a piece of gear and a star range to see how its Expected enhancement cost has moved, and where the current value sits against that history.",
+    "loading": "Loading...",
+    "equipment": {
+      "label": "Equipment",
+      "searchPlaceholder": "Search by item name or item ID",
+      "noMatch": "No matching equipment found",
+      "maxStarBadge": "up to ☆{{maxStar}}",
+      "loadError": "Could not load the equipment list. Please reload later."
+    },
+    "starRange": {
+      "startLabel": "Start ☆",
+      "targetLabel": "Target ☆",
+      "presetsLabel": "Presets",
+      "presetDisabledHint": "This item can only be enhanced up to ☆{{maxStar}}, so it can't be selected"
+    },
+    "period": {
+      "label": "Period",
+      "d7": "7D",
+      "d14": "14D",
+      "d30": "30D",
+      "d90": "90D",
+      "d150": "150D"
+    },
+    "summary": {
+      "current": "Current",
+      "currentUnavailable": "Current price unavailable",
+      "currentUnavailableHint": "Fetching the upstream price failed. We do not substitute the last historical value for it.",
+      "currentAsOf": "As of {{timestamp}}",
+      "periodAverage": "Period Average",
+      "periodHigh": "Period High",
+      "periodLow": "Period Low",
+      "currentPosition": "Current Position",
+      "percentileCheaperThan": "Cheaper than {{percent}}% of this period",
+      "percentileLowest": "The cheapest in this period",
+      "percentileHighest": "The most expensive in this period",
+      "noConfirmedData": "No confirmed data in this period"
+    },
+    "chart": {
+      "legendExpected": "Expected",
+      "legendAverage": "Period average",
+      "legendHigh": "Period high",
+      "legendLow": "Period low",
+      "tooltipDeltaFromPrev": "vs previous {{delta}}",
+      "tooltipDeltaFromAverage": "vs period average {{delta}}",
+      "tooltipBucketRange": "{{start}}–{{end}} bar",
+      "tooltipBucketRangeOpen": "{{start}}–{{end}} bar (not yet closed)",
+      "provisionalLegend": "The dashed segment is a provisional value for the current, still-open 4-hour bucket.",
+      "loadError": "Could not load the price history. Please reload later.",
+      "empty": "No data to display"
+    },
+    "heatmap": {
+      "title": "Weekday x Time of Day",
+      "axisNote": "Rows: UTC weekday. Columns: your local time ({{zone}}; UTC shown below each column)",
+      "periodNote": "Aggregated over the selected period -- about {{sampleRange}} points per cell",
+      "empty": "Not enough data to summarize yet",
+      "cellTooltip": "{{value}}",
+      "noData": "No data",
+      "lowestBadge": "Lowest",
+      "highestBadge": "Highest",
+      "disclaimer": "Shows the median only -- not a recommendation to enhance on any particular weekday or time."
+    }
   }
 }

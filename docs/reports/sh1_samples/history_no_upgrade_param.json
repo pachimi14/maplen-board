@@ -1,0 +1,2131 @@
+{
+ "itemId": "1382265",
+ "itemUpgradeType": "UPGRADE_STARFORCE",
+ "itemUpgradeSubType": "STARFORCE",
+ "itemUpgrade": 0,
+ "points": [
+  {
+   "date": "2026-07-25T18:00:00Z",
+   "step": 2,
+   "avgPrice": 446295.443682,
+   "maxPrice": 446295.443682,
+   "minPrice": 446295.443682,
+   "endPrice": 452911.683413,
+   "sumEnhanceCnt": 1
+  },
+  {
+   "date": "2026-07-25T19:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 449904.301717,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-25T20:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 446896.920021,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-25T21:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 443889.538325,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-25T23:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 401202.762532,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-26T00:00:00Z",
+   "step": 2,
+   "avgPrice": 449872.019353,
+   "maxPrice": 458884.844691,
+   "minPrice": 440376.979157,
+   "endPrice": 464579.572547,
+   "sumEnhanceCnt": 4
+  },
+  {
+   "date": "2026-07-26T01:00:00Z",
+   "step": 2,
+   "avgPrice": 469616.03885,
+   "maxPrice": 475326.075115,
+   "minPrice": 464441.796873,
+   "endPrice": 481663.756117,
+   "sumEnhanceCnt": 3
+  },
+  {
+   "date": "2026-07-26T02:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 478908.242638,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-26T03:00:00Z",
+   "step": 2,
+   "avgPrice": 481204.503871,
+   "maxPrice": 484281.493922,
+   "minPrice": 478127.513819,
+   "endPrice": 489379.193858,
+   "sumEnhanceCnt": 2
+  },
+  {
+   "date": "2026-07-26T04:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 486623.680379,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-26T05:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 483868.1669,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-26T06:00:00Z",
+   "step": 2,
+   "avgPrice": 485360.736701,
+   "maxPrice": 488414.76414,
+   "minPrice": 482306.709262,
+   "endPrice": 494339.11812,
+   "sumEnhanceCnt": 2
+  },
+  {
+   "date": "2026-07-26T07:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 491583.604641,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-26T08:00:00Z",
+   "step": 2,
+   "avgPrice": 489700.67043,
+   "maxPrice": 489700.67043,
+   "minPrice": 489700.67043,
+   "endPrice": 495441.323511,
+   "sumEnhanceCnt": 1
+  },
+  {
+   "date": "2026-07-26T09:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 492685.810032,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-26T10:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 489930.296553,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-26T11:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 487174.783075,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-26T12:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 484419.269596,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-26T13:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 481663.756117,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-26T14:00:00Z",
+   "step": 2,
+   "avgPrice": 480056.373254,
+   "maxPrice": 480056.373254,
+   "minPrice": 480056.373254,
+   "endPrice": 485521.474987,
+   "sumEnhanceCnt": 1
+  },
+  {
+   "date": "2026-07-26T15:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 482765.961508,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-26T16:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 480010.448029,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-26T17:00:00Z",
+   "step": 2,
+   "avgPrice": 479367.494884,
+   "maxPrice": 479367.494884,
+   "minPrice": 479367.494884,
+   "endPrice": 483868.1669,
+   "sumEnhanceCnt": 1
+  },
+  {
+   "date": "2026-07-26T18:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 481112.653421,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-26T19:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 478357.139942,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-26T20:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 475601.626463,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-26T21:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 472846.112984,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-26T23:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 467335.086026,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-27T00:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 467152.533258,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-27T01:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 464214.467011,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-27T02:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 461276.400764,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-27T03:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 458338.334517,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-27T04:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 455400.26827,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-27T05:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 452462.202023,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-27T06:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 449524.135776,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-27T07:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 446586.069529,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-27T08:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 443648.003282,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-27T09:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 440709.937035,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-27T10:00:00Z",
+   "step": 2,
+   "avgPrice": 440269.227098,
+   "maxPrice": 440269.227098,
+   "minPrice": 440269.227098,
+   "endPrice": 443648.003282,
+   "sumEnhanceCnt": 1
+  },
+  {
+   "date": "2026-07-27T11:00:00Z",
+   "step": 2,
+   "avgPrice": 441738.260222,
+   "maxPrice": 441738.260222,
+   "minPrice": 441738.260222,
+   "endPrice": 446586.069529,
+   "sumEnhanceCnt": 1
+  },
+  {
+   "date": "2026-07-27T12:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 443648.003282,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-27T13:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 440709.937035,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-27T14:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 437771.870789,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-27T15:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 434833.804542,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-27T16:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 431895.738295,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-27T17:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 428957.672048,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-27T18:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 426019.605801,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-27T19:00:00Z",
+   "step": 2,
+   "avgPrice": 425921.670259,
+   "maxPrice": 425921.670259,
+   "minPrice": 425921.670259,
+   "endPrice": 428957.672048,
+   "sumEnhanceCnt": 1
+  },
+  {
+   "date": "2026-07-27T20:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 426019.605801,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-27T21:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 423081.539554,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-27T23:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 376028.408609,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-28T00:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 417517.576598,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-28T01:00:00Z",
+   "step": 2,
+   "avgPrice": 415416.859232,
+   "maxPrice": 415416.859232,
+   "minPrice": 415416.859232,
+   "endPrice": 421193.83199,
+   "sumEnhanceCnt": 1
+  },
+  {
+   "date": "2026-07-28T02:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 418567.935282,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-28T03:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 415942.038573,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-28T04:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 413316.141865,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-28T05:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 410690.245157,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-28T06:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 408064.348449,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-28T07:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 405438.451741,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-28T08:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 402812.555033,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-28T09:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 400186.658324,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-28T10:00:00Z",
+   "step": 2,
+   "avgPrice": 401805.961295,
+   "maxPrice": 404913.272399,
+   "minPrice": 398698.65019,
+   "endPrice": 410165.065815,
+   "sumEnhanceCnt": 2
+  },
+  {
+   "date": "2026-07-28T11:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 407539.169107,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-28T12:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 404913.272399,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-28T13:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 402287.375691,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-28T14:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 399661.478983,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-28T15:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 397035.582275,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-28T16:00:00Z",
+   "step": 2,
+   "avgPrice": 399158.182114,
+   "maxPrice": 401455.841733,
+   "minPrice": 396860.522494,
+   "endPrice": 407013.989766,
+   "sumEnhanceCnt": 2
+  },
+  {
+   "date": "2026-07-28T17:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 404388.093057,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-28T18:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 401762.196349,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-28T19:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 399136.299641,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-28T20:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 396510.402933,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-28T21:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 393884.506225,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-28T22:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 391258.609517,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-28T23:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 388632.712808,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-29T00:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 388813.243207,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-29T01:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 386367.876898,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-29T02:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 383922.510588,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-29T03:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 381477.144279,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-29T04:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 379031.777969,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-29T05:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 376586.41166,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-29T06:00:00Z",
+   "step": 2,
+   "avgPrice": 374548.606402,
+   "maxPrice": 374548.606402,
+   "minPrice": 374548.606402,
+   "endPrice": 380009.924493,
+   "sumEnhanceCnt": 1
+  },
+  {
+   "date": "2026-07-29T07:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 377564.558183,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-29T08:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 375119.191874,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-29T09:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 372673.825564,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-29T10:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 370228.459255,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-29T11:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 367783.092945,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-29T12:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 365337.726636,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-29T13:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 362892.360327,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-29T14:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 360446.994017,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-29T15:00:00Z",
+   "step": 2,
+   "avgPrice": 358123.896023,
+   "maxPrice": 358123.896023,
+   "minPrice": 358123.896023,
+   "endPrice": 363870.50685,
+   "sumEnhanceCnt": 1
+  },
+  {
+   "date": "2026-07-29T16:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 361425.140541,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-29T17:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 358979.774231,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-29T18:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 356534.407922,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-29T19:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 354089.041612,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-29T20:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 351643.675303,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-29T21:00:00Z",
+   "step": 2,
+   "avgPrice": 349931.918886,
+   "maxPrice": 349931.918886,
+   "minPrice": 349931.918886,
+   "endPrice": 355067.188136,
+   "sumEnhanceCnt": 1
+  },
+  {
+   "date": "2026-07-29T22:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 352621.821827,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-29T23:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 350176.455517,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-30T00:00:00Z",
+   "step": 2,
+   "avgPrice": 397242.4547,
+   "maxPrice": 469553.967947,
+   "minPrice": 352327.970308,
+   "endPrice": 486894.360757,
+   "sumEnhanceCnt": 16
+  },
+  {
+   "date": "2026-07-30T01:00:00Z",
+   "step": 2,
+   "avgPrice": 509267.136718,
+   "maxPrice": 528932.73274,
+   "minPrice": 485390.921456,
+   "endPrice": 528932.73274,
+   "sumEnhanceCnt": 4
+  },
+  {
+   "date": "2026-07-30T02:00:00Z",
+   "step": 2,
+   "avgPrice": 528932.73274,
+   "maxPrice": 528932.73274,
+   "minPrice": 528932.73274,
+   "endPrice": 528932.73274,
+   "sumEnhanceCnt": 4
+  },
+  {
+   "date": "2026-07-30T03:00:00Z",
+   "step": 2,
+   "avgPrice": 528932.73274,
+   "maxPrice": 528932.73274,
+   "minPrice": 528932.73274,
+   "endPrice": 528932.73274,
+   "sumEnhanceCnt": 1
+  },
+  {
+   "date": "2026-07-30T04:00:00Z",
+   "step": 2,
+   "avgPrice": 528932.73274,
+   "maxPrice": 528932.73274,
+   "minPrice": 528932.73274,
+   "endPrice": 528932.73274,
+   "sumEnhanceCnt": 2
+  },
+  {
+   "date": "2026-07-30T05:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 528932.73274,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-30T06:00:00Z",
+   "step": 2,
+   "avgPrice": 528932.73274,
+   "maxPrice": 528932.73274,
+   "minPrice": 528932.73274,
+   "endPrice": 528932.73274,
+   "sumEnhanceCnt": 1
+  },
+  {
+   "date": "2026-07-30T07:00:00Z",
+   "step": 2,
+   "avgPrice": 528932.73274,
+   "maxPrice": 528932.73274,
+   "minPrice": 528932.73274,
+   "endPrice": 528932.73274,
+   "sumEnhanceCnt": 1
+  },
+  {
+   "date": "2026-07-30T08:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 528932.73274,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-30T09:00:00Z",
+   "step": 2,
+   "avgPrice": 528932.73274,
+   "maxPrice": 528932.73274,
+   "minPrice": 528932.73274,
+   "endPrice": 528932.73274,
+   "sumEnhanceCnt": 1
+  },
+  {
+   "date": "2026-07-30T10:00:00Z",
+   "step": 2,
+   "avgPrice": 528932.73274,
+   "maxPrice": 528932.73274,
+   "minPrice": 528932.73274,
+   "endPrice": 528932.73274,
+   "sumEnhanceCnt": 1
+  },
+  {
+   "date": "2026-07-30T11:00:00Z",
+   "step": 2,
+   "avgPrice": 528932.73274,
+   "maxPrice": 528932.73274,
+   "minPrice": 528932.73274,
+   "endPrice": 528932.73274,
+   "sumEnhanceCnt": 1
+  },
+  {
+   "date": "2026-07-30T12:00:00Z",
+   "step": 2,
+   "avgPrice": 528932.73274,
+   "maxPrice": 528932.73274,
+   "minPrice": 528932.73274,
+   "endPrice": 528932.73274,
+   "sumEnhanceCnt": 2
+  },
+  {
+   "date": "2026-07-30T13:00:00Z",
+   "step": 2,
+   "avgPrice": 528932.73274,
+   "maxPrice": 528932.73274,
+   "minPrice": 528932.73274,
+   "endPrice": 528932.73274,
+   "sumEnhanceCnt": 4
+  },
+  {
+   "date": "2026-07-30T14:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 528932.73274,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-30T15:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 528932.73274,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-30T16:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 528932.73274,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-30T17:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 528932.73274,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-30T18:00:00Z",
+   "step": 2,
+   "avgPrice": 528932.73274,
+   "maxPrice": 528932.73274,
+   "minPrice": 528932.73274,
+   "endPrice": 528932.73274,
+   "sumEnhanceCnt": 1
+  },
+  {
+   "date": "2026-07-30T19:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 528932.73274,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-30T20:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 528932.73274,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-30T21:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 528932.73274,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-30T22:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 528932.73274,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-30T23:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 528932.73274,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-31T00:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 525626.90316,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-31T01:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 522321.07358,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-31T02:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 519015.244001,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-31T03:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 515709.414421,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-31T04:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 512403.584841,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-31T05:00:00Z",
+   "step": 2,
+   "avgPrice": 509648.726858,
+   "maxPrice": 509648.726858,
+   "minPrice": 509648.726858,
+   "endPrice": 521303.895248,
+   "sumEnhanceCnt": 2
+  },
+  {
+   "date": "2026-07-31T06:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 517998.065668,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-31T07:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 514692.236089,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-31T08:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 511386.406509,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-31T09:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 508080.57693,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-31T10:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 504774.74735,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-31T11:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 501468.91777,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-31T12:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 498163.088191,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-31T13:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 494857.258611,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-31T14:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 491551.429031,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-31T15:00:00Z",
+   "step": 2,
+   "avgPrice": 490559.680158,
+   "maxPrice": 490559.680158,
+   "minPrice": 490559.680158,
+   "endPrice": 494348.669445,
+   "sumEnhanceCnt": 1
+  },
+  {
+   "date": "2026-07-31T16:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 491042.839865,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-31T17:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 487737.010286,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-31T18:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 484431.180706,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-31T19:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 481125.351126,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-31T20:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 477819.521547,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-31T21:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 474513.691967,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-31T22:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 471207.862388,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-07-31T23:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 467902.032808,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-01T00:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 468262.813248,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-01T01:00:00Z",
+   "step": 2,
+   "avgPrice": 466397.615459,
+   "maxPrice": 466397.615459,
+   "minPrice": 466397.615459,
+   "endPrice": 472385.882043,
+   "sumEnhanceCnt": 1
+  },
+  {
+   "date": "2026-08-01T02:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 469440.832904,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-01T03:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 466495.783764,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-01T04:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 463550.734624,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-01T05:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 460605.685484,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-01T06:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 457660.636344,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-01T07:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 454715.587204,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-01T08:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 451770.538064,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-01T09:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 448825.488924,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-01T10:00:00Z",
+   "step": 2,
+   "avgPrice": 448580.068162,
+   "maxPrice": 448580.068162,
+   "minPrice": 448580.068162,
+   "endPrice": 452948.55772,
+   "sumEnhanceCnt": 1
+  },
+  {
+   "date": "2026-08-01T11:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 450003.50858,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-01T12:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 447058.45944,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-01T13:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 444113.4103,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-01T14:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 441168.36116,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-01T15:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 438223.31202,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-01T16:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 435278.26288,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-01T17:00:00Z",
+   "step": 2,
+   "avgPrice": 434443.832291,
+   "maxPrice": 434443.832291,
+   "minPrice": 434443.832291,
+   "endPrice": 439401.331676,
+   "sumEnhanceCnt": 1
+  },
+  {
+   "date": "2026-08-01T18:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 436456.282536,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-01T19:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 433511.233396,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-01T20:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 430566.184257,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-01T21:00:00Z",
+   "step": 2,
+   "avgPrice": 430026.258581,
+   "maxPrice": 430026.258581,
+   "minPrice": 430026.258581,
+   "endPrice": 434689.253052,
+   "sumEnhanceCnt": 1
+  },
+  {
+   "date": "2026-08-01T22:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 431744.203913,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-01T23:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 428799.154773,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-02T00:00:00Z",
+   "step": 2,
+   "avgPrice": 442618.761048,
+   "maxPrice": 455310.241709,
+   "minPrice": 431564.310494,
+   "endPrice": 461426.617932,
+   "sumEnhanceCnt": 5
+  },
+  {
+   "date": "2026-08-02T01:00:00Z",
+   "step": 2,
+   "avgPrice": 467018.305017,
+   "maxPrice": 472624.983221,
+   "minPrice": 461066.831095,
+   "endPrice": 478156.705833,
+   "sumEnhanceCnt": 3
+  },
+  {
+   "date": "2026-08-02T02:00:00Z",
+   "step": 2,
+   "avgPrice": 479798.233275,
+   "maxPrice": 482339.227809,
+   "minPrice": 477257.238742,
+   "endPrice": 488410.630676,
+   "sumEnhanceCnt": 2
+  },
+  {
+   "date": "2026-08-02T03:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 485712.229402,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-02T04:00:00Z",
+   "step": 2,
+   "avgPrice": 488170.772785,
+   "maxPrice": 490029.671441,
+   "minPrice": 484452.975474,
+   "endPrice": 509602.855709,
+   "sumEnhanceCnt": 3
+  },
+  {
+   "date": "2026-08-02T05:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 503493.113144,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-02T06:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 497644.358897,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-02T07:00:00Z",
+   "step": 2,
+   "avgPrice": 495831.234181,
+   "maxPrice": 495831.234181,
+   "minPrice": 495831.234181,
+   "endPrice": 505905.633772,
+   "sumEnhanceCnt": 1
+  },
+  {
+   "date": "2026-08-02T08:00:00Z",
+   "step": 2,
+   "avgPrice": 503992.275778,
+   "maxPrice": 503992.275778,
+   "minPrice": 503992.275778,
+   "endPrice": 514679.246527,
+   "sumEnhanceCnt": 1
+  },
+  {
+   "date": "2026-08-02T09:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 508359.978762,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-02T10:00:00Z",
+   "step": 2,
+   "avgPrice": 504092.32585,
+   "maxPrice": 504092.32585,
+   "minPrice": 504092.32585,
+   "endPrice": 517280.482064,
+   "sumEnhanceCnt": 1
+  },
+  {
+   "date": "2026-08-02T11:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 510856.213013,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-02T12:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 504694.149504,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-02T13:00:00Z",
+   "step": 2,
+   "avgPrice": 501612.819472,
+   "maxPrice": 501612.819472,
+   "minPrice": 501612.819472,
+   "endPrice": 513394.40053,
+   "sumEnhanceCnt": 1
+  },
+  {
+   "date": "2026-08-02T14:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 507127.574144,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-02T15:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 501122.351061,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-02T16:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 495966.154245,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-02T17:00:00Z",
+   "step": 2,
+   "avgPrice": 501173.265308,
+   "maxPrice": 506515.296435,
+   "minPrice": 495831.234181,
+   "endPrice": 518596.887073,
+   "sumEnhanceCnt": 2
+  },
+  {
+   "date": "2026-08-02T18:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 512120.058647,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-02T19:00:00Z",
+   "step": 2,
+   "avgPrice": 511592.181167,
+   "maxPrice": 511592.181167,
+   "minPrice": 511592.181167,
+   "endPrice": 521261.309871,
+   "sumEnhanceCnt": 1
+  },
+  {
+   "date": "2026-08-02T20:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 514679.246527,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-02T21:00:00Z",
+   "step": 2,
+   "avgPrice": 512649.758393,
+   "maxPrice": 512649.758393,
+   "minPrice": 512649.758393,
+   "endPrice": 523967.933527,
+   "sumEnhanceCnt": 1
+  },
+  {
+   "date": "2026-08-02T23:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 510856.213013,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-03T00:00:00Z",
+   "step": 2,
+   "avgPrice": 516526.114694,
+   "maxPrice": 516526.114694,
+   "minPrice": 516526.114694,
+   "endPrice": 520016.099997,
+   "sumEnhanceCnt": 1
+  },
+  {
+   "date": "2026-08-03T01:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 516783.096985,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-03T02:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 513550.093972,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-03T03:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 510317.090959,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-03T04:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 507084.087946,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-03T05:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 503851.084933,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-03T06:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 500618.08192,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-03T07:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 497385.078907,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-03T08:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 494152.075894,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-03T09:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 490919.072881,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-03T10:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 487686.069868,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-03T11:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 484453.066856,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-03T12:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 481220.063843,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-03T13:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 477987.06083,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-03T14:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 474754.057817,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-03T15:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 471521.054804,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-03T16:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 468288.051791,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-03T17:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 465055.048778,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-03T18:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 461822.045765,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-03T19:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 458589.042752,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-03T20:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 455356.039739,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-03T21:00:00Z",
+   "step": 2,
+   "avgPrice": 454493.905603,
+   "maxPrice": 454493.905603,
+   "minPrice": 454493.905603,
+   "endPrice": 458091.657673,
+   "sumEnhanceCnt": 1
+  },
+  {
+   "date": "2026-08-03T22:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 454858.654661,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-03T23:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 400275.616101,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-04T00:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 452015.788069,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-04T01:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 449172.921477,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-04T02:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 446330.054886,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-04T03:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 443487.188294,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-04T04:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 440644.321702,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-04T05:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 437801.455111,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-04T06:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 434958.588519,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-04T07:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 432115.721927,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-04T08:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 429272.855336,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-04T09:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 426429.988744,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-04T10:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 423587.122153,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-04T11:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 420744.255561,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-04T12:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 417901.388969,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-04T13:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 415058.522378,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-04T14:00:00Z",
+   "step": 2,
+   "avgPrice": 413163.277983,
+   "maxPrice": 413163.277983,
+   "minPrice": 413163.277983,
+   "endPrice": 419038.535606,
+   "sumEnhanceCnt": 1
+  },
+  {
+   "date": "2026-08-04T15:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 416195.669014,
+   "sumEnhanceCnt": 0
+  },
+  {
+   "date": "2026-08-04T16:00:00Z",
+   "step": 2,
+   "avgPrice": 0,
+   "maxPrice": 0,
+   "minPrice": 0,
+   "endPrice": 413352.802423,
+   "sumEnhanceCnt": 0
+  }
+ ],
+ "minTimestamp": "1784999698",
+ "maxTimestamp": "1785863698",
+ "minAvgPrice": 0,
+ "maxAvgPrice": 528932.73274,
+ "minActualPrice": 0,
+ "maxActualPrice": 528932.73274,
+ "minEndPrice": 0,
+ "maxEndPrice": 528932.73274
+}

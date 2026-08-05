@@ -183,6 +183,14 @@ export function parseHash(hash) {
     return { name: path.slice(1), query };
   }
 
+  // IMPL_PLAN_SH5 §1: `#/starforce` -- the SF cost history chart screen
+  // (design DESIGN_SF_COST_HISTORY.md U2). Added as its own block rather
+  // than folded into the dashboard/tasks/schedule check above, so that
+  // check's existing branch is untouched.
+  if (path === "/starforce") {
+    return { name: "starforce", query };
+  }
+
   return { name: "list", query };
 }
 
@@ -193,7 +201,7 @@ function buildHash(route) {
     ? `/character/${encodeURIComponent(route.historyKey)}`
     : route?.name === "group"
       ? "/group"
-      : route?.name === "dashboard" || route?.name === "tasks" || route?.name === "schedule"
+      : route?.name === "dashboard" || route?.name === "tasks" || route?.name === "schedule" || route?.name === "starforce"
         ? `/${route.name}`
         : "/";
   return `#${path}${search ? `?${search}` : ""}`;
@@ -376,6 +384,16 @@ export function navigateToTool(name, options = {}) {
     : "list";
   applyRoute(
     (base) => ({ name: target, query: normalizeQuery(base.query) }),
+    options,
+  );
+}
+
+/** Navigates to `#/starforce` (IMPL_PLAN_SH5 §1), keeping the shared query
+ * shape. New function, added alongside the existing navigate* helpers
+ * without altering any of them. */
+export function navigateToStarforce(options = {}) {
+  applyRoute(
+    (base) => ({ name: "starforce", query: normalizeQuery(base.query) }),
     options,
   );
 }

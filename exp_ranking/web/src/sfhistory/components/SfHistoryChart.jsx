@@ -1,0 +1,225 @@
+import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { useTranslation } from "../../i18n/I18nContext.jsx";
+import { withDeltas } from "../domain/series.js";
+import { isOpenPoint, withChartColumns } from "../domain/chartColumns.js";
+import {
+  bucketDisplayDate,
+  formatAxisDate,
+  formatBucketRange,
+  formatCompactNeso,
+  formatExactNeso,
+  formatSignedCompactNeso,
+  formatTooltipDate,
+  formatTooltipDateLocal,
+} from "../domain/format.js";
+
+// IMPL_PLAN_SH14 §2 (2026-08-05, user decision): reverts IMPL_PLAN_SH11 §2's
+// viewer-local-time axis ticks / tooltip time line back to a fixed UTC --
+// `data` itself (the `date` ISO strings) is unchanged, only unaffected by
+// the choice of display zone as it always was. `formatAxisDate`/
+// `formatTooltipDate` (domain/format.js) still take no `timeZone` option --
+// the X axis below stays UTC-only by this plan's own choice (IMPL_PLAN_SH29
+// §1: "軸ラベルは場所が狭いので UTC のみでよい" -- the axis has materially
+// less width than a tooltip, and `minTickGap={24}` already thins ticks
+// aggressively; a second stacked line per tick would either overlap or
+// force ticks sparser than the single-line UTC axis already needs. This
+// implementer's judgment call, made explicit here as the plan's §1 asked
+// for regardless of which way it landed).
+//
+// IMPL_PLAN_SH29 §1 (2026-08-06, user decision): the tooltip now shows a
+// *second* line under the UTC one -- the viewer's own local time, via the
+// new `formatTooltipDateLocal` (domain/format.js), which is additive to
+// `formatTooltipDate`/`bucketDisplayDate` here, not a replacement of either.
+// UTC stays primary/authoritative (SH-14's decision, unchanged); local is
+// always the smaller, secondary line, always zone-labeled (never shown
+// unlabeled) -- see `ChartTooltipContent` below.
+//
+// IMPL_PLAN_SH18 §1/§3 (2026-08-05, user decision, reverses design §8's
+// "ラベルは区間開始"): a row's own `date` (bucket start, still what
+// `formatBucketRange`'s range note reads -- SH-17's range note is
+// unchanged, plan (c)) is no longer what gets shown as *the* time -- see
+// `bucketDisplayDate` (domain/format.js) for the "+4h, except the still-
+// open bucket keeps `asOf`" rule this file now applies at both the axis
+// (`withChartColumns`'s new `displayDate` column) and the tooltip
+// (`ChartTooltipContent`'s `timeLabel`) below.
+
+// IMPL_PLAN_SH5 §2: recharts LineChart, Expected only (design §12: no
+// p50/p70/p90). ReferenceLine = period average; high/low are read off the
+// summary cards rather than duplicated as extra chart lines (design's own
+// "装飾控えめ" -- avoids clutter on a series that can already have gaps).
+//
+// IMPL_PLAN_SH9 §4 scope note: the line/dot/axis colors below stay a fixed
+// cyan (#22d3ee) regardless of the 4-color theme picker -- a deliberate,
+// documented choice (data-series color locked for readability/consistency
+// across theme switches, same rationale many finance dashboards use), not
+// an oversight. Only the surrounding chrome (backgrounds, borders, tabs,
+// summary text -- sfhistory.css) responds to the picker.
+function ChartTooltipContent({ active, payload, average, t, language }) {
+  if (!active || !payload?.length) return null;
+  const point = payload[0]?.payload;
+  if (!point || point.expected == null) return null;
+  const diffFromAverage = average != null ? point.expected - average : null;
+  // IMPL_PLAN_SH17 §4-1 (revises IMPL_PLAN_SH16's own §1/§4 fix, per the
+  // 2026-08-05 user decision): `point.asOf` is only ever present on the
+  // still-open ("未終了") bucket's point (server-side: app.py only attaches
+  // it there). When present, it is the *time* to show -- the current
+  // instant the value is as-of, even though the point's *position* stays at
+  // the bucket's own start (`point.date`, unchanged). Either way there is
+  // always a real time to show -- SH-16's "time missing entirely" fix is
+  // preserved.
+  //
+  // IMPL_PLAN_SH14 §2: still rendered in UTC (+ weekday) via
+  // `formatTooltipDate`'s `{ locale }`, unchanged from SH8/SH14.
+  //
+  // IMPL_PLAN_SH18 §3 (2026-08-05, user decision, reverses design §8):
+  // every other point kind (confirmed, elapsed-but-unaggregated) no
+  // longer shows `point.date` (its own bucket *start*) here -- it shows
+  // the bucket's *end* instead, via `bucketDisplayDate(point)` (same
+  // `asOf` result as SH-17 for a still-open point; see that function's own
+  // doc comment for the full three-way rule and its future-time guard).
+  const dateOptions = { locale: language };
+  const timeLabel = formatTooltipDate(bucketDisplayDate(point), dateOptions);
+  // IMPL_PLAN_SH29 §1: same instant as `timeLabel` above, read on the
+  // viewer's own local clock instead -- rendered directly under it (smaller,
+  // dimmer) so UTC stays the primary/authoritative reading (SH-14) while
+  // the local time is always available right next to it, always explicitly
+  // zone-labeled (`formatTooltipDateLocal` -> `formatTimeZoneLabel`, never
+  // an unlabeled local time).
+  const localTimeLabel = formatTooltipDateLocal(bucketDisplayDate(point), dateOptions);
+  // IMPL_PLAN_SH17 §4-2: replaces SH-7's static `tooltipBucketNote`/
+  // `tooltipProvisional` pair with the bucket's own `HH:MM–HH:MM` range,
+  // always derived from `point.date` (the bucket-start position, never
+  // `asOf`) -- this is what explains *why* the point sits where it does.
+  // `point.asOf` presence is the sole "is this still open" signal (only the
+  // unified in-progress point ever carries it, per app.py); a completed-
+  // but-unaggregated bucket (also `provisional`, but no `asOf`) gets the
+  // same plain range as a confirmed bucket -- it already fully elapsed, it
+  // just hasn't been persisted to the 4h table yet.
+  const bucketRange = formatBucketRange(point.date);
+  const isOpenBucket = point.asOf != null;
+  return (
+    <div className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm shadow-lg">
+      {timeLabel != null ? (
+        <div className="text-slate-400">
+          <div>{timeLabel}</div>
+          {/* IMPL_PLAN_SH29 §1: the secondary local-time line -- UTC above
+              stays primary. */}
+          {localTimeLabel ? <div className="text-[11px] text-slate-500">{localTimeLabel}</div> : null}
+        </div>
+      ) : null}
+      <div className="mt-0.5 font-bold text-cyan-300 tabular-nums">{formatExactNeso(point.expected)}</div>
+      {/* IMPL_PLAN_SH12 §2: `.sfh-delta-up`/`.sfh-delta-down` (sfhistory.css)
+          instead of Tailwind's `text-rose-400`/`text-emerald-400` -- the
+          latter silently failed to resolve inside `.sfh-root` and fell
+          through to `--theme-focus`, making a price *increase* render in
+          the same color as the Expected value on every non-green theme. */}
+      {point.delta != null ? (
+        <div className={`mt-1 tabular-nums ${point.delta >= 0 ? "sfh-delta-up" : "sfh-delta-down"}`}>
+          {t("sfhistory.chart.tooltipDeltaFromPrev", { delta: formatSignedCompactNeso(point.delta) })}
+        </div>
+      ) : null}
+      {diffFromAverage != null ? (
+        <div className={`mt-1 tabular-nums ${diffFromAverage >= 0 ? "sfh-delta-up" : "sfh-delta-down"}`}>
+          {t("sfhistory.chart.tooltipDeltaFromAverage", { delta: formatSignedCompactNeso(diffFromAverage) })}
+        </div>
+      ) : null}
+      {bucketRange != null ? (
+        <div className={`mt-1.5 text-xs ${isOpenBucket ? "text-amber-400" : "text-slate-500"}`}>
+          {t(isOpenBucket ? "sfhistory.chart.tooltipBucketRangeOpen" : "sfhistory.chart.tooltipBucketRange", {
+            start: bucketRange.start,
+            end: bucketRange.end,
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+// IMPL_PLAN_SH19 §1/§4 (2026-08-05 P0 fix): `isOpenPoint`/`withChartColumns`
+// moved to `domain/chartColumns.js` (pure, DOM-free -- see that file's own
+// header comment for the full `closed`-vs-`provisional` rationale and why
+// this needed to be independently unit-testable). Only the JSX-dependent
+// `ProvisionalDot` marker stays here.
+//
+// IMPL_PLAN_SH7 §4 (updated by SH19 §4 to key off `closed`, see
+// `domain/chartColumns.js#isOpenPoint`): only the *marker* for the
+// still-open point is drawn (a hollow/open circle -- "中抜き"), never for
+// anything else on the `bridge` series (its other end is the last confirmed
+// point, already rendered, undotted, by the solid `confirmed` line below).
+function ProvisionalDot({ cx, cy, payload }) {
+  if (!isOpenPoint(payload) || cx == null || cy == null) return null;
+  return <circle cx={cx} cy={cy} r={4} fill="none" stroke="#22d3ee" strokeWidth={2} />;
+}
+
+export default function SfHistoryChart({ series, average }) {
+  const { t, language } = useTranslation();
+  const data = withChartColumns(withDeltas(series));
+
+  if (!data.length) {
+    return <div className="flex h-64 items-center justify-center text-sm text-slate-500">{t("sfhistory.chart.empty")}</div>;
+  }
+
+  return (
+    <div>
+      <div className="h-64 md:h-80">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={data} margin={{ top: 12, right: 16, left: 8, bottom: 4 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+            {/* IMPL_PLAN_SH18 §3: `displayDate` (withChartColumns), not the
+                raw `date` (bucket start) -- see that function's doc comment. */}
+            <XAxis
+              dataKey="displayDate"
+              tickFormatter={(value) => formatAxisDate(value, { locale: language })}
+              tick={{ fill: "#94a3b8", fontSize: 11 }}
+              minTickGap={24}
+              axisLine={{ stroke: "#334155" }}
+            />
+            <YAxis
+              domain={["auto", "auto"]}
+              tickFormatter={formatCompactNeso}
+              tick={{ fill: "#94a3b8", fontSize: 11 }}
+              width={56}
+              axisLine={{ stroke: "#334155" }}
+            />
+            {average != null ? (
+              <ReferenceLine y={average} stroke="#fbbf24" strokeDasharray="4 4" strokeOpacity={0.7} />
+            ) : null}
+            <Tooltip content={<ChartTooltipContent average={average} t={t} language={language} />} />
+            <Line
+              type="monotone"
+              dataKey="confirmed"
+              stroke="#22d3ee"
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 4, fill: "#22d3ee", stroke: "#083344", strokeWidth: 2 }}
+              connectNulls={false}
+              isAnimationActive={false}
+            />
+            {/* IMPL_PLAN_SH7 §4 (updated by SH19 §4): dashed connector +
+                hollow marker for the last-closed -> still-open segment
+                only. */}
+            <Line
+              type="monotone"
+              dataKey="bridge"
+              stroke="#22d3ee"
+              strokeWidth={2}
+              strokeDasharray="5 4"
+              dot={<ProvisionalDot />}
+              activeDot={{ r: 5, fill: "transparent", stroke: "#22d3ee", strokeWidth: 2 }}
+              connectNulls={false}
+              isAnimationActive={false}
+              legendType="none"
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+      {/* IMPL_PLAN_SH19 §1/§4: gated on `closed === false` (isOpenPoint), not
+          `provisional` -- the legend text itself ("...current, still-open
+          4-hour bucket") only describes the one still-open point, not an
+          elapsed-but-unaggregated one. */}
+      {data.some((row) => isOpenPoint(row)) ? (
+        <p className="mt-1 text-xs text-slate-500">{t("sfhistory.chart.provisionalLegend")}</p>
+      ) : null}
+    </div>
+  );
+}

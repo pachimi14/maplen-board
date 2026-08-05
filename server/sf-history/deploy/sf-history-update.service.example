@@ -1,0 +1,22 @@
+[Unit]
+Description=Lulumi Tools SF price history -- 4-hourly differential update (one-shot)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# One-shot, NOT a daemon (design §5.2: "ワンショット + timer" -- OPS-1's
+# lesson was a sleeping daemon that held an unbounded cache and drove the
+# VPS into swap. This process runs scripts/update.py to completion and exits;
+# sf-history-update.timer.example is what re-launches it every 4 hours).
+Type=oneshot
+User=botuser
+Group=botuser
+WorkingDirectory=/home/botuser/apps/lulumi-tools-sf-history
+Environment=SF_HISTORY_DB_PATH=/home/botuser/apps/lulumi-tools-sf-history/data/sf_price_history.sqlite
+Environment=SF_HISTORY_ITEMS_PATH=/home/botuser/apps/lulumi-tools-sf-history/data/sf_history_items.json
+ExecStart=/home/botuser/apps/lulumi-tools-sf-history/.venv/bin/python scripts/update.py
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
