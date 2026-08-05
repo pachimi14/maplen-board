@@ -11,21 +11,37 @@ import {
   weekdayShortLabel,
 } from "./format.js";
 
-describe("formatCompactNeso (design §2: '950M' / '1.25B' style)", () => {
-  it("matches the two examples given in the design/plan verbatim", () => {
-    expect(formatCompactNeso(950_000_000)).toBe("950M");
+// IMPL_PLAN_SH12 §3: always two decimals once a K/M/B unit applies, the
+// magnitude within the unit no longer decides the decimal count (replaces
+// the prior "drop decimals at >=100 of the unit" rule, which made
+// `380,120,000` render as the indistinguishable-from-rounder `380M`).
+describe("formatCompactNeso (IMPL_PLAN_SH12 §3: always two decimals, e.g. '380.12M' / '12.43B')", () => {
+  it("matches the plan's own worked examples verbatim", () => {
+    expect(formatCompactNeso(380_120_000)).toBe("380.12M");
+    expect(formatCompactNeso(2_630_105_337)).toBe("2.63B");
     expect(formatCompactNeso(1_250_000_000)).toBe("1.25B");
+    expect(formatCompactNeso(12_431_992_384)).toBe("12.43B");
   });
 
-  it("uses two decimals below 100 of a unit, none at/above 100", () => {
+  it("always shows two decimals, including at/above 100 of the unit (the boundary the old rule dropped decimals at)", () => {
+    expect(formatCompactNeso(950_000_000)).toBe("950.00M");
+    expect(formatCompactNeso(150_000_000)).toBe("150.00M");
     expect(formatCompactNeso(1_500_000)).toBe("1.50M");
-    expect(formatCompactNeso(150_000_000)).toBe("150M");
     expect(formatCompactNeso(1_500)).toBe("1.50K");
+    expect(formatCompactNeso(999_000)).toBe("999.00K");
   });
 
-  it("handles small values and negatives", () => {
+  it("K/M/B all follow the same rule -- no branch by magnitude within a unit", () => {
+    expect(formatCompactNeso(1_000)).toBe("1.00K");
+    expect(formatCompactNeso(1_000_000)).toBe("1.00M");
+    expect(formatCompactNeso(1_000_000_000)).toBe("1.00B");
+  });
+
+  it("handles small values (below the K threshold, unit-less, unchanged) and negatives", () => {
     expect(formatCompactNeso(500)).toBe("500");
-    expect(formatCompactNeso(-950_000_000)).toBe("-950M");
+    expect(formatCompactNeso(999)).toBe("999");
+    expect(formatCompactNeso(-950_000_000)).toBe("-950.00M");
+    expect(formatCompactNeso(-380_120_000)).toBe("-380.12M");
     expect(formatCompactNeso(0)).toBe("0");
   });
 
@@ -37,9 +53,10 @@ describe("formatCompactNeso (design §2: '950M' / '1.25B' style)", () => {
 });
 
 describe("formatSignedCompactNeso", () => {
-  it("prefixes non-negative deltas with +, keeps the built-in - for negatives", () => {
-    expect(formatSignedCompactNeso(950_000_000)).toBe("+950M");
-    expect(formatSignedCompactNeso(-950_000_000)).toBe("-950M");
+  it("prefixes non-negative deltas with +, keeps the built-in - for negatives (auto-follows the two-decimal rule above)", () => {
+    expect(formatSignedCompactNeso(950_000_000)).toBe("+950.00M");
+    expect(formatSignedCompactNeso(-950_000_000)).toBe("-950.00M");
+    expect(formatSignedCompactNeso(380_120_000)).toBe("+380.12M");
     expect(formatSignedCompactNeso(0)).toBe("+0");
   });
 });
