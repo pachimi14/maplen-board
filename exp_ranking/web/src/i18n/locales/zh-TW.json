@@ -409,7 +409,8 @@
       "searchPlaceholder": "以裝備名稱或 Item ID 搜尋",
       "noMatch": "找不到符合的裝備",
       "maxStarBadge": "最高 ☆{{maxStar}}",
-      "loadError": "無法取得裝備清單，請稍後再重新整理。"
+      "loadError": "無法取得裝備清單，請稍後再重新整理。",
+      "groupSharedNote": "強化費用為此群組共用(代表裝備:{{representativeName}})。"
     },
     "starRange": {
       "startLabel": "起始 ☆",

@@ -19,6 +19,16 @@
   letter-spacing: 0.05em;
 }
 
+.sfh-group-shared-note {
+  border-radius: 0.6rem;
+  border: 1px solid #0e7490;
+  background: #083344;
+  color: #a5f3fc;
+  padding: 0.5rem 0.85rem;
+  font-size: 0.8rem;
+  max-width: 42rem;
+}
+
 .sfh-select-group {
   display: flex;
   flex-direction: column;

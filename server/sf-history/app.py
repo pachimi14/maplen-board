@@ -190,6 +190,11 @@ def equipment(request: Request) -> JSONResponse:
                 "itemName": item.get("itemName"),
                 "aliasItemIds": item.get("aliasItemIds", []),
                 "maxStar": max_star,
+                # IMPL_PLAN_SH9 §3-2: passed through as-is from
+                # data/sf_history_items.json -- every other field on this
+                # response is unchanged. `[]` for items.json snapshots
+                # generated before SH9 (no new-field crash on stale data).
+                "aliases": item.get("aliases", []),
             }
         )
 

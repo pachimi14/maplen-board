@@ -23,7 +23,12 @@ export default function SfHistoryRoot() {
   const { t } = useTranslation();
 
   const [equipmentState, setEquipmentState] = useState({ status: "loading", items: [] });
-  const [selectedItemId, setSelectedItemId] = useState(null);
+  const [selectedItemId, setSelectedItemId] = useState(null); // representative id -- drives prices/latest
+  // IMPL_PLAN_SH9 §3-3: the exact alias row the user picked (may differ from
+  // `selectedItemId`'s own representative name/id -- see EquipmentSelector's
+  // header comment). Drives the search box's closed-state text and the
+  // "shared group" note below; never used for API calls.
+  const [selectedAlias, setSelectedAlias] = useState(null); // { itemId, itemName }
   const [range, setRange] = useState(null); // { startStar, targetStar }
   const [period, setPeriod] = useState("150D");
 
@@ -43,6 +48,7 @@ export default function SfHistoryRoot() {
       setEquipmentState({ status: "ready", items: result.items });
       const first = result.items[0];
       setSelectedItemId(first.itemId);
+      setSelectedAlias({ itemId: first.itemId, itemName: first.itemName });
       setRange(defaultPresetForMaxStar(first.maxStar));
     });
     return () => {
@@ -54,6 +60,20 @@ export default function SfHistoryRoot() {
     () => equipmentState.items.find((item) => item.itemId === selectedItemId) ?? null,
     [equipmentState.items, selectedItemId],
   );
+
+  // IMPL_PLAN_SH9 §3-3: `candidate.representativeItemId` (not
+  // `candidate.itemId`) is what drives prices/latest -- picking an alias
+  // never fetches a different item's numbers, only displays its name
+  // (`selectedAlias`, read by the "shared group" note below).
+  function handleSelectEquipment(candidate) {
+    setSelectedItemId(candidate.representativeItemId);
+    setSelectedAlias({ itemId: candidate.itemId, itemName: candidate.itemName });
+  }
+
+  // "強化費用はこのグループ共通(代表: ○○)" (plan §3-3 (d), design §7):
+  // shown exactly when the picked alias isn't the representative itself, so
+  // the numbers-vs-label mismatch is never silent.
+  const isAliasSelection = Boolean(selectedItem && selectedAlias && selectedAlias.itemId !== selectedItem.itemId);
 
   // design §7.1: if switching equipment makes the current range invalid
   // for the new item's maxStar (e.g. 19->21 on a maxStar=20 device), clamp
@@ -138,8 +158,9 @@ export default function SfHistoryRoot() {
             <div className="flex flex-wrap items-end gap-6">
               <EquipmentSelector
                 items={equipmentState.items}
-                selectedItemId={selectedItemId}
-                onSelect={setSelectedItemId}
+                selectedItemId={selectedAlias?.itemId ?? selectedItemId}
+                selectedItemName={selectedAlias?.itemName ?? selectedItem.itemName}
+                onSelect={handleSelectEquipment}
               />
               <StarRangeSelector
                 maxStar={selectedItem.maxStar}
@@ -148,6 +169,12 @@ export default function SfHistoryRoot() {
                 onChange={setRange}
               />
             </div>
+
+            {isAliasSelection ? (
+              <p className="sfh-group-shared-note">
+                {t("sfhistory.equipment.groupSharedNote", { representativeName: selectedItem.itemName })}
+              </p>
+            ) : null}
 
             <PeriodTabs value={period} onChange={setPeriod} />
 

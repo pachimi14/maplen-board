@@ -56,6 +56,36 @@ describe("normalizeEquipmentPayload", () => {
     expect(normalizeEquipmentPayload(null).ok).toBe(false);
     expect(normalizeEquipmentPayload({}).ok).toBe(false);
   });
+
+  it("IMPL_PLAN_SH9 §3-2: passes through per-alias itemId+itemName", () => {
+    const result = normalizeEquipmentPayload({
+      items: [
+        {
+          itemId: 1102940,
+          itemName: "Arcane Umbra Knight Cape",
+          aliasItemIds: [1102940, 1102942, 1102943],
+          maxStar: 22,
+          aliases: [
+            { itemId: 1102940, itemName: "Arcane Umbra Knight Cape" },
+            { itemId: 1102942, itemName: "Arcane Umbra Mage Cape" },
+            { itemId: 1102943, itemName: "Arcane Umbra Archer Cape" },
+          ],
+        },
+      ],
+    });
+    expect(result.items[0].aliases).toEqual([
+      { itemId: 1102940, itemName: "Arcane Umbra Knight Cape" },
+      { itemId: 1102942, itemName: "Arcane Umbra Mage Cape" },
+      { itemId: 1102943, itemName: "Arcane Umbra Archer Cape" },
+    ]);
+  });
+
+  it("falls back to a single self-named alias when the server sent no `aliases` (pre-SH9 snapshot)", () => {
+    const result = normalizeEquipmentPayload({
+      items: [{ itemId: 1022232, itemName: "Black Bean Mark", aliasItemIds: [1022232], maxStar: 20 }],
+    });
+    expect(result.items[0].aliases).toEqual([{ itemId: 1022232, itemName: "Black Bean Mark" }]);
+  });
 });
 
 describe("normalizePricesPayload", () => {

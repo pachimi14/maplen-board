@@ -14,24 +14,46 @@ function toFiniteOrNull(value) {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+/** IMPL_PLAN_SH9 §3-2: `aliases` (itemId + itemName) for one group. Falls
+ * back to one synthetic entry naming the representative by its own id when
+ * the server sent no `aliases` at all (a `sf_history_items.json` snapshot
+ * generated before SH9) -- the search box still works, just without alias
+ * names, rather than crashing or silently searching nothing. */
+function normalizeAliases(row) {
+  if (Array.isArray(row?.aliases) && row.aliases.length) {
+    return row.aliases
+      .filter((alias) => Number.isInteger(alias?.itemId))
+      .map((alias) => ({
+        itemId: alias.itemId,
+        itemName: typeof alias.itemName === "string" && alias.itemName ? alias.itemName : String(alias.itemId),
+      }));
+  }
+  return [{ itemId: row.itemId, itemName: row.itemName }];
+}
+
 /** `/sf-history/equipment` -> the searchable equipment list (design §7:
  * representative itemId + display name + alias itemIds + data-derived
- * maxStar). Items without a resolvable `maxStar` are dropped rather than
- * guessed at (design §7.1: maxStar must never be hardcoded/assumed). */
+ * maxStar; IMPL_PLAN_SH9 §3: + per-alias display names). Items without a
+ * resolvable `maxStar` are dropped rather than guessed at (design §7.1:
+ * maxStar must never be hardcoded/assumed). */
 export function normalizeEquipmentPayload(payload) {
   if (!payload || !Array.isArray(payload.items)) {
     return { ok: false, code: "invalidFormat", items: [] };
   }
   const items = payload.items
     .filter((row) => Number.isInteger(row?.itemId) && Number.isInteger(row?.maxStar) && row.maxStar > 0)
-    .map((row) => ({
-      itemId: row.itemId,
-      itemName: typeof row.itemName === "string" && row.itemName ? row.itemName : String(row.itemId),
-      aliasItemIds: Array.isArray(row.aliasItemIds) && row.aliasItemIds.length
-        ? row.aliasItemIds.filter((id) => Number.isInteger(id))
-        : [row.itemId],
-      maxStar: row.maxStar,
-    }));
+    .map((row) => {
+      const itemName = typeof row.itemName === "string" && row.itemName ? row.itemName : String(row.itemId);
+      return {
+        itemId: row.itemId,
+        itemName,
+        aliasItemIds: Array.isArray(row.aliasItemIds) && row.aliasItemIds.length
+          ? row.aliasItemIds.filter((id) => Number.isInteger(id))
+          : [row.itemId],
+        aliases: normalizeAliases({ ...row, itemName }),
+        maxStar: row.maxStar,
+      };
+    });
   return { ok: true, code: "ok", items };
 }
 

@@ -409,7 +409,8 @@
       "searchPlaceholder": "装備名・アイテムIDで検索",
       "noMatch": "該当する装備が見つかりません",
       "maxStarBadge": "☆{{maxStar}}まで",
-      "loadError": "装備一覧を取得できませんでした。時間をおいて再読み込みしてください。"
+      "loadError": "装備一覧を取得できませんでした。時間をおいて再読み込みしてください。",
+      "groupSharedNote": "強化費用はこのグループ共通です(代表: {{representativeName}})。"
     },
     "starRange": {
       "startLabel": "開始 ☆",

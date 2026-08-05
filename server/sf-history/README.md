@@ -71,7 +71,8 @@ python scripts/update.py
 
 ```text
 GET /sf-history/health                liveness check
-GET /sf-history/equipment             28-item list + aliasItemIds + data-derived maxStar (design §7.1)
+GET /sf-history/equipment             28-item list + aliasItemIds + aliases (itemId+itemName per group
+                                       member, IMPL_PLAN_SH9 §3-2) + data-derived maxStar (design §7.1)
 GET /sf-history/prices?itemId=        4h series, up to 150 days, 22-wide prices[] per point (null = missing).
                                        SH-7: may append one trailing point with `"provisional": true`, sourced
                                        from the same `latest` cache as below -- never persisted, degrades to
@@ -84,6 +85,28 @@ IDs (not an alias) -- clients resolve alias -> representative client-side
 using `equipment`'s `aliasItemIds` (design §7: "検索対象はグループ内の全
 itemId、取得・表示は代表"). Unknown `itemId` -> `404`; missing/non-integer
 `itemId` -> `400`.
+
+### `aliases` (IMPL_PLAN_SH9 §3-1)
+
+Each `equipment` item's `aliases` is `[{ itemId, itemName }, ...]`, one row
+per id in that same item's `aliasItemIds` -- **including the representative
+itself**. This is a deliberate choice, not an oversight: `aliasItemIds`
+already contains the representative's own id (a sorted `set`, so it can
+never repeat), so mapping it straight to `{itemId, itemName}` rows gives
+`aliases` exactly the same members with no separate "is this the
+representative" branch on either side (`gen_item_list.py` or the frontend's
+`EquipmentSelector.jsx`, which flattens `aliases` into search candidates).
+The representative therefore appears in `aliases` exactly once, like every
+other member -- never zero times, never twice.
+
+Every name is resolved from maplenEnhancebot's `catalog/main_equipment.json`
+(`groups[].items[].{item_id, item_name}`) except one: `1003719` (Chaos
+Pierre Hat), which the boss_only catalog never carries. Its name is a
+one-line override in `gen_item_list.py` (`EXTRA_ITEM_NAMES`), copied from a
+source-code comment in maplenEnhancebot's `priority_equipment.py` -- the only
+place that name exists in the source-of-truth repo. If a future alias id has
+no resolvable name at all, `gen_item_list.py` falls back to the stringified
+itemId (and prints a warning to stderr) rather than crashing the generator.
 
 ## Environment
 

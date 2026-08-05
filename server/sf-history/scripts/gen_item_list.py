@@ -10,7 +10,8 @@ ever opens files under its own ``--out`` path.
 Output: ``data/sf_history_items.json``
     { "generatedAt": ..., "sourceRepo": "maplenEnhancebot", "sourceCommit": <hash>,
       "excluded": [{ "itemId": ..., "reason": ... }],
-      "items": [{ "itemId": ..., "itemName": ..., "aliasItemIds": [...], "maxStar": ... }] }
+      "items": [{ "itemId": ..., "itemName": ..., "aliasItemIds": [...], "maxStar": ...,
+                  "aliases": [{ "itemId": ..., "itemName": ... }, ...] }] }
 
 Accept criterion (a): ``items`` must be exactly 28 entries (IMPL_PLAN_SH2 §4/§6).
 
@@ -18,6 +19,15 @@ Accept criterion (a): ``items`` must be exactly 28 entries (IMPL_PLAN_SH2 §4/§
 actual data (``MAX(item_upgrade) + 1``), never hardcoded -- if the backfill
 DB is not present at ``--db``, ``maxStar`` is left ``null`` rather than
 guessed.
+
+IMPL_PLAN_SH9 §3-1: ``aliases`` carries a name for every itemId in
+``aliasItemIds`` (representative included -- see the module docstring note
+by ``EXTRA_ITEM_NAMES`` below for the dedup policy), sourced from
+maplenEnhancebot's ``catalog/main_equipment.json`` (``groups[].items[].
+{item_id, item_name}``, read via ``item_catalog.load_catalog()``, already
+loaded by this script). This is what lets the SF History search box find a
+non-representative piece by name (e.g. "AbsoLab Warrior Gloves") instead of
+only the representative's own name and raw itemIds.
 """
 
 from __future__ import annotations
@@ -70,6 +80,22 @@ EXCLUDED_ITEM_IDS: dict[int, str] = {
         "override in maplenEnhancebot, not part of the RANGE_128_TO_137+ "
         "endgame lineup."
     ),
+}
+
+# IMPL_PLAN_SH9 §3-1: one item has no resolvable name anywhere in
+# maplenEnhancebot's JSON data. 1003719 (Chaos Pierre Hat) is an alias of the
+# 1003720 (Chaos Von Bon Helmet) group via `EXTRA_ITEM_REPRESENTATIVE_ALIASES`
+# in priority_equipment.py, but it belongs to a NORMAL-set line that never
+# appears in the boss_only `catalog/main_equipment.json` -- there is no
+# `groups[].items[].item_name` entry for it. The name below is copied
+# verbatim from the inline comment next to that mapping in
+# priority_equipment.py (`# Chaos Pierre Hat -> Chaos Von Bon Helmet group`),
+# the only place in the source-of-truth repo this name appears. If
+# maplenEnhancebot's catalog ever grows a real entry for this itemId, this
+# override becomes redundant (harmless) rather than wrong -- it is only ever
+# consulted when the catalog lookup misses.
+EXTRA_ITEM_NAMES: dict[int, str] = {
+    1003719: "Chaos Pierre Hat",
 }
 
 
@@ -135,8 +161,26 @@ def build_item_list(
             "representative_item_name"
         )
 
+    # IMPL_PLAN_SH9 §3-1: every catalog item (not just representatives) has a
+    # name here -- `groups[].items[].{item_id, item_name}`, the same raw
+    # per-item rows `item_catalog.build_item_to_representative_map` reads to
+    # build `item_to_representative` above. Seeded with
+    # `name_by_representative` first so the two EXTRA_PRIORITY_GROUPS
+    # representatives (Chaos Von Bon Helmet / Twilight Mark), which are not
+    # in the boss_only catalog at all, still resolve to their own name; then
+    # `EXTRA_ITEM_NAMES` covers the one remaining gap (§ comment above).
+    name_by_item_id: dict[int, str | None] = dict(name_by_representative)
+    for group in catalog.get("groups", []):
+        for item in group.get("items", []):
+            item_id = item.get("item_id")
+            if item_id is None:
+                continue
+            name_by_item_id[int(item_id)] = item.get("item_name")
+    name_by_item_id.update(EXTRA_ITEM_NAMES)
+
     items: list[dict[str, Any]] = []
     excluded: list[dict[str, Any]] = []
+    unresolved_names: list[int] = []
     for representative in representative_ids:
         if representative in EXCLUDED_ITEM_IDS:
             excluded.append(
@@ -148,13 +192,33 @@ def build_item_list(
         # design §7.1: maxStar is derived from hourly data (MAX(item_upgrade)+1),
         # never hardcoded. null when the backfill DB isn't available to derive it from.
         max_star = (max_upgrade + 1) if max_upgrade is not None else None
+        # IMPL_PLAN_SH9 §3-1: `aliases` deliberately includes the
+        # representative itself (it is already one of `alias_ids`) -- the SF
+        # History search box flattens this list into candidates, and having
+        # the representative appear once here (never twice: `alias_ids` is a
+        # sorted `set`, so no id repeats) is simpler than special-casing it
+        # out and back in on the frontend.
+        aliases: list[dict[str, Any]] = []
+        for alias_id in alias_ids:
+            alias_name = name_by_item_id.get(alias_id)
+            if alias_name is None:
+                unresolved_names.append(alias_id)
+                alias_name = str(alias_id)
+            aliases.append({"itemId": alias_id, "itemName": alias_name})
         items.append(
             {
                 "itemId": representative,
                 "itemName": name_by_representative.get(representative),
                 "aliasItemIds": alias_ids,
                 "maxStar": max_star,
+                "aliases": aliases,
             }
+        )
+    if unresolved_names:
+        print(
+            f"WARNING: {len(unresolved_names)} alias itemId(s) have no catalog name and "
+            f"fell back to their raw id: {sorted(set(unresolved_names))}",
+            file=sys.stderr,
         )
 
     return {

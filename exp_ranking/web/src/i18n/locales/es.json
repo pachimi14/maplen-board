@@ -409,7 +409,8 @@
       "searchPlaceholder": "Buscar por nombre de objeto o ID",
       "noMatch": "No se encontró ningún equipo coincidente",
       "maxStarBadge": "hasta ☆{{maxStar}}",
-      "loadError": "No se pudo cargar la lista de equipo. Vuelve a intentarlo más tarde."
+      "loadError": "No se pudo cargar la lista de equipo. Vuelve a intentarlo más tarde.",
+      "groupSharedNote": "El coste de mejora es compartido en este grupo (objeto representativo: {{representativeName}})."
     },
     "starRange": {
       "startLabel": "Inicio ☆",
