@@ -414,7 +414,7 @@
       "startLabel": "Start ☆",
       "targetLabel": "Target ☆",
       "presetsLabel": "Presets",
-      "presetDisabledHint": "This item only has data up to ☆{{maxStar}}"
+      "presetDisabledHint": "This item can only be enhanced up to ☆{{maxStar}}, so it can't be selected"
     },
     "period": {
       "label": "Period",

@@ -414,7 +414,7 @@
       "startLabel": "Bắt đầu ☆",
       "targetLabel": "Mục tiêu ☆",
       "presetsLabel": "Mẫu có sẵn",
-      "presetDisabledHint": "Vật phẩm này chỉ có dữ liệu đến ☆{{maxStar}}"
+      "presetDisabledHint": "Vật phẩm này chỉ có thể nâng cấp đến ☆{{maxStar}} nên không thể chọn"
     },
     "period": {
       "label": "Khoảng thời gian",
