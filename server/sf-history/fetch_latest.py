@@ -4,13 +4,20 @@ Design §6: "ブラウザから msu.io を直接叩かない" -- the browser cal
 `GET /sf-history/latest?itemId=`, and this module is what actually reaches
 the official upstream on the server's behalf, with:
 
-  - a 60-second TTL, process-in-memory cache per itemId
+  - a TTL (default 300s -- IMPL_PLAN_SH7 §2, up from the original 60s;
+    overridable via `SF_HISTORY_LATEST_TTL_SECONDS`, see app.py), process-
+    in-memory cache per itemId
   - single-flight coalescing: concurrent requests for the same itemId while
     a fetch is already in flight share its result instead of each making
     their own upstream call
   - **no fallback to historical data on upstream failure** (design §6: "履歴
     の最終確定足で代替しない" -- callers must surface this as an error, not
     silently substitute a stale number as if it were "now")
+
+SH-7 §3-1 also reuses this same cache for the `prices` endpoint's provisional
+(in-progress-bucket) point -- see app.py's `prices()`: "同じ出どころ" means
+the "Current" summary card and the provisional chart point never show two
+different numbers for "now".
 
 Unit conversion: the official `latest` endpoint's `closePrice` is on a
 different scale than this system's stored `end_price` (design P2, confirmed
@@ -36,7 +43,7 @@ import requests
 from fetcher import USER_AGENT
 
 LATEST_URL = "https://msu.io/maplestoryn/api/msn/dynamicpricing/enhance-price/latest"
-DEFAULT_TTL_SECONDS = 60.0
+DEFAULT_TTL_SECONDS = 300.0  # IMPL_PLAN_SH7 §2 (was 60.0). Env override: SF_HISTORY_LATEST_TTL_SECONDS.
 REQUEST_TIMEOUT_SECONDS = 5.0
 UPGRADE_COUNT = 22  # itemUpgrade 0..21, matching `prices[]` (plan §8 condition 6)
 PRICE_DIVISOR = 1e18  # design P2 / SH1_API_PROBE.md M1: closePrice / endPrice = 1e18
