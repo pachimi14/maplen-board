@@ -14,6 +14,21 @@ export const PERIOD_KEYS = ["7D", "30D", "90D", "150D"];
 
 export const PERIOD_DAYS = { "7D": 7, "30D": 30, "90D": 90, "150D": 150 };
 
+/** IMPL_PLAN_SH27 §1 (user decision, 2026-08-06): the period tab the screen
+ * opens on. Named the same way as `DEFAULT_INITIAL_ITEM_ID` (SH-26) rather
+ * than inlined into `SfHistoryRoot` -- so that a test can assert, alongside
+ * `PERIOD_KEYS`, that the default never drifts to a key that no longer
+ * exists (SH-26 §1(c)'s same "停止せず穏当に劣化する" concern; see
+ * `PeriodTabs`, which already renders whatever `period` state holds without
+ * validating it against `PERIOD_KEYS` itself).
+ *
+ * IMPL_PLAN_SH11 §3-2: the heatmap does not read `period` at all (it always
+ * aggregates the full ~150-day series), so changing this default does not
+ * change one bit of heatmap output -- only which trailing slice of the chart/
+ * stats series `sliceByPeriod` returns.
+ */
+export const DEFAULT_PERIOD = "30D";
+
 /** IMPL_PLAN_SH13 §3: exactly three presets a user can pick, before maxStar
  * filtering (design §7.1's own maxStar-disable rule is unchanged: a preset
  * whose `to` exceeds the device's maxStar stays disabled, e.g. `0->21`/
