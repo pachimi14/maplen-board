@@ -450,6 +450,17 @@
       "loadError": "Không thể tải lịch sử giá. Vui lòng tải lại sau.",
       "empty": "Không có dữ liệu để hiển thị"
     },
+    "heatmap": {
+      "title": "Thứ trong tuần x Khung giờ",
+      "periodNote": "Xu hướng trong khoảng ~150 ngày dữ liệu (không liên kết với tab khoảng thời gian phía trên)",
+      "empty": "Chưa đủ dữ liệu để tổng hợp",
+      "cellTooltip": "{{value}} ({{n}} điểm dữ liệu)",
+      "sampleCount": "n={{count}}",
+      "noData": "Không có dữ liệu",
+      "lowestBadge": "Thấp nhất",
+      "highestBadge": "Cao nhất",
+      "disclaimer": "Chỉ hiển thị giá trị trung vị và số lượng mẫu (n), không khuyến nghị nâng cấp vào một thứ hoặc khung giờ cụ thể."
+    },
     "conditions": {
       "title": "Điều kiện tính toán",
       "starCatch": "Star Catch BẬT",

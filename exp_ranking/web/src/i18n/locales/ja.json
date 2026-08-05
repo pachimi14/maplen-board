@@ -450,6 +450,17 @@
       "loadError": "価格履歴を取得できませんでした。時間をおいて再読み込みしてください。",
       "empty": "表示できるデータがありません"
     },
+    "heatmap": {
+      "title": "曜日 × 時間帯",
+      "periodNote": "過去150日全体の傾向（期間タブとは連動しません）",
+      "empty": "集計できるデータがまだありません",
+      "cellTooltip": "{{value}}（{{n}}件）",
+      "sampleCount": "n={{count}}",
+      "noData": "データなし",
+      "lowestBadge": "最安",
+      "highestBadge": "最高",
+      "disclaimer": "中央値とデータ件数（n）を示すものであり、特定の曜日・時間帯での強化を推奨するものではありません。"
+    },
     "conditions": {
       "title": "計算条件",
       "starCatch": "スターキャッチ ON",

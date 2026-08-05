@@ -11,6 +11,7 @@ import StarRangeSelector from "./components/StarRangeSelector.jsx";
 import PeriodTabs from "./components/PeriodTabs.jsx";
 import SfHistoryChart from "./components/SfHistoryChart.jsx";
 import SummaryCards from "./components/SummaryCards.jsx";
+import WeekdayHeatmap from "./components/WeekdayHeatmap.jsx";
 import CalcConditions from "./components/CalcConditions.jsx";
 import "./sfhistory.css";
 
@@ -163,7 +164,7 @@ export default function SfHistoryRoot() {
   // real regression guard on production code rather than a parallel
   // reimplementation that could silently drift from what SfHistoryRoot
   // actually does.
-  const { periodSeries, stats, currentExpected, percentile } = useMemo(
+  const { fullSeries, periodSeries, stats, currentExpected, percentile } = useMemo(
     () => buildScreenModel({ range, period, pricesState, latestState }),
     [range, period, pricesState, latestState],
   );
@@ -227,6 +228,11 @@ export default function SfHistoryRoot() {
                 <SfHistoryChart series={periodSeries} average={stats.average} />
               )}
             </div>
+
+            {/* IMPL_PLAN_SH11 §3-2: `fullSeries` (never `periodSeries`) --
+                the heatmap is deliberately not connected to the period tab
+                above (7D would put n=1 in every cell). */}
+            <WeekdayHeatmap series={fullSeries} />
 
             <CalcConditions historyUpdatedAt={pricesState.endDate} currentFetchedAt={latestState.latestUpdatedAt} />
           </>
