@@ -292,6 +292,7 @@ describe("sliceByPeriod (design §13: period tabs cut a trailing window of the s
 
   it.each([
     ["7D", 7 * 6],
+    ["14D", 14 * 6], // IMPL_PLAN_SH29 §3
     ["30D", 30 * 6],
     ["90D", 90 * 6],
     ["150D", 900],
@@ -306,9 +307,12 @@ describe("sliceByPeriod (design §13: period tabs cut a trailing window of the s
     expect(sliceByPeriod(short, "150D")).toHaveLength(10);
   });
 
-  it("PERIOD_KEYS and PERIOD_DAYS agree on the same four periods", () => {
-    expect(PERIOD_KEYS).toEqual(["7D", "30D", "90D", "150D"]);
+  // IMPL_PLAN_SH29 §3 (2026-08-06, user decision): adds "14D" between 7D
+  // and 30D.
+  it("PERIOD_KEYS and PERIOD_DAYS agree on the same five periods", () => {
+    expect(PERIOD_KEYS).toEqual(["7D", "14D", "30D", "90D", "150D"]);
     expect(Object.keys(PERIOD_DAYS)).toEqual(PERIOD_KEYS);
+    expect(PERIOD_DAYS["14D"]).toBe(14);
   });
 
   // IMPL_PLAN_SH27 §4(c): pins the default itself, alongside pinning that it

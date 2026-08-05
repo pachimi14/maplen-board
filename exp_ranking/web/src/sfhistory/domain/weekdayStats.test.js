@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildWeekdayHeatmap, extremeHeatmapCells, totalHeatmapCount } from "./weekdayStats.js";
+import { buildWeekdayHeatmap, extremeHeatmapCells, heatmapSampleRange, totalHeatmapCount } from "./weekdayStats.js";
 
 // IMPL_PLAN_SH14 §2 (2026-08-05, user decision): reverts IMPL_PLAN_SH11 §2's
 // local-timezone grouping back to a fixed UTC basis. `buildWeekdayHeatmap`
@@ -166,6 +166,60 @@ describe("median (representative value, not average -- plan §3-1: 'スパイク
     // sorted: 10,20,30,1000 -> (20+30)/2 = 25, not skewed by the 1000 spike
     // the way an average (265) would be.
     expect(cell.median).toBe(25e6);
+  });
+});
+
+// IMPL_PLAN_SH29 §4-1: the standard-count disclosure the now-period-linked
+// heatmap needs. `low`/`high` = floor/ceil of the average n per cell.
+describe("heatmapSampleRange (plan §4-1: '1セルあたり約N点' disclosure)", () => {
+  it("returns 0/0 for an empty grid (no cells at all)", () => {
+    expect(heatmapSampleRange([])).toEqual({ low: 0, high: 0 });
+  });
+
+  it("returns a single value (low === high) when the total divides the cell count evenly", () => {
+    // 84 confirmed points over 42 cells -> exactly 2 per cell.
+    const points = [];
+    for (let day = 0; day < 14; day++) {
+      for (const hour of [0, 4, 8, 12, 16, 20]) {
+        points.push(point(`2026-03-${String(8 + day).padStart(2, "0")}T${String(hour).padStart(2, "0")}:00:00Z`, 100));
+      }
+    }
+    const { cells } = buildWeekdayHeatmap(points);
+    expect(totalHeatmapCount(cells)).toBe(84);
+    expect(heatmapSampleRange(cells)).toEqual({ low: 2, high: 2 });
+  });
+
+  it("splits into a low/high range when the total does not divide the cell count evenly (the exact real-data shape IMPL_PLAN_SH29's plan §4-1 table describes)", () => {
+    // 41 confirmed points over 42 cells -> average 0.976 -> floor=0, ceil=1
+    // (matches the plan's own 7D worked figure: n 0-1, 1 empty cell).
+    const points = Array.from({ length: 41 }, (_, i) =>
+      point(`2026-03-${String(8 + Math.floor(i / 6)).padStart(2, "0")}T${String((i % 6) * 4).padStart(2, "0")}:00:00Z`, 100),
+    );
+    const { cells } = buildWeekdayHeatmap(points);
+    expect(totalHeatmapCount(cells)).toBe(41);
+    expect(heatmapSampleRange(cells)).toEqual({ low: 0, high: 1 });
+  });
+
+  it("IMPL_PLAN_SH29 §4-1 table, machine-verified against every period's confirmed count in isolation (real production counts, pinned as literals since fetching live data is out of scope for a unit test)", () => {
+    // 統括's own measured table (§4-1): confirmed-point count per period for
+    // one real (item, star-range) series, and the resulting n range.
+    const table = [
+      [41, { low: 0, high: 1 }],
+      [83, { low: 1, high: 2 }],
+      [179, { low: 4, high: 5 }],
+      [539, { low: 12, high: 13 }],
+      [898, { low: 21, high: 22 }],
+    ];
+    for (const [total, expected] of table) {
+      // A fake 42-cell grid whose n's sum to `total`, spread as evenly as
+      // buildWeekdayHeatmap's own real grouping would (front-loaded by 1 in
+      // the first `total % 42` cells) -- heatmapSampleRange itself only
+      // reads `cells.length` and each cell's `n`, so this is a faithful,
+      // deterministic stand-in for the real 42-cell grid without needing a
+      // live server fetch inside the test suite.
+      const cells = Array.from({ length: 42 }, (_, i) => ({ n: Math.floor(total / 42) + (i < total % 42 ? 1 : 0) }));
+      expect(heatmapSampleRange(cells)).toEqual(expected);
+    }
   });
 });
 

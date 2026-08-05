@@ -420,6 +420,7 @@
     "period": {
       "label": "Period",
       "d7": "7D",
+      "d14": "14D",
       "d30": "30D",
       "d90": "90D",
       "d150": "150D"
@@ -454,7 +455,7 @@
     "heatmap": {
       "title": "Weekday x Time of Day",
       "axisNote": "Rows: UTC weekday. Columns: your local time ({{zone}}; UTC shown below each column)",
-      "periodNote": "Trend across the full ~150-day history (not linked to the period tab above)",
+      "periodNote": "Aggregated over the selected period -- about {{sampleRange}} points per cell",
       "empty": "Not enough data to summarize yet",
       "cellTooltip": "{{value}}",
       "noData": "No data",

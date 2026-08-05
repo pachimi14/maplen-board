@@ -1,6 +1,6 @@
 import { Fragment, useMemo } from "react";
 import { useTranslation } from "../../i18n/I18nContext.jsx";
-import { buildWeekdayHeatmap, extremeHeatmapCells, totalHeatmapCount } from "../domain/weekdayStats.js";
+import { buildWeekdayHeatmap, extremeHeatmapCells, heatmapSampleRange, totalHeatmapCount } from "../domain/weekdayStats.js";
 import {
   formatClockTime,
   formatCompactNeso,
@@ -31,9 +31,18 @@ const LOW_N_THRESHOLD = 5; // plan §3-3: "n が少ないセルは視覚的に�
  * display choices -- this component only lays it out, colors it, and picks
  * which zone to *label* the columns in.
  *
- * IMPL_PLAN_SH11 §3-2: `series` is `SfHistoryRoot`'s `fullSeries`, always
- * the full ~150-day series, deliberately never the period-tab-sliced one --
- * passing `periodSeries` here would put n=1 in every cell for a 7-day tab.
+ * IMPL_PLAN_SH29 §4 (2026-08-06, user decision, reverses IMPL_PLAN_SH11
+ * §3-2 below): `series` is now `SfHistoryRoot`'s `periodSeries` (the same
+ * period-tab-sliced series the chart/stats use), not `fullSeries`. Changing
+ * the period tab now changes this grid's `n`/median too -- see
+ * `heatmapSampleRange` below for the standard-count disclosure this
+ * reversal requires (a 7D period puts n=0-1 in most cells; SH-29 plan
+ * §4-1's own worked table).
+ * ~~IMPL_PLAN_SH11 §3-2: always the full ~150-day series, deliberately
+ * never the period-tab-sliced one.~~ (superseded by SH-29 §4 above --
+ * struck through, not deleted, per this repo's "旧文は書き換えない" norm
+ * for reversed decisions; see docs/reports/SH11_LOCAL_TIME_HEATMAP.md's own
+ * addendum for the same pattern.)
  *
  * IMPL_PLAN_SH14 §0-1/§2 (2026-08-05, user decision): reverts IMPL_PLAN_SH11
  * §2's viewer-local-time basis back to a fixed UTC for the *grouping*
@@ -68,15 +77,22 @@ const LOW_N_THRESHOLD = 5; // plan §3-3: "n が少ないセルは視覚的に�
 export default function WeekdayHeatmap({ series }) {
   const { t, language } = useTranslation();
 
-  const { cells, columns, total, extremes } = useMemo(() => {
+  const { cells, columns, total, extremes, sampleRange } = useMemo(() => {
     const { cells, columns } = buildWeekdayHeatmap(series);
-    return { cells, columns, total: totalHeatmapCount(cells), extremes: extremeHeatmapCells(cells) };
+    return {
+      cells,
+      columns,
+      total: totalHeatmapCount(cells),
+      extremes: extremeHeatmapCells(cells),
+      sampleRange: heatmapSampleRange(cells),
+    };
   }, [series]);
 
   // IMPL_PLAN_SH29 §1/§2-1: the viewer's own zone label, computed once per
   // render (cheap, no network/DOM) -- shared by the axis note below and
   // reused the same way SfHistoryChart's tooltip uses it.
   const zoneLabel = formatTimeZoneLabel();
+  const sampleRangeText = sampleRange.low === sampleRange.high ? `${sampleRange.low}` : `${sampleRange.low}–${sampleRange.high}`;
 
   const cellByKey = useMemo(() => new Map(cells.map((cell) => [`${cell.weekdayIndex}-${cell.bucketSlot}`, cell])), [cells]);
 
@@ -166,10 +182,16 @@ export default function WeekdayHeatmap({ series }) {
               </Fragment>
             ))}
           </div>
+          {/* IMPL_PLAN_SH29 §4-1: the standard-count disclosure the period
+              linkage (§4) requires -- replaces the old always-full-period
+              note (SH-11 §3-2's "not linked to the period tab", now false)
+              with the actual per-cell sample spread for whichever period is
+              selected, so "中央値" never quietly means "one point". */}
+          <p className="mt-2 text-xs text-slate-500">{t("sfhistory.heatmap.periodNote", { sampleRange: sampleRangeText })}</p>
           {/* plan §3-3/design §11: "断定的な推薦をしない" -- this is the
-              only prose next to the grid, and it says only what the grid
-              is (median + n), not what to do with it. */}
-          <p className="mt-2 text-xs text-slate-500">{t("sfhistory.heatmap.disclaimer")}</p>
+              only other prose next to the grid, and it says only what the
+              grid is (median + n), not what to do with it. */}
+          <p className="mt-1 text-xs text-slate-500">{t("sfhistory.heatmap.disclaimer")}</p>
         </>
       )}
     </div>

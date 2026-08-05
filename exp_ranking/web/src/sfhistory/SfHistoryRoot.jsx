@@ -161,7 +161,10 @@ export default function SfHistoryRoot() {
   // real regression guard on production code rather than a parallel
   // reimplementation that could silently drift from what SfHistoryRoot
   // actually does.
-  const { fullSeries, periodSeries, stats, currentExpected, percentile } = useMemo(
+  // IMPL_PLAN_SH29 §4: `fullSeries` is no longer read here -- WeekdayHeatmap
+  // now takes `periodSeries` (see below) -- `buildScreenModel` still returns
+  // it (viewModel.js untouched; other future call sites may still want it).
+  const { periodSeries, stats, currentExpected, percentile } = useMemo(
     () => buildScreenModel({ range, period, pricesState, latestState }),
     [range, period, pricesState, latestState],
   );
@@ -218,10 +221,17 @@ export default function SfHistoryRoot() {
               )}
             </div>
 
-            {/* IMPL_PLAN_SH11 §3-2: `fullSeries` (never `periodSeries`) --
+            {/* IMPL_PLAN_SH29 §4 (2026-08-06, user decision, reverses
+                IMPL_PLAN_SH11 §3-2 below): `periodSeries` (same slice the
+                chart/stats use), not `fullSeries` -- the heatmap now IS
+                connected to the period tab above. `WeekdayHeatmap.jsx`'s own
+                `heatmapSampleRange` note is what covers the "7D puts n=0-1
+                in most cells" concern SH-11 §3-2 originally raised.
+                ~~IMPL_PLAN_SH11 §3-2: `fullSeries` (never `periodSeries`) --
                 the heatmap is deliberately not connected to the period tab
-                above (7D would put n=1 in every cell). */}
-            <WeekdayHeatmap series={fullSeries} />
+                above (7D would put n=1 in every cell).~~ (superseded by
+                SH-29 §4 above -- struck through, not deleted.) */}
+            <WeekdayHeatmap series={periodSeries} />
           </>
         ) : null}
       </main>
