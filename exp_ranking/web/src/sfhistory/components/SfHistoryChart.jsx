@@ -174,7 +174,6 @@ export default function SfHistoryChart({ series, average }) {
           </LineChart>
         </ResponsiveContainer>
       </div>
-      <p className="mt-2 text-xs text-slate-500">{t("sfhistory.chart.gapNote")}</p>
       {data.some((row) => row.provisional) ? (
         <p className="mt-1 text-xs text-slate-500">{t("sfhistory.chart.provisionalLegend")}</p>
       ) : null}

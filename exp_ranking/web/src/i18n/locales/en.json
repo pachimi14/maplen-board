@@ -409,8 +409,7 @@
       "searchPlaceholder": "Search by item name or item ID",
       "noMatch": "No matching equipment found",
       "maxStarBadge": "up to ☆{{maxStar}}",
-      "loadError": "Could not load the equipment list. Please reload later.",
-      "groupSharedNote": "Enhancement cost is shared across this group (representative item: {{representativeName}})."
+      "loadError": "Could not load the equipment list. Please reload later."
     },
     "starRange": {
       "startLabel": "Start ☆",
@@ -441,7 +440,6 @@
       "legendAverage": "Period average",
       "legendHigh": "Period high",
       "legendLow": "Period low",
-      "gapNote": "The line breaks where data is missing (no guessed values are shown).",
       "tooltipDeltaFromPrev": "vs previous {{delta}}",
       "tooltipDeltaFromAverage": "vs period average {{delta}}",
       "tooltipBucketNote": "4-hour bar (bucket-end value)",
@@ -454,25 +452,11 @@
       "title": "Weekday x Time of Day",
       "periodNote": "Trend across the full ~150-day history (not linked to the period tab above)",
       "empty": "Not enough data to summarize yet",
-      "cellTooltip": "{{value}} ({{n}} points)",
-      "sampleCount": "n={{count}}",
+      "cellTooltip": "{{value}}",
       "noData": "No data",
       "lowestBadge": "Lowest",
       "highestBadge": "Highest",
-      "disclaimer": "Shows the median and sample count (n) only -- not a recommendation to enhance on any particular weekday or time."
-    },
-    "conditions": {
-      "title": "Calculation Conditions",
-      "starCatch": "Star Catch ON",
-      "chanceTime": "Chance Time ON",
-      "safeguard": "Safeguard OFF",
-      "eventAdjustment": "No event adjustment",
-      "metric": "Metric = Expected value",
-      "interval": "Interval = 4 hours",
-      "displayTimeZone": "Displayed time: your device's timezone ({{zone}})",
-      "historyUpdatedAt": "History last updated: {{date}}",
-      "currentFetchedAt": "Current price fetched: {{date}}",
-      "policyVersion": "Calculation policy: {{version}}"
+      "disclaimer": "Shows the median only -- not a recommendation to enhance on any particular weekday or time."
     }
   }
 }

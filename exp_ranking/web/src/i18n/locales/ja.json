@@ -409,8 +409,7 @@
       "searchPlaceholder": "装備名・アイテムIDで検索",
       "noMatch": "該当する装備が見つかりません",
       "maxStarBadge": "☆{{maxStar}}まで",
-      "loadError": "装備一覧を取得できませんでした。時間をおいて再読み込みしてください。",
-      "groupSharedNote": "強化費用はこのグループ共通です(代表: {{representativeName}})。"
+      "loadError": "装備一覧を取得できませんでした。時間をおいて再読み込みしてください。"
     },
     "starRange": {
       "startLabel": "開始 ☆",
@@ -441,7 +440,6 @@
       "legendAverage": "期間平均",
       "legendHigh": "期間高値",
       "legendLow": "期間安値",
-      "gapNote": "データが欠けている期間は線が途切れます（推測値は表示しません）",
       "tooltipDeltaFromPrev": "前回比 {{delta}}",
       "tooltipDeltaFromAverage": "期間平均との差 {{delta}}",
       "tooltipBucketNote": "4時間足（区間終値）",
@@ -454,25 +452,11 @@
       "title": "曜日 × 時間帯",
       "periodNote": "過去150日全体の傾向（期間タブとは連動しません）",
       "empty": "集計できるデータがまだありません",
-      "cellTooltip": "{{value}}（{{n}}件）",
-      "sampleCount": "n={{count}}",
+      "cellTooltip": "{{value}}",
       "noData": "データなし",
       "lowestBadge": "最安",
       "highestBadge": "最高",
-      "disclaimer": "中央値とデータ件数（n）を示すものであり、特定の曜日・時間帯での強化を推奨するものではありません。"
-    },
-    "conditions": {
-      "title": "計算条件",
-      "starCatch": "スターキャッチ ON",
-      "chanceTime": "チャンスタイム ON",
-      "safeguard": "破壊防止 OFF",
-      "eventAdjustment": "イベント補正なし",
-      "metric": "指標 = 期待値",
-      "interval": "足 = 4時間",
-      "displayTimeZone": "表示時刻: お使いの端末のタイムゾーン({{zone}})",
-      "historyUpdatedAt": "履歴の最終更新: {{date}}",
-      "currentFetchedAt": "現在価格の取得時刻: {{date}}",
-      "policyVersion": "計算ポリシー: {{version}}"
+      "disclaimer": "中央値を示すものであり、特定の曜日・時間帯での強化を推奨するものではありません。"
     }
   }
 }

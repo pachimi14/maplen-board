@@ -409,8 +409,7 @@
       "searchPlaceholder": "Tìm theo tên vật phẩm hoặc Item ID",
       "noMatch": "Không tìm thấy trang bị phù hợp",
       "maxStarBadge": "tối đa ☆{{maxStar}}",
-      "loadError": "Không thể tải danh sách trang bị. Vui lòng tải lại sau.",
-      "groupSharedNote": "Chi phí nâng cấp dùng chung cho cả nhóm này (vật phẩm đại diện: {{representativeName}})."
+      "loadError": "Không thể tải danh sách trang bị. Vui lòng tải lại sau."
     },
     "starRange": {
       "startLabel": "Bắt đầu ☆",
@@ -441,7 +440,6 @@
       "legendAverage": "Trung bình kỳ",
       "legendHigh": "Cao nhất kỳ",
       "legendLow": "Thấp nhất kỳ",
-      "gapNote": "Đường biểu đồ bị đứt ở nơi thiếu dữ liệu (không hiển thị giá trị suy đoán).",
       "tooltipDeltaFromPrev": "so với lần trước {{delta}}",
       "tooltipDeltaFromAverage": "so với trung bình kỳ {{delta}}",
       "tooltipBucketNote": "Nến 4 giờ (giá trị cuối khoảng)",
@@ -454,25 +452,11 @@
       "title": "Thứ trong tuần x Khung giờ",
       "periodNote": "Xu hướng trong khoảng ~150 ngày dữ liệu (không liên kết với tab khoảng thời gian phía trên)",
       "empty": "Chưa đủ dữ liệu để tổng hợp",
-      "cellTooltip": "{{value}} ({{n}} điểm dữ liệu)",
-      "sampleCount": "n={{count}}",
+      "cellTooltip": "{{value}}",
       "noData": "Không có dữ liệu",
       "lowestBadge": "Thấp nhất",
       "highestBadge": "Cao nhất",
-      "disclaimer": "Chỉ hiển thị giá trị trung vị và số lượng mẫu (n), không khuyến nghị nâng cấp vào một thứ hoặc khung giờ cụ thể."
-    },
-    "conditions": {
-      "title": "Điều kiện tính toán",
-      "starCatch": "Star Catch BẬT",
-      "chanceTime": "Chance Time BẬT",
-      "safeguard": "Bảo vệ TẮT",
-      "eventAdjustment": "Không điều chỉnh theo sự kiện",
-      "metric": "Chỉ số = Giá trị kỳ vọng",
-      "interval": "Chu kỳ nến = 4 giờ",
-      "displayTimeZone": "Thời gian hiển thị: múi giờ thiết bị của bạn ({{zone}})",
-      "historyUpdatedAt": "Lịch sử cập nhật lần cuối: {{date}}",
-      "currentFetchedAt": "Thời điểm lấy giá hiện tại: {{date}}",
-      "policyVersion": "Chính sách tính toán: {{version}}"
+      "disclaimer": "Chỉ hiển thị giá trị trung vị, không khuyến nghị nâng cấp vào một thứ hoặc khung giờ cụ thể."
     }
   }
 }
