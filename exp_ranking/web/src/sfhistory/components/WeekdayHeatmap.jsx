@@ -3,7 +3,18 @@ import { useTranslation } from "../../i18n/I18nContext.jsx";
 import { buildWeekdayHeatmap, extremeHeatmapCells, totalHeatmapCount } from "../domain/weekdayStats.js";
 import { formatClockTime, formatCompactNeso, formatExactNeso, weekdayShortLabel } from "../domain/format.js";
 
-const WEEKDAY_ORDER = [0, 1, 2, 3, 4, 5, 6]; // Sun..Sat -- Date#getUTCDay() order
+// IMPL_PLAN_SH14 §4 (2026-08-05, user decision): the grid's origin is now
+// Thursday UTC 00:00 (top-left) -- rows Thu->Fri->Sat->Sun->Mon->Tue->Wed,
+// still in `Date#getUTCDay()` index terms (0=Sun..6=Sat) so it lines up
+// directly with `buildWeekdayHeatmap`'s cell keys and `weekdayShortLabel`'s
+// own index convention. This is a *display order* change only -- each
+// cell is still looked up from `cellByKey` by its (weekdayIndex, bucketSlot)
+// key below, so its median/n (computed in domain/weekdayStats.js) are
+// byte-for-byte unaffected by which row order they're rendered in -- only
+// the columns (already a fixed 00/04/08/12/16/20 UTC sequence since
+// IMPL_PLAN_SH14 §2) combine with this row order to put Thu 00:00 UTC at
+// the top-left cell.
+const WEEKDAY_ORDER = [4, 5, 6, 0, 1, 2, 3];
 const LOW_N_THRESHOLD = 5; // plan §3-3: "n が少ないセルは視覚的に弱める（例 n<5）"
 
 /**
@@ -17,7 +28,9 @@ const LOW_N_THRESHOLD = 5; // plan §3-3: "n が少ないセルは視覚的に�
  *
  * IMPL_PLAN_SH14 §0-1/§2 (2026-08-05, user decision): reverts IMPL_PLAN_SH11
  * §2's viewer-local-time basis back to a fixed UTC (both the weekday
- * grouping and the column time-of-day labels).
+ * grouping and the column time-of-day labels). §4: rows are ordered
+ * Thu-first (see `WEEKDAY_ORDER` above) so the top-left cell is Thu 00:00
+ * UTC.
  */
 export default function WeekdayHeatmap({ series }) {
   const { t, language } = useTranslation();
