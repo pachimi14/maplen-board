@@ -32,35 +32,100 @@ describe("buildWeekdayHeatmap: shape", () => {
   });
 });
 
-describe("buildWeekdayHeatmap: UTC-basis grouping", () => {
-  it("2026-03-08 is a Sunday (UTC): a 00:00 point lands in weekdayIndex=0, bucketSlot=0", () => {
+// IMPL_PLAN_SH18 §4 (2026-08-05, user decision, reverses design §8): a
+// point is now grouped by its bucket's *end* weekday/hour, not its start
+// (`date` is still a bucket-start ISO instant -- only the grouping key
+// derived from it shifted by +4h). Every case below is the direct "+4h"
+// re-derivation of the pre-SH18 assertions this replaces -- see the
+// dedicated "1枠ずれ" cross-check describe block further down for a
+// machine confirmation that the *old* algorithm's cell and the *new*
+// algorithm's shifted cell hold the exact same data.
+describe("buildWeekdayHeatmap: UTC-basis grouping, keyed by bucket END (IMPL_PLAN_SH18 §4)", () => {
+  it("2026-03-08 is a Sunday (UTC): a 00:00-start point (bucket [00:00,04:00)) lands in weekdayIndex=0 (still Sun), bucketSlot=1 (04:00)", () => {
     const { cells } = buildWeekdayHeatmap([point("2026-03-08T00:00:00Z", 100)]);
-    const cell = cells.find((c) => c.weekdayIndex === 0 && c.bucketSlot === 0);
+    const cell = cells.find((c) => c.weekdayIndex === 0 && c.bucketSlot === 1);
     expect(cell.n).toBe(1);
     expect(cell.median).toBe(100);
   });
 
-  it("groups a 20:00 UTC point into bucketSlot=5 (floor(20/4))", () => {
+  it("a 20:00-start point (bucket [20:00,00:00)) rolls into the NEXT day's bucketSlot=0 (00:00) -- the midnight-crossing case", () => {
+    // 2026-03-08 is a Sunday; the bucket [20:00,00:00) ends Monday 00:00.
     const { cells } = buildWeekdayHeatmap([point("2026-03-08T20:00:00Z", 100)]);
-    const cell = cells.find((c) => c.weekdayIndex === 0 && c.bucketSlot === 5);
+    const cell = cells.find((c) => c.weekdayIndex === 1 && c.bucketSlot === 0);
     expect(cell.n).toBe(1);
   });
 
-  it("groups every one of the 6 fixed UTC slots to its own bucketSlot (00/04/08/12/16/20)", () => {
+  it("groups every one of the 6 fixed UTC slots to its own bucketSlot (each point's end, 04/08/12/16/20/next-00)", () => {
     const points = [0, 4, 8, 12, 16, 20].map((h) => point(`2026-03-08T${String(h).padStart(2, "0")}:00:00Z`, 100));
     const { cells } = buildWeekdayHeatmap(points);
-    for (let bucketSlot = 0; bucketSlot < 6; bucketSlot++) {
+    // the first 5 (starts 00/04/08/12/16) end same-day at slots 1..5;
+    // the last (start 20) ends next-day (Monday, weekdayIndex=1) at slot 0.
+    for (let bucketSlot = 1; bucketSlot <= 5; bucketSlot++) {
       const cell = cells.find((c) => c.weekdayIndex === 0 && c.bucketSlot === bucketSlot);
       expect(cell.n).toBe(1);
     }
+    const rolledOver = cells.find((c) => c.weekdayIndex === 1 && c.bucketSlot === 0);
+    expect(rolledOver.n).toBe(1);
+  });
+});
+
+// IMPL_PLAN_SH18 §6/(d): "★ヒートマップの1枠ずれを機械確認: 新しい
+// [木][00:00] の中央値と件数が、旧実装の [水][20:00] と一致することを示す".
+// `oldBuildWeekdayHeatmap` below is `buildWeekdayHeatmap` as it existed
+// before this plan (grouping by bucket *start*, not end) -- reproduced here
+// only to cross-check against the current (post-SH18) implementation on
+// the exact same input, never imported/used by any production code.
+function oldBuildWeekdayHeatmap(series) {
+  const cellGroups = new Map();
+  for (const p of series) {
+    if (p?.provisional || p?.expected == null) continue;
+    const date = new Date(p.date);
+    if (Number.isNaN(date.getTime())) continue;
+    const weekdayIndex = date.getUTCDay();
+    const bucketSlot = Math.floor(date.getUTCHours() / 4);
+    const key = `${weekdayIndex}-${bucketSlot}`;
+    if (!cellGroups.has(key)) cellGroups.set(key, []);
+    cellGroups.get(key).push(p.expected);
+  }
+  return cellGroups;
+}
+
+describe("IMPL_PLAN_SH18 (d): the new [Thu][00:00] cell == the old [Wed][20:00] cell (1枠ずれ, machine-confirmed)", () => {
+  it("same n and median for a mixed multi-week series of Wed-20:00-start buckets", () => {
+    // 2026-03-04, 2026-03-11, 2026-03-18 are all Wednesdays (UTC).
+    const series = [
+      point("2026-03-04T20:00:00Z", 100e6),
+      point("2026-03-11T20:00:00Z", 300e6),
+      point("2026-03-18T20:00:00Z", 200e6),
+      // noise in an unrelated cell, to prove this isn't vacuously matching everything:
+      point("2026-03-05T00:00:00Z", 999e6),
+    ];
+
+    const oldGroups = oldBuildWeekdayHeatmap(series);
+    const oldWedTwenty = oldGroups.get("3-5") ?? []; // weekdayIndex=3 (Wed), bucketSlot=5 (20:00)
+
+    const { cells } = buildWeekdayHeatmap(series);
+    const newThuZero = cells.find((c) => c.weekdayIndex === 4 && c.bucketSlot === 0); // Thu, 00:00
+
+    expect(oldWedTwenty.length).toBeGreaterThan(0); // sanity: the old cell is non-empty
+    expect(newThuZero.n).toBe(oldWedTwenty.length);
+    const oldSorted = [...oldWedTwenty].sort((a, b) => a - b);
+    const oldMedian =
+      oldSorted.length % 2 === 1
+        ? oldSorted[Math.floor(oldSorted.length / 2)]
+        : (oldSorted[oldSorted.length / 2 - 1] + oldSorted[oldSorted.length / 2]) / 2;
+    expect(newThuZero.median).toBe(oldMedian);
+    expect(newThuZero.n).toBe(3);
+    expect(newThuZero.median).toBe(200e6);
   });
 });
 
 describe("buildWeekdayHeatmap: exclusions (plan §3-1/(f) -- SH-7's regulation carried through)", () => {
   it("excludes a provisional point from both n and the median", () => {
+    // IMPL_PLAN_SH18 §4: a 00:00-start bucket ends 04:00 same day -> bucketSlot=1.
     const points = [point("2026-03-08T00:00:00Z", 100), point("2026-03-15T00:00:00Z", 999999, { provisional: true })];
     const { cells } = buildWeekdayHeatmap(points);
-    const cell = cells.find((c) => c.weekdayIndex === 0 && c.bucketSlot === 0);
+    const cell = cells.find((c) => c.weekdayIndex === 0 && c.bucketSlot === 1);
     expect(cell.n).toBe(1);
     expect(cell.median).toBe(100);
   });
@@ -68,7 +133,7 @@ describe("buildWeekdayHeatmap: exclusions (plan §3-1/(f) -- SH-7's regulation c
   it("excludes a point whose expected is null (a missing-data gap, design §9.1)", () => {
     const points = [point("2026-03-08T00:00:00Z", 100), point("2026-03-15T00:00:00Z", null)];
     const { cells } = buildWeekdayHeatmap(points);
-    const cell = cells.find((c) => c.weekdayIndex === 0 && c.bucketSlot === 0);
+    const cell = cells.find((c) => c.weekdayIndex === 0 && c.bucketSlot === 1);
     expect(cell.n).toBe(1);
   });
 
@@ -87,16 +152,17 @@ describe("buildWeekdayHeatmap: exclusions (plan §3-1/(f) -- SH-7's regulation c
 
 describe("median (representative value, not average -- plan §3-1: 'スパイクに引きずられないため')", () => {
   it("uses the middle value for an odd-length cell", () => {
+    // IMPL_PLAN_SH18 §4: a 00:00-start bucket ends 04:00 same day -> bucketSlot=1.
     const points = [10, 20, 30].map((v) => point("2026-03-08T00:00:00Z", v * 1e6));
     const { cells } = buildWeekdayHeatmap(points);
-    const cell = cells.find((c) => c.weekdayIndex === 0 && c.bucketSlot === 0);
+    const cell = cells.find((c) => c.weekdayIndex === 0 && c.bucketSlot === 1);
     expect(cell.median).toBe(20e6);
   });
 
   it("averages the two middle values for an even-length cell", () => {
     const points = [10, 20, 30, 1000].map((v) => point("2026-03-08T00:00:00Z", v * 1e6));
     const { cells } = buildWeekdayHeatmap(points);
-    const cell = cells.find((c) => c.weekdayIndex === 0 && c.bucketSlot === 0);
+    const cell = cells.find((c) => c.weekdayIndex === 0 && c.bucketSlot === 1);
     // sorted: 10,20,30,1000 -> (20+30)/2 = 25, not skewed by the 1000 spike
     // the way an average (265) would be.
     expect(cell.median).toBe(25e6);
