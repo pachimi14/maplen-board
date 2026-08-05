@@ -409,7 +409,8 @@
       "searchPlaceholder": "Tìm theo tên vật phẩm hoặc Item ID",
       "noMatch": "Không tìm thấy trang bị phù hợp",
       "maxStarBadge": "tối đa ☆{{maxStar}}",
-      "loadError": "Không thể tải danh sách trang bị. Vui lòng tải lại sau."
+      "loadError": "Không thể tải danh sách trang bị. Vui lòng tải lại sau.",
+      "groupSharedNote": "Chi phí nâng cấp dùng chung cho cả nhóm này (vật phẩm đại diện: {{representativeName}})."
     },
     "starRange": {
       "startLabel": "Bắt đầu ☆",

@@ -42,6 +42,28 @@ def test_build_item_list_items_have_no_duplicate_ids_and_self_inclusive_aliases(
 
 
 @pytest.mark.skipif(not SOURCE_REPO_EXISTS, reason="maplenEnhancebot not present on this machine")
+def test_build_item_list_aliases_cover_all_alias_ids_with_real_names() -> None:
+    """IMPL_PLAN_SH9 §3-1/(b): 186 total aliases across the 28 groups, every
+    one with a name resolved from maplenEnhancebot's catalog (never a bare
+    stringified itemId -- that fallback exists in the code for future data
+    drift, not for today's known 28 groups)."""
+    payload = gen_item_list.build_item_list()
+    total_aliases = 0
+    for item in payload["items"]:
+        alias_ids_by_id = {a["itemId"] for a in item["aliases"]}
+        assert alias_ids_by_id == set(item["aliasItemIds"])
+        assert item["itemId"] in alias_ids_by_id  # representative included, plan §3-1
+        for alias in item["aliases"]:
+            assert alias["itemName"], alias
+            assert alias["itemName"] != str(alias["itemId"]), (
+                f"itemId {alias['itemId']} fell back to its raw id -- "
+                "no catalog name resolved (plan §3-1 acceptance (b))"
+            )
+        total_aliases += len(item["aliases"])
+    assert total_aliases == 186
+
+
+@pytest.mark.skipif(not SOURCE_REPO_EXISTS, reason="maplenEnhancebot not present on this machine")
 def test_build_item_list_records_source_commit() -> None:
     payload = gen_item_list.build_item_list()
     assert len(payload["sourceCommit"]) == 40  # full git SHA

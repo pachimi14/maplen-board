@@ -28,8 +28,16 @@ ITEMS: dict[str, Any] = {
     "sourceCommit": "abc",
     "excluded": [{"itemId": 1113282, "reason": "test reason"}],
     "items": [
-        {"itemId": 1001, "itemName": "Full 22", "aliasItemIds": [1001, 1099]},
-        {"itemId": 1002, "itemName": "Capped 20", "aliasItemIds": [1002]},
+        {
+            "itemId": 1001,
+            "itemName": "Full 22",
+            "aliasItemIds": [1001, 1099],
+            "aliases": [
+                {"itemId": 1001, "itemName": "Full 22"},
+                {"itemId": 1099, "itemName": "Full 22 Alias"},
+            ],
+        },
+        {"itemId": 1002, "itemName": "Capped 20", "aliasItemIds": [1002], "aliases": [{"itemId": 1002, "itemName": "Capped 20"}]},
     ],
 }
 
@@ -106,6 +114,36 @@ def test_equipment_reports_data_derived_max_star(_env: Path) -> None:
     assert by_id[1002]["maxStar"] == 20
     assert body["excluded"] == ITEMS["excluded"]
     assert by_id[1001]["aliasItemIds"] == [1001, 1099]
+    # IMPL_PLAN_SH9 §3-2: `aliases` (itemId + itemName) passes straight
+    # through from data/sf_history_items.json, unmodified.
+    assert by_id[1001]["aliases"] == ITEMS["items"][0]["aliases"]
+    assert by_id[1002]["aliases"] == ITEMS["items"][1]["aliases"]
+
+
+def test_equipment_aliases_defaults_to_empty_list_for_stale_items_json(
+    _env: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A data/sf_history_items.json generated before SH9 has no `aliases`
+    key at all -- the response must not crash, just omit alias names."""
+    items_path = tmp_path / "stale_items.json"
+    items_path.write_text(
+        json.dumps(
+            {
+                "generatedAt": "2026-08-05T00:00:00Z",
+                "sourceRepo": "maplenEnhancebot",
+                "sourceCommit": "abc",
+                "excluded": [],
+                "items": [{"itemId": 1001, "itemName": "Full 22", "aliasItemIds": [1001, 1099]}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("SF_HISTORY_ITEMS_PATH", str(items_path))
+    app_module._items_cache = None
+    app_module._items_cache_key = None
+    response = app_module.equipment(_request())
+    body = json.loads(response.body)
+    assert body["items"][0]["aliases"] == []
 
 
 def test_prices_unknown_item_id_is_404(_env: Path) -> None:

@@ -409,7 +409,8 @@
       "searchPlaceholder": "Search by item name or item ID",
       "noMatch": "No matching equipment found",
       "maxStarBadge": "up to ☆{{maxStar}}",
-      "loadError": "Could not load the equipment list. Please reload later."
+      "loadError": "Could not load the equipment list. Please reload later.",
+      "groupSharedNote": "Enhancement cost is shared across this group (representative item: {{representativeName}})."
     },
     "starRange": {
       "startLabel": "Start ☆",
