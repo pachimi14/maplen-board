@@ -184,12 +184,23 @@ export default function SfHistoryRoot() {
         ) : selectedItem && isRangeReady(range) ? (
           <>
             <div className="flex flex-wrap items-end gap-6">
-              <EquipmentSelector
-                items={equipmentState.items}
-                selectedItemId={selectedAlias?.itemId ?? selectedItemId}
-                selectedItemName={selectedAlias?.itemName ?? selectedItem.itemName}
-                onSelect={handleSelectEquipment}
-              />
+              <div className="flex flex-col gap-2">
+                <EquipmentSelector
+                  items={equipmentState.items}
+                  selectedItemId={selectedAlias?.itemId ?? selectedItemId}
+                  selectedItemName={selectedAlias?.itemName ?? selectedItem.itemName}
+                  onSelect={handleSelectEquipment}
+                />
+                {/* IMPL_PLAN_SH10 §2: directly under the equipment selector
+                    (not after the star-range preset row below). Content,
+                    i18n key, and the alias-only visibility condition are
+                    unchanged from SH-9 -- position only. */}
+                {isAliasSelection ? (
+                  <p className="sfh-group-shared-note">
+                    {t("sfhistory.equipment.groupSharedNote", { representativeName: selectedItem.itemName })}
+                  </p>
+                ) : null}
+              </div>
               <StarRangeSelector
                 maxStar={selectedItem.maxStar}
                 startStar={range.startStar}
@@ -197,12 +208,6 @@ export default function SfHistoryRoot() {
                 onChange={setRange}
               />
             </div>
-
-            {isAliasSelection ? (
-              <p className="sfh-group-shared-note">
-                {t("sfhistory.equipment.groupSharedNote", { representativeName: selectedItem.itemName })}
-              </p>
-            ) : null}
 
             <PeriodTabs value={period} onChange={setPeriod} />
 
