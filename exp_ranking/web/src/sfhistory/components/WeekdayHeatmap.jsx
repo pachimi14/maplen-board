@@ -31,6 +31,19 @@ const LOW_N_THRESHOLD = 5; // plan §3-3: "n が少ないセルは視覚的に�
  * grouping and the column time-of-day labels). §4: rows are ordered
  * Thu-first (see `WEEKDAY_ORDER` above) so the top-left cell is Thu 00:00
  * UTC.
+ *
+ * IMPL_PLAN_SH18 §4 (2026-08-05, user decision, reverses design §8):
+ * `buildWeekdayHeatmap` now keys each cell by its bucket's *end* weekday/
+ * hour rather than its start (same reasoning as the chart's
+ * `bucketDisplayDate` -- the stored value is really the bucket's last
+ * instant). A `水 20:00–木 00:00` bucket now lands in the `木`/`00:00`
+ * cell, not `水`/`20:00`. This component's own row order (`WEEKDAY_ORDER`,
+ * still Thu-first) and column set (still the fixed 00/04/08/12/16/20
+ * UTC values) are unchanged by this -- only *which* cell a given bucket's
+ * data lands in shifted by one column/row, which is exactly what keeps
+ * the top-left cell "Thu 00:00 UTC" meaning "the bucket ending at Thu
+ * 00:00 UTC" (i.e. the `水 20:00–木 00:00` bucket) rather than "the bucket
+ * starting at Thu 00:00 UTC".
  */
 export default function WeekdayHeatmap({ series }) {
   const { t, language } = useTranslation();

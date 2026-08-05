@@ -20,9 +20,25 @@
 // `getUTCHours` read the grouping key directly. `buildWeekdayHeatmap` no
 // longer takes a `timeZone` argument; there is nothing left to parameterize.
 
+// IMPL_PLAN_SH18 §4 (2026-08-05, user decision, reverses design §8): a
+// point's `date` is still the bucket's own *start* (server/DB convention,
+// unchanged -- SH-18 plan §2 "サーバー・DB は触らない"), but the grid now
+// groups each point by its bucket's *end* weekday/hour, not its start --
+// the same "the value is really the bucket's last instant" reasoning
+// `domain/format.js`'s `bucketDisplayDate` applies to the chart. A point at
+// `date="...T20:00:00Z"` (Wed) now lands under Thursday's `00:00` column,
+// not Wednesday's `20:00` one -- see `WeekdayHeatmap.jsx`'s own note on why
+// this makes the top-left cell "Thu 00:00 UTC". No future-time guard is
+// needed here the way `bucketDisplayDate` needs one for the chart's
+// still-open point: this function already excludes every `provisional`
+// point below (SH-7's regulation), so every point reaching the `+4h` shift
+// is a *confirmed*, already-persisted bucket -- its end is necessarily
+// already in the past.
+
 const WEEKDAY_COUNT = 7; // Sun..Sat
 const BUCKET_COUNT = 6; // 4h buckets (design §9), same cadence series.js uses
 const HOURS_PER_BUCKET = 24 / BUCKET_COUNT; // 4
+const BUCKET_MS = HOURS_PER_BUCKET * 60 * 60 * 1000;
 
 function median(values) {
   const sorted = [...values].sort((a, b) => a - b);
@@ -39,26 +55,33 @@ function median(values) {
  *   (weekday 0..6, each with bucketSlot 0..5) -- `{ weekdayIndex,
  *   bucketSlot, median, n, values }`. An empty cell (`n === 0`) still gets
  *   an entry (`median: null`) so the grid is always fully rectangular.
- *   `weekdayIndex` matches `Date#getUTCDay()` (0=Sun..6=Sat); which order the
+ *   `weekdayIndex`/`bucketSlot` are keyed by each point's bucket *end*
+ *   (IMPL_PLAN_SH18 §4), so `weekdayIndex` matches
+ *   `Date#getUTCDay()` of `date + 4h`, not of `date` itself; which order the
  *   caller *displays* those 7 rows in (IMPL_PLAN_SH14 §4: Thu-first) is a
  *   presentation concern of `WeekdayHeatmap.jsx`, not of this aggregation.
  * - `columns`: exactly `BUCKET_COUNT` (=6) entries describing each
  *   `bucketSlot`'s column header, `{ bucketSlot, hour, minute }` -- always
  *   `hour: bucketSlot * 4, minute: 0` (IMPL_PLAN_SH14 §4: a fixed UTC
  *   00/04/08/12/16/20, never derived from which points happened to be
- *   observed -- unlike SH-11's local-time columns, a UTC bucket's start time
- *   is already fully determined by its `bucketSlot`, data or no data).
+ *   observed). IMPL_PLAN_SH18 §4: this is now the bucket's *end* hour, not
+ *   its start -- the same fixed 6-value set either way, just naming what a
+ *   column now groups by.
  */
 export function buildWeekdayHeatmap(series) {
   const cellGroups = new Map(); // `${weekdayIndex}-${bucketSlot}` -> number[]
 
   for (const point of series) {
     if (point?.provisional || point?.expected == null) continue;
-    const date = new Date(point.date);
-    if (Number.isNaN(date.getTime())) continue;
+    const start = new Date(point.date);
+    if (Number.isNaN(start.getTime())) continue;
+    // IMPL_PLAN_SH18 §4: group by the bucket's *end*, not its start -- see
+    // the file-header note above for why this needs no future-time guard
+    // (every point here is already `!provisional`, i.e. confirmed/past).
+    const end = new Date(start.getTime() + BUCKET_MS);
 
-    const weekdayIndex = date.getUTCDay();
-    const bucketSlot = Math.floor(date.getUTCHours() / HOURS_PER_BUCKET);
+    const weekdayIndex = end.getUTCDay();
+    const bucketSlot = Math.floor(end.getUTCHours() / HOURS_PER_BUCKET);
     const key = `${weekdayIndex}-${bucketSlot}`;
     if (!cellGroups.has(key)) cellGroups.set(key, []);
     cellGroups.get(key).push(point.expected);
