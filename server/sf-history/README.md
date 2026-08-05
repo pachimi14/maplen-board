@@ -22,7 +22,7 @@ aggregate.py                         SH-3 §3: deterministic hourly -> 4h deriva
 fetch_latest.py                      SH-3 §5 / SH-7 §2: TTL (default 300s), single-flight `enhance-price/latest` proxy (design §6)
 app.py                               SH-3 §4: FastAPI app (health / equipment / prices / latest)
 scripts/gen_item_list.py             generates data/sf_history_items.json (reads maplenEnhancebot, read-only)
-scripts/backfill.py                  resumable backfill: 28 items x itemUpgrade 0..21 x ~150 days
+scripts/backfill.py                  resumable backfill: 30 items x itemUpgrade 0..21 x ~150 days (SH-22: 28 + 2)
 scripts/rebuild_4h.py                full, deterministic rebuild of sf_price_history_4h
 scripts/update.py                    4-hourly differential fetch + incremental 4h re-derivation (design §5.2)
 scripts/audit_high_star_plateau.py   design §9.2: do the ☆20/☆21 end_price series match exactly?
@@ -99,7 +99,7 @@ python scripts/update.py
 
 ```text
 GET /sf-history/health                liveness check
-GET /sf-history/equipment             28-item list + aliasItemIds + aliases (itemId+itemName per group
+GET /sf-history/equipment             30-item list (SH-22: 28 + 2) + aliasItemIds + aliases (itemId+itemName per group
                                        member, IMPL_PLAN_SH9 §3-2) + data-derived maxStar (design §7.1)
 GET /sf-history/prices?itemId=        4h series, up to 150 days, 22-wide prices[] per point (null = missing).
                                        IMPL_PLAN_SH13 §2-2 (supersedes SH-7's "one trailing point"): the rule is
@@ -212,7 +212,8 @@ All HTTP requests -- including any ad-hoc/manual checks -- must go through
 
 - sequential (no concurrency), >=1.0s between requests
 - request budget: 700 per process run (616 = 28 items x 22 upgrades, plus
-  retry headroom)
+  retry headroom; SH-22's 2 additions add 44 more requests, still well under
+  budget)
 - HTTP 429: exponential backoff (5s / 15s / 45s) and retry the same request;
   3 consecutive 429s, or more than 5 total 429s in one run, raise and stop
   the whole backfill
