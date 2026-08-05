@@ -28,7 +28,7 @@ class FakeSession:
         self.calls: list[dict[str, Any]] = []
         self.lock_calls = 0
 
-    def get(self, url: str, params: dict[str, Any], timeout: float, headers: dict[str, str]) -> FakeResponse:
+    def get(self, url: str, params: dict[str, Any] | None = None, timeout: float = 0, headers: dict[str, str] | None = None) -> FakeResponse:
         self.calls.append({"url": url, "params": params, "timeout": timeout, "headers": headers})
         return self._responder(params)
 
@@ -41,6 +41,28 @@ def _star_force_payload(prices_by_upgrade: dict[int, float], latest_updated_at: 
             for upgrade, price in prices_by_upgrade.items()
         ],
     }
+
+
+def _openapi_payload(
+    prices_by_upgrade: dict[int, float], start_dates: dict[int, str] | None = None
+) -> dict[str, Any]:
+    """IMPL_PLAN_SH23 §0/§3-1: shape of `openapi.msu.io/.../dynamicprice`'s
+    body -- `data.currentPrices.starforce` is a string-keyed object, and each
+    entry's price is itself a *string* (large integer, NESO * 1e18)."""
+    start_dates = start_dates or {}
+    starforce = {
+        str(upgrade): {
+            "currentPrice": {
+                "startDate": start_dates.get(upgrade, "2026-08-05T11:53:00Z"),
+                "endDate": "2026-08-05T11:54:00Z",
+                "createDate": "2026-08-05T11:53:49Z",
+                "price": str(int(price * fetch_latest.PRICE_DIVISOR)),
+                "step": "STEP_TYPE_CHANGE",
+            }
+        }
+        for upgrade, price in prices_by_upgrade.items()
+    }
+    return {"data": {"currentPrices": {"starforce": starforce}}}
 
 
 def _fixed_wall_clock(dt: datetime):
@@ -62,6 +84,91 @@ def test_parse_latest_payload_ignores_upgrade_22_and_above() -> None:
     payload = {"latestUpdatedAt": None, "starForce": [{"itemUpgrade": 22, "closePrice": 1}]}
     result = fetch_latest.parse_latest_payload(1, payload)
     assert result["prices"] == [None] * 22
+
+
+# --- IMPL_PLAN_SH23 §3-1: `parse_openapi_payload` -- the official Open API's
+# `data.currentPrices.starforce` shape (string keys, string prices). ---
+
+
+def test_parse_openapi_payload_converts_price_and_takes_lowest_star_start_date() -> None:
+    payload = _openapi_payload(
+        {5: 250.5, 0: 100.0},
+        start_dates={0: "2026-08-05T11:53:00Z", 5: "2026-08-05T11:59:00Z"},
+    )
+    result = fetch_latest.parse_openapi_payload(1382265, payload)
+    assert result["itemId"] == 1382265
+    assert result["prices"][0] == pytest.approx(100.0)
+    assert result["prices"][5] == pytest.approx(250.5)
+    assert result["prices"][1] is None
+    assert len(result["prices"]) == 22
+    # (b) "その価格がいつ時点のものか" -- taken from the lowest-star entry, not
+    # an arbitrary/dict-order-dependent one.
+    assert result["latestUpdatedAt"] == "2026-08-05T11:53:00Z"
+
+
+def test_parse_openapi_payload_ignores_out_of_range_and_non_numeric_star_keys() -> None:
+    """(6) "星キーは文字列で来ます。25件前提のハードコードをしない" -- keys
+    22/23/24 (>= UPGRADE_COUNT) and a non-numeric key are all ignored, never
+    extending `prices` past its fixed length of 22."""
+    payload = _openapi_payload({0: 10.0, 22: 999.0, 24: 999.0})
+    payload["data"]["currentPrices"]["starforce"]["not-a-number"] = {
+        "currentPrice": {"price": "1", "startDate": "2026-08-05T11:53:00Z"}
+    }
+    result = fetch_latest.parse_openapi_payload(1, payload)
+    assert result["prices"][0] == pytest.approx(10.0)
+    assert len(result["prices"]) == 22
+
+
+def test_parse_openapi_payload_raises_when_starforce_is_missing_or_empty() -> None:
+    with pytest.raises(fetch_latest.UpstreamLatestError):
+        fetch_latest.parse_openapi_payload(1, {"data": {"currentPrices": {}}})
+    with pytest.raises(fetch_latest.UpstreamLatestError):
+        fetch_latest.parse_openapi_payload(1, {})
+    with pytest.raises(fetch_latest.UpstreamLatestError):
+        fetch_latest.parse_openapi_payload(1, {"data": {"currentPrices": {"starforce": {}}}})
+
+
+# --- IMPL_PLAN_SH23 §3-1/§3-3: upstream dispatch -- `api_key` configured ->
+# Open API; not configured -> legacy endpoint (the fallback). ---
+
+
+def test_fetch_upstream_uses_openapi_when_api_key_is_configured() -> None:
+    session = FakeSession(lambda params: FakeResponse(200, _openapi_payload({0: 42.0})))
+    cache = fetch_latest.LatestPriceCache(session=session, api_key="test-key-not-a-real-secret")
+
+    result = cache.get(1001)
+
+    assert result["prices"][0] == pytest.approx(42.0)
+    assert cache.uses_open_api is True
+    assert len(session.calls) == 1
+    call = session.calls[0]
+    assert call["url"] == fetch_latest.OPEN_API_URL_TEMPLATE.format(item_id=1001)
+    assert call["headers"]["x-nxopen-api-key"] == "test-key-not-a-real-secret"
+    assert call["headers"]["Content-Type"] == "application/json"
+    assert call["params"] is None  # itemId is in the URL path, not a query param
+
+
+def test_fetch_upstream_uses_legacy_endpoint_when_no_api_key_is_configured() -> None:
+    session = FakeSession(lambda params: FakeResponse(200, _star_force_payload({0: 7.0})))
+    cache = fetch_latest.LatestPriceCache(session=session)  # api_key defaults to ""
+
+    result = cache.get(1001)
+
+    assert result["prices"][0] == pytest.approx(7.0)
+    assert cache.uses_open_api is False
+    call = session.calls[0]
+    assert call["url"] == fetch_latest.LATEST_URL
+    assert "x-nxopen-api-key" not in call["headers"]
+
+
+def test_uses_open_api_is_false_for_an_empty_string_api_key() -> None:
+    """An empty string (e.g. `os.getenv("MSU_OPEN_API_KEY", "")` when unset)
+    must behave exactly like not passing `api_key` at all."""
+    cache = fetch_latest.LatestPriceCache(
+        session=FakeSession(lambda params: FakeResponse(200, _star_force_payload({0: 1.0}))),
+        api_key="",
+    )
+    assert cache.uses_open_api is False
 
 
 # --- IMPL_PLAN_SH15 §4: `_compute_ttl_seconds` -- the formula and its guards,
