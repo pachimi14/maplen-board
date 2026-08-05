@@ -414,7 +414,7 @@
       "startLabel": "เริ่ม ☆",
       "targetLabel": "เป้าหมาย ☆",
       "presetsLabel": "ค่าที่ตั้งไว้ล่วงหน้า",
-      "presetDisabledHint": "อุปกรณ์นี้มีข้อมูลถึง ☆{{maxStar}} เท่านั้น"
+      "presetDisabledHint": "อุปกรณ์นี้อัปเกรดได้สูงสุด ☆{{maxStar}} จึงไม่สามารถเลือกได้"
     },
     "period": {
       "label": "ช่วงเวลา",

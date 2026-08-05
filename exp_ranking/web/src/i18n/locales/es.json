@@ -414,7 +414,7 @@
       "startLabel": "Inicio ☆",
       "targetLabel": "Objetivo ☆",
       "presetsLabel": "Preajustes",
-      "presetDisabledHint": "Este objeto solo tiene datos hasta ☆{{maxStar}}"
+      "presetDisabledHint": "Este objeto solo puede mejorarse hasta ☆{{maxStar}}, por lo que no se puede seleccionar"
     },
     "period": {
       "label": "Período",

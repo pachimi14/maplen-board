@@ -414,7 +414,7 @@
       "startLabel": "起始 ☆",
       "targetLabel": "目標 ☆",
       "presetsLabel": "預設範圍",
-      "presetDisabledHint": "此裝備僅有到 ☆{{maxStar}} 的資料"
+      "presetDisabledHint": "此裝備最高只能強化到 ☆{{maxStar}}，因此無法選擇"
     },
     "period": {
       "label": "期間",
