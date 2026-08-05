@@ -112,6 +112,32 @@ describe("buildExpectedSeries carries `asOf` through for a provisional point onl
   });
 });
 
+describe("buildExpectedSeries carries the `closed` flag through, separate from `provisional` (IMPL_PLAN_SH19 §1/§4)", () => {
+  it("defaults `closed` to true when the server omits the field (a confirmed point)", () => {
+    const points = [{ date: "2026-01-01T00:00:00Z", prices: flatPrices() }];
+    const series = buildExpectedSeries(points, 19, 21);
+    expect(series[0].closed).toBe(true);
+  });
+
+  it("an elapsed-but-unaggregated bucket is provisional:true AND closed:true (not the dashed point)", () => {
+    const points = [
+      { date: "2026-01-01T04:00:00Z", prices: flatPrices(), provisional: true, closed: true },
+    ];
+    const series = buildExpectedSeries(points, 19, 21);
+    expect(series[0].provisional).toBe(true);
+    expect(series[0].closed).toBe(true);
+  });
+
+  it("the still-open bucket is provisional:true AND closed:false (the one dashed point)", () => {
+    const points = [
+      { date: "2026-01-01T08:00:00Z", prices: flatPrices(), provisional: true, closed: false },
+    ];
+    const series = buildExpectedSeries(points, 19, 21);
+    expect(series[0].provisional).toBe(true);
+    expect(series[0].closed).toBe(false);
+  });
+});
+
 describe("computeCurrentExpected (design §6: same missing-data gating, single point)", () => {
   it("returns null (not a fallback value) when latestPrices is absent", () => {
     expect(computeCurrentExpected(null, 19, 21)).toBeNull();

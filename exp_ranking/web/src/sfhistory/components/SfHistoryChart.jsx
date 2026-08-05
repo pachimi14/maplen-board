@@ -105,26 +105,43 @@ function ChartTooltipContent({ active, payload, average, t, language }) {
   );
 }
 
-// IMPL_PLAN_SH7 §4: only the *marker* for a provisional point is drawn (a
-// hollow/open circle -- "中抜き"), never for anything else on the `bridge`
-// series (its other end is the last confirmed point, already rendered,
-// undotted, by the solid `confirmed` line below).
+// IMPL_PLAN_SH19 §1/§4: the dashed/hollow-marker treatment now keys off
+// `closed === false` (the bucket's own time window has not ended), NOT
+// `provisional` -- an elapsed-but-unaggregated bucket is `provisional: true`
+// too (domain/series.js's buildExpectedSeries carries the flag straight
+// through from app.py) but is `closed: true`, so it renders solid like any
+// confirmed point. This is what keeps the dashed segment down to always
+// exactly ONE point (the still-open bucket): before this plan, both an
+// elapsed-but-unaggregated bucket AND the still-open bucket were
+// `provisional: true`, which could draw two separate dashed segments (the
+// bug SH-19 fixes -- see app.py's own §1/§3 comment for the full
+// `closed`-vs-`provisional` rationale).
+function isOpenPoint(row) {
+  return row?.closed === false;
+}
+
+// IMPL_PLAN_SH7 §4 (updated by SH19 §4 to key off `closed`, see
+// `isOpenPoint` above): only the *marker* for the still-open point is drawn
+// (a hollow/open circle -- "中抜き"), never for anything else on the
+// `bridge` series (its other end is the last confirmed point, already
+// rendered, undotted, by the solid `confirmed` line below).
 function ProvisionalDot({ cx, cy, payload }) {
-  if (!payload?.provisional || cx == null || cy == null) return null;
+  if (!isOpenPoint(payload) || cx == null || cy == null) return null;
   return <circle cx={cx} cy={cy} r={4} fill="none" stroke="#22d3ee" strokeWidth={2} />;
 }
 
 /**
- * IMPL_PLAN_SH7 §4: derives two additional per-row columns from `series`
- * (already tagged with `provisional` by domain/series.js's
- * buildExpectedSeries) so recharts can draw "only the last confirmed point
- * -> provisional point segment is dashed" with two <Line>s sharing the same
- * category axis, rather than one line that would otherwise render that
- * final segment in the same solid style as every other segment:
+ * IMPL_PLAN_SH7 §4 (updated by SH19 §4): derives two additional per-row
+ * columns from `series` (each row now also carrying `closed`, passed
+ * through by domain/series.js's buildExpectedSeries) so recharts can draw
+ * "only the last closed point -> still-open point segment is dashed" with
+ * two <Line>s sharing the same category axis, rather than one line that
+ * would otherwise render that final segment in the same solid style as
+ * every other segment:
  *
- *   - `confirmed`: `expected`, but `null` at a provisional point -- this is
- *     what stops the solid line one point short of the provisional one.
- *   - `bridge`: `expected` at a provisional point AND at the confirmed point
+ *   - `confirmed`: `expected`, but `null` at the still-open point -- this is
+ *     what stops the solid line one point short of the open one.
+ *   - `bridge`: `expected` at the still-open point AND at the closed point
  *     immediately before it (`null` everywhere else) -- these two adjacent,
  *     non-null values are exactly the one segment a second, dashed <Line>
  *     needs to draw the connector.
@@ -143,12 +160,12 @@ function ProvisionalDot({ cx, cy, payload }) {
  */
 function withChartColumns(rows) {
   return rows.map((row, index) => {
-    const isProvisional = row.provisional === true;
-    const nextIsProvisional = rows[index + 1]?.provisional === true;
+    const isOpen = isOpenPoint(row);
+    const nextIsOpen = isOpenPoint(rows[index + 1]);
     return {
       ...row,
-      confirmed: isProvisional ? null : row.expected,
-      bridge: isProvisional || nextIsProvisional ? row.expected : null,
+      confirmed: isOpen ? null : row.expected,
+      bridge: isOpen || nextIsOpen ? row.expected : null,
       displayDate: bucketDisplayDate(row),
     };
   });
@@ -198,8 +215,9 @@ export default function SfHistoryChart({ series, average }) {
               connectNulls={false}
               isAnimationActive={false}
             />
-            {/* IMPL_PLAN_SH7 §4: dashed connector + hollow marker for the
-                last-confirmed -> provisional segment only. */}
+            {/* IMPL_PLAN_SH7 §4 (updated by SH19 §4): dashed connector +
+                hollow marker for the last-closed -> still-open segment
+                only. */}
             <Line
               type="monotone"
               dataKey="bridge"
@@ -215,7 +233,11 @@ export default function SfHistoryChart({ series, average }) {
           </LineChart>
         </ResponsiveContainer>
       </div>
-      {data.some((row) => row.provisional) ? (
+      {/* IMPL_PLAN_SH19 §1/§4: gated on `closed === false` (isOpenPoint), not
+          `provisional` -- the legend text itself ("...current, still-open
+          4-hour bucket") only describes the one still-open point, not an
+          elapsed-but-unaggregated one. */}
+      {data.some((row) => isOpenPoint(row)) ? (
         <p className="mt-1 text-xs text-slate-500">{t("sfhistory.chart.provisionalLegend")}</p>
       ) : null}
     </div>
