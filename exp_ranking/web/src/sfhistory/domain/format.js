@@ -3,25 +3,28 @@
 // style regardless of locale -- these are compact-magnitude numbers, not
 // translated text) and no DOM.
 
-/** design §2: "縦軸は 950M / 1.25B 形式の省略表示". Two significant digits
- * once the magnitude reaches 100+ of its unit (matching the spec's own
- * "950M" example, not "950.00M"); two decimals below that (matching
- * "1.25B"). */
+/** IMPL_PLAN_SH12 §3: always two decimal digits once a K/M/B unit applies
+ * (`380.12M`, `12.43B`) -- the magnitude no longer decides the decimal
+ * count (a prior "drop the decimals at >=100 of the unit" rule made
+ * `380,120,000` render as the indistinguishable-from-rounder `380M`,
+ * which is exactly what prompted this change). This only changes the
+ * *display* string: the `value` passed in is never rounded here or
+ * upstream (see `domain/weekdayStats.js` / `domain/series.js`, both
+ * untouched by this plan) -- rounding stays confined to this formatting
+ * layer, as it always has. Below 1 of the smallest unit (K), values stay
+ * a plain rounded integer (no unit, unchanged from before). */
 export function formatCompactNeso(value) {
   if (value == null || !Number.isFinite(value)) return "--";
   const sign = value < 0 ? "-" : "";
   const abs = Math.abs(value);
   if (abs >= 1e9) {
-    const scaled = abs / 1e9;
-    return `${sign}${scaled.toFixed(scaled >= 100 ? 0 : 2)}B`;
+    return `${sign}${(abs / 1e9).toFixed(2)}B`;
   }
   if (abs >= 1e6) {
-    const scaled = abs / 1e6;
-    return `${sign}${scaled.toFixed(scaled >= 100 ? 0 : 2)}M`;
+    return `${sign}${(abs / 1e6).toFixed(2)}M`;
   }
   if (abs >= 1e3) {
-    const scaled = abs / 1e3;
-    return `${sign}${scaled.toFixed(scaled >= 100 ? 0 : 2)}K`;
+    return `${sign}${(abs / 1e3).toFixed(2)}K`;
   }
   return `${sign}${Math.round(abs)}`;
 }
