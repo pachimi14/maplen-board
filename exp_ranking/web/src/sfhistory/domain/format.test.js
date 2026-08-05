@@ -238,10 +238,6 @@ describe("localTimeZone (plan §1: drives the tooltip/heatmap local display when
 });
 
 describe("formatTimeZoneLabel (plan §1/§2-1: 'UTC+9' style zone disclosure)", () => {
-  it("renders JST as UTC+9", () => {
-    expect(formatTimeZoneLabel("Asia/Tokyo", new Date("2026-08-04T00:00:00Z"))).toBe("UTC+9");
-  });
-
   it("renders UTC as UTC (no explicit +0)", () => {
     expect(formatTimeZoneLabel("UTC", new Date("2026-08-04T00:00:00Z"))).toBe("UTC");
   });
@@ -253,17 +249,74 @@ describe("formatTimeZoneLabel (plan §1/§2-1: 'UTC+9' style zone disclosure)", 
   it("falls back to the raw zone name for an unresolvable zone rather than inventing an offset", () => {
     expect(formatTimeZoneLabel("Not/AZone", new Date("2026-08-04T00:00:00Z"))).toBe("Not/AZone");
   });
+
+  it("does not throw when the zone argument is omitted (falls back to the runtime's own zone)", () => {
+    expect(typeof formatTimeZoneLabel()).toBe("string");
+  });
+
+  // IMPL_PLAN_SH31 (2026-08-06, user decision): "JST"/"KST" replace the
+  // offset form for exactly these two zones -- both DST-free and both
+  // world-wide-unique abbreviations (plan §1-3). Every other zone above
+  // keeps the pre-SH-31 offset output verbatim (plan §3/(d)).
+  describe("SH-31: JST/KST abbreviations for the two DST-free, globally-unique zones", () => {
+    it("(a) Asia/Tokyo -> JST", () => {
+      expect(formatTimeZoneLabel("Asia/Tokyo", new Date("2026-08-04T00:00:00Z"))).toBe("JST");
+    });
+
+    it("(b) Asia/Seoul -> KST", () => {
+      expect(formatTimeZoneLabel("Asia/Seoul", new Date("2026-08-04T00:00:00Z"))).toBe("KST");
+    });
+
+    it("(c) unchanged across a January and an August reference date (no DST to seasonally break the static table)", () => {
+      expect(formatTimeZoneLabel("Asia/Tokyo", new Date("2026-01-15T00:00:00Z"))).toBe("JST");
+      expect(formatTimeZoneLabel("Asia/Tokyo", new Date("2026-08-15T00:00:00Z"))).toBe("JST");
+      expect(formatTimeZoneLabel("Asia/Seoul", new Date("2026-01-15T00:00:00Z"))).toBe("KST");
+      expect(formatTimeZoneLabel("Asia/Seoul", new Date("2026-08-15T00:00:00Z"))).toBe("KST");
+    });
+
+    it("(e) Asia/Shanghai stays the offset form ('UTC+8'), never 'CST' (China/US-Central/Cuba all abbreviate to CST)", () => {
+      expect(formatTimeZoneLabel("Asia/Shanghai", new Date("2026-08-04T00:00:00Z"))).toBe("UTC+8");
+    });
+
+    it("(f) Asia/Kolkata stays the offset form ('UTC+5:30'), never 'IST' (India/Israel/Ireland all abbreviate to IST)", () => {
+      expect(formatTimeZoneLabel("Asia/Kolkata", new Date("2026-08-04T00:00:00Z"))).toBe("UTC+5:30");
+    });
+
+    // §1-4: measured (Node v22.21.0) that `Intl.DateTimeFormat(undefined, {
+    // timeZone: "Japan" }).resolvedOptions().timeZone` already normalizes
+    // to "Asia/Tokyo" (and "ROK" to "Asia/Seoul"), so the legacy alias
+    // itself is never added to `ZONE_ABBREVIATIONS` -- normalization runs
+    // first and the table only ever needs the canonical name.
+    it("(i) the legacy IANA alias 'Japan' also resolves to JST (normalized to Asia/Tokyo before the table lookup)", () => {
+      expect(formatTimeZoneLabel("Japan", new Date("2026-08-04T00:00:00Z"))).toBe("JST");
+    });
+
+    it("(i) the legacy IANA alias 'ROK' also resolves to KST (normalized to Asia/Seoul before the table lookup)", () => {
+      expect(formatTimeZoneLabel("ROK", new Date("2026-08-04T00:00:00Z"))).toBe("KST");
+    });
+  });
 });
 
 describe("formatTooltipDateLocal (plan §1: the chart tooltip's secondary local-time line)", () => {
   it("renders the same instant as formatTooltipDate, converted to the given zone, with the zone label and weekday", () => {
     // 2026-08-04T11:00:00Z + 9h -> 2026-08-04 20:00 JST, a Tuesday.
+    // IMPL_PLAN_SH31: the zone label is now the "JST" abbreviation (was
+    // "UTC+9" before this plan) -- see the ZONE_ABBREVIATIONS table above.
     expect(formatTooltipDateLocal("2026-08-04T11:00:00Z", { locale: "en", timeZone: "Asia/Tokyo" })).toBe(
-      "2026-08-04 20:00 UTC+9 (Tue)",
+      "2026-08-04 20:00 JST (Tue)",
     );
     expect(formatTooltipDateLocal("2026-08-04T11:00:00Z", { locale: "ja", timeZone: "Asia/Tokyo" })).toBe(
-      "2026-08-04 20:00 UTC+9 (火)",
+      "2026-08-04 20:00 JST (火)",
     );
+  });
+
+  // IMPL_PLAN_SH31 §3/(h): the two call sites of `formatTimeZoneLabel`
+  // (this function's zone-label suffix, and `WeekdayHeatmap.jsx:94`) must
+  // change together -- this pins the change on the `formatTooltipDateLocal`
+  // side without touching that function's own body (plan §4/stop condition
+  // 2: only `formatTimeZoneLabel`'s return value changes).
+  it("(h) the tooltip's local-time line includes the JST abbreviation for Asia/Tokyo", () => {
+    expect(formatTooltipDateLocal("2026-08-05T12:00:00Z", { timeZone: "Asia/Tokyo" })).toContain("JST");
   });
 
   it("a different timezone renders a different wall-clock time for the same instant, and never leaves the zone unlabeled", () => {
