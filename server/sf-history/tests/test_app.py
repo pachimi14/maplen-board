@@ -238,6 +238,52 @@ def test_prices_appends_a_provisional_point_from_the_shared_latest_cache(_env: P
         app_module.app.state.latest_cache = app_module._build_latest_cache()
 
 
+def test_prices_provisional_point_carries_asOf_from_latestUpdatedAt(_env: Path) -> None:
+    """IMPL_PLAN_SH8 (a)/(e): the provisional point's `asOf` is the shared
+    `latest` cache's own `latestUpdatedAt` -- the same value `/sf-history
+    /latest` returns -- never the bucket-start `date`."""
+
+    class FakeCache:
+        def get(self, item_id: int) -> dict[str, Any]:
+            return {"itemId": item_id, "latestUpdatedAt": "2026-08-05T01:40:00Z", "prices": [999.0] + [None] * 21}
+
+    app_module.app.state.latest_cache = FakeCache()
+    try:
+        response = app_module.prices(_request(), itemId="1001")
+        body = json.loads(response.body)
+        provisional_points = [p for p in body["points"] if p.get("provisional") is True]
+        assert len(provisional_points) == 1
+        assert provisional_points[0]["asOf"] == "2026-08-05T01:40:00Z"
+        assert provisional_points[0]["asOf"] != provisional_points[0]["date"]
+
+        # (b): confirmed points never carry `asOf` -- 0 of them do.
+        confirmed_points = [p for p in body["points"] if not p.get("provisional")]
+        assert all("asOf" not in p for p in confirmed_points)
+    finally:
+        app_module.app.state.latest_cache = app_module._build_latest_cache()
+
+
+def test_prices_provisional_point_omits_asOf_when_upstream_did_not_provide_one(_env: Path) -> None:
+    """IMPL_PLAN_SH8 §2-1: "無い数字を発明しない" -- if the shared cache's
+    `latestUpdatedAt` is missing/None, `asOf` must be omitted entirely, never
+    filled in with the bucket-start `date` (that fallback is exactly the
+    "looks stale" bug this slice exists to fix)."""
+
+    class FakeCache:
+        def get(self, item_id: int) -> dict[str, Any]:
+            return {"itemId": item_id, "latestUpdatedAt": None, "prices": [999.0] + [None] * 21}
+
+    app_module.app.state.latest_cache = FakeCache()
+    try:
+        response = app_module.prices(_request(), itemId="1001")
+        body = json.loads(response.body)
+        provisional_points = [p for p in body["points"] if p.get("provisional") is True]
+        assert len(provisional_points) == 1
+        assert "asOf" not in provisional_points[0]
+    finally:
+        app_module.app.state.latest_cache = app_module._build_latest_cache()
+
+
 def test_prices_has_no_provisional_point_when_the_current_bucket_is_already_confirmed(_env: Path) -> None:
     """(b): "無いときは0個" -- if a bucket already covers "now" (a fixed,
     far-future-seeded 4h row), there is nothing left to be "in progress"."""

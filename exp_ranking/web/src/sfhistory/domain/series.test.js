@@ -87,6 +87,30 @@ describe("buildExpectedSeries carries the `provisional` flag through (IMPL_PLAN_
   });
 });
 
+describe("buildExpectedSeries carries `asOf` through for a provisional point only (IMPL_PLAN_SH8 §2-2)", () => {
+  it("passes `asOf` through on the provisional point, leaving a confirmed point's asOf null", () => {
+    const points = [
+      { date: "2026-01-01T00:00:00Z", prices: flatPrices() },
+      { date: "2026-01-01T04:00:00Z", prices: flatPrices(), provisional: true, asOf: "2026-01-01T05:40:00Z" },
+    ];
+    const series = buildExpectedSeries(points, 19, 21);
+    expect(series[0].asOf).toBeNull();
+    expect(series[1].asOf).toBe("2026-01-01T05:40:00Z");
+  });
+
+  it("is null when the provisional point had no asOf (never falls back to `date`)", () => {
+    const points = [{ date: "2026-01-01T04:00:00Z", prices: flatPrices(), provisional: true }];
+    const series = buildExpectedSeries(points, 19, 21);
+    expect(series[0].asOf).toBeNull();
+  });
+
+  it("ignores a stray `asOf` on a non-provisional point (design: 確定点には asOf を付けない)", () => {
+    const points = [{ date: "2026-01-01T00:00:00Z", prices: flatPrices(), asOf: "2026-01-01T00:05:00Z" }];
+    const series = buildExpectedSeries(points, 19, 21);
+    expect(series[0].asOf).toBeNull();
+  });
+});
+
 describe("computeCurrentExpected (design §6: same missing-data gating, single point)", () => {
   it("returns null (not a fallback value) when latestPrices is absent", () => {
     expect(computeCurrentExpected(null, 19, 21)).toBeNull();

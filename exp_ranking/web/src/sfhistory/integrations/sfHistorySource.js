@@ -45,6 +45,13 @@ export function normalizeEquipmentPayload(payload) {
  * Without this pass-through the flag would be silently dropped here before
  * it ever reached the domain layer, and the provisional point would look
  * exactly like an ordinary confirmed one everywhere else in the app.
+ *
+ * IMPL_PLAN_SH8 §2-2: a provisional point may also carry `point.asOf` (the
+ * official API's own as-of timestamp for the value, distinct from `date`,
+ * the bucket-start draw position -- untouched). Passed through only when
+ * present as a non-empty string; omitted otherwise so downstream code can
+ * tell "no asOf" apart from an empty one without an extra null-vs-missing
+ * check ("無い数字を発明しない" -- never invent a fallback value here).
  */
 export function normalizePricesPayload(payload, expectedItemId) {
   if (!payload || payload.itemId !== expectedItemId || !Array.isArray(payload.points)) {
@@ -60,11 +67,17 @@ export function normalizePricesPayload(payload, expectedItemId) {
   }
   const points = payload.points
     .filter((point) => typeof point?.date === "string" && Array.isArray(point?.prices))
-    .map((point) => ({
-      date: point.date,
-      prices: point.prices.map(toFiniteOrNull),
-      provisional: point.provisional === true,
-    }));
+    .map((point) => {
+      const normalized = {
+        date: point.date,
+        prices: point.prices.map(toFiniteOrNull),
+        provisional: point.provisional === true,
+      };
+      if (typeof point.asOf === "string" && point.asOf) {
+        normalized.asOf = point.asOf;
+      }
+      return normalized;
+    });
   return {
     ok: true,
     code: "ok",
