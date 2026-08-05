@@ -11,6 +11,7 @@ from starlette.requests import Request
 import aggregate
 import app as app_module
 import db
+import fetch_latest
 
 
 def _request(origin: str | None = None) -> Request:
@@ -654,45 +655,51 @@ def test_prices_fills_a_completed_but_unaggregated_bucket_from_hourly_data(
     assert after_hash == before_hash
 
 
-def test_latest_cache_publish_interval_defaults_to_1200_seconds(monkeypatch: pytest.MonkeyPatch) -> None:
-    """IMPL_PLAN_SH15 §4: replaces the old fixed-TTL env var/test -- the
-    cache is now built from a publish interval (default 1200s = 20min) and
-    a grace period (default 60s), not a single `ttl_seconds`."""
-    monkeypatch.delenv("SF_HISTORY_LATEST_PUBLISH_INTERVAL_SECONDS", raising=False)
+def test_latest_cache_ttl_defaults_to_300_seconds(monkeypatch: pytest.MonkeyPatch) -> None:
+    """IMPL_PLAN_SH23 §3-2: supersedes IMPL_PLAN_SH15 §4's publish-interval/
+    grace pair -- the cache is built from a single fixed TTL again (default
+    300s = 5min, user-specified)."""
+    monkeypatch.delenv("SF_HISTORY_LATEST_TTL_SECONDS", raising=False)
     cache = app_module._build_latest_cache()
-    assert cache._publish_interval_seconds == 1200.0
+    assert cache._ttl_seconds == 300.0
 
 
-def test_latest_cache_publish_interval_is_overridable_via_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("SF_HISTORY_LATEST_PUBLISH_INTERVAL_SECONDS", "600")
+def test_latest_cache_ttl_is_overridable_via_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SF_HISTORY_LATEST_TTL_SECONDS", "120")
     cache = app_module._build_latest_cache()
-    assert cache._publish_interval_seconds == 600.0
+    assert cache._ttl_seconds == 120.0
 
 
-def test_latest_cache_publish_interval_falls_back_to_default_on_a_non_numeric_env_value(
+def test_latest_cache_ttl_falls_back_to_default_on_a_non_numeric_env_value(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SF_HISTORY_LATEST_TTL_SECONDS", "not-a-number")
+    cache = app_module._build_latest_cache()
+    assert cache._ttl_seconds == 300.0
+
+
+def test_latest_cache_ttl_env_override_is_still_clamped_to_the_guard_rails(monkeypatch: pytest.MonkeyPatch) -> None:
+    """plan §3-2 "上限・下限のガードは維持": an env var can configure the TTL,
+    but never past `[MIN_TTL_SECONDS, MAX_TTL_SECONDS]`."""
+    monkeypatch.setenv("SF_HISTORY_LATEST_TTL_SECONDS", "5")
+    cache = app_module._build_latest_cache()
+    assert cache._ttl_seconds == fetch_latest.MIN_TTL_SECONDS == 60.0
+
+
+# --- IMPL_PLAN_SH23 §2/§3-3: ★秘密情報 -- `MSU_OPEN_API_KEY` is read exactly
+# once, here, and only ever passed into `LatestPriceCache`. ---
+
+
+def test_build_latest_cache_falls_back_to_legacy_when_no_api_key_is_configured(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("SF_HISTORY_LATEST_PUBLISH_INTERVAL_SECONDS", "not-a-number")
+    monkeypatch.delenv("MSU_OPEN_API_KEY", raising=False)
     cache = app_module._build_latest_cache()
-    assert cache._publish_interval_seconds == 1200.0
+    assert cache.uses_open_api is False
 
 
-def test_latest_cache_grace_defaults_to_60_seconds(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("SF_HISTORY_LATEST_GRACE_SECONDS", raising=False)
+def test_build_latest_cache_uses_openapi_when_an_api_key_is_configured(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MSU_OPEN_API_KEY", "test-key-not-a-real-secret")
     cache = app_module._build_latest_cache()
-    assert cache._grace_seconds == 60.0
-
-
-def test_latest_cache_grace_is_overridable_via_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("SF_HISTORY_LATEST_GRACE_SECONDS", "90")
-    cache = app_module._build_latest_cache()
-    assert cache._grace_seconds == 90.0
-
-
-def test_latest_cache_grace_falls_back_to_default_on_a_non_numeric_env_value(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("SF_HISTORY_LATEST_GRACE_SECONDS", "not-a-number")
-    cache = app_module._build_latest_cache()
-    assert cache._grace_seconds == 60.0
+    assert cache.uses_open_api is True
 
 
 def test_latest_unknown_item_id_is_404_before_touching_cache(_env: Path) -> None:
