@@ -15,9 +15,11 @@ SOURCE_REPO_EXISTS = gen_item_list.DEFAULT_SOURCE_REPO.exists()
     not SOURCE_REPO_EXISTS,
     reason="maplenEnhancebot not present on this machine (SH-2 is a local-only tool, plan §4)",
 )
-def test_build_item_list_yields_exactly_28_items() -> None:
+def test_build_item_list_yields_exactly_30_items() -> None:
+    """SH-22: 28 priority items + 2 explicit additions (Magic Eyepatch /
+    Berserked, IMPL_PLAN_SH22 §1) -- was 28 before SH-22."""
     payload = gen_item_list.build_item_list()
-    assert len(payload["items"]) == gen_item_list.EXPECTED_ITEM_COUNT == 28
+    assert len(payload["items"]) == gen_item_list.EXPECTED_ITEM_COUNT == 30
 
 
 @pytest.mark.skipif(not SOURCE_REPO_EXISTS, reason="maplenEnhancebot not present on this machine")
@@ -60,7 +62,37 @@ def test_build_item_list_aliases_cover_all_alias_ids_with_real_names() -> None:
                 "no catalog name resolved (plan §3-1 acceptance (b))"
             )
         total_aliases += len(item["aliases"])
-    assert total_aliases == 186
+    # SH-22: 186 across the original 28 groups + 1 each for the 2 new
+    # single-item additions (Magic Eyepatch / Berserked, no aliases of their
+    # own, IMPL_PLAN_SH22 §1) = 188.
+    assert total_aliases == 188
+
+
+@pytest.mark.skipif(not SOURCE_REPO_EXISTS, reason="maplenEnhancebot not present on this machine")
+def test_build_item_list_includes_sh22_additions() -> None:
+    """IMPL_PLAN_SH22 §1/§4(a)/(c): Magic Eyepatch and Berserked are appended
+    after the priority set, each as its own single-item group (no aliases),
+    with a name resolved from the catalog (not a bare stringified itemId)."""
+    payload = gen_item_list.build_item_list()
+    by_id = {item["itemId"]: item for item in payload["items"]}
+
+    assert gen_item_list.ADDITIONAL_ITEM_IDS == {1022278, 1012632}
+    for item_id, expected_name in {1022278: "Magic Eyepatch", 1012632: "Berserked"}.items():
+        assert item_id in by_id, item_id
+        item = by_id[item_id]
+        assert item["itemName"] == expected_name
+        assert item["aliasItemIds"] == [item_id]
+        assert item["aliases"] == [{"itemId": item_id, "itemName": expected_name}]
+
+    # Appended after the priority-derived items, not merged/re-sorted into
+    # them (plan §3-1 -- keeps the diff against the existing 28 a pure
+    # append).
+    ids_in_order = [item["itemId"] for item in payload["items"]]
+    assert ids_in_order[-2:] == [1012632, 1022278]
+
+    # Additions and exclusions never target the same item (plan §3-1).
+    excluded_ids = {row["itemId"] for row in payload["excluded"]}
+    assert gen_item_list.ADDITIONAL_ITEM_IDS.isdisjoint(excluded_ids)
 
 
 @pytest.mark.skipif(not SOURCE_REPO_EXISTS, reason="maplenEnhancebot not present on this machine")

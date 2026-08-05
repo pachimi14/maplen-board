@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-05T02:48:01.585943+00:00",
+  "generatedAt": "2026-08-05T11:42:56.519737+00:00",
   "sourceRepo": "maplenEnhancebot",
   "sourceCommit": "a9f534b4d1292fd580780a22344198f46027ae38",
   "excluded": [
@@ -1192,6 +1192,34 @@
         {
           "itemId": 1592020,
           "itemName": "Arcane Umbra Ancient Bow"
+        }
+      ]
+    },
+    {
+      "itemId": 1012632,
+      "itemName": "Berserked",
+      "aliasItemIds": [
+        1012632
+      ],
+      "maxStar": null,
+      "aliases": [
+        {
+          "itemId": 1012632,
+          "itemName": "Berserked"
+        }
+      ]
+    },
+    {
+      "itemId": 1022278,
+      "itemName": "Magic Eyepatch",
+      "aliasItemIds": [
+        1022278
+      ],
+      "maxStar": null,
+      "aliases": [
+        {
+          "itemId": 1022278,
+          "itemName": "Magic Eyepatch"
         }
       ]
     }

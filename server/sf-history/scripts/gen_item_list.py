@@ -13,7 +13,8 @@ Output: ``data/sf_history_items.json``
       "items": [{ "itemId": ..., "itemName": ..., "aliasItemIds": [...], "maxStar": ...,
                   "aliases": [{ "itemId": ..., "itemName": ... }, ...] }] }
 
-Accept criterion (a): ``items`` must be exactly 28 entries (IMPL_PLAN_SH2 §4/§6).
+Accept criterion (a): ``items`` must be exactly 28 entries (IMPL_PLAN_SH2 §4/§6),
+plus the 2 SH-22 additions below (30 total, IMPL_PLAN_SH22 §4(a)).
 
 ``maxStar`` (SH-3, design §7.1) is derived from ``sf_price_history_hourly``'s
 actual data (``MAX(item_upgrade) + 1``), never hardcoded -- if the backfill
@@ -46,7 +47,21 @@ import db  # noqa: E402
 DEFAULT_SOURCE_REPO = Path(r"C:\Users\pachi\Desktop\maplenEnhancebot")
 DEFAULT_OUTPUT_PATH = Path(__file__).resolve().parent.parent / "data" / "sf_history_items.json"
 DEFAULT_DB_PATH = Path(__file__).resolve().parent.parent / "data" / "sf_price_history.sqlite"
-EXPECTED_ITEM_COUNT = 28
+
+# SH-22 (2026-08-05, ユーザー指示): maplenEnhancebot の priority からは
+# EXCLUDED_REPRESENTATIVE_ITEM_IDS で除外されているが、SF 履歴では見たい2件。
+# 除外の理由はあちらのコードにコメントが無く追えない(GS-263 の3件とは別)。
+# SF 履歴が欲しい装備と SF キャッシュを温める装備は別要件、という整理で本リポ側に持つ。
+# Both are their own catalog group with no aliases (verified against
+# catalog/main_equipment.json, IMPL_PLAN_SH22 §1):
+#   1022278  Magic Eyepatch  RANGE_160_TO_169 / EYE_ACC   / BOSS_PITCHED_BOSS_SET
+#   1012632  Berserked       RANGE_160_TO_169 / FOREHEAD  / BOSS_PITCHED_BOSS_SET
+# maplenEnhancebot is read-only for this repo -- this does NOT edit
+# EXCLUDED_REPRESENTATIVE_ITEM_IDS over there, it adds these two on top of
+# whatever `load_priority_representative_item_ids()` already returns.
+ADDITIONAL_ITEM_IDS: set[int] = {1022278, 1012632}
+
+EXPECTED_ITEM_COUNT = 28 + len(ADDITIONAL_ITEM_IDS)  # SH-22: 28 priority + 2 additional = 30
 
 # SH-3 correction (IMPL_PLAN_SH3 §4(m), design §7): SH-2's implementer could
 # not find the "原案" (original draft) text this exclusion traces back to in
@@ -178,10 +193,27 @@ def build_item_list(
             name_by_item_id[int(item_id)] = item.get("item_name")
     name_by_item_id.update(EXTRA_ITEM_NAMES)
 
+    # SH-22 §3-1: append the 2 additional item ids after the priority set,
+    # not merged/re-sorted into it -- this keeps the diff against the
+    # existing 28 entries a pure append (plan §4(b)). `name_by_representative`
+    # / `representative_to_aliases` above are already keyed from the full
+    # catalog (unconditional over all groups, not just the priority-filtered
+    # ones), so both additions resolve their own name + single-item alias
+    # list without any further catalog lookups here.
+    assert ADDITIONAL_ITEM_IDS.isdisjoint(EXCLUDED_ITEM_IDS), (
+        "SH-22 ADDITIONAL_ITEM_IDS collides with EXCLUDED_ITEM_IDS -- "
+        "an addition and an exclusion can't target the same item"
+    )
+    all_representative_ids = list(representative_ids) + [
+        item_id
+        for item_id in sorted(ADDITIONAL_ITEM_IDS)
+        if item_id not in representative_ids
+    ]
+
     items: list[dict[str, Any]] = []
     excluded: list[dict[str, Any]] = []
     unresolved_names: list[int] = []
-    for representative in representative_ids:
+    for representative in all_representative_ids:
         if representative in EXCLUDED_ITEM_IDS:
             excluded.append(
                 {"itemId": representative, "reason": EXCLUDED_ITEM_IDS[representative]}
