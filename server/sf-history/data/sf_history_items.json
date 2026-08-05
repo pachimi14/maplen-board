@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-05T13:13:34.233069+00:00",
+  "generatedAt": "2026-08-05T16:22:54.676544+00:00",
   "sourceRepo": "maplenEnhancebot",
   "sourceCommit": "a9f534b4d1292fd580780a22344198f46027ae38",
   "excluded": [
@@ -1220,6 +1220,20 @@
         {
           "itemId": 1022278,
           "itemName": "Magic Eyepatch"
+        }
+      ]
+    },
+    {
+      "itemId": 1132308,
+      "itemName": "Dreamy Belt",
+      "aliasItemIds": [
+        1132308
+      ],
+      "maxStar": null,
+      "aliases": [
+        {
+          "itemId": 1132308,
+          "itemName": "Dreamy Belt"
         }
       ]
     }
