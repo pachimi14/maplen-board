@@ -54,6 +54,43 @@ html:not([data-theme-depth="deep"]) .sfh-root :is([class*="text-slate-400"], [cl
   color: var(--theme-focus) !important;
 }
 
+/* ============================================================
+   ★ 意味色 (semantic colors) はテーマ色と混ぜない -- IMPL_PLAN_SH12 §2
+   ------------------------------------------------------------
+   この画面のほとんどの色は `--theme-*`(4色テーマ切り替え)から取る。だが
+   「値が上がった/下がった」のような *意味* を伝える色だけは例外で、
+   テーマの影響を受けてはならない。
+   SH-9 のテーマ化で、この「前回比が上がった/下がった」の色分けを
+   Tailwind の `text-rose-400` / `text-emerald-400` ユーティリティ任せに
+   していたところ、`.sfh-root` の中では `text-emerald-400` に対応する
+   スタイルがそもそも生成されておらず(このリポジトリのビルドを実測して
+   確認済み)、結果として値は素通りで `--theme-focus` の色に化けていた。
+   既定のグリーンテーマでは `--theme-focus` (#34d399) がたまたま emerald
+   に近かったため誰も気づけず、青/紫/オレンジのテーマに切り替えて初めて
+   「マイナスの行が Expected と同じ色になる」というバグとして露見した
+   (GS: IMPL_PLAN_SH12)。
+   再発防止のため、上昇/下降のような意味色は必ずこの2クラスを使うこと。
+   `text-emerald-*` / `text-rose-*` のような Tailwind カラーユーティリティ
+   にも `var(--theme-*)` にも依存しないこと。
+   なお、下降色にはあえて emerald-400 (#34d399) ではなく emerald-500
+   (#10b981) を選んでいる。#34d399 はグリーンテーマの `--theme-focus` と
+   ビット同一のため、そのまま使うと「グリーンテーマでだけ意味色とテーマ色が
+   一致して見分けがつかない」という、今回と同種の罠を新たに作ってしまう
+   (4テーマ全てで `--theme-focus` と異なることが受け入れ基準)。
+   ============================================================ */
+.sfh-root {
+  --sfh-color-cheaper: #10b981; /* emerald-500 相当: 安くなった/最安 (良い方向) */
+  --sfh-color-costlier: #fb7185; /* rose-400 相当: 高くなった/最高 (悪い方向) */
+}
+
+.sfh-delta-up {
+  color: var(--sfh-color-costlier);
+}
+
+.sfh-delta-down {
+  color: var(--sfh-color-cheaper);
+}
+
 .sfh-field-label {
   font-size: 0.75rem;
   font-weight: 600;
@@ -262,14 +299,16 @@ html:not([data-theme-depth="deep"]) .sfh-heatmap-cell {
   opacity: 0.55;
 }
 
-/* plan §3-3: "最安セル・最高セルを視覚的に示す". Same emerald/rose pairing
-   `SfHistoryChart`'s tooltip already uses for "cheaper" / "costlier". */
+/* plan §3-3 / IMPL_PLAN_SH12 §2/(b): "最安セル・最高セルを視覚的に示す".
+   Same fixed, non-theme semantic colors as `.sfh-delta-up`/`.sfh-delta-down`
+   above (not a re-declared literal -- one pair of variables, reused
+   everywhere "cheaper"/"costlier" is shown). */
 .sfh-heatmap-cell-lowest {
-  box-shadow: inset 0 0 0 2px #34d399;
+  box-shadow: inset 0 0 0 2px var(--sfh-color-cheaper);
 }
 
 .sfh-heatmap-cell-highest {
-  box-shadow: inset 0 0 0 2px #fb7185;
+  box-shadow: inset 0 0 0 2px var(--sfh-color-costlier);
 }
 
 .sfh-heatmap-cell-badge {
@@ -282,9 +321,9 @@ html:not([data-theme-depth="deep"]) .sfh-heatmap-cell {
 }
 
 .sfh-heatmap-cell-badge-low {
-  color: #34d399;
+  color: var(--sfh-color-cheaper);
 }
 
 .sfh-heatmap-cell-badge-high {
-  color: #fb7185;
+  color: var(--sfh-color-costlier);
 }
