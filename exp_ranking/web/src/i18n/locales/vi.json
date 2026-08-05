@@ -4,7 +4,7 @@
   },
   "app": {
     "openDailyDashboard": "Task Manager",
-    "openSfHistory": "Lịch sử SF",
+    "openSfHistory": "Enhance History",
     "pageTitle": "Bảng xếp hạng EXP MSU",
     "pageDescription": "Xếp hạng cấp độ và lượng EXP tăng hằng ngày, tuần và tháng cho các nhân vật cấp 225 trở lên, dựa trên bảng xếp hạng MSU chính thức.",
     "metaTitle": "Lulumi Tools | Bảng xếp hạng EXP MapleStory N",
@@ -401,7 +401,7 @@
     "main30d": "T?ng 30 ng?y"
   },
   "sfhistory": {
-    "pageTitle": "Lịch sử chi phí nâng cấp StarForce",
+    "pageTitle": "Enhance History",
     "pageDescription": "Chọn một trang bị và khoảng sao để xem chi phí nâng cấp kỳ vọng đã thay đổi thế nào, và giá trị hiện tại đang ở mức nào so với lịch sử đó.",
     "loading": "Đang tải...",
     "equipment": {

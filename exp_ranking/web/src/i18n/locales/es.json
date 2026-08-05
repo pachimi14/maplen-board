@@ -4,7 +4,7 @@
   },
   "app": {
     "openDailyDashboard": "Task Manager",
-    "openSfHistory": "Historial SF",
+    "openSfHistory": "Enhance History",
     "pageTitle": "Clasificación de EXP de MSU",
     "pageDescription": "Clasificación de nivel y ganancias de EXP diarias, semanales y mensuales de personajes de nivel 225 o superior, basada en la clasificación oficial de MSU.",
     "metaTitle": "Lulumi Tools | Clasificación de EXP de MapleStory N",
@@ -401,7 +401,7 @@
     "main30d": "Ganancia 30 d?as"
   },
   "sfhistory": {
-    "pageTitle": "Historial de coste de mejora StarForce",
+    "pageTitle": "Enhance History",
     "pageDescription": "Elige un equipo y un rango de estrellas para ver cómo ha evolucionado su coste esperado de mejora y en qué nivel se sitúa el valor actual frente a ese historial.",
     "loading": "Cargando...",
     "equipment": {
