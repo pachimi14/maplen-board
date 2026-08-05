@@ -92,7 +92,9 @@ describe("normalizePricesPayload", () => {
   it("passes through points, converting non-finite prices entries to null", () => {
     const result = normalizePricesPayload(pricesPayload, 1003720);
     expect(result.ok).toBe(true);
-    expect(result.points).toEqual([{ date: "2026-03-08T00:00:00Z", prices: [1, 2, null, 4], provisional: false }]);
+    expect(result.points).toEqual([
+      { date: "2026-03-08T00:00:00Z", prices: [1, 2, null, 4], provisional: false, closed: true },
+    ]);
     expect(result.priceVersion).toBe("2026-08-05T20:00:00Z");
     expect(result.endDate).toBe("2026-08-04T16:00:00Z");
     expect(result.provisionalDate).toBeNull();
@@ -120,7 +122,34 @@ describe("normalizePricesPayload", () => {
       date: "2026-08-05T00:00:00Z",
       prices: [9, 8, 7, 6],
       provisional: true,
+      closed: true,
     });
+  });
+
+  it("IMPL_PLAN_SH19 §1/§4 (P0 regression): passes through `closed: false` for the still-open bucket -- this is the exact field the previous version of this function silently dropped, which made every point look closed and emptied the chart's dashed/bridge series", () => {
+    const payloadWithOpenBucket = {
+      ...pricesPayload,
+      points: [
+        ...pricesPayload.points,
+        { date: "2026-08-05T00:00:00Z", prices: [9, 8, 7, 6], provisional: true, closed: false, asOf: "2026-08-05T01:40:00Z" },
+      ],
+    };
+    const result = normalizePricesPayload(payloadWithOpenBucket, 1003720);
+    expect(result.points[0].closed).toBe(true); // confirmed point defaults to closed (server omits the field)
+    expect(result.points[1].closed).toBe(false); // the still-open bucket, explicitly false
+  });
+
+  it("IMPL_PLAN_SH19 §1/§4: an elapsed-but-unaggregated point (`provisional: true`, `closed: true`) keeps `closed: true` -- distinct from the still-open bucket even though both are `provisional`", () => {
+    const payloadWithElapsedUnsaved = {
+      ...pricesPayload,
+      points: [
+        ...pricesPayload.points,
+        { date: "2026-08-05T00:00:00Z", prices: [9, 8, 7, 6], provisional: true, closed: true },
+      ],
+    };
+    const result = normalizePricesPayload(payloadWithElapsedUnsaved, 1003720);
+    expect(result.points[1].provisional).toBe(true);
+    expect(result.points[1].closed).toBe(true);
   });
 
   it("IMPL_PLAN_SH8 §2-2: passes through a provisional point's `asOf`, omitting the key when absent", () => {
