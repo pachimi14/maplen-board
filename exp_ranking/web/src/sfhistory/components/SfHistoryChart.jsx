@@ -1,7 +1,14 @@
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useTranslation } from "../../i18n/I18nContext.jsx";
 import { withDeltas } from "../domain/series.js";
-import { formatAxisDate, formatCompactNeso, formatExactNeso, formatSignedCompactNeso, formatTooltipDate } from "../domain/format.js";
+import {
+  formatAxisDate,
+  formatBucketRange,
+  formatCompactNeso,
+  formatExactNeso,
+  formatSignedCompactNeso,
+  formatTooltipDate,
+} from "../domain/format.js";
 
 // IMPL_PLAN_SH14 §2 (2026-08-05, user decision): reverts IMPL_PLAN_SH11 §2's
 // viewer-local-time axis ticks / tooltip time line back to a fixed UTC --
@@ -26,22 +33,33 @@ function ChartTooltipContent({ active, payload, average, t, language }) {
   const point = payload[0]?.payload;
   if (!point || point.expected == null) return null;
   const diffFromAverage = average != null ? point.expected - average : null;
-  // IMPL_PLAN_SH16 §1/§4 (revises IMPL_PLAN_SH8): a point's `date` is now
-  // ALWAYS its own real, displayable time, for every point kind --
-  // confirmed, an elapsed-but-unaggregated bucket, the still-open bucket's
-  // own provisional point, and the live current-value point alike. There is
-  // no longer any `provisional`/`asOf` branch here: the server-side fix
-  // (app.py) is what stopped putting a bucket-start *position* under an
-  // `asOf` *label* that disagreed with it -- the live point's own `date` IS
-  // `asOf` now, so reading `point.date` unconditionally is exactly correct
-  // for it too. This is what fixes the "time missing entirely" bug SH-13's
-  // completed-but-unaggregated points used to hit here (they always had a
-  // real `date`, just never `asOf`, and the old branch showed neither).
+  // IMPL_PLAN_SH17 §4-1 (revises IMPL_PLAN_SH16's own §1/§4 fix, per the
+  // 2026-08-05 user decision): `point.asOf` is only ever present on the
+  // still-open ("未終了") bucket's point (server-side: app.py only attaches
+  // it there). When present, it is the *time* to show -- the current
+  // instant the value is as-of, even though the point's *position* stays at
+  // the bucket's own start (`point.date`, unchanged). Every other point
+  // kind (confirmed, elapsed-but-unaggregated) has no `asOf` at all, so
+  // `point.date` (their own real, displayable bucket time -- the property
+  // SH-16 fixed and this slice does not touch) is shown instead. Either way
+  // there is always a real time to show -- SH-16's "time missing entirely"
+  // fix is preserved.
   //
   // IMPL_PLAN_SH14 §2: still rendered in UTC (+ weekday) via
   // `formatTooltipDate`'s `{ locale }`, unchanged from SH8/SH14.
   const dateOptions = { locale: language };
-  const timeLabel = formatTooltipDate(point.date, dateOptions);
+  const timeLabel = formatTooltipDate(point.asOf ?? point.date, dateOptions);
+  // IMPL_PLAN_SH17 §4-2: replaces SH-7's static `tooltipBucketNote`/
+  // `tooltipProvisional` pair with the bucket's own `HH:MM–HH:MM` range,
+  // always derived from `point.date` (the bucket-start position, never
+  // `asOf`) -- this is what explains *why* the point sits where it does.
+  // `point.asOf` presence is the sole "is this still open" signal (only the
+  // unified in-progress point ever carries it, per app.py); a completed-
+  // but-unaggregated bucket (also `provisional`, but no `asOf`) gets the
+  // same plain range as a confirmed bucket -- it already fully elapsed, it
+  // just hasn't been persisted to the 4h table yet.
+  const bucketRange = formatBucketRange(point.date);
+  const isOpenBucket = point.asOf != null;
   return (
     <div className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm shadow-lg">
       {timeLabel != null ? <div className="text-slate-400">{timeLabel}</div> : null}
@@ -61,14 +79,14 @@ function ChartTooltipContent({ active, payload, average, t, language }) {
           {t("sfhistory.chart.tooltipDeltaFromAverage", { delta: formatSignedCompactNeso(diffFromAverage) })}
         </div>
       ) : null}
-      {/* IMPL_PLAN_SH7 §4: "ツールチップに「暫定値(区間未終了)」" -- shown
-          instead of (not in addition to) the confirmed-bucket note below,
-          since a provisional point is by definition not a closed bucket. */}
-      {point.provisional ? (
-        <div className="mt-1.5 text-xs text-amber-400">{t("sfhistory.chart.tooltipProvisional")}</div>
-      ) : (
-        <div className="mt-1.5 text-xs text-slate-500">{t("sfhistory.chart.tooltipBucketNote")}</div>
-      )}
+      {bucketRange != null ? (
+        <div className={`mt-1.5 text-xs ${isOpenBucket ? "text-amber-400" : "text-slate-500"}`}>
+          {t(isOpenBucket ? "sfhistory.chart.tooltipBucketRangeOpen" : "sfhistory.chart.tooltipBucketRange", {
+            start: bucketRange.start,
+            end: bucketRange.end,
+          })}
+        </div>
+      ) : null}
     </div>
   );
 }

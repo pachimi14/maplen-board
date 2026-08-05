@@ -445,8 +445,8 @@
       "legendLow": "Period low",
       "tooltipDeltaFromPrev": "vs previous {{delta}}",
       "tooltipDeltaFromAverage": "vs period average {{delta}}",
-      "tooltipBucketNote": "4-hour bar (bucket-end value)",
-      "tooltipProvisional": "Provisional (period not yet closed)",
+      "tooltipBucketRange": "{{start}}–{{end}} bar",
+      "tooltipBucketRangeOpen": "{{start}}–{{end}} bar (not yet closed)",
       "provisionalLegend": "The dashed segment is a provisional value for the current, still-open 4-hour bucket.",
       "loadError": "Could not load the price history. Please reload later.",
       "empty": "No data to display"

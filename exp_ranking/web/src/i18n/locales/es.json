@@ -445,8 +445,8 @@
       "legendLow": "Mínimo del período",
       "tooltipDeltaFromPrev": "vs anterior {{delta}}",
       "tooltipDeltaFromAverage": "vs media del período {{delta}}",
-      "tooltipBucketNote": "Barra de 4 horas (valor de cierre del intervalo)",
-      "tooltipProvisional": "Provisional (período aún no cerrado)",
+      "tooltipBucketRange": "Barra {{start}}–{{end}}",
+      "tooltipBucketRangeOpen": "Barra {{start}}–{{end}} (aún no cerrada)",
       "provisionalLegend": "El tramo discontinuo es un valor provisional del bloque de 4 horas actual, que todavía no se ha cerrado.",
       "loadError": "No se pudo cargar el historial de precios. Vuelve a intentarlo más tarde.",
       "empty": "No hay datos para mostrar"

@@ -445,8 +445,8 @@
       "legendLow": "期間安値",
       "tooltipDeltaFromPrev": "前回比 {{delta}}",
       "tooltipDeltaFromAverage": "期間平均との差 {{delta}}",
-      "tooltipBucketNote": "4時間足（区間終値）",
-      "tooltipProvisional": "暫定値（区間未終了）",
+      "tooltipBucketRange": "{{start}}–{{end}} の足",
+      "tooltipBucketRangeOpen": "{{start}}–{{end}} の足（未終了）",
       "provisionalLegend": "破線の区間は、まだ終了していない直近の4時間足の暫定値です。",
       "loadError": "価格履歴を取得できませんでした。時間をおいて再読み込みしてください。",
       "empty": "表示できるデータがありません"

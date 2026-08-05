@@ -122,6 +122,36 @@ export function formatTimestamp(isoDate, options) {
   return formatTooltipDate(isoDate, options);
 }
 
+// design §9: 4-hour buckets. Same constant `domain/series.js`'s
+// `BUCKETS_PER_DAY = 6` (24 / 4) is derived from, kept local here since this
+// function only needs the duration, not the per-day count.
+const BUCKET_HOURS = 4;
+
+/** IMPL_PLAN_SH17 §4-2: `{ start, end }` HH:MM clock-range for a
+ * bucket-start ISO date -- the bucket's own start and (start + 4h) end,
+ * both read on a UTC wall clock. Returned as separate parts (not a single
+ * pre-joined string) so each locale's `{{start}}`/`{{end}}` template
+ * (`sfhistory.chart.tooltipBucketRange`/`tooltipBucketRangeOpen`) controls
+ * its own separator/word order. This is what lets the tooltip explain *why*
+ * a point sits where it does (design's "ラベルは区間開始時刻" put the
+ * bucket-start *position* under a same-looking label before this, which is
+ * what prompted this slice -- see docs/reports/SH17_BUCKET_RANGE.md).
+ * Handles a day rollover the same way `utcDateTimeParts` already normalizes
+ * any UTC-midnight "24" ICU can emit, so a bucket starting `20:00` correctly
+ * ends at `00:00` (not `24:00`). Returns `null` for an unparsable date
+ * (never invents a range). */
+export function formatBucketRange(isoDate) {
+  const start = new Date(isoDate);
+  if (Number.isNaN(start.getTime())) return null;
+  const end = new Date(start.getTime() + BUCKET_HOURS * 60 * 60 * 1000);
+  const startParts = utcDateTimeParts(start);
+  const endParts = utcDateTimeParts(end);
+  return {
+    start: `${startParts.hour}:${startParts.minute}`,
+    end: `${endParts.hour}:${endParts.minute}`,
+  };
+}
+
 const WEEKDAY_REFERENCE_SUNDAY_UTC = Date.UTC(2023, 0, 1); // a known Sunday, UTC
 
 /** Localized short weekday name for a bare `weekdayIndex` (0=Sun..6=Sat,

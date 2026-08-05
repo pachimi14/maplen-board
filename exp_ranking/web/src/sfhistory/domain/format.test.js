@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   formatAxisDate,
+  formatBucketRange,
   formatClockTime,
   formatCompactNeso,
   formatExactNeso,
@@ -137,6 +138,23 @@ describe("weekdayShortLabel (plan §2/(b): ja/en/zh-TW/th/vi/es via Intl, no har
       }
     });
   }
+});
+
+// IMPL_PLAN_SH17 §4-2/(e): the tooltip's range note -- `{ start, end }`
+// HH:MM parts for a bucket-start ISO date, always its own start + 4h end.
+describe("formatBucketRange (IMPL_PLAN_SH17 §4-2: bucket range for the tooltip note)", () => {
+  it("returns the bucket's own start and (start + 4h) end", () => {
+    expect(formatBucketRange("2026-08-04T04:00:00Z")).toEqual({ start: "04:00", end: "08:00" });
+  });
+
+  it("(e): a bucket crossing midnight UTC renders '20:00'-'00:00', not '20:00'-'24:00'", () => {
+    expect(formatBucketRange("2026-08-04T20:00:00Z")).toEqual({ start: "20:00", end: "00:00" });
+  });
+
+  it("returns null for an unparsable date (never invents a range)", () => {
+    expect(formatBucketRange("not-a-date")).toBeNull();
+    expect(formatBucketRange(undefined)).toBeNull();
+  });
 });
 
 describe("formatClockTime (heatmap column headers)", () => {
