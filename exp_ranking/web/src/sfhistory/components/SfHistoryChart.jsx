@@ -26,22 +26,22 @@ function ChartTooltipContent({ active, payload, average, t, language }) {
   const point = payload[0]?.payload;
   if (!point || point.expected == null) return null;
   const diffFromAverage = average != null ? point.expected - average : null;
-  // IMPL_PLAN_SH8: a provisional point's `date` is only the bucket-start
-  // draw position (still needed for the x-axis -- untouched), not when the
-  // value was actually current. Showing `date` there is exactly the "looks
-  // stale" bug this slice fixes (design §2-2/§0). Show `asOf` instead for a
-  // provisional point; when it is absent, show no time line at all rather
-  // than falling back to `date` (that fallback reintroduces the same bug).
+  // IMPL_PLAN_SH16 §1/§4 (revises IMPL_PLAN_SH8): a point's `date` is now
+  // ALWAYS its own real, displayable time, for every point kind --
+  // confirmed, an elapsed-but-unaggregated bucket, the still-open bucket's
+  // own provisional point, and the live current-value point alike. There is
+  // no longer any `provisional`/`asOf` branch here: the server-side fix
+  // (app.py) is what stopped putting a bucket-start *position* under an
+  // `asOf` *label* that disagreed with it -- the live point's own `date` IS
+  // `asOf` now, so reading `point.date` unconditionally is exactly correct
+  // for it too. This is what fixes the "time missing entirely" bug SH-13's
+  // completed-but-unaggregated points used to hit here (they always had a
+  // real `date`, just never `asOf`, and the old branch showed neither).
   //
-  // IMPL_PLAN_SH14 §2: both branches render in UTC (+ weekday) via
-  // `formatTooltipDate`'s `{ locale }` -- the provisional-vs-confirmed
-  // choice of *which* ISO string to show is unchanged from SH8.
+  // IMPL_PLAN_SH14 §2: still rendered in UTC (+ weekday) via
+  // `formatTooltipDate`'s `{ locale }`, unchanged from SH8/SH14.
   const dateOptions = { locale: language };
-  const timeLabel = point.provisional
-    ? point.asOf
-      ? formatTooltipDate(point.asOf, dateOptions)
-      : null
-    : formatTooltipDate(point.date, dateOptions);
+  const timeLabel = formatTooltipDate(point.date, dateOptions);
   return (
     <div className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm shadow-lg">
       {timeLabel != null ? <div className="text-slate-400">{timeLabel}</div> : null}
