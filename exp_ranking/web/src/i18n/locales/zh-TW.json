@@ -4,6 +4,7 @@
   },
   "app": {
     "openDailyDashboard": "Task Manager",
+    "openSfHistory": "SF 歷史",
     "pageTitle": "MSU 經驗值排行榜",
     "pageDescription": "依據 MSU 官方排行榜，提供 Lv.225 以上角色的等級排名與每日、每週及每月經驗值增加量。",
     "metaTitle": "Lulumi Tools | MapleStory N 經驗值排行榜",

@@ -4,6 +4,7 @@
   },
   "app": {
     "openDailyDashboard": "Task Manager",
+    "openSfHistory": "SF履歴",
     "pageTitle": "MSU 経験値ランキング",
     "pageDescription": "MSU公式ランキングをもとに、Lv225以上のキャラクターのレベル順位と日間・週間・月間の経験値増加量を掲載しています。",
     "metaTitle": "Lulumi Tools | MapleStory N 経験値ランキング",
