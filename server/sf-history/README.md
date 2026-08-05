@@ -19,7 +19,9 @@ schema.sql                          sf_price_history_hourly + sf_history_backfil
 db.py                                connect / apply_schema / hourly + 4h read-write / progress read-write
 fetcher.py                           rate-limited, 429-backoff HTTP GET for `history` (backfill.py / update.py)
 aggregate.py                         SH-3 §3: deterministic hourly -> 4h derivation (design §9)
-fetch_latest.py                      SH-3 §5 / SH-7 §2: TTL (default 300s), single-flight `enhance-price/latest` proxy (design §6)
+fetch_latest.py                      SH-3 §5 / SH-7 §2 / IMPL_PLAN_SH23: TTL (default 300s), single-flight proxy for the
+                                      current price -- official Open API `dynamicprice` when `MSU_OPEN_API_KEY` is
+                                      configured, else the legacy unauthenticated `enhance-price/latest` (design §6)
 app.py                               SH-3 §4: FastAPI app (health / equipment / prices / latest)
 scripts/gen_item_list.py             generates data/sf_history_items.json (reads maplenEnhancebot, read-only)
 scripts/backfill.py                  resumable backfill: 30 items x itemUpgrade 0..21 x ~150 days (SH-22: 28 + 2)
@@ -131,7 +133,9 @@ GET /sf-history/prices?itemId=        4h series, up to 150 days, 22-wide prices[
                                        call fails and no hourly fallback is available; the hourly-derived
                                        elapsed-bucket points (1) are unaffected by that failure (they never call
                                        upstream at all).
-GET /sf-history/latest?itemId=        current price (official `latest` proxied, TTL default 300s, no historical fallback)
+GET /sf-history/latest?itemId=        current price (IMPL_PLAN_SH23: official Open API `dynamicprice` when
+                                       `MSU_OPEN_API_KEY` is configured, else the legacy `enhance-price/latest` --
+                                       same response shape either way; TTL default 300s, no historical fallback)
 ```
 
 `itemId` must be one of `data/sf_history_items.json`'s **representative**
@@ -168,34 +172,55 @@ itemId (and prints a warning to stderr) rather than crashing the generator.
 SF_HISTORY_DB_PATH=./data/sf_price_history.sqlite
 SF_HISTORY_ITEMS_PATH=./data/sf_history_items.json
 SF_HISTORY_ALLOWED_ORIGINS=https://lulumi-tools.com
-SF_HISTORY_LATEST_PUBLISH_INTERVAL_SECONDS=1200  # IMPL_PLAN_SH15 §4: default 1200 (20min) -- the
-                                                  # observed upstream `latestUpdatedAt` publish cadence
-                                                  # (04:00/04:20/04:40/05:00, all on a 20-min grid; 4
-                                                  # samples, not a guarantee -- see MAX_TTL_SECONDS
-                                                  # below for the safety rail if reality differs).
-SF_HISTORY_LATEST_GRACE_SECONDS=60               # IMPL_PLAN_SH15 §4: default 60 -- slack added after
-                                                  # `latestUpdatedAt + interval`, in case upstream
-                                                  # publishes a little late.
+SF_HISTORY_LATEST_TTL_SECONDS=300   # IMPL_PLAN_SH23 §3-2: default 300 (5min, user-specified: "負荷を考え").
+                                     # Clamped to [60, 1200]s regardless (fetch_latest.MIN_TTL_SECONDS /
+                                     # MAX_TTL_SECONDS -- hard-coded, non-configurable safety rails; a
+                                     # misconfigured value can never reach 0s or an absurdly long TTL).
+MSU_OPEN_API_KEY=                   # ★秘密情報 -- see "Current-price upstream & secrets" below. Read once
+                                     # at process startup; never logged, never returned in any response.
 ```
 
 Both are read once at process startup (app.py builds the `LatestPriceCache` singleton from
 them) -- changing either requires a process restart.
 
-**IMPL_PLAN_SH15 §4 (replaces SH-7 §2's fixed `SF_HISTORY_LATEST_TTL_SECONDS`)**: each cache
-entry now gets its own TTL, computed from *that response's own* `latestUpdatedAt` --
-`next_publish = latestUpdatedAt + PUBLISH_INTERVAL`, `expiry = next_publish + GRACE` -- instead
-of a single fixed TTL applied to every entry regardless of when upstream actually published. The
-old `SF_HISTORY_LATEST_TTL_SECONDS` env var is **removed outright** (not reinterpreted as an
-upper bound): the upper bound is `fetch_latest.MAX_TTL_SECONDS` (1200s / "at most 20 minutes"),
-and the lower bound is `fetch_latest.MIN_TTL_SECONDS` (60s) -- both are **hard-coded, non-
-configurable safety rails**, deliberately not exposed as env vars, so a misconfigured or future
-upstream change cannot push the cache past "always re-check within 20 minutes" or down to
-"re-checks on every single request" (the latter being this slice's most dangerous failure mode: a
-stale/old `latestUpdatedAt` must never make `expiry` land in the past).
+## Current-price upstream & secrets (IMPL_PLAN_SH23)
 
-A missing, unparsable, or future `latestUpdatedAt` never causes the cache to poll *more*
-aggressively -- it falls back to the plain `PUBLISH_INTERVAL_SECONDS` outright (no
-finer-than-usual guessing).
+`GET /sf-history/latest` (and `prices`' provisional in-progress point, which shares the same
+cache) picks its upstream once per process, by whether `MSU_OPEN_API_KEY` is set:
+
+- **configured**: the official Open API, `GET openapi.msu.io/v1rc1/enhancement/items/{itemId}/
+  dynamicprice` (`x-nxopen-api-key` header) -- republishes every **1 minute**, star 0..24
+  (string-keyed; never hardcode the key count).
+- **not configured**: the legacy, unauthenticated `enhance-price/latest` (unchanged from SH-3/
+  SH-7) -- republishes on a ~20-minute grid. This is the fallback: the service must keep working
+  before a key is provisioned in production ("本番へキーを配る前でも画面が壊れないようにする").
+
+Both parsers (`fetch_latest.parse_openapi_payload` / `parse_latest_payload`) return the exact
+same `{itemId, latestUpdatedAt, prices}` shape in the exact same units, so which upstream
+actually answered is invisible to every caller and to the response contract. Which one is in use
+is printed once, at startup, to stderr (`sf-history: current-price upstream = ...`) -- **the key
+value itself is never printed, logged, returned in any response, or written to a file**.
+
+**Why the TTL went back to a single fixed number**: IMPL_PLAN_SH15 §4 used to derive each cache
+entry's TTL from that response's own `latestUpdatedAt`, tuned for the legacy endpoint's observed
+~20-minute republish cadence. The Open API republishes every 1 minute -- deriving a TTL from its
+stamp the same way would mean re-hitting upstream on almost every request (the exact "毎リクエ
+スト上流を叩く事故" failure mode SH-15 was built to avoid, just triggered by a fresher upstream
+instead of a stale one). `SF_HISTORY_LATEST_TTL_SECONDS` (a single fixed TTL, back to SH-7's
+model) sidesteps that regardless of which upstream is configured.
+
+**Key handling, same discipline as `server/raffle-api/README.md`**:
+
+- Only ever read from the `MSU_OPEN_API_KEY` environment variable (`app.py`'s `_open_api_key()`)
+  -- never hardcoded, never committed (`.env`/fixtures/tests/docs/reports, this file included).
+- Local dev: put it in `C:\Users\<user>\.lulumi-tools\raffle-api.env` (Git-外, already used by the
+  raffle API) and source that file into the process environment before starting uvicorn. Do not
+  paste the value into shell history, `.env` inside this repo, or any web build.
+- Production: `/etc/lulumi-tools/*.env` (root-owned, `0600`), same as raffle-api. Not deployed by
+  this plan -- SH-23 only ships the code path; provisioning the key on the VPS is a separate,
+  explicit step.
+- Never sent to the browser: `/sf-history/latest`'s response never includes it (only
+  `{itemId, latestUpdatedAt, prices}`), and it is server-side-only end to end.
 
 ## Offline by design
 

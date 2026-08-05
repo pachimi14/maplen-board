@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -43,52 +44,57 @@ DISPLAY_WINDOW_DAYS = 150  # design §10: "4時間足・最大150日"
 UPGRADE_COUNT = 22  # itemUpgrade 0..21 (plan §8 condition 6)
 
 
-def _latest_publish_interval_seconds() -> float:
-    """IMPL_PLAN_SH15 §4: `SF_HISTORY_LATEST_PUBLISH_INTERVAL_SECONDS`
-    overrides `fetch_latest.DEFAULT_PUBLISH_INTERVAL_SECONDS` (1200s = the
-    observed upstream publish cadence). Read once, at cache construction
-    time -- unlike the per-request settings above, this value is baked into
-    a long-lived `LatestPriceCache` instance's own state, so re-reading the
-    env var on every request would not actually change anything after the
-    cache has already been built.
+def _latest_ttl_seconds() -> float:
+    """IMPL_PLAN_SH23 §3-2: `SF_HISTORY_LATEST_TTL_SECONDS` overrides
+    `fetch_latest.DEFAULT_TTL_SECONDS` (300s / 5min, user-specified). Read
+    once, at cache construction time -- unlike the per-request settings
+    above, this value is baked into a long-lived `LatestPriceCache`
+    instance's own state, so re-reading the env var on every request would
+    not actually change anything after the cache has already been built.
 
-    Replaces SH-7 §2's `SF_HISTORY_LATEST_TTL_SECONDS` (a single fixed TTL
-    for every entry). That variable is removed outright, not reinterpreted
-    as an upper bound: SH-15 §4-3's upper bound (`fetch_latest.
-    MAX_TTL_SECONDS`, 1200s / "最大20分") is a hard, non-configurable safety
-    rail by design, not something an env var should be able to raise past
-    the ceiling the plan calls "必ず守るガード". See README.md.
+    Supersedes IMPL_PLAN_SH15 §4's `SF_HISTORY_LATEST_PUBLISH_INTERVAL_SECONDS`
+    / `SF_HISTORY_LATEST_GRACE_SECONDS` pair (removed outright, not
+    reinterpreted): that per-stamp derivation assumed the legacy endpoint's
+    ~20-minute republish cadence, which does not hold for the Open API's
+    1-minute cadence (fetch_latest.py's "Why a fixed TTL again"). The
+    resulting TTL is still clamped to `[fetch_latest.MIN_TTL_SECONDS,
+    fetch_latest.MAX_TTL_SECONDS]` regardless of what this returns -- that
+    guard is unconditional and lives in `LatestPriceCache.__init__`, not
+    here. See README.md.
     """
-    raw = os.getenv("SF_HISTORY_LATEST_PUBLISH_INTERVAL_SECONDS")
+    raw = os.getenv("SF_HISTORY_LATEST_TTL_SECONDS")
     if not raw:
-        return fetch_latest.DEFAULT_PUBLISH_INTERVAL_SECONDS
+        return fetch_latest.DEFAULT_TTL_SECONDS
     try:
         return float(raw)
     except ValueError:
-        return fetch_latest.DEFAULT_PUBLISH_INTERVAL_SECONDS
+        return fetch_latest.DEFAULT_TTL_SECONDS
 
 
-def _latest_grace_seconds() -> float:
-    """IMPL_PLAN_SH15 §4: `SF_HISTORY_LATEST_GRACE_SECONDS` overrides
-    `fetch_latest.DEFAULT_GRACE_SECONDS` (60s slack added after
-    `latestUpdatedAt + interval`, in case upstream publishes a little late).
-    Read once, at cache construction time -- same reasoning as
-    `_latest_publish_interval_seconds` above.
+def _open_api_key() -> str:
+    """IMPL_PLAN_SH23 §2/§3-3: ★秘密情報 -- the ONLY place this service reads
+    `MSU_OPEN_API_KEY`. Read once, at cache construction time, and passed
+    straight into `LatestPriceCache` -- never logged, never returned in any
+    response, never written to a file. An unset/empty value means "no key
+    configured", which `LatestPriceCache` treats as "fall back to the legacy
+    unauthenticated endpoint" (plan §3-3: "本番へキーを配る前でも画面が
+    壊れないようにする").
     """
-    raw = os.getenv("SF_HISTORY_LATEST_GRACE_SECONDS")
-    if not raw:
-        return fetch_latest.DEFAULT_GRACE_SECONDS
-    try:
-        return float(raw)
-    except ValueError:
-        return fetch_latest.DEFAULT_GRACE_SECONDS
+    return os.getenv("MSU_OPEN_API_KEY", "")
 
 
 def _build_latest_cache() -> LatestPriceCache:
-    return LatestPriceCache(
-        publish_interval_seconds=_latest_publish_interval_seconds(),
-        grace_seconds=_latest_grace_seconds(),
+    api_key = _open_api_key()
+    # plan §3-3: "どちらを使ったかをログに1行" -- the key itself is never
+    # printed, only whether one is configured (fetcher.py's existing
+    # print(..., file=sys.stderr) convention -- this codebase does not use
+    # the `logging` module elsewhere).
+    print(
+        "sf-history: current-price upstream ="
+        f" {'openapi.msu.io (MSU_OPEN_API_KEY configured)' if api_key else 'legacy enhance-price/latest (no MSU_OPEN_API_KEY)'}",
+        file=sys.stderr,
     )
+    return LatestPriceCache(ttl_seconds=_latest_ttl_seconds(), api_key=api_key)
 
 
 app = FastAPI(title="Lulumi Tools SF price history", docs_url=None, redoc_url=None)

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import threading
 import time
-from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import pytest
@@ -63,10 +62,6 @@ def _openapi_payload(
         for upgrade, price in prices_by_upgrade.items()
     }
     return {"data": {"currentPrices": {"starforce": starforce}}}
-
-
-def _fixed_wall_clock(dt: datetime):
-    return lambda: dt
 
 
 def test_parse_latest_payload_converts_close_price_and_fills_nulls() -> None:
@@ -171,76 +166,39 @@ def test_uses_open_api_is_false_for_an_empty_string_api_key() -> None:
     assert cache.uses_open_api is False
 
 
-# --- IMPL_PLAN_SH15 §4: `_compute_ttl_seconds` -- the formula and its guards,
-# tested directly (§5(c): "失効の計算を単体テストで固定"). Every case below
-# uses a fixed `wall_clock` so the assertions never depend on the real clock. ---
+# --- IMPL_PLAN_SH23 §3-2: a fixed TTL, clamped to `[MIN_TTL_SECONDS,
+# MAX_TTL_SECONDS]` -- supersedes IMPL_PLAN_SH15 §4's per-stamp derivation
+# (see fetch_latest.py's "Why a fixed TTL again"). Every case below asserts
+# directly on `cache._ttl_seconds` -- the value is fixed at construction
+# time, so there is no formula left to exercise per-call. ---
 
 
-def _cache_with_fixed_wall_clock(now: datetime, **kwargs: Any) -> fetch_latest.LatestPriceCache:
-    return fetch_latest.LatestPriceCache(
-        session=FakeSession(lambda params: FakeResponse(200, {})),
-        wall_clock=_fixed_wall_clock(now),
-        **kwargs,
+def test_default_ttl_is_300_seconds() -> None:
+    cache = fetch_latest.LatestPriceCache(session=FakeSession(lambda params: FakeResponse(200, {})))
+    assert cache._ttl_seconds == fetch_latest.DEFAULT_TTL_SECONDS == 300.0
+
+
+def test_ttl_seconds_is_clamped_to_the_60_second_floor() -> None:
+    """plan §3-2 "上限・下限のガードは維持": a misconfigured (too-small) TTL
+    must never reach a near-0s value (the "毎リクエスト上流を叩く事故"
+    failure mode)."""
+    cache = fetch_latest.LatestPriceCache(
+        session=FakeSession(lambda params: FakeResponse(200, {})), ttl_seconds=5.0
     )
+    assert cache._ttl_seconds == fetch_latest.MIN_TTL_SECONDS == 60.0
 
 
-def test_compute_ttl_normal_case_is_interval_plus_grace_minus_elapsed() -> None:
-    """(c) normal case: a stamp published 5 minutes ago."""
-    now = datetime(2026, 8, 5, 12, 5, 0, tzinfo=timezone.utc)
-    cache = _cache_with_fixed_wall_clock(now)
-    ttl = cache._compute_ttl_seconds("2026-08-05T12:00:00Z")
-    # expiry = 12:00 + 1200s(interval) + 60s(grace) = 12:21:00 -> ttl = 12:21:00 - 12:05:00 = 960s
-    assert ttl == pytest.approx(960.0)
-
-
-def test_compute_ttl_stamp_one_hour_old_clamps_to_the_60_second_floor() -> None:
-    """(c) "スタンプが1時間前 → 下限60秒": the single most dangerous failure
-    mode this plan calls out -- a stale stamp must never drive the TTL to
-    (or past) zero, which would turn every request into an upstream hit."""
-    now = datetime(2026, 8, 5, 12, 0, 0, tzinfo=timezone.utc)
-    cache = _cache_with_fixed_wall_clock(now)
-    ttl = cache._compute_ttl_seconds("2026-08-05T11:00:00Z")  # published 1 hour ago
-    assert ttl == fetch_latest.MIN_TTL_SECONDS == 60.0
-
-
-def test_compute_ttl_missing_or_invalid_stamp_falls_back_to_the_fixed_interval() -> None:
-    """(c) "不正・欠落 → 20分": never guess a finer poll from a bad stamp."""
-    now = datetime(2026, 8, 5, 12, 0, 0, tzinfo=timezone.utc)
-    cache = _cache_with_fixed_wall_clock(now)
-    for bad_stamp in (None, "", "not-a-timestamp", 12345, {}):
-        assert cache._compute_ttl_seconds(bad_stamp) == fetch_latest.DEFAULT_PUBLISH_INTERVAL_SECONDS == 1200.0
-
-
-def test_compute_ttl_future_stamp_is_treated_like_a_missing_one() -> None:
-    """A `latestUpdatedAt` ahead of the wall clock is corrupt/untrustworthy --
-    never used to shorten the TTL below the plain fixed interval."""
-    now = datetime(2026, 8, 5, 12, 0, 0, tzinfo=timezone.utc)
-    cache = _cache_with_fixed_wall_clock(now)
-    ttl = cache._compute_ttl_seconds("2026-08-05T13:00:00Z")  # 1 hour in the future
-    assert ttl == fetch_latest.DEFAULT_PUBLISH_INTERVAL_SECONDS
-
-
-def test_compute_ttl_never_exceeds_the_20_minute_ceiling_even_if_misconfigured() -> None:
-    """(c) "どの場合も20分を超えない": `MAX_TTL_SECONDS` is a hard rail, not
-    derived from (and not raisable by) the configurable interval/grace."""
-    now = datetime(2026, 8, 5, 12, 0, 0, tzinfo=timezone.utc)
-    cache = _cache_with_fixed_wall_clock(
-        now,
-        publish_interval_seconds=6000.0,  # deliberately misconfigured (100 min)
-        grace_seconds=6000.0,
+def test_ttl_seconds_is_clamped_to_the_1200_second_ceiling() -> None:
+    cache = fetch_latest.LatestPriceCache(
+        session=FakeSession(lambda params: FakeResponse(200, {})), ttl_seconds=999999.0
     )
-    # A stamp published exactly now would otherwise compute 6000+6000=12000s.
-    assert cache._compute_ttl_seconds("2026-08-05T12:00:00Z") == fetch_latest.MAX_TTL_SECONDS == 1200.0
-    # The missing/invalid fallback path (== the configured interval) must
-    # also respect the ceiling.
-    assert cache._compute_ttl_seconds(None) == fetch_latest.MAX_TTL_SECONDS
+    assert cache._ttl_seconds == fetch_latest.MAX_TTL_SECONDS == 1200.0
 
 
 def test_ttl_bounds_are_60_to_1200_seconds() -> None:
     assert fetch_latest.MIN_TTL_SECONDS == 60.0
     assert fetch_latest.MAX_TTL_SECONDS == 1200.0
-    assert fetch_latest.DEFAULT_PUBLISH_INTERVAL_SECONDS == 1200.0
-    assert fetch_latest.DEFAULT_GRACE_SECONDS == 60.0
+    assert fetch_latest.DEFAULT_TTL_SECONDS == 300.0
 
 
 # --- `LatestPriceCache.get()` behavior (single-flight, per-itemId isolation,
@@ -250,15 +208,12 @@ def test_ttl_bounds_are_60_to_1200_seconds() -> None:
 
 
 def test_cache_returns_fresh_result_without_a_second_upstream_call() -> None:
-    """A stamp old enough that the computed TTL clamps to the 60s floor --
-    still fresh 10s later, still exactly one upstream call."""
-    now = datetime(2026, 8, 6, 0, 0, 0, tzinfo=timezone.utc)  # ~12h after the payload's stamp
     clock = {"t": 0.0}
     session = FakeSession(lambda params: FakeResponse(200, _star_force_payload({0: 10.0})))
-    cache = fetch_latest.LatestPriceCache(session=session, clock=lambda: clock["t"], wall_clock=_fixed_wall_clock(now))
+    cache = fetch_latest.LatestPriceCache(session=session, clock=lambda: clock["t"])
 
     first = cache.get(1001)
-    clock["t"] = 10.0  # well within the (floor-clamped) 60s TTL
+    clock["t"] = 10.0  # well within the default 300s TTL
     second = cache.get(1001)
 
     assert first == second
@@ -267,16 +222,31 @@ def test_cache_returns_fresh_result_without_a_second_upstream_call() -> None:
 
 
 def test_cache_refetches_after_ttl_expires() -> None:
-    now = datetime(2026, 8, 6, 0, 0, 0, tzinfo=timezone.utc)  # same floor-clamp scenario as above
     clock = {"t": 0.0}
     session = FakeSession(lambda params: FakeResponse(200, _star_force_payload({0: 10.0})))
-    cache = fetch_latest.LatestPriceCache(session=session, clock=lambda: clock["t"], wall_clock=_fixed_wall_clock(now))
+    cache = fetch_latest.LatestPriceCache(session=session, clock=lambda: clock["t"], ttl_seconds=60.0)
 
     cache.get(1001)
-    clock["t"] = 61.0  # past the (floor-clamped) 60s TTL
+    clock["t"] = 61.0  # past the (explicitly configured) 60s TTL
     cache.get(1001)
 
     assert cache.upstream_call_count == 2
+
+
+def test_upstream_is_hit_once_per_ttl_window_over_multiple_cycles() -> None:
+    """Fixed-TTL analogue of the old per-stamp "at most N calls in a window"
+    guarantee (IMPL_PLAN_SH15 §5(d)) -- with a fixed TTL there is nothing
+    upstream-stamp-dependent left to bound, but repeated polling still must
+    only re-hit upstream once per TTL window, never more."""
+    clock = {"t": 0.0}
+    session = FakeSession(lambda params: FakeResponse(200, _star_force_payload({0: 10.0})))
+    cache = fetch_latest.LatestPriceCache(session=session, clock=lambda: clock["t"], ttl_seconds=300.0)
+
+    for _ in range(40):  # 40 x 30s = 1200s = 4 full 300s TTL windows
+        cache.get(1001)
+        clock["t"] += 30.0
+
+    assert cache.upstream_call_count == 4
 
 
 def test_upstream_non_200_raises_and_is_not_cached() -> None:
@@ -354,34 +324,3 @@ def test_different_item_ids_do_not_block_each_other() -> None:
     cache.get(1002)
 
     assert cache.upstream_call_count == 2
-
-
-# --- IMPL_PLAN_SH15 §5(d): "20分の窓で同一itemIdの上流アクセスが2回を超えない" ---
-
-
-def test_at_most_two_upstream_calls_within_a_20_minute_window_under_realistic_publish_timing() -> None:
-    """Mimics real upstream behavior (the published stamp is always the
-    start of the *current* 20-minute UTC bucket as of whenever upstream is
-    actually asked -- not a value fixed for the whole test), then hammers
-    the cache every 30s for a full 20-minute window. Even though the first
-    request lands mid-bucket (worst realistic case: freshness left is less
-    than a full 20 minutes), the cache should only reach upstream once more
-    near the bucket boundary -- never more than twice total."""
-    mono = {"t": 0.0}
-    wall = {"dt": datetime(2026, 8, 5, 4, 5, 0, tzinfo=timezone.utc)}  # 5 min into the 04:00 bucket
-
-    def responder(params: dict[str, Any]) -> FakeResponse:
-        now = wall["dt"]
-        bucket_minute = (now.minute // 20) * 20
-        stamp = now.replace(minute=bucket_minute, second=0, microsecond=0)
-        return FakeResponse(200, _star_force_payload({0: 10.0}, latest_updated_at=stamp.strftime("%Y-%m-%dT%H:%M:%SZ")))
-
-    session = FakeSession(responder)
-    cache = fetch_latest.LatestPriceCache(session=session, clock=lambda: mono["t"], wall_clock=lambda: wall["dt"])
-
-    for _ in range(40):  # 40 x 30s = 1200s = 20 minutes
-        cache.get(1001)
-        mono["t"] += 30.0
-        wall["dt"] += timedelta(seconds=30)
-
-    assert cache.upstream_call_count <= 2
