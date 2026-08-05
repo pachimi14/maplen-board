@@ -43,25 +43,52 @@ DISPLAY_WINDOW_DAYS = 150  # design §10: "4時間足・最大150日"
 UPGRADE_COUNT = 22  # itemUpgrade 0..21 (plan §8 condition 6)
 
 
-def _latest_ttl_seconds() -> float:
-    """IMPL_PLAN_SH7 §2: `SF_HISTORY_LATEST_TTL_SECONDS` overrides
-    `fetch_latest.DEFAULT_TTL_SECONDS` (300s). Read once, at cache
-    construction time -- unlike the per-request settings above, the TTL is
-    baked into a long-lived `LatestPriceCache` instance's own state, so
-    re-reading the env var on every request would not actually change
-    anything after the cache has already been built.
+def _latest_publish_interval_seconds() -> float:
+    """IMPL_PLAN_SH15 §4: `SF_HISTORY_LATEST_PUBLISH_INTERVAL_SECONDS`
+    overrides `fetch_latest.DEFAULT_PUBLISH_INTERVAL_SECONDS` (1200s = the
+    observed upstream publish cadence). Read once, at cache construction
+    time -- unlike the per-request settings above, this value is baked into
+    a long-lived `LatestPriceCache` instance's own state, so re-reading the
+    env var on every request would not actually change anything after the
+    cache has already been built.
+
+    Replaces SH-7 §2's `SF_HISTORY_LATEST_TTL_SECONDS` (a single fixed TTL
+    for every entry). That variable is removed outright, not reinterpreted
+    as an upper bound: SH-15 §4-3's upper bound (`fetch_latest.
+    MAX_TTL_SECONDS`, 1200s / "最大20分") is a hard, non-configurable safety
+    rail by design, not something an env var should be able to raise past
+    the ceiling the plan calls "必ず守るガード". See README.md.
     """
-    raw = os.getenv("SF_HISTORY_LATEST_TTL_SECONDS")
+    raw = os.getenv("SF_HISTORY_LATEST_PUBLISH_INTERVAL_SECONDS")
     if not raw:
-        return fetch_latest.DEFAULT_TTL_SECONDS
+        return fetch_latest.DEFAULT_PUBLISH_INTERVAL_SECONDS
     try:
         return float(raw)
     except ValueError:
-        return fetch_latest.DEFAULT_TTL_SECONDS
+        return fetch_latest.DEFAULT_PUBLISH_INTERVAL_SECONDS
+
+
+def _latest_grace_seconds() -> float:
+    """IMPL_PLAN_SH15 §4: `SF_HISTORY_LATEST_GRACE_SECONDS` overrides
+    `fetch_latest.DEFAULT_GRACE_SECONDS` (60s slack added after
+    `latestUpdatedAt + interval`, in case upstream publishes a little late).
+    Read once, at cache construction time -- same reasoning as
+    `_latest_publish_interval_seconds` above.
+    """
+    raw = os.getenv("SF_HISTORY_LATEST_GRACE_SECONDS")
+    if not raw:
+        return fetch_latest.DEFAULT_GRACE_SECONDS
+    try:
+        return float(raw)
+    except ValueError:
+        return fetch_latest.DEFAULT_GRACE_SECONDS
 
 
 def _build_latest_cache() -> LatestPriceCache:
-    return LatestPriceCache(ttl_seconds=_latest_ttl_seconds())
+    return LatestPriceCache(
+        publish_interval_seconds=_latest_publish_interval_seconds(),
+        grace_seconds=_latest_grace_seconds(),
+    )
 
 
 app = FastAPI(title="Lulumi Tools SF price history", docs_url=None, redoc_url=None)
