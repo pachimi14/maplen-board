@@ -276,6 +276,33 @@ def test_prices_appends_a_provisional_point_from_the_shared_latest_cache(_env: P
         app_module.app.state.latest_cache = app_module._build_latest_cache()
 
 
+def test_prices_exactly_one_point_is_closed_false(_env: Path) -> None:
+    """IMPL_PLAN_SH19 §1/(a): `closed` is a SEPARATE flag from
+    `provisional` -- the confirmed points and the still-open point together
+    must have exactly ONE `closed: False` point (the still-open bucket).
+    This is the server-side half of the "破線は常に1点" acceptance
+    criterion (the frontend keys its dashed-line/hollow-marker treatment off
+    this exact flag, not `provisional`)."""
+
+    class FakeCache:
+        def get(self, item_id: int) -> dict[str, Any]:
+            return {"itemId": item_id, "latestUpdatedAt": "now", "prices": [999.0] + [None] * 21}
+
+    app_module.app.state.latest_cache = FakeCache()
+    try:
+        response = app_module.prices(_request(), itemId="1001")
+        body = json.loads(response.body)
+        open_points = [p for p in body["points"] if p.get("closed") is False]
+        assert len(open_points) == 1  # exactly one open point, ever
+        assert open_points[0]["provisional"] is True  # the still-open point is also provisional
+
+        closed_points = [p for p in body["points"] if p is not open_points[0]]
+        assert len(closed_points) == 2  # the two seeded confirmed buckets
+        assert all(p.get("closed") is True for p in closed_points)
+    finally:
+        app_module.app.state.latest_cache = app_module._build_latest_cache()
+
+
 def test_prices_provisional_point_carries_asOf_from_latestUpdatedAt(_env: Path) -> None:
     """IMPL_PLAN_SH17 §3/§1 (reverses IMPL_PLAN_SH16's "draw at asOf" fix,
     per the 2026-08-05 user decision): the still-open bucket's point is
@@ -457,6 +484,10 @@ def test_prices_has_no_provisional_point_when_the_current_bucket_is_already_conf
         body = json.loads(response.body)
         assert body["provisionalDate"] is None
         assert all(not p.get("provisional") for p in body["points"])
+        # IMPL_PLAN_SH19 §1/(a): no bucket is in progress at all here -- every
+        # point is `closed: True`, so there is zero `closed: False` points
+        # (nothing dashed on the chart).
+        assert all(p.get("closed") is True for p in body["points"])
     finally:
         app_module.app.state.latest_cache = app_module._build_latest_cache()
 
@@ -596,11 +627,20 @@ def test_prices_fills_a_completed_but_unaggregated_bucket_from_hourly_data(
         assert completed["prices"][0] == 200.0  # last hourly end_price inside that bucket
         assert "asOf" not in completed  # SH-13 §2-2: only the in-progress point ever carries asOf
         assert "current" not in completed
+        # IMPL_PLAN_SH19 §1/(a): this bucket's own window HAS ended (it is
+        # the "終了済み・未保存" case the plan fixes) -- `closed: True` even
+        # though `provisional` stays True, so the frontend renders it solid,
+        # not as a second dashed segment (the exact bug SH-19 fixes).
+        assert completed["closed"] is True
 
         assert live["date"] == current_iso  # (b): date is the bucket start, not asOf (SH-17 reverses SH-16)
         assert live["prices"][0] == 999.0
         assert live["asOf"] == "now-ish"
         assert "current" not in live  # (a): no `current: true` flag any more
+        assert live["closed"] is False  # IMPL_PLAN_SH19 §1/(a): the ONLY open point
+
+        # (a): exactly one `closed: False` point across the whole response.
+        assert sum(1 for p in body["points"] if p.get("closed") is False) == 1
 
         assert body["provisionalDate"] == current_iso  # most recent provisional point
     finally:
