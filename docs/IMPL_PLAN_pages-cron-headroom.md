@@ -3,6 +3,7 @@
 > 1計画書=1縦切りテーマ(PR-001)。
 > 承認者: ユーザー（cron 変更＝ユーザー専権事項）/ 実装: implementer / 統括が code-review + 実測で検収。
 > **これは ①-b（暫定）**。concurrency 占有の増大を解消する **①-c（待機役と実行役の分離）は別計画書**で後続。
+> **マージ順序**: 本計画が参照する LULU-066 はブランチ `docs/lulu-066-ranking-cap`（未push）にある。**そちらを先にマージ**してから本 PR を出す（計画書の参照が同一ブランチ上で解決できない状態を作らない。アドバイザー指摘）。
 
 ## 0. 目的と背景
 
@@ -44,8 +45,8 @@ GitHub のスケジューラ遅延がこのバッファを食い潰している:
 ## 2. 変わってよいもの・いけないもの
 
 **変わってよい**
-- schedule run のキュー時刻（JST 8:00 → **5:00 と 7:00 の2本**）
-- 1日の Pages schedule run 本数（1本 → 最大2本。**2本目は当日取得済みのため約20秒でスキップする no-op**）
+- schedule run のキュー時刻（JST 8:00 → **5:07 と 7:07 の2本**）
+- 1日の Pages schedule run 本数（1本 → 最大2本。**2本目は当日取得済みのため fetch せず終了する no-op**。skip 判定は `main.py` 内のため checkout〜pip は走り、所要は約20秒でなく**数分**）
 - **build ジョブの実行時間が最大 約4.5時間になる**（待機が長くなるため）
 - **`maplen-board-pages` concurrency group の占有時間が 約30分 → 約3.5〜4時間**（JST 約5:58〜9:30）。**①-b が意図的に払うコスト**で、①-c で回収する
 
@@ -64,28 +65,38 @@ GitHub のスケジューラ遅延がこのバッファを食い潰している:
     # 公式更新は JST 9:00、取得窓は JST 9:05（jst_schedule.JST_FETCH_*）。
     # GitHub のスケジューラ遅延は実測で中央値 +58分・最大 +223分(同リポ Navigator)。
     # 遅れて到着しても待機で吸収できるよう、取得窓に対して十分な余裕を取る。
-    - cron: "0 20 * * *"   # JST 5:00 — 余裕 245分（実測最大 +223分をカバー）
-    - cron: "0 22 * * *"   # JST 7:00 — 余裕 125分（0 20 がドロップした日の保険）
+    # 分値 7 は毎時0分の混雑ピーク回避（GitHub 公式が毎時0分の混雑を明言。
+    # アドバイザー裁定 2026-08-08）。
+    - cron: "7 20 * * *"   # JST 5:07 — 余裕 238分（実測最大 +223分をカバー）
+    - cron: "7 22 * * *"   # JST 7:07 — 余裕 118分（7 20 がドロップした日の保険）
 ```
 
 **`0 23`（現行）は削除する。** 根拠:
-1. 余裕65分＝**今朝破綻した設定そのもの**。`0 22`（125分）が完全に上位互換で残す意味がない
-2. `0 23` は **JST 8:00** 発火。その時刻に `0 20` が待機中・`0 22` が pending だと、**ユーザーが朝 push した run が `0 23` に evict される**（`cancel-in-progress: false` でも pending は1本しか保持されない）。削除でこの窓が消える
+1. 余裕65分＝**今朝破綻した設定そのもの**。`7 22`（118分）が完全に上位互換で残す意味がない。さらにアドバイザー裁定: 実証済みのドロップ機構は「先行イベント滞留時の後続イベント」なので、その状況では**最後発の `0 23` こそ最も落ちやすく**、保険価値がほぼ無い
+2. `0 23` は **JST 8:00** 発火。その時刻に `7 20` が待機中・`7 22` が pending だと、**ユーザーが朝 push した run が `0 23` に evict される**（`cancel-in-progress: false` でも pending は1本しか保持されない）。削除でこの窓が消える
 
-**残余リスク**: `0 20` と `0 22` が両方ドロップした日は取得が Retry 梯子（現状 JST 12:33）まで落ちる。**これは現状の最悪ケースと同じで悪化しない**。②（Retry 前倒し）と ①-c で別途潰す。
+**残余リスク**: `7 20` と `7 22` が両方ドロップした日は取得が Retry 梯子（現状 JST 12:33）まで落ちる。**これは現状の最悪ケースと同じで悪化しない**。②（Retry 前倒し）と ①-c で別途潰す。
+
+### 3.3 watch-item: 「push 静か未デプロイ」窓の拡大（アドバイザー指摘・①-c までの暫定運用ルール付き）
+
+シーケンス: `7 20` run が待機中（group 占有）→ ユーザーが朝 web 修正を push → push run が pending → `7 22` の schedule run が到着し **push の pending を evict** → `7 22` run は schedule なので `SKIP_DEPLOY_IF_DAY_CAPTURED=true` → deploy_gate が `deploy=false` → **push した修正がその朝、誰にも気づかれずデプロイされない**。
+
+- この窓は**現行 `0 23` でも存在する**（約30分幅）が、①-b は **約3.5時間（JST 約6:00〜9:30）に拡大**する。LULU-066 の「静かな異常」クラス
+- **暫定運用ルール（①-c で解消するまで）**: **JST 6:00〜9:30 に `exp_ranking/**` を push したら Actions を目視し、push 由来の run が消えていたら `workflow_dispatch` で再実行**する
+- 本 watch-item は DECISION_LOG のエントリにも記載する
 
 ### 3.2 `timeout-minutes` の明示
 
 待機が最大4時間になるため、既定の 360分に暗黙依存させない。`jobs.build` に **`timeout-minutes: 330`** を明示する（待機 最大4時間5分 + 取得・エクスポート実測約30分 に対し十分、かつ6時間の GitHub 上限より内側で異常時に早く落ちる）。
 
-`jst_schedule.MAX_WAIT_SEC = 6h` は変更しない（JST 5:00 起動でも待機は最大4時間5分なので抵触しない）。
+`jst_schedule.MAX_WAIT_SEC = 6h` は変更しない（JST 5:07 起動でも待機は最大約4時間なので抵触しない）。
 
 ## 4. 受け入れ基準（数値で）
 
 | # | 基準 | 目標値 | 測定方法 |
 |---|------|--------|----------|
 | 1 | YAML 構文 | 正常にパース | `python -c "import yaml;yaml.safe_load(open('.github/workflows/maplen-board-pages.yml',encoding='utf-8'))"` |
-| 2 | cron の本数と値 | **`0 20 * * *` と `0 22 * * *` の2本のみ**（`0 23` が存在しない） | `python -c "import yaml;print([c['cron'] for c in yaml.safe_load(open('.github/workflows/maplen-board-pages.yml',encoding='utf-8'))[True]['schedule']])"` |
+| 2 | cron の本数と値 | **`7 20 * * *` と `7 22 * * *` の2本のみ**（`0 23` が存在しない） | `python -c "import yaml;print([c['cron'] for c in yaml.safe_load(open('.github/workflows/maplen-board-pages.yml',encoding='utf-8'))[True]['schedule']])"` |
 | 3 | `timeout-minutes` | `jobs.build` に **330** | `grep -n 'timeout-minutes' .github/workflows/maplen-board-pages.yml` |
 | 4 | **差分の局所性** | 変更は `on.schedule` と `jobs.build.timeout-minutes` **のみ**。**bot/web/DB/concurrency/permissions/env に差分0** | `git diff -w -- .github/workflows/maplen-board-pages.yml` を目視 + `git diff -w --stat`（**1ファイルのみ**） |
 | 5 | bot テスト | 全緑（**現状 175 passed** から減らない） | `cd exp_ranking/bot && python -m pytest` |
@@ -95,12 +106,13 @@ GitHub のスケジューラ遅延がこのバッファを食い潰している:
 
 | # | 基準 | 目標値 |
 |---|------|--------|
-| 7 | 翌朝の schedule run のキュー時刻 | `0 20` 由来の run が **JST 9:05 より前**にキューされている |
+| 7 | 翌朝の schedule run のキュー時刻 | `7 20` 由来の run が **JST 9:05 より前**にキューされている |
 | 8 | **取得窓に対するマージン** | `Fetch` ステップ開始 → JST 9:05 が **60分以上** |
 | 9 | 取得開始時刻 | ログに `JST fetch window open` が出て、**取得は JST 9:05 以降**（前倒し取得が起きていない） |
 | 10 | データ | `latestSnapshotDate` が前日・`characterCount` が前日比で妥当（±100以内の増減）・cap 警告0件 |
 | 11 | サイト更新時刻 | 公開 v2 の `updatedAt` が **JST 9:40 以前** |
-| 12 | 2本目の cron | `0 22` 由来の run が存在する場合、**当日スキップで約20秒**で終了（二重取得していない） |
+| 12 | 2本目の cron | `7 22` 由来の run が存在する場合、**≤5分で終了し、ランキング fetch のログが無い**（二重取得していない）。※skip 判定は `main.py` 内のため checkout〜pip が必ず走る。「約20秒」は不可能（アドバイザー指摘） |
+| 13 | **cron 別遅延の7日間観測** | 「Log cache restore」ステップの `schedule=` 出力で cron 由来を判別し、**`7 20` 由来 run の遅延最大が +238分未満**。超えた日が出たら ①-c 前倒しか3本目追加を再検討する数値トリガとする |
 
 ## 5. 停止条件
 
@@ -116,7 +128,7 @@ GitHub のスケジューラ遅延がこのバッファを食い潰している:
 
 **1コミットのみ**（cron と timeout は同一の意図＝「先行起動バッファの確保」であり、分けると片方だけ revert された中途半端な状態が生まれる）。
 
-1. `ci(pages): 先行起動を JST 5:00/7:00 の2本にしてバッファを245分へ拡張 + timeout-minutes を明示`
+1. `ci(pages): 先行起動を JST 5:07/7:07 の2本にしてバッファを238分へ拡張 + timeout-minutes を明示`
 
 ## 7. 検証コマンド
 
