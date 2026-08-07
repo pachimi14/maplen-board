@@ -171,7 +171,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
           RANKING_MIN_LEVEL: "225"
-          RANKING_MAX_PAGES: "800"
+          RANKING_MAX_PAGES: "2000"
           RANKING_REQUEST_DELAY_SEC: "0.8"
           RANKING_UPDATE_POLL_INTERVAL_SEC: "45"
           RANKING_UPDATE_POLL_TIMEOUT_SEC: "1200"
