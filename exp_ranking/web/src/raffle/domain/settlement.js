@@ -5,6 +5,8 @@ const SIGNED_INTEGER_PATTERN = /^[+-]?\d+$/;
 const RATE_PATTERN = /^(\d+)(?:\.(\d{1,18}))?$/;
 const MAX_INPUT_DIGITS = 30;
 const MAX_RESULT_DIGITS = 60;
+const SALE_PROCEEDS_PERCENT = 95n;
+const PERCENT_DENOMINATOR = 100n;
 
 function problem(code, field = "", memberId = "", dropId = "") {
   return { code, field, memberId, dropId };
@@ -51,6 +53,18 @@ export function parseDecimalRate(value) {
     numerator: BigInt(match[1] + fraction),
     denominator: 10n ** BigInt(fraction.length),
   };
+}
+
+function salePriceToProceeds(salePriceNeso) {
+  return (salePriceNeso * SALE_PROCEEDS_PERCENT) / PERCENT_DENOMINATOR;
+}
+
+export function calculateSaleProceedsNeso(value) {
+  const text = String(value ?? "");
+  if (!INTEGER_PATTERN.test(text)) return null;
+  const normalized = text.replace(/^0+(?=\d)/, "");
+  if (normalized.length > MAX_INPUT_DIGITS) return null;
+  return salePriceToProceeds(BigInt(normalized)).toString();
 }
 
 function stringifyChecked(value, errors, field, memberId = "") {
@@ -141,10 +155,11 @@ export function calculateSettlement(input) {
       const selected = drop.category === "COIN" ? include.coin : include.equipment;
       if (!selected) continue;
       const quantity = parseInteger(drop.quantity, "dropQuantity", errors, { memberId, dropId: drop.dropId });
-      const saleNeso = parseInteger(input?.saleNesoByDropId?.[drop.dropId], "saleNeso", errors, {
+      const salePriceNeso = parseInteger(input?.saleNesoByDropId?.[drop.dropId], "saleNeso", errors, {
         memberId,
         dropId: drop.dropId,
       });
+      const saleNeso = salePriceToProceeds(salePriceNeso);
       if (drop.category === "COIN") {
         coinQuantity += quantity;
         coinSaleNeso += saleNeso;
@@ -156,6 +171,7 @@ export function calculateSettlement(input) {
           name: typeof drop.name === "string" ? drop.name : "",
           quantity: quantity.toString(),
           imageUrl: typeof drop.imageUrl === "string" ? drop.imageUrl : "",
+          salePriceNeso: salePriceNeso.toString(),
           saleNeso: saleNeso.toString(),
         });
       }

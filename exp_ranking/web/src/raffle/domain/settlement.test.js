@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateSettlement, parseDecimalRate } from "./settlement.js";
+import { calculateSaleProceedsNeso, calculateSettlement, parseDecimalRate } from "./settlement.js";
 
 function clearInput(overrides = {}) {
   return {
@@ -25,45 +25,53 @@ describe("parseDecimalRate", () => {
   });
 });
 
+describe("calculateSaleProceedsNeso", () => {
+  it("deducts the 5% sale fee using exact integer arithmetic", () => {
+    expect(calculateSaleProceedsNeso("9500000")).toBe("9025000");
+    expect(calculateSaleProceedsNeso("101")).toBe("95");
+    expect(calculateSaleProceedsNeso("")).toBeNull();
+  });
+});
+
 describe("calculateSettlement", () => {
   it("adds only selected categories and creates transfers", () => {
     const result = calculateSettlement(clearInput());
     expect(result.ok).toBe(true);
-    expect(result.total).toBe("1150");
-    expect(result.members.map((row) => row.assignedShare)).toEqual(["575", "575"]);
+    expect(result.total).toBe("1130");
+    expect(result.members.map((row) => row.assignedShare)).toEqual(["565", "565"]);
     expect(result).toMatchObject({
       memberCount: 2,
-      baseShare: "575",
+      baseShare: "565",
       remainder: 0,
       categoryTotals: {
         bossNeso: "600",
         powerCrystalAmount: "100",
         powerCrystalNeso: "100",
         ascendantNeso: "50",
-        coinSaleNeso: "100",
-        equipmentSaleNeso: "300",
+        coinSaleNeso: "95",
+        equipmentSaleNeso: "285",
         coinQuantity: "10",
         equipmentQuantity: "1",
-        transferableNeso: "1050",
+        transferableNeso: "1030",
       },
     });
     expect(result.members[0]).toMatchObject({
       memberId: "a",
       hasHistory: true,
-      gross: "850",
-      payment: "275",
+      gross: "845",
+      payment: "280",
       receipt: "0",
     });
     expect(result.members[1]).toMatchObject({
       memberId: "b",
       hasHistory: false,
-      gross: "300",
+      gross: "285",
       payment: "0",
-      receipt: "275",
+      receipt: "280",
       equipmentQuantity: "1",
-      equipmentDrops: [expect.objectContaining({ name: "Gear", quantity: "1" })],
+      equipmentDrops: [expect.objectContaining({ name: "Gear", quantity: "1", salePriceNeso: "300", saleNeso: "285" })],
     });
-    expect(result.transfers).toEqual([{ fromMemberId: "a", toMemberId: "b", amount: "275" }]);
+    expect(result.transfers).toEqual([{ fromMemberId: "a", toMemberId: "b", amount: "280" }]);
   });
 
   it("ignores unchecked categories without requiring sale values", () => {
@@ -85,7 +93,7 @@ describe("calculateSettlement", () => {
   it("uses exact Power Crystal conversion and rejects sub-NESO fractions", () => {
     const exact = calculateSettlement(clearInput({ powerCrystalNesoRate: "0.8" }));
     expect(exact.ok).toBe(true);
-    expect(exact.total).toBe("1130");
+    expect(exact.total).toBe("1110");
     const members = clearInput().members.map((member) => ({ ...member, powerCrystalAmount: member.memberId === "a" ? "1" : "0" }));
     const fractional = calculateSettlement(clearInput({ members, powerCrystalNesoRate: "0.8" }));
     expect(fractional.errors.map((entry) => entry.code)).toContain("fractional_neso");
