@@ -91,6 +91,19 @@ describe("buildSettlementShareModel", () => {
     expect(model.baseShareLine.label).toContain("PC換算込み");
   });
 
+  it("reuses the existing member/transfer breakdown section headings (no new locale keys for box headings)", () => {
+    const calculation = compositeCalculation();
+    const model = buildSettlementShareModel(calculation, memberMap, include, "1.2", t);
+    expect(model.memberSectionTitle).toBe(t("raffle.memberBreakdown"));
+    expect(model.transferSectionTitle).toBe(t("raffle.actualTransfers"));
+  });
+
+  it("no longer carries a baseShareNote field (retired per post-launch feedback round 2)", () => {
+    const calculation = compositeCalculation();
+    const model = buildSettlementShareModel(calculation, memberMap, include, "1.2", t);
+    expect(model.baseShareNote).toBeUndefined();
+  });
+
   it("carries the boss label and round line through untouched when provided", () => {
     const calculation = compositeCalculation();
     const model = buildSettlementShareModel(calculation, memberMap, include, "1.2", t, {
@@ -111,15 +124,23 @@ describe("buildSettlementShareModel", () => {
 });
 
 describe("drawSettlementShareImage (smoke test)", () => {
+  // No ctx.roundRect on this mock (mirrors real engines that predate it), so
+  // drawRoundedRect() falls back to fillRect/strokeRect -- exercising both
+  // the box-fill and box-border code paths without needing a real canvas.
   function makeMockCtx() {
-    const calls = { fillRect: 0, fillText: 0 };
+    const calls = { fillRect: 0, strokeRect: 0, fillText: 0 };
     return {
       calls,
       fillStyle: "",
+      strokeStyle: "",
+      lineWidth: 0,
       font: "",
       textAlign: "left",
       fillRect: () => {
         calls.fillRect += 1;
+      },
+      strokeRect: () => {
+        calls.strokeRect += 1;
       },
       fillText: () => {
         calls.fillText += 1;
@@ -127,7 +148,7 @@ describe("drawSettlementShareImage (smoke test)", () => {
     };
   }
 
-  it("draws without throwing and paints a background plus one fillText call per text row", () => {
+  it("draws without throwing, paints the canvas background, boxes every section, and bands every row", () => {
     const calculation = compositeCalculation();
     const model = buildSettlementShareModel(calculation, memberMap, include, "1.2", t, {
       bossLabel: "Hard Will",
@@ -140,15 +161,20 @@ describe("drawSettlementShareImage (smoke test)", () => {
 
     expect(size.height).toBeGreaterThan(0);
     expect(size.width).toBeGreaterThan(0);
-    expect(ctx.calls.fillRect).toBe(1);
-    // title + boss + round + summary lines + baseShare(2) + actualTransferTotal
-    // + section separators(2) + (2 fillText per member row w/ PC note, 1 without)
-    // + transfer rows + footer -- assert a generous lower bound instead of an
-    // exact count so minor copy tweaks don't make this test brittle.
-    expect(ctx.calls.fillText).toBeGreaterThan(10);
+    // canvas background(1) + 3 section boxes(3) + 1 band per member row(3) +
+    // 1 pill per member row(3) + 1 band per transfer row(>=1) -- a generous
+    // lower bound instead of an exact count so minor layout tweaks don't
+    // make this test brittle.
+    expect(ctx.calls.fillRect).toBeGreaterThanOrEqual(1 + 3 + model.memberRows.length * 2 + model.transferRows.length);
+    // 3 section box borders (fallback strokeRect, no ctx.roundRect on this mock).
+    expect(ctx.calls.strokeRect).toBeGreaterThanOrEqual(3);
+    // title + boss + round + summary lines + baseShare + actualTransferTotal
+    // + 2 section headings + (name/gross-label/gross-value/pill(+pcNote) per
+    // member row) + transfer rows + footer.
+    expect(ctx.calls.fillText).toBeGreaterThan(15);
   });
 
-  it("still draws (with a placeholder row) when there are no transfers to show", () => {
+  it("still draws (with a placeholder 'no transfers' line) when there are no transfers to show", () => {
     const result = calculateSettlement({
       boss: "LUCID",
       complete: true,
@@ -160,6 +186,7 @@ describe("drawSettlementShareImage (smoke test)", () => {
     expect(result.ok).toBe(true);
     expect(result.transfers).toEqual([]);
     const model = buildSettlementShareModel(result, { a: { displayName: "Solo" } }, { bossNeso: true }, "1", t);
+    expect(model.noTransfersText).toBe(t("raffle.noTransfers"));
     const ctx = makeMockCtx();
 
     expect(() => drawSettlementShareImage(ctx, model)).not.toThrow();

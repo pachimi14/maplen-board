@@ -710,14 +710,6 @@ html[data-theme-depth="deep"] .raffle-ascendant-tier-line span {
   font-weight: 800;
 }
 
-.raffle-hero-tile-note {
-  margin-top: 0.3rem;
-  color: #047857;
-  font-size: 0.7rem;
-  font-weight: 700;
-  opacity: 0.85;
-}
-
 .raffle-hero-tile strong {
   margin-top: 0.25rem;
   overflow-wrap: anywhere;
@@ -1068,7 +1060,6 @@ html[data-theme-depth="deep"] .raffle-hero-tile {
 
 html[data-theme-depth="deep"] .raffle-hero-tile span,
 html[data-theme-depth="deep"] .raffle-hero-tile strong,
-html[data-theme-depth="deep"] .raffle-hero-tile-note,
 html[data-theme-depth="deep"] .raffle-share-status {
   color: var(--theme-deep-accent, #34d399);
 }
