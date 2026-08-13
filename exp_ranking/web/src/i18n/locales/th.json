@@ -4,6 +4,7 @@
   },
   "app": {
     "openDailyDashboard": "Task Manager",
+    "openSfHistory": "Enhance History",
     "pageTitle": "อันดับ EXP ของ MSU",
     "pageDescription": "อันดับเลเวลและค่า EXP ที่เพิ่มขึ้นรายวัน รายสัปดาห์ และรายเดือนของตัวละครเลเวล 225 ขึ้นไป อ้างอิงจากอันดับ MSU อย่างเป็นทางการ",
     "metaTitle": "Lulumi Tools | อันดับ EXP ของ MapleStory N",
@@ -543,5 +544,69 @@
     "postText": "{{name}} Lv.{{level}} {{percent}}% | Lulumi Tools",
     "main7d": "????? 7 ???",
     "main30d": "????? 30 ???"
+  },
+  "sfhistory": {
+    "pageTitle": "Enhance History",
+    "pageDescription": "เลือกอุปกรณ์และช่วงดาวเพื่อดูการเปลี่ยนแปลงของค่าใช้จ่ายคาดการณ์ในการอัปเกรด และดูว่าค่าปัจจุบันอยู่ในระดับใดเมื่อเทียบกับประวัติ",
+    "loading": "กำลังโหลด...",
+    "equipment": {
+      "label": "อุปกรณ์",
+      "searchPlaceholder": "ค้นหาด้วยชื่อไอเทมหรือ Item ID",
+      "noMatch": "ไม่พบอุปกรณ์ที่ตรงกัน",
+      "maxStarBadge": "สูงสุด ☆{{maxStar}}",
+      "loadError": "ไม่สามารถโหลดรายการอุปกรณ์ได้ โปรดลองอีกครั้งภายหลัง"
+    },
+    "starRange": {
+      "startLabel": "เริ่ม ☆",
+      "targetLabel": "เป้าหมาย ☆",
+      "presetsLabel": "ค่าที่ตั้งไว้ล่วงหน้า",
+      "presetDisabledHint": "อุปกรณ์นี้อัปเกรดได้สูงสุด ☆{{maxStar}} จึงไม่สามารถเลือกได้"
+    },
+    "period": {
+      "label": "ช่วงเวลา",
+      "d7": "7 วัน",
+      "d14": "14 วัน",
+      "d30": "30 วัน",
+      "d90": "90 วัน",
+      "d150": "150 วัน"
+    },
+    "summary": {
+      "current": "ค่าปัจจุบัน",
+      "currentUnavailable": "ไม่สามารถดึงราคาปัจจุบันได้",
+      "currentUnavailableHint": "การดึงราคาจากต้นทางล้มเหลว เราจะไม่ใช้ค่าประวัติล่าสุดแทน",
+      "currentAsOf": "ณ เวลา {{timestamp}}",
+      "periodAverage": "ค่าเฉลี่ยของช่วงเวลา",
+      "periodHigh": "ค่าสูงสุดของช่วงเวลา",
+      "periodLow": "ค่าต่ำสุดของช่วงเวลา",
+      "currentPosition": "ตำแหน่งปัจจุบัน",
+      "percentileCheaperThan": "ถูกกว่า {{percent}}% ของช่วงเวลานี้",
+      "percentileLowest": "ถูกที่สุดในช่วงเวลานี้",
+      "percentileHighest": "แพงที่สุดในช่วงเวลานี้",
+      "noConfirmedData": "ไม่มีข้อมูลที่ยืนยันแล้วในช่วงเวลานี้"
+    },
+    "chart": {
+      "legendExpected": "ค่าคาดการณ์",
+      "legendAverage": "ค่าเฉลี่ยของช่วงเวลา",
+      "legendHigh": "ค่าสูงสุดของช่วงเวลา",
+      "legendLow": "ค่าต่ำสุดของช่วงเวลา",
+      "tooltipDeltaFromPrev": "เทียบกับครั้งก่อน {{delta}}",
+      "tooltipDeltaFromAverage": "เทียบกับค่าเฉลี่ยของช่วงเวลา {{delta}}",
+      "tooltipBucketRange": "แท่ง {{start}}–{{end}}",
+      "tooltipBucketRangeOpen": "แท่ง {{start}}–{{end}} (ยังไม่ปิด)",
+      "provisionalLegend": "ส่วนเส้นประคือค่าชั่วคราวของแท่ง 4 ชั่วโมงปัจจุบันที่ยังไม่ปิด",
+      "loadError": "ไม่สามารถโหลดประวัติราคาได้ โปรดลองอีกครั้งภายหลัง",
+      "empty": "ไม่มีข้อมูลที่จะแสดง"
+    },
+    "heatmap": {
+      "title": "วันในสัปดาห์ x ช่วงเวลา",
+      "axisNote": "แถว: วันในสัปดาห์ (UTC) คอลัมน์: เวลาท้องถิ่น ({{zone}}; แสดง UTC ไว้ใต้แต่ละคอลัมน์)",
+      "periodNote": "สรุปตามช่วงเวลาที่เลือก -- ประมาณ {{sampleRange}} จุดต่อเซลล์",
+      "empty": "ยังมีข้อมูลไม่พอสำหรับสรุป",
+      "cellTooltip": "{{value}}",
+      "noData": "ไม่มีข้อมูล",
+      "lowestBadge": "ต่ำสุด",
+      "highestBadge": "สูงสุด",
+      "disclaimer": "แสดงเฉพาะค่ามัธยฐานเท่านั้น ไม่ได้แนะนำให้ตีดาวในวันหรือช่วงเวลาใดเวลาหนึ่ง"
+    }
   }
 }

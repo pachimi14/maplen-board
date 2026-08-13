@@ -4,6 +4,7 @@
   },
   "app": {
     "openDailyDashboard": "Task Manager",
+    "openSfHistory": "Enhance History",
     "pageTitle": "MSU 経験値ランキング",
     "pageDescription": "MSU公式ランキングをもとに、Lv225以上のキャラクターのレベル順位と日間・週間・月間の経験値増加量を掲載しています。",
     "metaTitle": "Lulumi Tools | MapleStory N 経験値ランキング",
@@ -543,5 +544,69 @@
     "postText": "{{name}} Lv.{{level}} {{percent}}% | Lulumi Tools",
     "main7d": "7日増加量",
     "main30d": "30日増加量"
+  },
+  "sfhistory": {
+    "pageTitle": "Enhance History",
+    "pageDescription": "装備と強化範囲を選ぶと、期待強化費用の推移と、現在値が過去のどの水準かを確認できます。",
+    "loading": "読み込み中...",
+    "equipment": {
+      "label": "装備",
+      "searchPlaceholder": "装備名・アイテムIDで検索",
+      "noMatch": "該当する装備が見つかりません",
+      "maxStarBadge": "☆{{maxStar}}まで",
+      "loadError": "装備一覧を取得できませんでした。時間をおいて再読み込みしてください。"
+    },
+    "starRange": {
+      "startLabel": "開始 ☆",
+      "targetLabel": "目標 ☆",
+      "presetsLabel": "プリセット",
+      "presetDisabledHint": "この装備は☆{{maxStar}}までのため選択できません"
+    },
+    "period": {
+      "label": "期間",
+      "d7": "7日",
+      "d14": "14日",
+      "d30": "30日",
+      "d90": "90日",
+      "d150": "150日"
+    },
+    "summary": {
+      "current": "現在値",
+      "currentUnavailable": "現在価格を取得できません",
+      "currentUnavailableHint": "上流の価格取得に失敗しました。履歴の最終値で代用はしません。",
+      "currentAsOf": "{{timestamp}} 時点",
+      "periodAverage": "期間平均",
+      "periodHigh": "期間高値",
+      "periodLow": "期間安値",
+      "currentPosition": "現在の位置",
+      "percentileCheaperThan": "この期間の{{percent}}%より安い",
+      "percentileLowest": "この期間で最も安い",
+      "percentileHighest": "この期間で最も高い",
+      "noConfirmedData": "この期間に確定データがありません"
+    },
+    "chart": {
+      "legendExpected": "期待値",
+      "legendAverage": "期間平均",
+      "legendHigh": "期間高値",
+      "legendLow": "期間安値",
+      "tooltipDeltaFromPrev": "前回比 {{delta}}",
+      "tooltipDeltaFromAverage": "期間平均との差 {{delta}}",
+      "tooltipBucketRange": "{{start}}–{{end}} の足",
+      "tooltipBucketRangeOpen": "{{start}}–{{end}} の足（未終了）",
+      "provisionalLegend": "破線の区間は、まだ終了していない直近の4時間足の暫定値です。",
+      "loadError": "価格履歴を取得できませんでした。時間をおいて再読み込みしてください。",
+      "empty": "表示できるデータがありません"
+    },
+    "heatmap": {
+      "title": "曜日 × 時間帯",
+      "axisNote": "行=UTCの曜日。列=ローカル時刻（{{zone}}。UTCは列見出しの下に併記）",
+      "periodNote": "選択中の期間の集計です（1セルあたり約{{sampleRange}}点）",
+      "empty": "集計できるデータがまだありません",
+      "cellTooltip": "{{value}}",
+      "noData": "データなし",
+      "lowestBadge": "最安",
+      "highestBadge": "最高",
+      "disclaimer": "中央値を示すものであり、特定の曜日・時間帯での強化を推奨するものではありません。"
+    }
   }
 }

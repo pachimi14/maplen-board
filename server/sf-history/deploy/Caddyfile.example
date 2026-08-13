@@ -1,0 +1,25 @@
+# SH-6 (VPS deploy) adds exactly this -- see docs/reports/SH1B_VPS_PROBE.md §3.2
+# for the real Caddyfile's actual shape (snippet-based, `(proxy_routes)` block).
+#
+# Do NOT replace the whole `(proxy_routes)` block on the real VPS Caddyfile --
+# it already has `/healthz`, `/img/*`, `/exp/*`, `/notifications/*` handles.
+# Add the `sf_history_upstream` snippet and ONE new `handle` line, before the
+# trailing `respond 404`, and change nothing else.
+#
+# Port: 127.0.0.1:8785 (SH1B_VPS_PROBE.md §1 -- 8781/8782/8783/8784/8765 are
+# already taken; 8785 is the confirmed-free port for this service).
+
+(sf_history_upstream) {
+    reverse_proxy 127.0.0.1:8785 {
+        header_down -Server
+    }
+}
+
+(proxy_routes) {
+    # ... existing handle blocks (healthz / img / exp / notifications) stay
+    # exactly as they are on the real VPS Caddyfile ...
+    handle /sf-history/* {
+        import sf_history_upstream
+    }
+    respond 404
+}

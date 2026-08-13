@@ -14,8 +14,13 @@ on:
       - ".github/workflows/maplen-board-pages.yml"
       - "README.md"
   schedule:
-    # JST 8:00 に先行起動し、セットアップ後は9:05から公式更新を検知して取得する。
-    - cron: "0 23 * * *"
+    # 公式更新は JST 9:00、取得窓は JST 9:05（jst_schedule.JST_FETCH_*）。
+    # GitHub のスケジューラ遅延は実測で中央値 +58分・最大 +223分(同リポ Navigator)。
+    # 遅れて到着しても待機で吸収できるよう、取得窓に対して十分な余裕を取る。
+    # 分値 7 は毎時0分の混雑ピーク回避（GitHub 公式が毎時0分の混雑を明言。
+    # アドバイザー裁定 2026-08-08）。
+    - cron: "7 20 * * *"   # JST 5:07 — 余裕 238分（実測最大 +223分をカバー）
+    - cron: "7 22 * * *"   # JST 7:07 — 余裕 118分（7 20 がドロップした日の保険）
   workflow_dispatch:
     inputs:
       force_fetch:
@@ -36,6 +41,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 330
     outputs:
       deploy: ${{ steps.deploy_gate.outputs.deploy }}
 
@@ -171,7 +177,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
           RANKING_MIN_LEVEL: "225"
-          RANKING_MAX_PAGES: "800"
+          RANKING_MAX_PAGES: "2000"
           RANKING_REQUEST_DELAY_SEC: "0.8"
           RANKING_UPDATE_POLL_INTERVAL_SEC: "45"
           RANKING_UPDATE_POLL_TIMEOUT_SEC: "1200"
