@@ -134,7 +134,6 @@ export default function SettlementResult({ calculation, include, memberMap, powe
         <div className="raffle-hero-tile">
           <span>{t("raffle.baseShare")}</span>
           <strong>{neso(calculation.baseShare)}</strong>
-          <small className="raffle-hero-tile-note">{t("raffle.baseShareNote")}</small>
         </div>
       </div>
 
