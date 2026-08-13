@@ -90,13 +90,32 @@ describe("calculateSettlement", () => {
     expect(result.errors).toContainEqual(expect.objectContaining({ code: "invalid_integer", dropId: "equip1" }));
   });
 
-  it("uses exact Power Crystal conversion and rejects sub-NESO fractions", () => {
+  it("converts Power Crystal via division (1 NESO = [rate] PC) and rounds half up instead of erroring on a remainder", () => {
+    // 100 PC ÷ 0.8 = 125 NESO exactly.
     const exact = calculateSettlement(clearInput({ powerCrystalNesoRate: "0.8" }));
     expect(exact.ok).toBe(true);
-    expect(exact.total).toBe("1110");
+    expect(exact.categoryTotals.powerCrystalNeso).toBe("125");
+    expect(exact.total).toBe("1155");
+
+    // 1 PC ÷ 0.8 = 1.25 -> rounds down to 1 (nearest integer, not a tie).
     const members = clearInput().members.map((member) => ({ ...member, powerCrystalAmount: member.memberId === "a" ? "1" : "0" }));
-    const fractional = calculateSettlement(clearInput({ members, powerCrystalNesoRate: "0.8" }));
-    expect(fractional.errors.map((entry) => entry.code)).toContain("fractional_neso");
+    const nonExact = calculateSettlement(clearInput({ members, powerCrystalNesoRate: "0.8" }));
+    expect(nonExact.ok).toBe(true);
+    expect(nonExact.members.find((member) => member.memberId === "a").powerCrystalNeso).toBe("1");
+
+    // 1 PC ÷ 2 = 0.5 exactly -> round half up rounds the tie up to 1.
+    const tieMembers = clearInput().members.map((member) => ({ ...member, powerCrystalAmount: member.memberId === "a" ? "1" : "0" }));
+    const tie = calculateSettlement(clearInput({ members: tieMembers, powerCrystalNesoRate: "2" }));
+    expect(tie.ok).toBe(true);
+    expect(tie.members.find((member) => member.memberId === "a").powerCrystalNeso).toBe("1");
+  });
+
+  it("rejects rate 0, empty, negative, and non-numeric rate input as invalid_rate without calculating", () => {
+    for (const rate of ["0", "0.0", "", "-1", "abc", "1.2.3"]) {
+      const result = calculateSettlement(clearInput({ powerCrystalNesoRate: rate }));
+      expect(result.ok).toBe(false);
+      expect(result.errors).toContainEqual(expect.objectContaining({ code: "invalid_rate", field: "powerCrystalNesoRate" }));
+    }
   });
 
   it("rejects incomplete or mismatched parties", () => {
@@ -174,5 +193,74 @@ describe("calculateSettlement", () => {
     }));
     expect(result.ok).toBe(false);
     expect(result.errors.map((entry) => entry.code)).toContain("carryover_not_balanced");
+  });
+});
+
+// LULU-099: Power Crystal rate is now a divisor ("1 NESO = [rate] Power
+// Crystal") instead of a multiplier. IMPL_PLAN_RAFFLE_PC_RATE_DIVIDE.md
+// acceptance criteria 1-2: pin the documented 100,000,000 PC examples and
+// confirm the single conversion propagates unchanged through total value,
+// assigned share, payment/receipt, and next-carryover (no double conversion).
+describe("Power Crystal rate divide conversion (LULU-099)", () => {
+  function pcOnlyInput(rate, amount, overrides = {}) {
+    return {
+      boss: "LUCID",
+      complete: true,
+      historyMemberIds: ["a"],
+      partyOrder: ["a", "b"],
+      include: { coin: false, equipment: false, bossNeso: false, powerCrystal: true, ascendantNeso: false },
+      powerCrystalNesoRate: rate,
+      saleNesoByDropId: {},
+      members: [
+        { memberId: "a", bossNeso: "0", powerCrystalAmount: amount, ascendantNeso: "0", drops: [] },
+        { memberId: "b", bossNeso: "0", powerCrystalAmount: "0", ascendantNeso: "0", drops: [] },
+      ],
+      ...overrides,
+    };
+  }
+
+  it("converts 100,000,000 PC using round-half-up division for the documented rate examples (acceptance criterion 1)", () => {
+    expect(calculateSettlement(pcOnlyInput("1.1", "100000000")).members[0].powerCrystalNeso).toBe("90909091");
+    expect(calculateSettlement(pcOnlyInput("1.2", "100000000")).members[0].powerCrystalNeso).toBe("83333333");
+    expect(calculateSettlement(pcOnlyInput("1.3", "100000000")).members[0].powerCrystalNeso).toBe("76923077");
+    expect(calculateSettlement(pcOnlyInput("1.0", "100000000")).members[0].powerCrystalNeso).toBe("100000000");
+  });
+
+  it("keeps total value, category totals, and gross consistent with a single conversion (no double conversion)", () => {
+    const result = calculateSettlement(pcOnlyInput("1.1", "100000000"));
+    expect(result.ok).toBe(true);
+    expect(result.total).toBe("90909091");
+    expect(result.categoryTotals.powerCrystalNeso).toBe("90909091");
+    expect(result.members[0].powerCrystalNeso).toBe("90909091");
+    expect(result.members[0].gross).toBe("90909091");
+    expect(result.members[0].transferableNeso).toBe("0");
+  });
+
+  it("propagates the converted value through assigned share, payment/receipt, and next-carryover without recomputation (acceptance criterion 2)", () => {
+    const result = calculateSettlement(pcOnlyInput("1.1", "100000000", {
+      carryoverEnabled: true,
+      previousCarryoverByMemberId: { a: "0", b: "0" },
+    }));
+    expect(result.ok).toBe(true);
+    expect(result.members.map((member) => member.assignedShare)).toEqual(["45454546", "45454545"]);
+    // Power Crystal value cannot itself be transferred, so no actual transfer occurs.
+    expect(result.transfers).toEqual([]);
+    expect(result.members.map((member) => ({
+      id: member.memberId,
+      payment: member.payment,
+      receipt: member.receipt,
+      next: member.nextCarryover,
+    }))).toEqual([
+      { id: "a", payment: "0", receipt: "0", next: "-45454545" },
+      { id: "b", payment: "0", receipt: "0", next: "45454545" },
+    ]);
+  });
+
+  it("rejects rate 0, empty, negative, and non-numeric rate input as invalid_rate without calculating (acceptance criterion 3)", () => {
+    for (const rate of ["0", "0.0", "", "-1", "abc", "1.2.3"]) {
+      const result = calculateSettlement(pcOnlyInput(rate, "100"));
+      expect(result.ok).toBe(false);
+      expect(result.errors).toContainEqual(expect.objectContaining({ code: "invalid_rate" }));
+    }
   });
 });
