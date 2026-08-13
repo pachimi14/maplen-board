@@ -45,7 +45,7 @@ export default function SettlementResult({ calculation, include, memberMap, powe
   ].filter(Boolean);
 
   function categoryQuantity(category) {
-    if (category.key === "powerCrystal") return <><strong>{formatNeso(calculation.categoryTotals.powerCrystalAmount)} PC × {powerCrystalNesoRate}</strong><small>{t("raffle.powerCrystalNonTransferable")}</small></>;
+    if (category.key === "powerCrystal") return <><strong>{formatNeso(calculation.categoryTotals.powerCrystalAmount)} PC ÷ {powerCrystalNesoRate}</strong><small>{t("raffle.powerCrystalNonTransferable")}</small></>;
     if (category.key === "coin") return <strong>× {formatNeso(calculation.categoryTotals.coinQuantity)}</strong>;
     if (category.key === "equipment") return <EquipmentIcons drops={calculation.equipmentDrops} />;
     return <span className="raffle-empty-value">—</span>;
