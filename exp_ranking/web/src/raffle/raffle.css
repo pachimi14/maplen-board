@@ -689,6 +689,14 @@ html[data-theme-depth="deep"] .raffle-ascendant-tier-line span {
   font-weight: 800;
 }
 
+.raffle-hero-tile-note {
+  margin-top: 0.3rem;
+  color: #047857;
+  font-size: 0.7rem;
+  font-weight: 700;
+  opacity: 0.85;
+}
+
 .raffle-hero-tile strong {
   margin-top: 0.25rem;
   overflow-wrap: anywhere;
@@ -796,6 +804,12 @@ html[data-theme-depth="deep"] .raffle-ascendant-tier-line span {
   color: #0f172a;
   font-variant-numeric: tabular-nums;
   font-weight: 900;
+}
+
+.raffle-member-card-pc-note {
+  margin-top: 0.3rem;
+  color: #64748b;
+  font-size: 0.72rem;
 }
 
 .raffle-member-card-settle {
@@ -1032,7 +1046,8 @@ html[data-theme-depth="deep"] .raffle-hero-tile {
 }
 
 html[data-theme-depth="deep"] .raffle-hero-tile span,
-html[data-theme-depth="deep"] .raffle-hero-tile strong {
+html[data-theme-depth="deep"] .raffle-hero-tile strong,
+html[data-theme-depth="deep"] .raffle-hero-tile-note {
   color: var(--theme-deep-accent, #34d399);
 }
 
@@ -1072,6 +1087,10 @@ html[data-theme-depth="deep"] .raffle-member-card-gross {
 
 html[data-theme-depth="deep"] .raffle-member-card-gross strong {
   color: #f8fafc;
+}
+
+html[data-theme-depth="deep"] .raffle-member-card-pc-note {
+  color: #94a3b8;
 }
 
 html[data-theme-depth="deep"] .raffle-breakdown-subsection h5 {

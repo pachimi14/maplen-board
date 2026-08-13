@@ -8,7 +8,10 @@ import {
   describeSettlementError,
   formatRaffleRoundLocal,
   formatRaffleRoundUtc,
+  pcPortionAmount,
+  sumTransferAmounts,
 } from "./uiText.js";
+import { calculateSettlement } from "./domain/settlement.js";
 
 function getNested(obj, path) {
   return path.split(".").reduce((current, key) => current?.[key], obj);
@@ -167,5 +170,77 @@ describe("describeSettlementError", () => {
   it("works with the English locale too", () => {
     const text = describeSettlementError({ code: "fractional_neso" }, { t: tEn });
     expect(text).toBe(en.raffle.errorFractionalNeso);
+  });
+});
+
+describe("sumTransferAmounts", () => {
+  it("sums decimal-string amounts with BigInt precision", () => {
+    expect(sumTransferAmounts([{ amount: "280" }, { amount: "45" }])).toBe("325");
+  });
+
+  it("returns \"0\" for an empty or missing transfers array", () => {
+    expect(sumTransferAmounts([])).toBe("0");
+    expect(sumTransferAmounts(undefined)).toBe("0");
+  });
+
+  it("matches the settlement's own `transfers` total for a real calculateSettlement output", () => {
+    const result = calculateSettlement({
+      boss: "WILL",
+      complete: true,
+      historyMemberIds: ["a"],
+      partyOrder: ["a", "b", "c"],
+      include: { coin: false, equipment: false, bossNeso: true, powerCrystal: false, ascendantNeso: false },
+      members: [
+        { memberId: "a", bossNeso: "900", drops: [] },
+        { memberId: "b", bossNeso: "0", drops: [] },
+        { memberId: "c", bossNeso: "0", drops: [] },
+      ],
+    });
+    expect(result.ok).toBe(true);
+    const manualTotal = result.transfers.reduce((sum, transfer) => sum + BigInt(transfer.amount), 0n).toString();
+    expect(sumTransferAmounts(result.transfers)).toBe(manualTotal);
+    expect(result.transfers.length).toBeGreaterThan(0);
+  });
+});
+
+describe("pcPortionAmount (C1: value-vs-actual-NESO clarity, acceptance criterion 1)", () => {
+  it("returns the converted PC amount for a member with a non-zero PC conversion (rate 1.2 composite case)", () => {
+    const result = calculateSettlement({
+      boss: "WILL",
+      complete: true,
+      historyMemberIds: ["a"],
+      partyOrder: ["a", "b"],
+      include: { coin: false, equipment: false, bossNeso: true, powerCrystal: true, ascendantNeso: false },
+      powerCrystalNesoRate: "1.2",
+      members: [
+        { memberId: "a", bossNeso: "900", powerCrystalAmount: "100", ascendantNeso: "0", drops: [] },
+        { memberId: "b", bossNeso: "0", powerCrystalAmount: "0", ascendantNeso: "0", drops: [] },
+      ],
+    });
+    expect(result.ok).toBe(true);
+    // This directly backs the "member card shows an 'incl. PC conversion'
+    // note" half of the acceptance criterion: SettlementResult.jsx gates
+    // that note on this exact function.
+    expect(pcPortionAmount(result.members[0])).toBe("120");
+    expect(pcPortionAmount(result.members[1])).toBeNull();
+  });
+
+  it("returns null for a zero/absent powerCrystalNeso", () => {
+    expect(pcPortionAmount({ powerCrystalNeso: "0" })).toBeNull();
+    expect(pcPortionAmount({})).toBeNull();
+  });
+});
+
+describe("raffle.baseShare label (C1: value-vs-actual-NESO clarity)", () => {
+  it("explicitly notes PC conversion is included, in every locale (regression pin for the value/actual-NESO confusion report)", () => {
+    // A literal substring check rather than a rendered-component check: this
+    // codebase has no @testing-library/react (see src/sfhistory/domain/
+    // viewModel.test.js), so JSX-conditional UI is exercised via the pure
+    // functions it delegates to (pcPortionAmount above; describeMemberSettlement
+    // in shareImage.test.js once C2 lands), while purely-static per-locale
+    // copy like this label is pinned directly here.
+    expect(ja.raffle.baseShare).toContain("PC換算込み");
+    expect(en.raffle.baseShare.toLowerCase()).toContain("pc");
+    expect(en.raffle.baseShare.toLowerCase()).toContain("incl");
   });
 });

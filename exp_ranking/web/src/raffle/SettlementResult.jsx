@@ -1,4 +1,5 @@
 import { useTranslation } from "../i18n/I18nContext.jsx";
+import { pcPortionAmount, sumTransferAmounts } from "./uiText.js";
 
 function formatNeso(value) {
   try {
@@ -38,6 +39,7 @@ function EquipmentIcons({ drops }) {
 
 export default function SettlementResult({ calculation, include, memberMap, powerCrystalNesoRate }) {
   const { t } = useTranslation();
+  const actualTransferTotal = sumTransferAmounts(calculation.transfers);
   const categoryColumns = [
     include.bossNeso ? { key: "bossNeso", label: t("raffle.item_bossNeso"), total: calculation.categoryTotals.bossNeso } : null,
     include.powerCrystal ? { key: "powerCrystal", label: t("raffle.item_powerCrystal"), total: calculation.categoryTotals.powerCrystalNeso } : null,
@@ -100,11 +102,13 @@ export default function SettlementResult({ calculation, include, memberMap, powe
         <div className="raffle-hero-tile">
           <span>{t("raffle.baseShare")}</span>
           <strong>{neso(calculation.baseShare)}</strong>
+          <small className="raffle-hero-tile-note">{t("raffle.baseShareNote")}</small>
         </div>
       </div>
 
       <div className="raffle-sub-metrics">
         <span className="raffle-sub-metric"><small>{t("raffle.transferableNeso")}</small><strong>{neso(calculation.categoryTotals.transferableNeso)}</strong></span>
+        <span className="raffle-sub-metric"><small>{t("raffle.actualTransferTotal")}</small><strong>{neso(actualTransferTotal)}</strong></span>
         <span className="raffle-sub-metric"><small>{t("raffle.distributionMembers")}</small><strong>{calculation.memberCount}</strong></span>
         <span className="raffle-sub-metric"><small>{t("raffle.remainder")}</small><strong>{neso(calculation.remainder)}</strong></span>
         {calculation.carryoverEnabled ? <span className="raffle-sub-metric raffle-sub-metric-note">{t("raffle.carryoverEnabled")}</span> : null}
@@ -114,17 +118,21 @@ export default function SettlementResult({ calculation, include, memberMap, powe
 
       <section className="raffle-settlement-section raffle-member-cards-section">
         <div className="raffle-member-cards">
-          {calculation.members.map((member) => <article key={member.memberId} className="raffle-member-card">
-            <header className="raffle-member-card-header">
-              <h4>{memberName(memberMap, member.memberId)}</h4>
-              {!member.hasHistory ? <span className="raffle-history-no">{t("raffle.historyNo")}</span> : null}
-            </header>
-            <p className="raffle-member-card-gross">{t("raffle.grossWon")}: <strong>{neso(member.gross)}</strong></p>
-            <div className="raffle-member-card-settle">
-              <span className={settlementBadgeClassName(member) + " raffle-badge-lg"}>{settlementBadgeContent(member)}</span>
-            </div>
-            {calculation.carryoverEnabled ? <p className="raffle-member-card-carryover">{t("raffle.nextCarryover")}: {carryoverBadge(member.nextCarryover)}</p> : null}
-          </article>)}
+          {calculation.members.map((member) => {
+            const pcAmount = pcPortionAmount(member);
+            return <article key={member.memberId} className="raffle-member-card">
+              <header className="raffle-member-card-header">
+                <h4>{memberName(memberMap, member.memberId)}</h4>
+                {!member.hasHistory ? <span className="raffle-history-no">{t("raffle.historyNo")}</span> : null}
+              </header>
+              <p className="raffle-member-card-gross">{t("raffle.grossWon")}: <strong>{neso(member.gross)}</strong></p>
+              {pcAmount != null ? <p className="raffle-member-card-pc-note">{t("raffle.pcPortionNote", { amount: neso(pcAmount) })}</p> : null}
+              <div className="raffle-member-card-settle">
+                <span className={settlementBadgeClassName(member) + " raffle-badge-lg"}>{settlementBadgeContent(member)}</span>
+              </div>
+              {calculation.carryoverEnabled ? <p className="raffle-member-card-carryover">{t("raffle.nextCarryover")}: {carryoverBadge(member.nextCarryover)}</p> : null}
+            </article>;
+          })}
         </div>
       </section>
 
