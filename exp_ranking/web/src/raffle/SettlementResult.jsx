@@ -1,15 +1,17 @@
 import { useState } from "react";
 import { useTranslation } from "../i18n/I18nContext.jsx";
 import {
+  buildTransferNotificationText,
   describeMemberSettlement,
   formatNeso,
   memberDisplayName as memberName,
   neso,
   pcPortionAmount,
-  sumTransferAmounts,
+  resolveMemberWallet,
+  settlementMemberCategoryCell,
 } from "./uiText.js";
 import { buildSettlementShareModel, renderSettlementShareImageBlob, settlementShareFileName } from "./shareImage.js";
-import { copyPngBlobToClipboard, downloadBlob } from "../shareImageIO.js";
+import { copyPngBlobToClipboard, copyTextToClipboard, downloadBlob } from "../shareImageIO.js";
 
 function signedNeso(value) {
   try {
@@ -31,11 +33,12 @@ function EquipmentIcons({ drops }) {
   })}</span>;
 }
 
-export default function SettlementResult({ calculation, include, memberMap, powerCrystalNesoRate, bossLabel = "", roundLocalText = "", roundUtcText = "" }) {
+export default function SettlementResult({ calculation, include, memberMap, memberWallets = {}, powerCrystalNesoRate, bossLabel = "", roundLocalText = "", roundUtcText = "" }) {
   const { t } = useTranslation();
   const [shareBusy, setShareBusy] = useState(false);
   const [shareStatus, setShareStatus] = useState("idle");
-  const actualTransferTotal = sumTransferAmounts(calculation.transfers);
+  const [transferCopyBusy, setTransferCopyBusy] = useState(false);
+  const [transferCopyStatus, setTransferCopyStatus] = useState("idle");
   const categoryColumns = [
     include.bossNeso ? { key: "bossNeso", label: t("raffle.item_bossNeso"), total: calculation.categoryTotals.bossNeso } : null,
     include.powerCrystal ? { key: "powerCrystal", label: t("raffle.item_powerCrystal"), total: calculation.categoryTotals.powerCrystalNeso } : null,
@@ -51,21 +54,19 @@ export default function SettlementResult({ calculation, include, memberMap, powe
     return <span className="raffle-empty-value">—</span>;
   }
 
+  // Equipment keeps its own icon rendering here (canvas-drawn text in the
+  // share image can't show icons, so shareImage.js's C4 member table uses
+  // settlementMemberCategoryCell's text-only equipment cell instead). Every
+  // other category defers to the shared settlementMemberCategoryCell so this
+  // table and the share-image member table can never disagree about a
+  // member's cell value.
   function memberCategoryValue(member, key) {
-    if (key === "powerCrystal") {
-      if (member.powerCrystalAmount === "0") return <span className="raffle-zero-value">0</span>;
-      const showConvertedNeso = powerCrystalNesoRate !== "1";
-      return <><strong>{formatNeso(member.powerCrystalAmount)} PC</strong>{showConvertedNeso ? <small>{neso(member.powerCrystalNeso)}</small> : null}</>;
-    }
-    if (key === "coin") {
-      if (member.coinQuantity === "0") return <span className="raffle-zero-value">0</span>;
-      return <><strong>× {formatNeso(member.coinQuantity)}</strong><small>{neso(member.coinSaleNeso)}</small></>;
-    }
     if (key === "equipment") {
       return <><EquipmentIcons drops={member.equipmentDrops} />{member.equipmentDrops.length ? <small>{neso(member.equipmentSaleNeso)}</small> : null}</>;
     }
-    if (member[key] === "0") return <span className="raffle-zero-value">0</span>;
-    return <strong>{neso(member[key])}</strong>;
+    const cell = settlementMemberCategoryCell(member, key, { powerCrystalNesoRate });
+    if (cell.zero) return <span className="raffle-zero-value">0</span>;
+    return <><strong>{cell.primary}</strong>{cell.secondary ? <small>{cell.secondary}</small> : null}</>;
   }
 
   function carryoverBadge(value) {
@@ -95,6 +96,7 @@ export default function SettlementResult({ calculation, include, memberMap, powe
         bossLabel,
         roundLocalText,
         roundUtcText,
+        memberWallets,
       });
       const blob = await renderSettlementShareImageBlob(model);
       const copied = await copyPngBlobToClipboard(blob);
@@ -110,6 +112,27 @@ export default function SettlementResult({ calculation, include, memberMap, powe
       setShareBusy(false);
     }
   }
+
+  // LULU-103: one-button Discord/manual transfer notification copy, so
+  // members no longer hand-type "SENDER → RECEIVER amount NESO" + wallet
+  // while reading the settlement table.
+  async function handleCopyTransferNotification() {
+    if (transferCopyBusy) return;
+    setTransferCopyBusy(true);
+    try {
+      const text = buildTransferNotificationText(calculation.transfers, memberMap, memberWallets, { t });
+      const copied = await copyTextToClipboard(text);
+      setTransferCopyStatus(copied ? "copied" : "failed");
+    } catch {
+      setTransferCopyStatus("failed");
+    } finally {
+      setTransferCopyBusy(false);
+    }
+  }
+
+  const missingWalletTransferCount = calculation.transfers.filter(
+    (transfer) => !resolveMemberWallet(memberWallets, transfer.toMemberId),
+  ).length;
 
   return (
     <article className="raffle-settlement-result">
@@ -134,13 +157,11 @@ export default function SettlementResult({ calculation, include, memberMap, powe
         <div className="raffle-hero-tile">
           <span>{t("raffle.baseShare")}</span>
           <strong>{neso(calculation.baseShare)}</strong>
-          <small className="raffle-hero-tile-note">{t("raffle.baseShareNote")}</small>
         </div>
       </div>
 
       <div className="raffle-sub-metrics">
         <span className="raffle-sub-metric"><small>{t("raffle.transferableNeso")}</small><strong>{neso(calculation.categoryTotals.transferableNeso)}</strong></span>
-        <span className="raffle-sub-metric"><small>{t("raffle.actualTransferTotal")}</small><strong>{neso(actualTransferTotal)}</strong></span>
         <span className="raffle-sub-metric"><small>{t("raffle.distributionMembers")}</small><strong>{calculation.memberCount}</strong></span>
         <span className="raffle-sub-metric"><small>{t("raffle.remainder")}</small><strong>{neso(calculation.remainder)}</strong></span>
         {calculation.carryoverEnabled ? <span className="raffle-sub-metric raffle-sub-metric-note">{t("raffle.carryoverEnabled")}</span> : null}
@@ -169,13 +190,38 @@ export default function SettlementResult({ calculation, include, memberMap, powe
       </section>
 
       <section className="raffle-settlement-section raffle-actual-transfers-section">
-        <h4>{t("raffle.actualTransfers")}</h4>
-        {calculation.transfers.length ? <ul className="raffle-transfer-list">{calculation.transfers.map((transfer, index) => <li key={transfer.fromMemberId + ":" + transfer.toMemberId + ":" + index} className="raffle-transfer-row">
-          <span className="raffle-transfer-payer">{memberName(memberMap, transfer.fromMemberId)}</span>
-          <span className="raffle-transfer-arrow" aria-hidden="true">→</span>
-          <span className="raffle-transfer-receiver">{memberName(memberMap, transfer.toMemberId)}</span>
-          <strong className="raffle-transfer-amount">{neso(transfer.amount)}</strong>
-        </li>)}</ul> : <p className="raffle-no-transfers">{t("raffle.noTransfers")}</p>}
+        <div className="raffle-actual-transfers-header">
+          <h4>{t("raffle.actualTransfers")}</h4>
+          {calculation.transfers.length ? <button type="button" className="raffle-button-secondary raffle-copy-transfer-button" disabled={transferCopyBusy} onClick={handleCopyTransferNotification}>
+            {t("raffle.copyTransferNotification")}
+          </button> : null}
+        </div>
+        {missingWalletTransferCount > 0 ? <p role="status" className="raffle-transfer-wallet-warning">{t("raffle.missingTransferWalletWarning")}</p> : null}
+        {transferCopyStatus !== "idle" ? <p role="status" className="raffle-share-status">
+          {transferCopyStatus === "copied" ? t("raffle.transferNotificationCopied") : null}
+          {transferCopyStatus === "failed" ? t("raffle.transferNotificationFailed") : null}
+        </p> : null}
+        {calculation.transfers.length ? <div className="raffle-table-scroll raffle-table-scroll--compact">
+          <table className="raffle-settlement-table raffle-transfer-table">
+            <thead><tr>
+              <th>{t("raffle.payer")} → {t("raffle.receiver")}</th>
+              <th>{t("raffle.amount")}</th>
+              <th>{t("raffle.receiverWallet")}</th>
+            </tr></thead>
+            <tbody>{calculation.transfers.map((transfer, index) => {
+              const wallet = resolveMemberWallet(memberWallets, transfer.toMemberId);
+              return <tr key={transfer.fromMemberId + ":" + transfer.toMemberId + ":" + index}>
+                <th scope="row" className="raffle-transfer-names">
+                  <span className="raffle-transfer-payer">{memberName(memberMap, transfer.fromMemberId)}</span>
+                  <span className="raffle-transfer-arrow" aria-hidden="true">→</span>
+                  <span className="raffle-transfer-receiver">{memberName(memberMap, transfer.toMemberId)}</span>
+                </th>
+                <td className="raffle-strong-amount">{neso(transfer.amount)}</td>
+                <td className="raffle-transfer-wallet-cell">{wallet || t("raffle.walletUnavailable")}</td>
+              </tr>;
+            })}</tbody>
+          </table>
+        </div> : <p className="raffle-no-transfers">{t("raffle.noTransfers")}</p>}
       </section>
 
       <section className="raffle-settlement-section raffle-breakdown-section">

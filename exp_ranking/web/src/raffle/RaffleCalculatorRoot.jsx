@@ -3,6 +3,7 @@ import { useTranslation } from "../i18n/I18nContext.jsx";
 import { parseNavigatorCharacterUrl } from "./domain/assetInput.js";
 import { currentRaffleRoundUtc } from "./domain/raffleRound.js";
 import { combineSelectedPartyClears, formatPartyBossName, formatPartyClearTitle, groupPartyClearCandidates, requiresDistributionConfirmation, selectPartyClearCandidates } from "./domain/partyClears.js";
+import { sortPartyMembers } from "./domain/partyOrder.js";
 import { calculateSaleProceedsNeso, calculateSettlement } from "./domain/settlement.js";
 import { RAFFLE_SCHEMA_VERSION } from "./domain/contract.js";
 import { raffleSource } from "./integrations/raffleSource.js";
@@ -69,6 +70,7 @@ export default function RaffleCalculatorRoot() {
   const settlementRef = useRef(null);
 
   const activeParty = model.parties.find((party) => party.id === model.activePartyId) || model.parties[0] || null;
+  const sortedActiveMembers = activeParty ? sortPartyMembers(activeParty.members) : [];
   const targetRound = currentRaffleRoundUtc();
   const targetRoundLocalText = formatRaffleRoundLocal(targetRound, { locale: language });
   const targetRoundUtcText = formatRaffleRoundUtc(targetRound);
@@ -188,7 +190,7 @@ export default function RaffleCalculatorRoot() {
     setSelectedClearIdsByBoss({ LUCID: [], WILL: [] });
     setConfirmedClearIds([]);
     const memberMap = {};
-    const characters = activeParty.members.map((member, index) => {
+    const characters = sortPartyMembers(activeParty.members).map((member, index) => {
       const memberId = "member-" + String(index + 1);
       memberMap[memberId] = member;
       return { memberId, assetKey: member.assetKey };
@@ -300,8 +302,8 @@ export default function RaffleCalculatorRoot() {
               <label className="raffle-label mt-4">{t("raffle.characterName")}<div className="mt-1 grid gap-2 sm:grid-cols-[1fr_auto]"><input className="raffle-input" value={characterQuery} onChange={(event) => setCharacterQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") searchCharacter(); }} placeholder={t("raffle.characterNamePlaceholder")} /><button type="button" className="raffle-button-secondary" disabled={searching} onClick={searchCharacter}>{searching ? t("raffle.searching") : t("raffle.search")}</button></div></label>
               {characterResults.length ? <div className="mt-3 space-y-2">{characterResults.map((character) => <article key={character.assetKey} className="flex items-center justify-between gap-3 rounded-lg border border-emerald-300 bg-emerald-50 p-3 dark:border-emerald-800 dark:bg-emerald-950/30"><div className="flex min-w-0 items-center gap-3">{character.imageUrl ? <img className="h-12 w-12 rounded-lg object-cover" src={character.imageUrl} alt="" /> : null}<div className="min-w-0"><p className="truncate font-semibold">{character.displayName}</p><p className="truncate text-xs text-slate-500">{character.level != null ? "Lv." + character.level : ""}{character.jobName ? " · " + character.jobName : ""}</p></div></div><button type="button" className="raffle-button-primary shrink-0" onClick={() => addSearchResult(character)}>{t("raffle.addToParty")}</button></article>)}</div> : searchCompleted ? <p className="mt-3 text-sm text-slate-500">{t("raffle.noCharacterFound")}</p> : null}
               <div className="mt-4 border-t border-slate-200 pt-4 dark:border-slate-700"><label className="raffle-label">{t("raffle.navigatorUrl")}<div className="mt-1 grid gap-2 sm:grid-cols-[1fr_auto]"><input className="raffle-input" value={navigatorUrl} onChange={(event) => setNavigatorUrl(event.target.value)} placeholder="https://msu.io/navigator/character/CHAR..." /><button type="button" className="raffle-button-secondary" disabled={resolving} onClick={addNavigatorMember}>{resolving ? t("raffle.loading") : t("raffle.add")}</button></div></label></div>
-              <ul className="raffle-party-members mt-4">{activeParty.members.map((member) => <li key={member.assetKey} className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 p-3 dark:border-slate-700"><div className="flex min-w-0 items-center gap-3">{member.imageUrl ? <img className="h-10 w-10 rounded-lg object-cover" src={member.imageUrl} alt="" /> : null}<div className="min-w-0"><p className="truncate font-semibold">{member.displayName}</p><p className="truncate text-xs text-slate-500">{member.level != null ? "Lv." + member.level : ""}{member.jobName ? " · " + member.jobName : ""}</p></div></div><button type="button" className="raffle-button-remove" onClick={() => removeMember(member.assetKey)}>{t("raffle.remove")}</button></li>)}</ul>
-              <PartyCarryoverSettings party={activeParty} updateParty={updatePartySettlementSettings} />
+              <ul className="raffle-party-members mt-4">{sortedActiveMembers.map((member) => <li key={member.assetKey} className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 p-3 dark:border-slate-700"><div className="flex min-w-0 items-center gap-3">{member.imageUrl ? <img className="h-10 w-10 rounded-lg object-cover" src={member.imageUrl} alt="" /> : null}<div className="min-w-0"><p className="truncate font-semibold">{member.displayName}</p><p className="truncate text-xs text-slate-500">{member.level != null ? "Lv." + member.level : ""}{member.jobName ? " · " + member.jobName : ""}</p></div></div><button type="button" className="raffle-button-remove" onClick={() => removeMember(member.assetKey)}>{t("raffle.remove")}</button></li>)}</ul>
+              <PartyCarryoverSettings party={activeParty} members={sortedActiveMembers} updateParty={updatePartySettlementSettings} />
             </> : null}
           </div>
 
@@ -382,7 +384,7 @@ export default function RaffleCalculatorRoot() {
                     <button type="button" className="raffle-button-primary w-full" disabled={!distributionRosterConfirmed} onClick={() => calculateBoss(activeClear)}>{t("raffle.calculateDistribution")}</button>
                     {!distributionRosterConfirmed ? <p className="raffle-hint-text">{t("raffle.confirmBeforeCalculate")}</p> : null}
                     <div ref={settlementRef}>
-                      {activeSetting.calculated ? activeSetting.calculated.ok ? <SettlementResult calculation={activeSetting.calculated} include={activeSetting.include} memberMap={jobResult.memberMap} powerCrystalNesoRate={activeSetting.powerCrystalNesoRate} bossLabel={activeClearBossLabel} roundLocalText={targetRoundLocalText} roundUtcText={targetRoundUtcText} /> : <div role="alert" className="space-y-1 rounded-xl border border-rose-400 bg-rose-50 p-3 text-sm text-rose-900">{activeSetting.calculated.errors.map((error, index) => <p key={index}>{describeSettlementError(error, { t, memberMap: jobResult.memberMap, dropNameByDropId })}</p>)}</div> : null}
+                      {activeSetting.calculated ? activeSetting.calculated.ok ? <SettlementResult calculation={activeSetting.calculated} include={activeSetting.include} memberMap={jobResult.memberMap} memberWallets={jobResult.memberWallets} powerCrystalNesoRate={activeSetting.powerCrystalNesoRate} bossLabel={activeClearBossLabel} roundLocalText={targetRoundLocalText} roundUtcText={targetRoundUtcText} /> : <div role="alert" className="space-y-1 rounded-xl border border-rose-400 bg-rose-50 p-3 text-sm text-rose-900">{activeSetting.calculated.errors.map((error, index) => <p key={index}>{describeSettlementError(error, { t, memberMap: jobResult.memberMap, dropNameByDropId })}</p>)}</div> : null}
                     </div>
                   </div> : null}
                 </> : <p className="text-sm text-slate-500">{t("raffle.noPartyClears")}</p>}

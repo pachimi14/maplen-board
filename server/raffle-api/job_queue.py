@@ -23,7 +23,7 @@ class Job:
     status: str = "queued"
     stage: str = "queued"
     completed_characters: int = 0
-    result: dict = field(default_factory=lambda: {"raffleResults": [], "clears": [], "warnings": [], "errors": []})
+    result: dict = field(default_factory=lambda: {"raffleResults": [], "clears": [], "warnings": [], "errors": [], "memberWallets": {}})
     cancel_event: threading.Event = field(default_factory=threading.Event)
     finished_at: float | None = None
 
@@ -90,6 +90,7 @@ class JobQueue:
                 "clears": list(job.result.get("clears", [])),
                 "warnings": list(job.result.get("warnings", [])),
                 "errors": list(job.result.get("errors", [])),
+                "memberWallets": dict(job.result.get("memberWallets", {})),
             }
         return payload
 
