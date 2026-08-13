@@ -96,6 +96,9 @@
       }
     ],
     "warnings": [{ "code": "fixture_mode" }],
-    "errors": []
+    "errors": [],
+    "memberWallets": {
+      "member-1": "0x0b89e0acd94a1998c9c7c7ba707d8e639cd44135"
+    }
   }
 }

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import threading
 import time
 from dataclasses import replace
@@ -57,6 +58,7 @@ def test_fixture_job_contract_does_not_return_asset_key() -> None:
         assert {clear["boss"] for clear in payload["clears"]} == {"LUCID", "WILL"}
         assert "assetKey" not in str(payload)
         assert payload["warnings"] == [{"code": "fixture_mode"}]
+        assert re.fullmatch(r"0x[0-9a-fA-F]{40}", payload["memberWallets"]["member-1"])
 
 
 def test_live_mode_fails_closed_without_key(monkeypatch) -> None:
@@ -184,7 +186,11 @@ def test_live_job_uses_server_side_history_and_returns_normalized_result() -> No
         assert payload["raffleResults"][0]["bossName"] == "Lucid"
         assert payload["clears"][0]["members"][0]["bossNeso"] == "9000000"
         assert payload["clears"][0]["members"][0]["drops"][0]["name"] == "Phantasma Coin"
-        assert "wallet" not in str(payload).casefold()
+        # LULU-069/LULU-103: the resolved owner wallet is now returned, but only
+        # under memberWallets (keyed by memberId) -- nowhere else in the payload.
+        assert payload["memberWallets"] == {"member-1": "wallet-test-only"}
+        payload_without_wallets = {key: value for key, value in payload.items() if key != "memberWallets"}
+        assert "wallet" not in str(payload_without_wallets).casefold()
         assert "assetKey" not in str(payload)
 
 def test_metadata_is_hydrated_before_a_later_member_exhausts_the_deadline(monkeypatch) -> None:

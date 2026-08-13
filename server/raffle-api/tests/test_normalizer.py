@@ -363,3 +363,4 @@ def test_shared_contract_fixture_matches_fixture_normalizer() -> None:
     assert result["clears"] == expected["clears"]
     assert result["warnings"] == expected["warnings"]
     assert result["errors"] == expected["errors"]
+    assert result["memberWallets"] == expected["memberWallets"]

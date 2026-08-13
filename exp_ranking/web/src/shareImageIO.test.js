@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { copyPngBlobToClipboard, downloadBlob } from "./shareImageIO.js";
+import { copyPngBlobToClipboard, copyTextToClipboard, downloadBlob } from "./shareImageIO.js";
 
 // vitest.config.js runs this file under environment: "node" (no jsdom), so
 // every browser global these functions touch (navigator, document, window,
@@ -55,6 +55,80 @@ describe("copyPngBlobToClipboard", () => {
     vi.stubGlobal("navigator", { clipboard: { write: vi.fn() } });
 
     expect(await copyPngBlobToClipboard(FAKE_BLOB)).toBe(false);
+  });
+});
+
+function makeFakeTextarea() {
+  return {
+    value: "",
+    style: {},
+    attributes: {},
+    setAttribute(name, value) {
+      this.attributes[name] = value;
+    },
+    select: vi.fn(),
+    setSelectionRange: vi.fn(),
+  };
+}
+
+describe("copyTextToClipboard", () => {
+  it("writes text via navigator.clipboard.writeText and returns true on success (LULU-103)", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { clipboard: { writeText } });
+
+    const ok = await copyTextToClipboard("SHIVA → pachimi 68,720,465 NESO");
+
+    expect(ok).toBe(true);
+    expect(writeText).toHaveBeenCalledWith("SHIVA → pachimi 68,720,465 NESO");
+  });
+
+  it("falls back to a hidden textarea + document.execCommand('copy') when writeText is unavailable (http environments)", async () => {
+    vi.stubGlobal("navigator", {});
+    const textarea = makeFakeTextarea();
+    const appended = [];
+    globalThis.document = {
+      createElement: vi.fn(() => textarea),
+      execCommand: vi.fn(() => true),
+      body: {
+        appendChild: vi.fn((el) => appended.push(["append", el])),
+        removeChild: vi.fn((el) => appended.push(["remove", el])),
+      },
+    };
+
+    const ok = await copyTextToClipboard("fallback text");
+
+    expect(ok).toBe(true);
+    expect(textarea.value).toBe("fallback text");
+    expect(textarea.select).toHaveBeenCalledTimes(1);
+    expect(document.execCommand).toHaveBeenCalledWith("copy");
+    expect(appended).toEqual([
+      ["append", textarea],
+      ["remove", textarea],
+    ]);
+  });
+
+  it("falls back to execCommand when writeText rejects", async () => {
+    vi.stubGlobal("navigator", { clipboard: { writeText: vi.fn().mockRejectedValue(new Error("denied")) } });
+    const textarea = makeFakeTextarea();
+    globalThis.document = {
+      createElement: vi.fn(() => textarea),
+      execCommand: vi.fn(() => true),
+      body: { appendChild: vi.fn(), removeChild: vi.fn() },
+    };
+
+    expect(await copyTextToClipboard("retry text")).toBe(true);
+  });
+
+  it("returns false (without throwing) when both the Clipboard API and execCommand fail", async () => {
+    vi.stubGlobal("navigator", {});
+    const textarea = makeFakeTextarea();
+    globalThis.document = {
+      createElement: vi.fn(() => textarea),
+      execCommand: vi.fn(() => false),
+      body: { appendChild: vi.fn(), removeChild: vi.fn() },
+    };
+
+    expect(await copyTextToClipboard("nope")).toBe(false);
   });
 });
 

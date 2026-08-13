@@ -213,6 +213,37 @@ export function memberDisplayName(memberMap, memberId) {
 }
 
 /**
+ * Resolves a member's own owner wallet address from the job's `memberWallets`
+ * map (LULU-069/LULU-103), or null when it is missing/malformed. This is the
+ * single place that decides "does this member have a known wallet" -- the
+ * transfer notification text, the settlement transfer rows, and the share
+ * image all call this instead of re-deriving the rule.
+ */
+export function resolveMemberWallet(memberWallets, memberId) {
+  const wallet = memberWallets?.[memberId];
+  return typeof wallet === "string" && wallet ? wallet : null;
+}
+
+/**
+ * Builds the plain-text Discord/manual transfer notification (LULU-103): one
+ * two-line block per transfer ("SENDER → RECEIVER AMOUNT NESO" then the
+ * receiver's wallet address on its own line), blocks separated by a blank
+ * line. When a receiver's wallet is unknown, the second line is a localized
+ * placeholder instead of being silently dropped.
+ */
+export function buildTransferNotificationText(transfers, memberMap, memberWallets, { t }) {
+  const list = Array.isArray(transfers) ? transfers : [];
+  return list
+    .map((transfer) => {
+      const from = memberDisplayName(memberMap, transfer.fromMemberId);
+      const to = memberDisplayName(memberMap, transfer.toMemberId);
+      const wallet = resolveMemberWallet(memberWallets, transfer.toMemberId) || t("raffle.walletUnavailable");
+      return from + " → " + to + " " + neso(transfer.amount) + "\n" + wallet;
+    })
+    .join("\n\n");
+}
+
+/**
  * Describes a settlement member's transfer status as
  * `{ kind: "pays" | "receives" | "settled", label, amount }` (`amount` is
  * the raw decimal-string NESO value, or null when nothing is owed). Shared
