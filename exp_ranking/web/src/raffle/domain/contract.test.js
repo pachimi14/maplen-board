@@ -66,7 +66,7 @@ describe("normalizeJobPayload", () => {
     expect(normalizeJobPayload(incomplete).code).toBe("invalidClear");
     const mixed = payload();
     mixed.clears.push(structuredClone(mixed.clears[0]));
-    mixed.clears[1].clearId = "clear-lucid-normal";
+    mixed.clears[1].clearId = "clear-lucid-normal-p2";
     mixed.clears[1].bossDifficulty = "NORMAL";
     mixed.clears[1].ascendantTier = "Mystic Ascendant";
     mixed.clears[1].historyMemberIds = ["member-2"];
@@ -75,6 +75,23 @@ describe("normalizeJobPayload", () => {
     mixed.clears[1].bossDifficulty = "HARD";
     mixed.clears[1].ascendantTier = "Divine Ascendant";
     expect(normalizeJobPayload(mixed).code).toBe("invalidClear");
+  });
+
+  it("accepts independent partyCount clusters of the same boss+difficulty but rejects an exact duplicate (LULU-096)", () => {
+    const multiCluster = payload();
+    multiCluster.clears.push(structuredClone(multiCluster.clears[0]));
+    multiCluster.clears[1].clearId = "clear-lucid-hard-p6";
+    multiCluster.clears[1].partyCount = 6;
+    multiCluster.clears[1].historyMemberIds = ["member-2"];
+    multiCluster.clears[1].members.forEach((member) => { member.drops = []; });
+    expect(normalizeJobPayload(multiCluster).ok).toBe(true);
+    expect(normalizeJobPayload(multiCluster).data.clears.map((clear) => clear.partyCount)).toEqual([2, 6]);
+
+    const exactDuplicate = payload();
+    exactDuplicate.clears.push(structuredClone(exactDuplicate.clears[0]));
+    exactDuplicate.clears[1].clearId = "clear-lucid-hard-p2-duplicate";
+    exactDuplicate.clears[1].members.forEach((member) => { member.drops = []; });
+    expect(normalizeJobPayload(exactDuplicate).code).toBe("invalidClear");
   });
 
   it("accepts the repository shared weekly contract fixture", () => {
