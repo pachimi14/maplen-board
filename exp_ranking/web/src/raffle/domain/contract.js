@@ -41,19 +41,23 @@ export function normalizeJobPayload(payload) {
     }
   }
 
-  if (!Array.isArray(payload.clears) || payload.clears.length > 6) return { ok: false, code: "invalidClears" };
+  // Up to 6 party sizes per boss/difficulty (LULU-096 independent clusters) x 3 difficulties x 2 bosses.
+  if (!Array.isArray(payload.clears) || payload.clears.length > 36) return { ok: false, code: "invalidClears" };
   const clearIds = new Set();
-  const clearKeys = new Set();
+  const clearIdentities = new Set();
   const dropIds = new Set();
   for (const clear of payload.clears) {
     const registeredCount = Array.isArray(clear?.members) ? clear.members.length : 0;
     const clearKey = clear?.boss + ":" + clear?.bossDifficulty;
+    // A given boss+difficulty may legitimately produce multiple independent clear candidates
+    // (one per observed partyCount cluster), so uniqueness is keyed on partyCount as well.
+    const clearIdentity = clearKey + ":" + clear?.partyCount;
     const expectedAscendantTier = ASCENDANT_TIER_BY_CLEAR[clearKey];
-    if (!clear || typeof clear.clearId !== "string" || !clear.clearId || clearIds.has(clear.clearId) || !RAFFLE_BOSSES.includes(clear.boss) || clearKeys.has(clearKey) || clear.complete !== true || !expectedAscendantTier || clear.ascendantTier !== expectedAscendantTier || !Number.isInteger(clear.partyCount) || clear.partyCount < 1 || clear.partyCount > 6 || !Array.isArray(clear.members) || registeredCount < 1 || registeredCount > 6 || !Array.isArray(clear.historyMemberIds) || clear.historyMemberIds.length < 1 || clear.historyMemberIds.length > registeredCount || clear.historyMemberIds.length > clear.partyCount) {
+    if (!clear || typeof clear.clearId !== "string" || !clear.clearId || clearIds.has(clear.clearId) || !RAFFLE_BOSSES.includes(clear.boss) || clearIdentities.has(clearIdentity) || clear.complete !== true || !expectedAscendantTier || clear.ascendantTier !== expectedAscendantTier || !Number.isInteger(clear.partyCount) || clear.partyCount < 1 || clear.partyCount > 6 || !Array.isArray(clear.members) || registeredCount < 1 || registeredCount > 6 || !Array.isArray(clear.historyMemberIds) || clear.historyMemberIds.length < 1 || clear.historyMemberIds.length > registeredCount || clear.historyMemberIds.length > clear.partyCount) {
       return { ok: false, code: "invalidClear" };
     }
     clearIds.add(clear.clearId);
-    clearKeys.add(clearKey);
+    clearIdentities.add(clearIdentity);
     const memberIds = new Set();
     for (const member of clear.members) {
       if (!member || typeof member.memberId !== "string" || !member.memberId || memberIds.has(member.memberId) || !validIntegerString(member.bossNeso) || !validIntegerString(member.powerCrystalAmount) || !validIntegerString(member.ascendantNeso) || !Array.isArray(member.drops)) {
