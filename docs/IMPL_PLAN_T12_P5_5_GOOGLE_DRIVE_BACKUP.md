@@ -251,11 +251,21 @@ git diff -w -- .github/workflows/ exp_ranking/bot/
    pip install -r requirements-backup-setup.txt
    ```
 6. **初期設定スクリプトを実行** → ブラウザで本人アカウントの同意 → **refresh token と folder ID が個別に表示される**
+
+   **★`--client-secret` というコマンドライン引数は存在しない**(ユーザー指示 2026-07-30 により廃止。シェル履歴・プロセス一覧に秘密が残るため)。client secret は**実行後に画面非表示で入力**する(`getpass`)。`allow_abbrev=False` により **`--client-s` のような略記も拒否**される。
+
    ```bash
-   python tools/gdrive_backup_setup.py --client-id <ID> --client-secret <SECRET>
+   python tools/gdrive_backup_setup.py --client-id <クライアントID>
    ```
+   - 実行すると `Client secret を入力してください（画面には表示されません）:` と出るので貼り付けて Enter(**入力は画面に出ない**)
+   - 任意: ダウンロードした `client_secret_*.json` をそのまま渡す方法もある(この場合 `--client-id` は不要)
+     ```bash
+     python tools/gdrive_backup_setup.py --client-secrets-file "C:/path/to/client_secret_XXXX.json"
+     ```
    - スクリプトが **`Lulumi Tools DB Backup` フォルダを作成**し、その **folder_id** を出力する
    - **token / client secret はファイルに保存されない**(標準出力のみ)
+   - **CI 上では実行が拒否される**(`GITHUB_ACTIONS` / `CI` を検出。refresh token を CI に表示しない)
+   - 詳細手順は **`docs/T12_P5_5_SETUP_GUIDE.md`** を参照(本節はその要約)
 
 ### 9-3. GitHub Secrets への登録(4項目)
 7. リポジトリの **Settings → Secrets and variables → Actions** で登録
