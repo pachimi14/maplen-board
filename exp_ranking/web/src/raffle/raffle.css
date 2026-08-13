@@ -177,7 +177,7 @@
   background: #eef2f7;
   padding: 0.15rem 0.42rem;
   color: #475569;
-  font-size: 0.62rem;
+  font-size: 0.7rem;
   font-weight: 800;
   line-height: 1.2;
 }
@@ -186,7 +186,7 @@
   overflow: hidden;
   margin-top: 0.12rem;
   color: #475569;
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   line-height: 1.25;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -196,7 +196,7 @@
   display: block;
   margin-top: 0.16rem;
   color: #64748b;
-  font-size: 0.65rem;
+  font-size: 0.72rem;
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
 }
@@ -209,7 +209,7 @@
   background: #d1fae5;
   padding: 0.22rem 0.48rem;
   color: #047857;
-  font-size: 0.62rem;
+  font-size: 0.72rem;
   font-weight: 900;
   letter-spacing: 0.02em;
 }
@@ -257,7 +257,7 @@
   border-radius: 50%;
   background: color-mix(in srgb, var(--color-emerald-100, #d1fae5) 74%, white);
   color: var(--color-emerald-800, #065f46);
-  font-size: 0.58rem;
+  font-size: 0.66rem;
   font-weight: 900;
 }
 
@@ -271,7 +271,7 @@
 .raffle-reward-name {
   overflow: hidden;
   color: #1e293b;
-  font-size: 0.78rem;
+  font-size: 0.85rem;
   font-weight: 750;
   line-height: 1.15;
   text-overflow: ellipsis;
@@ -284,7 +284,7 @@
   background: #e8edf3;
   padding: 0.08rem 0.35rem;
   color: #64748b;
-  font-size: 0.55rem;
+  font-size: 0.66rem;
   font-weight: 800;
   line-height: 1.2;
 }
@@ -308,7 +308,7 @@
 .raffle-reward-quantity {
   justify-self: end;
   color: #047857;
-  font-size: 0.78rem;
+  font-size: 0.88rem;
   font-variant-numeric: tabular-nums;
   font-weight: 900;
   white-space: nowrap;
@@ -362,7 +362,7 @@
 
 .raffle-summary-metrics small {
   color: #64748b;
-  font-size: 0.55rem;
+  font-size: 0.68rem;
   font-weight: 800;
   line-height: 1.15;
 }
@@ -370,7 +370,7 @@
 .raffle-summary-metrics strong {
   margin-top: 0.08rem;
   color: #047857;
-  font-size: 0.82rem;
+  font-size: 0.95rem;
   font-variant-numeric: tabular-nums;
   font-weight: 900;
   line-height: 1.2;
@@ -446,7 +446,7 @@
   background: #ede9fe;
   padding: 0.12rem 0.4rem;
   color: #6d28d9;
-  font-size: 0.56rem;
+  font-size: 0.68rem;
   font-weight: 900;
 }
 
@@ -667,44 +667,82 @@ html[data-theme-depth="deep"] .raffle-ascendant-tier-line span {
   font-weight: 900;
 }
 
-.raffle-settlement-metrics {
+.raffle-hero-metrics {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
-  gap: 0.6rem;
-  padding: 0.8rem 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+  padding: 0.9rem 1rem 0;
 }
 
-.raffle-settlement-metrics > div {
+.raffle-hero-tile {
   display: flex;
   min-width: 0;
   flex-direction: column;
-  border: 1px solid #dbe4ee;
-  border-radius: 0.7rem;
-  background: #f8fafc;
-  padding: 0.6rem 0.7rem;
+  border-radius: 0.85rem;
+  background: #ecfdf5;
+  padding: 0.85rem 1rem;
 }
 
-.raffle-settlement-metrics span {
-  color: #64748b;
-  font-size: 0.67rem;
+.raffle-hero-tile span {
+  color: #047857;
+  font-size: 0.78rem;
   font-weight: 800;
 }
 
-.raffle-settlement-metrics strong {
-  margin-top: 0.16rem;
+.raffle-hero-tile strong {
+  margin-top: 0.25rem;
   overflow-wrap: anywhere;
   color: #047857;
-  font-size: 0.92rem;
+  font-size: 1.6rem;
   font-variant-numeric: tabular-nums;
   font-weight: 900;
 }
 
+.raffle-sub-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.7rem 1rem 0;
+}
+
+.raffle-sub-metric {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  border: 1px solid #dbe4ee;
+  border-radius: 0.6rem;
+  background: #f8fafc;
+  padding: 0.4rem 0.6rem;
+}
+
+.raffle-sub-metric small {
+  color: #64748b;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.raffle-sub-metric strong {
+  margin-top: 0.1rem;
+  overflow-wrap: anywhere;
+  color: #0f172a;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+}
+
+.raffle-sub-metric-note {
+  justify-content: center;
+  color: #047857;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
 .raffle-settlement-formula {
-  margin: 0 1rem 0.9rem;
+  margin: 0.7rem 1rem 0;
   border-left: 3px solid #94a3b8;
   padding-left: 0.6rem;
   color: #475569;
-  font-size: 0.72rem;
+  font-size: 0.78rem;
 }
 
 .raffle-settlement-section {
@@ -719,10 +757,85 @@ html[data-theme-depth="deep"] .raffle-ascendant-tier-line span {
   font-weight: 900;
 }
 
+.raffle-member-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 0.7rem;
+}
+
+.raffle-member-card {
+  min-width: 0;
+  border: 1px solid #dbe4ee;
+  border-radius: 0.85rem;
+  background: #ffffff;
+  padding: 0.75rem 0.85rem;
+}
+
+.raffle-member-card-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.raffle-member-card-header h4 {
+  overflow-wrap: anywhere;
+  color: #0f172a;
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.raffle-member-card-gross {
+  margin-top: 0.5rem;
+  color: #334155;
+  font-size: 0.85rem;
+}
+
+.raffle-member-card-gross strong {
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+}
+
+.raffle-member-card-settle {
+  margin-top: 0.5rem;
+}
+
+.raffle-member-card-carryover {
+  margin-top: 0.5rem;
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+.raffle-badge-lg {
+  padding: 0.28rem 0.55rem;
+  font-size: 0.78rem;
+}
+
+.raffle-badge-lg strong {
+  font-size: 0.95rem;
+}
+
+.raffle-breakdown-subsection + .raffle-breakdown-subsection {
+  margin-top: 1.1rem;
+}
+
+.raffle-breakdown-subsection h5 {
+  margin-bottom: 0.6rem;
+  color: #1e293b;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
 .raffle-table-scroll {
   overflow-x: auto;
   border: 1px solid #dbe4ee;
   border-radius: 0.7rem;
+}
+
+.raffle-table-scroll--compact {
+  max-width: 46rem;
 }
 
 .raffle-settlement-table {
@@ -730,18 +843,17 @@ html[data-theme-depth="deep"] .raffle-ascendant-tier-line span {
   border-collapse: separate;
   border-spacing: 0;
   color: #1e293b;
-  font-size: 0.72rem;
+  font-size: 0.82rem;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-.raffle-category-table,
-.raffle-transfer-table {
+.raffle-category-table {
   min-width: 31rem;
 }
 
 .raffle-member-table {
-  min-width: 62rem;
+  min-width: 56rem;
 }
 
 .raffle-settlement-table th,
@@ -755,13 +867,24 @@ html[data-theme-depth="deep"] .raffle-ascendant-tier-line span {
 .raffle-settlement-table thead th {
   background: #e8edf3;
   color: #334155;
-  font-size: 0.65rem;
+  font-size: 0.72rem;
   font-weight: 900;
+}
+
+.raffle-th-note {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.72rem;
+  font-weight: 400;
 }
 
 .raffle-settlement-table th:first-child,
 .raffle-settlement-table td:first-child {
   text-align: left;
+}
+
+.raffle-col-settle {
+  border-left: 2px solid #cbd5e1;
 }
 
 .raffle-member-table tbody th {
@@ -771,6 +894,16 @@ html[data-theme-depth="deep"] .raffle-ascendant-tier-line span {
   background: #ffffff;
   color: #0f172a;
   font-weight: 900;
+}
+
+.raffle-member-table tbody tr:nth-child(even) td,
+.raffle-member-table tbody tr:nth-child(even) th {
+  background: #f8fafc;
+}
+
+.raffle-member-table tbody tr:hover td,
+.raffle-member-table tbody tr:hover th {
+  background: #ecfdf5;
 }
 
 .raffle-settlement-table tbody tr:last-child th,
@@ -795,12 +928,16 @@ html[data-theme-depth="deep"] .raffle-ascendant-tier-line span {
 .raffle-member-amount small {
   margin-top: 0.1rem;
   color: #64748b;
-  font-size: 0.62rem;
+  font-size: 0.7rem;
 }
 
 .raffle-strong-amount {
   color: #0f172a;
   font-weight: 900;
+}
+
+.raffle-zero-value {
+  color: #94a3b8;
 }
 
 .raffle-history-yes,
@@ -813,7 +950,7 @@ html[data-theme-depth="deep"] .raffle-ascendant-tier-line span {
   gap: 0.25rem;
   border-radius: 999px;
   padding: 0.18rem 0.4rem;
-  font-size: 0.62rem;
+  font-size: 0.72rem;
   font-weight: 900;
 }
 
@@ -836,27 +973,52 @@ html[data-theme-depth="deep"] .raffle-ascendant-tier-line span {
 
 .raffle-payment strong,
 .raffle-receipt strong {
-  font-size: 0.68rem;
+  font-size: 0.82rem;
 }
 
-.raffle-transfer-table tbody td:first-child {
+.raffle-transfer-list {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.raffle-transfer-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 0.7rem;
+  background: #ecfdf5;
+  padding: 0.65rem 0.85rem;
+}
+
+.raffle-transfer-payer {
   color: #be123c;
+  font-size: 0.85rem;
   font-weight: 800;
 }
 
-.raffle-transfer-table tbody td:nth-child(2) {
+.raffle-transfer-arrow {
+  color: #64748b;
+  font-weight: 900;
+}
+
+.raffle-transfer-receiver {
   color: #047857;
+  font-size: 0.85rem;
   font-weight: 800;
 }
 
-.raffle-transfer-table tbody td:last-child {
+.raffle-transfer-amount {
+  margin-left: auto;
   color: #0f172a;
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
   font-weight: 900;
 }
 
 .raffle-no-transfers {
   color: #64748b;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
 }
 
 html[data-theme-depth="deep"] .raffle-settlement-result {
@@ -865,20 +1027,55 @@ html[data-theme-depth="deep"] .raffle-settlement-result {
   color: #e2e8f0;
 }
 
-html[data-theme-depth="deep"] .raffle-settlement-metrics > div {
+html[data-theme-depth="deep"] .raffle-hero-tile {
+  background: #123c35;
+}
+
+html[data-theme-depth="deep"] .raffle-hero-tile span,
+html[data-theme-depth="deep"] .raffle-hero-tile strong {
+  color: var(--theme-deep-accent, #34d399);
+}
+
+html[data-theme-depth="deep"] .raffle-sub-metric {
   border-color: #334155;
   background: #111c2e;
 }
 
-html[data-theme-depth="deep"] .raffle-settlement-metrics span,
+html[data-theme-depth="deep"] .raffle-sub-metric small,
 html[data-theme-depth="deep"] .raffle-settlement-formula,
 html[data-theme-depth="deep"] .raffle-member-amount small,
-html[data-theme-depth="deep"] .raffle-no-transfers {
+html[data-theme-depth="deep"] .raffle-no-transfers,
+html[data-theme-depth="deep"] .raffle-member-card-carryover {
   color: #94a3b8;
 }
 
-html[data-theme-depth="deep"] .raffle-settlement-metrics strong {
+html[data-theme-depth="deep"] .raffle-sub-metric strong {
+  color: #e2e8f0;
+}
+
+html[data-theme-depth="deep"] .raffle-sub-metric-note {
   color: var(--theme-deep-accent, #34d399);
+}
+
+html[data-theme-depth="deep"] .raffle-member-card {
+  border-color: #334155;
+  background: #0f172a;
+}
+
+html[data-theme-depth="deep"] .raffle-member-card-header h4 {
+  color: #f8fafc;
+}
+
+html[data-theme-depth="deep"] .raffle-member-card-gross {
+  color: #cbd5e1;
+}
+
+html[data-theme-depth="deep"] .raffle-member-card-gross strong {
+  color: #f8fafc;
+}
+
+html[data-theme-depth="deep"] .raffle-breakdown-subsection h5 {
+  color: #e2e8f0;
 }
 
 html[data-theme-depth="deep"] .raffle-settlement-section,
@@ -888,9 +1085,28 @@ html[data-theme-depth="deep"] .raffle-table-scroll {
 
 html[data-theme-depth="deep"] .raffle-settlement-section > h4,
 html[data-theme-depth="deep"] .raffle-settlement-table,
-html[data-theme-depth="deep"] .raffle-strong-amount,
-html[data-theme-depth="deep"] .raffle-transfer-table tbody td:last-child {
+html[data-theme-depth="deep"] .raffle-strong-amount {
   color: #e2e8f0;
+}
+
+html[data-theme-depth="deep"] .raffle-transfer-row {
+  background: #123c35;
+}
+
+html[data-theme-depth="deep"] .raffle-transfer-payer {
+  color: #fda4af;
+}
+
+html[data-theme-depth="deep"] .raffle-transfer-receiver {
+  color: #6ee7b7;
+}
+
+html[data-theme-depth="deep"] .raffle-transfer-amount {
+  color: #f8fafc;
+}
+
+html[data-theme-depth="deep"] .raffle-transfer-arrow {
+  color: #94a3b8;
 }
 
 html[data-theme-depth="deep"] .raffle-settlement-table th,
@@ -906,6 +1122,24 @@ html[data-theme-depth="deep"] .raffle-settlement-table thead th {
 html[data-theme-depth="deep"] .raffle-member-table tbody th {
   background: #0f172a;
   color: #f8fafc;
+}
+
+html[data-theme-depth="deep"] .raffle-member-table tbody tr:nth-child(even) td,
+html[data-theme-depth="deep"] .raffle-member-table tbody tr:nth-child(even) th {
+  background: #14203a;
+}
+
+html[data-theme-depth="deep"] .raffle-member-table tbody tr:hover td,
+html[data-theme-depth="deep"] .raffle-member-table tbody tr:hover th {
+  background: #123c35;
+}
+
+html[data-theme-depth="deep"] .raffle-col-settle {
+  border-left-color: #475569;
+}
+
+html[data-theme-depth="deep"] .raffle-zero-value {
+  color: #64748b;
 }
 
 html[data-theme-depth="deep"] .raffle-settlement-table tfoot th,
@@ -932,8 +1166,12 @@ html[data-theme-depth="deep"] .raffle-settled {
 }
 
 @media (max-width: 640px) {
-  .raffle-settlement-metrics {
-    grid-template-columns: 1fr 1fr;
+  .raffle-hero-metrics {
+    grid-template-columns: 1fr;
+    padding-inline: 0.75rem;
+  }
+
+  .raffle-sub-metrics {
     padding-inline: 0.75rem;
   }
 
@@ -977,7 +1215,7 @@ html[data-theme-depth="deep"] .raffle-settled {
 .raffle-carryover-sign-help {
   margin-top: 0.16rem;
   color: #64748b;
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   line-height: 1.35;
 }
 
@@ -1005,7 +1243,7 @@ html[data-theme-depth="deep"] .raffle-settled {
 
 .raffle-carryover-member > span {
   overflow: hidden;
-  font-size: 0.72rem;
+  font-size: 0.8rem;
   font-weight: 800;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1024,7 +1262,7 @@ html[data-theme-depth="deep"] .raffle-settled {
 .raffle-category-quantity > small {
   margin-top: 0.12rem;
   color: #64748b;
-  font-size: 0.6rem;
+  font-size: 0.7rem;
 }
 
 .raffle-equipment-icons {
@@ -1056,19 +1294,19 @@ html[data-theme-depth="deep"] .raffle-settled {
 
 .raffle-equipment-fallback {
   color: #64748b;
-  font-size: 0.55rem;
+  font-size: 0.68rem;
   font-weight: 900;
 }
 
 .raffle-equipment-item b {
   position: absolute;
-  right: -0.25rem;
-  bottom: -0.22rem;
+  right: -0.3rem;
+  bottom: -0.25rem;
   border-radius: 999px;
   background: #0f172a;
-  padding: 0.04rem 0.2rem;
+  padding: 0.05rem 0.22rem;
   color: #ffffff;
-  font-size: 0.48rem;
+  font-size: 0.68rem;
   line-height: 1.2;
 }
 
@@ -1082,7 +1320,7 @@ html[data-theme-depth="deep"] .raffle-settled {
   display: inline-flex;
   border-radius: 999px;
   padding: 0.18rem 0.4rem;
-  font-size: 0.62rem;
+  font-size: 0.72rem;
   font-weight: 900;
 }
 
@@ -1134,4 +1372,121 @@ html[data-theme-depth="deep"] .raffle-carryover-pay {
 html[data-theme-depth="deep"] .raffle-carryover-zero {
   background: #263244;
   color: #cbd5e1;
+}
+
+/* Progress bar (C4) */
+.raffle-progress-bar {
+  overflow: hidden;
+  width: 100%;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+
+.raffle-progress-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--color-emerald-600, #059669);
+  transition: width 200ms ease;
+}
+
+.raffle-progress-text {
+  color: #334155;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+html[data-theme-depth="deep"] .raffle-progress-bar {
+  background: #263244;
+}
+
+html[data-theme-depth="deep"] .raffle-progress-text {
+  color: #cbd5e1;
+}
+
+/* Disabled-button hint text (C3) */
+.raffle-hint-text {
+  margin-top: 0.5rem;
+  color: #b45309;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+html[data-theme-depth="deep"] .raffle-hint-text {
+  color: #fbbf24;
+}
+
+/* Tab sub-labels (C7) */
+.raffle-tab-sublabel {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+/* Inline Power Crystal rate input (C7) */
+.raffle-rate-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.raffle-rate-input {
+  width: 7rem;
+  flex: none;
+}
+
+/* Member remove button (C7) */
+.raffle-button-remove {
+  flex: none;
+  min-height: 2rem;
+  border: 1px solid #fda4af;
+  border-radius: 0.55rem;
+  background: #fff1f2;
+  padding: 0.3rem 0.65rem;
+  color: #be123c;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+html[data-theme-depth="deep"] .raffle-button-remove {
+  border-color: #7f1d2e;
+  background: #3f1622;
+  color: #fda4af;
+}
+
+/* Larger, higher-contrast checkboxes across the raffle page (C7) */
+.raffle-root input[type="checkbox"] {
+  width: 1.05rem;
+  height: 1.05rem;
+  accent-color: var(--color-emerald-600, #059669);
+}
+.raffle-sale-proceeds {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.45rem;
+  border-radius: 0.6rem;
+  background: #ecfdf5;
+  padding: 0.5rem 0.65rem;
+  color: #065f46;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.raffle-sale-proceeds strong {
+  color: #047857;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+html[data-theme-depth="deep"] .raffle-sale-proceeds {
+  background: #123c35;
+  color: #a7f3d0;
 }
