@@ -778,6 +778,35 @@ html[data-theme-depth="deep"] .raffle-ascendant-tier-line span {
   font-weight: 900;
 }
 
+.raffle-actual-transfers-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-bottom: 0.6rem;
+}
+
+.raffle-actual-transfers-header > h4 {
+  margin-bottom: 0;
+  color: #1e293b;
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.raffle-copy-transfer-button {
+  flex-shrink: 0;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.76rem;
+}
+
+.raffle-transfer-wallet-warning {
+  margin: 0 0 0.6rem;
+  color: #b45309;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
 .raffle-member-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
@@ -1116,9 +1145,14 @@ html[data-theme-depth="deep"] .raffle-table-scroll {
 }
 
 html[data-theme-depth="deep"] .raffle-settlement-section > h4,
+html[data-theme-depth="deep"] .raffle-actual-transfers-header > h4,
 html[data-theme-depth="deep"] .raffle-settlement-table,
 html[data-theme-depth="deep"] .raffle-strong-amount {
   color: #e2e8f0;
+}
+
+html[data-theme-depth="deep"] .raffle-transfer-wallet-warning {
+  color: #fbbf24;
 }
 
 html[data-theme-depth="deep"] .raffle-transfer-row {

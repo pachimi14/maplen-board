@@ -1,15 +1,17 @@
 import { useState } from "react";
 import { useTranslation } from "../i18n/I18nContext.jsx";
 import {
+  buildTransferNotificationText,
   describeMemberSettlement,
   formatNeso,
   memberDisplayName as memberName,
   neso,
   pcPortionAmount,
+  resolveMemberWallet,
   sumTransferAmounts,
 } from "./uiText.js";
 import { buildSettlementShareModel, renderSettlementShareImageBlob, settlementShareFileName } from "./shareImage.js";
-import { copyPngBlobToClipboard, downloadBlob } from "../shareImageIO.js";
+import { copyPngBlobToClipboard, copyTextToClipboard, downloadBlob } from "../shareImageIO.js";
 
 function signedNeso(value) {
   try {
@@ -31,10 +33,12 @@ function EquipmentIcons({ drops }) {
   })}</span>;
 }
 
-export default function SettlementResult({ calculation, include, memberMap, powerCrystalNesoRate, bossLabel = "", roundLocalText = "", roundUtcText = "" }) {
+export default function SettlementResult({ calculation, include, memberMap, memberWallets = {}, powerCrystalNesoRate, bossLabel = "", roundLocalText = "", roundUtcText = "" }) {
   const { t } = useTranslation();
   const [shareBusy, setShareBusy] = useState(false);
   const [shareStatus, setShareStatus] = useState("idle");
+  const [transferCopyBusy, setTransferCopyBusy] = useState(false);
+  const [transferCopyStatus, setTransferCopyStatus] = useState("idle");
   const actualTransferTotal = sumTransferAmounts(calculation.transfers);
   const categoryColumns = [
     include.bossNeso ? { key: "bossNeso", label: t("raffle.item_bossNeso"), total: calculation.categoryTotals.bossNeso } : null,
@@ -111,6 +115,27 @@ export default function SettlementResult({ calculation, include, memberMap, powe
     }
   }
 
+  // LULU-103: one-button Discord/manual transfer notification copy, so
+  // members no longer hand-type "SENDER → RECEIVER amount NESO" + wallet
+  // while reading the settlement table.
+  async function handleCopyTransferNotification() {
+    if (transferCopyBusy) return;
+    setTransferCopyBusy(true);
+    try {
+      const text = buildTransferNotificationText(calculation.transfers, memberMap, memberWallets, { t });
+      const copied = await copyTextToClipboard(text);
+      setTransferCopyStatus(copied ? "copied" : "failed");
+    } catch {
+      setTransferCopyStatus("failed");
+    } finally {
+      setTransferCopyBusy(false);
+    }
+  }
+
+  const missingWalletTransferCount = calculation.transfers.filter(
+    (transfer) => !resolveMemberWallet(memberWallets, transfer.toMemberId),
+  ).length;
+
   return (
     <article className="raffle-settlement-result">
       <div className="raffle-settlement-header">
@@ -168,7 +193,17 @@ export default function SettlementResult({ calculation, include, memberMap, powe
       </section>
 
       <section className="raffle-settlement-section raffle-actual-transfers-section">
-        <h4>{t("raffle.actualTransfers")}</h4>
+        <div className="raffle-actual-transfers-header">
+          <h4>{t("raffle.actualTransfers")}</h4>
+          {calculation.transfers.length ? <button type="button" className="raffle-button-secondary raffle-copy-transfer-button" disabled={transferCopyBusy} onClick={handleCopyTransferNotification}>
+            {t("raffle.copyTransferNotification")}
+          </button> : null}
+        </div>
+        {missingWalletTransferCount > 0 ? <p role="status" className="raffle-transfer-wallet-warning">{t("raffle.missingTransferWalletWarning")}</p> : null}
+        {transferCopyStatus !== "idle" ? <p role="status" className="raffle-share-status">
+          {transferCopyStatus === "copied" ? t("raffle.transferNotificationCopied") : null}
+          {transferCopyStatus === "failed" ? t("raffle.transferNotificationFailed") : null}
+        </p> : null}
         {calculation.transfers.length ? <ul className="raffle-transfer-list">{calculation.transfers.map((transfer, index) => <li key={transfer.fromMemberId + ":" + transfer.toMemberId + ":" + index} className="raffle-transfer-row">
           <span className="raffle-transfer-payer">{memberName(memberMap, transfer.fromMemberId)}</span>
           <span className="raffle-transfer-arrow" aria-hidden="true">→</span>

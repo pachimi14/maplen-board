@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import ja from "../i18n/locales/ja.json";
 import en from "../i18n/locales/en.json";
 import {
+  buildTransferNotificationText,
   describeProgressStage,
   describeRaffleCode,
   describeRaffleEntry,
@@ -9,6 +10,7 @@ import {
   formatRaffleRoundLocal,
   formatRaffleRoundUtc,
   pcPortionAmount,
+  resolveMemberWallet,
   sumTransferAmounts,
 } from "./uiText.js";
 import { calculateSettlement } from "./domain/settlement.js";
@@ -230,6 +232,64 @@ describe("pcPortionAmount (C1: value-vs-actual-NESO clarity, acceptance criterio
   it("returns null for a zero/absent powerCrystalNeso", () => {
     expect(pcPortionAmount({ powerCrystalNeso: "0" })).toBeNull();
     expect(pcPortionAmount({})).toBeNull();
+  });
+});
+
+describe("resolveMemberWallet", () => {
+  it("returns the wallet string when present", () => {
+    expect(resolveMemberWallet({ "member-1": "0xEE158FbBF3507A4a7e42C112e49725db4875a5b9" }, "member-1")).toBe(
+      "0xEE158FbBF3507A4a7e42C112e49725db4875a5b9",
+    );
+  });
+
+  it("returns null when the member's wallet is missing or the map itself is missing", () => {
+    expect(resolveMemberWallet({}, "member-1")).toBeNull();
+    expect(resolveMemberWallet(undefined, "member-1")).toBeNull();
+    expect(resolveMemberWallet({ "member-1": "" }, "member-1")).toBeNull();
+    expect(resolveMemberWallet({ "member-1": 12345 }, "member-1")).toBeNull();
+  });
+});
+
+describe("buildTransferNotificationText (LULU-103)", () => {
+  const memberMap = { "member-1": { displayName: "SHIVA" }, "member-2": { displayName: "pachimi" } };
+  const wallet = "0xEE158FbBF3507A4a7e42C112e49725db4875a5b9";
+
+  it("matches the documented format exactly: 'SENDER → RECEIVER AMOUNT NESO' then the wallet on the next line", () => {
+    const transfers = [{ fromMemberId: "member-1", toMemberId: "member-2", amount: "68720465" }];
+    const text = buildTransferNotificationText(transfers, memberMap, { "member-2": wallet }, { t });
+    expect(text).toBe("SHIVA → pachimi 68,720,465 NESO\n" + wallet);
+  });
+
+  it("separates multiple transfer blocks with a blank line", () => {
+    const transfers = [
+      { fromMemberId: "member-1", toMemberId: "member-2", amount: "100" },
+      { fromMemberId: "member-2", toMemberId: "member-1", amount: "50" },
+    ];
+    const memberWallets = { "member-1": wallet, "member-2": "0x0000000000000000000000000000000000000001" };
+    const text = buildTransferNotificationText(transfers, memberMap, memberWallets, { t });
+    expect(text).toBe(
+      "SHIVA → pachimi 100 NESO\n0x0000000000000000000000000000000000000001" +
+        "\n\n" +
+        "pachimi → SHIVA 50 NESO\n" + wallet,
+    );
+  });
+
+  it("shows a localized placeholder instead of silently omitting an unknown receiver wallet", () => {
+    const transfers = [{ fromMemberId: "member-1", toMemberId: "member-2", amount: "100" }];
+    const text = buildTransferNotificationText(transfers, memberMap, {}, { t });
+    expect(text).toBe("SHIVA → pachimi 100 NESO\n" + ja.raffle.walletUnavailable);
+    expect(ja.raffle.walletUnavailable).toBe("(ウォレット未取得)");
+  });
+
+  it("returns an empty string for an empty/missing transfers list", () => {
+    expect(buildTransferNotificationText([], memberMap, {}, { t })).toBe("");
+    expect(buildTransferNotificationText(undefined, memberMap, {}, { t })).toBe("");
+  });
+
+  it("works with the English locale too", () => {
+    const transfers = [{ fromMemberId: "member-1", toMemberId: "member-2", amount: "100" }];
+    const text = buildTransferNotificationText(transfers, memberMap, {}, { t: tEn });
+    expect(text).toBe("SHIVA → pachimi 100 NESO\n" + en.raffle.walletUnavailable);
   });
 });
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import re
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
@@ -34,6 +35,12 @@ def _drops(boss: str, member_index: int) -> list[dict]:
     return drops
 
 
+def _fixture_wallet_address(asset_key: str) -> str:
+    # Deterministic 0x + 40 hex chars so fixture (dev/CI) mode can exercise
+    # the memberWallets contract end-to-end without a real MSU wallet.
+    return "0x" + hashlib.sha1(asset_key.encode("utf-8")).hexdigest()[:40]
+
+
 def fixture_result(request: CreateJobRequest) -> dict:
     raffle_results = []
     for character in request.characters:
@@ -47,7 +54,8 @@ def fixture_result(request: CreateJobRequest) -> dict:
         for index, character in enumerate(request.characters):
             members.append({"memberId": character.memberId, "bossNeso": "600" if index == 0 else "0", "powerCrystalAmount": "100" if index == 0 else "0", "ascendantNeso": "50" if index == 0 else "0", "drops": _drops(boss, index)})
         clears.append({"clearId": "fixture-" + boss.lower(), "boss": boss, "bossDifficulty": difficulty, "ascendantTier": ascendant_tier, "partyCount": len(request.characters), "historyMemberIds": [character.memberId for character in request.characters], "complete": True, "members": members})
-    return {"raffleResults": raffle_results, "clears": clears, "warnings": [{"code": "fixture_mode"}], "errors": []}
+    member_wallets = {character.memberId: character.walletOverride or _fixture_wallet_address(character.assetKey) for character in request.characters}
+    return {"raffleResults": raffle_results, "clears": clears, "warnings": [{"code": "fixture_mode"}], "errors": [], "memberWallets": member_wallets}
 
 
 def _text(value: object) -> str:
