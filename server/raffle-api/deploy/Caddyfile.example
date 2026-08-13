@@ -2,7 +2,7 @@
 # Do not replace the existing /img/* route.
 api.lulumi-tools.com {
     handle /raffle/* {
-        reverse_proxy 127.0.0.1:8782
+        reverse_proxy 127.0.0.1:8786
     }
 
     handle /img/* {
