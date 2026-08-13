@@ -161,6 +161,33 @@ export function formatRaffleRoundUtc(isoString) {
   return hours + ":" + minutes + " UTC";
 }
 
+/**
+ * Sums a settlement's `transfers` array (`{ amount }[]`, decimal strings)
+ * using BigInt to avoid precision loss. Shared by the settlement UI's
+ * "actual NESO transferred" sub-metric and the share-image model so the two
+ * can never drift from each other.
+ */
+export function sumTransferAmounts(transfers) {
+  const total = (Array.isArray(transfers) ? transfers : []).reduce(
+    (sum, transfer) => sum + BigInt(transfer?.amount ?? "0"),
+    0n
+  );
+  return total.toString();
+}
+
+/**
+ * Returns a settlement member's PC-converted NESO portion (decimal string)
+ * when it is non-zero, else null. Gates the "incl. PC conversion" note on
+ * the settlement card (SettlementResult.jsx).
+ */
+export function pcPortionAmount(member) {
+  try {
+    return BigInt(member?.powerCrystalNeso ?? "0") > 0n ? member.powerCrystalNeso : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Smoothly scrolls an element into view, respecting reduced-motion preference. */
 export function scrollElementIntoView(element) {
   if (!element || typeof element.scrollIntoView !== "function") return;
