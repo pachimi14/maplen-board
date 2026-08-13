@@ -102,7 +102,7 @@
     "baseShare": "1人あたりの分配価値（PC換算込み）",
     "pcPortionNote": "うちPC換算 {{amount}}（送金対象外）",
     "actualTransferTotal": "実際に動くNESO合計",
-    "remainder": "余り（PT順に+1）",
+    "remainder": "余り（キャラ名順に+1）",
     "settlementFormula": "当選総額 − 分配権利額 − 前回持ち越し（受取＋／支払－）を精算します。",
     "categoryBreakdown": "カテゴリ別合計",
     "category": "項目",

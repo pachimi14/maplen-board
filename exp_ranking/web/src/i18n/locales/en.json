@@ -102,7 +102,7 @@
     "baseShare": "Share per member (incl. PC conversion)",
     "pcPortionNote": "Incl. PC conversion {{amount}} (not transferable)",
     "actualTransferTotal": "Total NESO actually transferred",
-    "remainder": "Remainder (+1 in party order)",
+    "remainder": "Remainder (+1 in character name order)",
     "settlementFormula": "Settle total won − assigned share − previous carryover (receive + / pay −).",
     "categoryBreakdown": "Totals by category",
     "category": "Category",
