@@ -1032,36 +1032,32 @@ html[data-theme-depth="deep"] .raffle-ascendant-tier-line span {
   font-size: 0.82rem;
 }
 
-.raffle-transfer-list {
-  display: grid;
-  gap: 0.55rem;
+/* C5: a real column-aligned table (payer/receiver names / amount / wallet)
+   instead of the old packed-text row -- the previous layout left the
+   amount's starting x different on every row (depended on name length), so
+   amounts never lined up vertically. A <table> fixes that for free: every
+   row's amount cell sits in the same column. font-variant-numeric:
+   tabular-nums is inherited from .raffle-settlement-table. */
+.raffle-transfer-table {
+  min-width: 34rem;
 }
 
-.raffle-transfer-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem 0.85rem;
-  border-radius: 0.7rem;
-  background: #ecfdf5;
-  padding: 0.65rem 0.85rem;
+.raffle-transfer-table tbody tr:nth-child(even) td,
+.raffle-transfer-table tbody tr:nth-child(even) th {
+  background: #f8fafc;
 }
 
-/* LULU-103 C3: name + amount packed together on the left ("who pays whom
-   how much" at a glance); the receiver's wallet moves to the row's right
-   edge instead of leaving a big gap between the names and the amount. */
-.raffle-transfer-left {
+.raffle-transfer-names {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: 0.35rem;
-  min-width: 0;
+  color: #0f172a;
+  font-weight: 900;
 }
 
 .raffle-transfer-payer {
   color: #be123c;
-  font-size: 0.85rem;
   font-weight: 800;
 }
 
@@ -1072,20 +1068,11 @@ html[data-theme-depth="deep"] .raffle-ascendant-tier-line span {
 
 .raffle-transfer-receiver {
   color: #047857;
-  font-size: 0.85rem;
   font-weight: 800;
 }
 
-.raffle-transfer-amount {
-  color: #0f172a;
-  font-size: 1rem;
-  font-variant-numeric: tabular-nums;
-  font-weight: 900;
-}
-
-.raffle-transfer-wallet {
+.raffle-transfer-wallet-cell {
   overflow-wrap: anywhere;
-  margin-left: auto;
   color: #64748b;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.72rem;
@@ -1175,8 +1162,13 @@ html[data-theme-depth="deep"] .raffle-transfer-wallet-warning {
   color: #fbbf24;
 }
 
-html[data-theme-depth="deep"] .raffle-transfer-row {
-  background: #123c35;
+html[data-theme-depth="deep"] .raffle-transfer-table tbody tr:nth-child(even) td,
+html[data-theme-depth="deep"] .raffle-transfer-table tbody tr:nth-child(even) th {
+  background: #14203a;
+}
+
+html[data-theme-depth="deep"] .raffle-transfer-names {
+  color: #f8fafc;
 }
 
 html[data-theme-depth="deep"] .raffle-transfer-payer {
@@ -1187,15 +1179,11 @@ html[data-theme-depth="deep"] .raffle-transfer-receiver {
   color: #6ee7b7;
 }
 
-html[data-theme-depth="deep"] .raffle-transfer-amount {
-  color: #f8fafc;
-}
-
 html[data-theme-depth="deep"] .raffle-transfer-arrow {
   color: #94a3b8;
 }
 
-html[data-theme-depth="deep"] .raffle-transfer-wallet {
+html[data-theme-depth="deep"] .raffle-transfer-wallet-cell {
   color: #94a3b8;
 }
 

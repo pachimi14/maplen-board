@@ -11,7 +11,8 @@ import {
   formatRaffleRoundUtc,
   pcPortionAmount,
   resolveMemberWallet,
-  sumTransferAmounts,
+  settlementCategoryColumns,
+  settlementMemberCategoryCell,
 } from "./uiText.js";
 import { calculateSettlement } from "./domain/settlement.js";
 
@@ -175,36 +176,6 @@ describe("describeSettlementError", () => {
   });
 });
 
-describe("sumTransferAmounts", () => {
-  it("sums decimal-string amounts with BigInt precision", () => {
-    expect(sumTransferAmounts([{ amount: "280" }, { amount: "45" }])).toBe("325");
-  });
-
-  it("returns \"0\" for an empty or missing transfers array", () => {
-    expect(sumTransferAmounts([])).toBe("0");
-    expect(sumTransferAmounts(undefined)).toBe("0");
-  });
-
-  it("matches the settlement's own `transfers` total for a real calculateSettlement output", () => {
-    const result = calculateSettlement({
-      boss: "WILL",
-      complete: true,
-      historyMemberIds: ["a"],
-      partyOrder: ["a", "b", "c"],
-      include: { coin: false, equipment: false, bossNeso: true, powerCrystal: false, ascendantNeso: false },
-      members: [
-        { memberId: "a", bossNeso: "900", drops: [] },
-        { memberId: "b", bossNeso: "0", drops: [] },
-        { memberId: "c", bossNeso: "0", drops: [] },
-      ],
-    });
-    expect(result.ok).toBe(true);
-    const manualTotal = result.transfers.reduce((sum, transfer) => sum + BigInt(transfer.amount), 0n).toString();
-    expect(sumTransferAmounts(result.transfers)).toBe(manualTotal);
-    expect(result.transfers.length).toBeGreaterThan(0);
-  });
-});
-
 describe("pcPortionAmount (C1: value-vs-actual-NESO clarity, acceptance criterion 1)", () => {
   it("returns the converted PC amount for a member with a non-zero PC conversion (rate 1.2 composite case)", () => {
     const result = calculateSettlement({
@@ -290,6 +261,72 @@ describe("buildTransferNotificationText (LULU-103)", () => {
     const transfers = [{ fromMemberId: "member-1", toMemberId: "member-2", amount: "100" }];
     const text = buildTransferNotificationText(transfers, memberMap, {}, { t: tEn });
     expect(text).toBe("SHIVA → pachimi 100 NESO\n" + en.raffle.walletUnavailable);
+  });
+});
+
+// LULU-103 C4: the share-image member table reuses these two pure helpers
+// (instead of re-deriving the same column set/cell formatting a second
+// time) so it can never disagree with the on-screen member table about
+// which columns are shown or what a given member's cell says.
+describe("settlementCategoryColumns", () => {
+  it("returns only the included categories, in a fixed left-to-right order", () => {
+    const include = { equipment: true, coin: true, bossNeso: true, powerCrystal: false, ascendantNeso: true };
+    const columns = settlementCategoryColumns(include, t);
+    expect(columns.map((column) => column.key)).toEqual(["bossNeso", "ascendantNeso", "coin", "equipment"]);
+  });
+
+  it("returns an empty array when nothing is included", () => {
+    expect(settlementCategoryColumns({}, t)).toEqual([]);
+    expect(settlementCategoryColumns(undefined, t)).toEqual([]);
+  });
+
+  it("labels every column with its localized item name", () => {
+    const columns = settlementCategoryColumns({ powerCrystal: true }, t);
+    expect(columns).toEqual([{ key: "powerCrystal", label: t("raffle.item_powerCrystal") }]);
+  });
+});
+
+describe("settlementMemberCategoryCell", () => {
+  it("dims a zero bossNeso/ascendantNeso value instead of showing a bare 0", () => {
+    expect(settlementMemberCategoryCell({ bossNeso: "0" }, "bossNeso")).toEqual({ primary: "0", secondary: null, zero: true });
+    expect(settlementMemberCategoryCell({ ascendantNeso: "600" }, "ascendantNeso")).toEqual({ primary: "600 NESO", secondary: null, zero: false });
+  });
+
+  it("shows the Power Crystal amount, with the converted NESO only when the rate isn't 1", () => {
+    const member = { powerCrystalAmount: "100", powerCrystalNeso: "83" };
+    expect(settlementMemberCategoryCell(member, "powerCrystal", { powerCrystalNesoRate: "1.2" })).toEqual({
+      primary: "100 PC",
+      secondary: "83 NESO",
+      zero: false,
+    });
+    expect(settlementMemberCategoryCell(member, "powerCrystal", { powerCrystalNesoRate: "1" })).toEqual({
+      primary: "100 PC",
+      secondary: null,
+      zero: false,
+    });
+    expect(settlementMemberCategoryCell({ powerCrystalAmount: "0", powerCrystalNeso: "0" }, "powerCrystal", { powerCrystalNesoRate: "1.2" })).toEqual({
+      primary: "0",
+      secondary: null,
+      zero: true,
+    });
+  });
+
+  it("shows coin quantity + sale proceeds, dimmed at zero", () => {
+    expect(settlementMemberCategoryCell({ coinQuantity: "10", coinSaleNeso: "95" }, "coin")).toEqual({
+      primary: "× 10",
+      secondary: "95 NESO",
+      zero: false,
+    });
+    expect(settlementMemberCategoryCell({ coinQuantity: "0" }, "coin")).toEqual({ primary: "0", secondary: null, zero: true });
+  });
+
+  it("shows only the equipment sale NESO amount (no icons -- callers that can render icons special-case equipment themselves), dimmed at zero", () => {
+    expect(settlementMemberCategoryCell({ equipmentDrops: [{ dropId: "d1" }], equipmentSaleNeso: "285" }, "equipment")).toEqual({
+      primary: "285 NESO",
+      secondary: null,
+      zero: false,
+    });
+    expect(settlementMemberCategoryCell({ equipmentDrops: [] }, "equipment")).toEqual({ primary: "—", secondary: null, zero: true });
   });
 });
 

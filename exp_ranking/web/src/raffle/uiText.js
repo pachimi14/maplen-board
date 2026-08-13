@@ -162,20 +162,6 @@ export function formatRaffleRoundUtc(isoString) {
 }
 
 /**
- * Sums a settlement's `transfers` array (`{ amount }[]`, decimal strings)
- * using BigInt to avoid precision loss. Shared by the settlement UI's
- * "actual NESO transferred" sub-metric and the share-image model so the two
- * can never drift from each other.
- */
-export function sumTransferAmounts(transfers) {
-  const total = (Array.isArray(transfers) ? transfers : []).reduce(
-    (sum, transfer) => sum + BigInt(transfer?.amount ?? "0"),
-    0n
-  );
-  return total.toString();
-}
-
-/**
  * Returns a settlement member's PC-converted NESO portion (decimal string)
  * when it is non-zero, else null. Gates the "incl. PC conversion" note on
  * both the settlement card (SettlementResult.jsx) and the share image
@@ -205,6 +191,59 @@ export function formatNeso(value) {
 /** Formats a decimal-string NESO amount with its unit suffix, e.g. "1,234 NESO". */
 export function neso(value) {
   return formatNeso(value) + " NESO";
+}
+
+const CATEGORY_COLUMN_DEFS = Object.freeze([
+  { key: "bossNeso", includeKey: "bossNeso", labelKey: "raffle.item_bossNeso" },
+  { key: "powerCrystal", includeKey: "powerCrystal", labelKey: "raffle.item_powerCrystal" },
+  { key: "ascendantNeso", includeKey: "ascendantNeso", labelKey: "raffle.item_ascendantNeso" },
+  { key: "coin", includeKey: "coin", labelKey: "raffle.item_coin" },
+  { key: "equipment", includeKey: "equipment", labelKey: "raffle.item_equipment" },
+]);
+
+/**
+ * Returns the settlement's active member-table category columns
+ * (`{ key, label }[]`), in a fixed left-to-right order, filtered to only the
+ * categories currently `include`d. Shared by the on-screen member table
+ * (SettlementResult.jsx) and the share-image member table (shareImage.js,
+ * C4) so both always show exactly the same set of columns in the same order.
+ */
+export function settlementCategoryColumns(include, t) {
+  return CATEGORY_COLUMN_DEFS.filter((def) => include?.[def.includeKey]).map((def) => ({ key: def.key, label: t(def.labelKey) }));
+}
+
+/**
+ * Returns one member's formatted value for a category column as
+ * `{ primary, secondary, zero }` (`secondary` is null when there is no
+ * second line; `zero` marks a zero value that should render dimmed). Every
+ * number comes straight from `member` (a `calculateSettlement` output row)
+ * via `formatNeso`/`neso` -- no new computation, only formatting -- so a
+ * member's cell can never show a different number in the on-screen member
+ * table vs. the share-image member table (C4), which both call this.
+ * `equipment` intentionally has no icon here (icons cannot be embedded as
+ * canvas-drawn text): callers that can render icons (SettlementResult.jsx)
+ * special-case `equipment` themselves instead of using this cell for it.
+ */
+export function settlementMemberCategoryCell(member, key, { powerCrystalNesoRate } = {}) {
+  if (key === "powerCrystal") {
+    if (member.powerCrystalAmount === "0") return { primary: "0", secondary: null, zero: true };
+    const showConvertedNeso = powerCrystalNesoRate !== "1";
+    return {
+      primary: formatNeso(member.powerCrystalAmount) + " PC",
+      secondary: showConvertedNeso ? neso(member.powerCrystalNeso) : null,
+      zero: false,
+    };
+  }
+  if (key === "coin") {
+    if (member.coinQuantity === "0") return { primary: "0", secondary: null, zero: true };
+    return { primary: "× " + formatNeso(member.coinQuantity), secondary: neso(member.coinSaleNeso), zero: false };
+  }
+  if (key === "equipment") {
+    if (!member.equipmentDrops?.length) return { primary: "—", secondary: null, zero: true };
+    return { primary: neso(member.equipmentSaleNeso), secondary: null, zero: false };
+  }
+  if (member[key] === "0") return { primary: "0", secondary: null, zero: true };
+  return { primary: neso(member[key]), secondary: null, zero: false };
 }
 
 /** Resolves a settlement member's display name, falling back to the raw memberId. */
