@@ -30,3 +30,9 @@ server/raffle-api/*.sqlite3*
 
 # Local Codex/Claude workspace metadata
 .claude/
+
+# Google Drive backup setup (T12 P5.5) - secrets must never be committed
+token.json
+tools/token.json
+*.credentials.json
+client_secret*.json
