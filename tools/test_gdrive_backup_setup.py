@@ -261,3 +261,31 @@ def test_find_or_create_backup_folder_creates_when_missing(monkeypatch):
     assert folder_id == "should-not-be-used"
     assert created is True
     assert fake_service._files_resource.create_called is True
+
+
+def test_requirements_files_parse_under_windows_locale_encoding():
+    """pip は BOM/コーディング宣言が無い requirements を OS のロケール
+    エンコーディング(日本語 Windows では cp932)で読む。UTF-8 の日本語
+    コメントはそこで UnicodeDecodeError になる(2026-08-13 に実発生)。
+    リポジトリ内の全 requirements*.txt が「ASCII のみ」または
+    「UTF-8 BOM 付き」であることを検査する(同クラスの網羅検査)。"""
+    import pathlib
+
+    repo_root = pathlib.Path(__file__).resolve().parent.parent
+    checked = 0
+    for path in repo_root.rglob("requirements*.txt"):
+        if any(part in ("node_modules", ".git", "dist") for part in path.parts):
+            continue
+        raw = path.read_bytes()
+        checked += 1
+        if raw[:3] == b"\xef\xbb\xbf":
+            raw.decode("utf-8-sig")  # BOM 付きなら UTF-8 として正当であること
+            continue
+        try:
+            raw.decode("ascii")
+        except UnicodeDecodeError as exc:
+            raise AssertionError(
+                f"{path.relative_to(repo_root)} は非ASCIIを含むのに UTF-8 BOM が"
+                f"無い。日本語 Windows の pip (cp932) で読めず落ちる: {exc}"
+            ) from None
+    assert checked >= 2, "requirements ファイルが見つからない(検査対象の消失)"
