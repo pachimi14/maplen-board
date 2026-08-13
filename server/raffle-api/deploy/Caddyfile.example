@@ -1,0 +1,11 @@
+# Merge only this handle into the existing api.lulumi-tools.com site block.
+# Do not replace the existing /img/* route.
+api.lulumi-tools.com {
+    handle /raffle/* {
+        reverse_proxy 127.0.0.1:8786
+    }
+
+    handle /img/* {
+        reverse_proxy 127.0.0.1:8781
+    }
+}

@@ -1,0 +1,101 @@
+{
+  "caseId": "fixture-weekly-party-results-and-clears",
+  "request": {
+    "raffledAt": "2026-07-30T00:00:00Z",
+    "characters": [
+      { "memberId": "member-1", "assetKey": "CHARfixture001" }
+    ]
+  },
+  "expectedJob": {
+    "schemaVersion": 3,
+    "classificationVersion": 1,
+    "status": "complete",
+    "progress": { "completedCharacters": 1, "totalCharacters": 1, "stage": "complete", "elapsedMs": 10 },
+    "raffleResults": [
+      {
+        "resultId": "fixture-lucid-member-1",
+        "memberId": "member-1",
+        "raffledAt": "2026-07-30T00:00:00Z",
+        "layerName": "Fixture Lucid",
+        "bossCode": "LUCID",
+        "bossName": "Lucid",
+        "outcome": "WIN",
+        "rewards": [
+          { "rewardName": "Phantasma Coin", "classification": "COIN", "quantity": "10", "won": true }
+        ]
+      },
+      {
+        "resultId": "fixture-will-member-1",
+        "memberId": "member-1",
+        "raffledAt": "2026-07-30T00:00:00Z",
+        "layerName": "Fixture Will",
+        "bossCode": "WILL",
+        "bossName": "Will",
+        "outcome": "WIN",
+        "rewards": [
+          { "rewardName": "Arachno Coin", "classification": "COIN", "quantity": "10", "won": true }
+        ]
+      },
+      {
+        "resultId": "fixture-other-member-1",
+        "memberId": "member-1",
+        "raffledAt": "2026-07-30T00:00:00Z",
+        "layerName": "Fixture Other Boss",
+        "bossCode": null,
+        "bossName": "Other Boss",
+        "outcome": "WIN",
+        "rewards": [
+          { "rewardName": "Fixture Other Reward", "classification": "OTHER", "quantity": "1", "won": true }
+        ]
+      }
+    ],
+    "clears": [
+      {
+        "clearId": "fixture-lucid",
+        "boss": "LUCID",
+        "bossDifficulty": "HARD",
+        "ascendantTier": "Divine Ascendant",
+        "partyCount": 1,
+        "historyMemberIds": [
+          "member-1"
+        ],
+        "complete": true,
+        "members": [
+          {
+            "memberId": "member-1",
+            "bossNeso": "600",
+            "powerCrystalAmount": "100",
+            "ascendantNeso": "50",
+            "drops": [
+              { "dropId": "fixture-lucid-coin", "category": "COIN", "name": "Phantasma Coin", "quantity": "10" }
+            ]
+          }
+        ]
+      },
+      {
+        "clearId": "fixture-will",
+        "boss": "WILL",
+        "bossDifficulty": "HARD",
+        "ascendantTier": "Eternal Ascendant",
+        "partyCount": 1,
+        "historyMemberIds": [
+          "member-1"
+        ],
+        "complete": true,
+        "members": [
+          {
+            "memberId": "member-1",
+            "bossNeso": "600",
+            "powerCrystalAmount": "100",
+            "ascendantNeso": "50",
+            "drops": [
+              { "dropId": "fixture-will-coin", "category": "COIN", "name": "Arachno Coin", "quantity": "10" }
+            ]
+          }
+        ]
+      }
+    ],
+    "warnings": [{ "code": "fixture_mode" }],
+    "errors": []
+  }
+}

@@ -26,6 +26,7 @@ import { useProfile } from "../profile/ProfileContext";
 import { toShareProxyUrl } from "../shareImageProxy";
 import { DEFAULT_SHARE_IMAGE_THEME, getShareImageTheme, listShareImageThemes } from "../shareImageThemes";
 import { buildShareText, characterDetailUrl, safeShareFileName, xIntentUrl } from "../shareImageUtils";
+import { copyPngBlobToClipboard, downloadBlob } from "../shareImageIO";
 
 const CARD_WIDTH = 1600;
 const CARD_HEIGHT = 900;
@@ -109,29 +110,6 @@ function loadImageOrPlaceholder(src) {
     };
     image.src = src;
   });
-}
-
-function downloadBlob(blob, fileName) {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
-async function copyPngToClipboard(blob) {
-  if (!navigator.clipboard?.write || typeof ClipboardItem === "undefined") {
-    return false;
-  }
-  try {
-    await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 function ThemeLayer({ theme }) {
@@ -508,7 +486,7 @@ export default function ShareImageButton({ character, allCharacters = [], gainRa
   const handleCopy = async () => {
     try {
       const nextBlob = blob || (await generateBlob());
-      const ok = await copyPngToClipboard(nextBlob);
+      const ok = await copyPngBlobToClipboard(nextBlob);
       if (ok) {
         setStatus("copied");
       } else {
