@@ -1,14 +1,12 @@
-// Builds and draws the "copy settlement as image" PNG (IMPL_PLAN_RAFFLE_
-// VALUE_CLARITY_SHARE.md C2, polished per post-launch user feedback --
-// "character name and the transfer amount are far apart" / "please box the
-// sections with a light background"). Split in three layers on purpose:
+// Builds and draws the "copy settlement as image" PNG. Split in three layers
+// on purpose:
 //  - buildSettlementShareModel(): pure data assembly (testable without a
 //    canvas/DOM -- every number/string comes straight from `calculation`,
 //    the same source SettlementResult.jsx renders, so the image and the
 //    screen can never show different numbers).
 //  - layoutSections(): pure arithmetic (no ctx) that turns the model into
-//    absolute box/row/text positions plus the total canvas height. Both
-//    measureSettlementShareImageHeight() and drawSettlementShareImage()
+//    absolute box/row/text/column positions plus the total canvas height.
+//    Both measureSettlementShareImageHeight() and drawSettlementShareImage()
 //    delegate to this single function so the measured height and the
 //    drawn content can never drift apart from each other.
 //  - drawSettlementShareImage(): takes a 2D rendering context and issues
@@ -19,8 +17,26 @@
 // renderSettlementShareImageBlob() is the browser-only glue (creates the
 // actual <canvas>, calls toBlob) and is intentionally not unit-tested, the
 // same way components/ShareImageButton.jsx's canvas/DOM glue isn't.
+//
+// C4: the member section is a real table (member / active category columns
+// / gross / settlement -- no raffle-history or assigned-share columns),
+// mirroring SettlementResult.jsx's member breakdown table via the shared
+// settlementCategoryColumns/settlementMemberCategoryCell helpers so the two
+// tables can never disagree about which columns are shown or a member's
+// cell value.
+// C5: the transfer section is also a column-aligned table -- the amount
+// column's right edge sits at the same fixed x on every row (independent of
+// name length), so amounts read as a straight vertical column instead of
+// drifting per row; the wallet column stays at the box's right edge.
 
-import { describeMemberSettlement, memberDisplayName, neso, pcPortionAmount, resolveMemberWallet, sumTransferAmounts } from "./uiText.js";
+import {
+  describeMemberSettlement,
+  memberDisplayName,
+  neso,
+  resolveMemberWallet,
+  settlementCategoryColumns,
+  settlementMemberCategoryCell,
+} from "./uiText.js";
 
 const SHARE_IMAGE_TITLE = "Raffle Settlement";
 const SHARE_IMAGE_FOOTER = "lulumi-tools.com";
@@ -30,10 +46,22 @@ const PADDING = 40;
 const BOX_PADDING = 20;
 const BOX_RADIUS = 12;
 const BOX_GAP = 20;
+const CELL_PADDING = 10;
 const MEMBER_ROW_HEIGHT = 56;
+const MEMBER_HEADER_HEIGHT = 40;
 const TRANSFER_ROW_HEIGHT = 40;
+const TRANSFER_HEADER_HEIGHT = 28;
 const PILL_HEIGHT = 30;
 const FONT_FAMILY = "sans-serif";
+const MONOSPACE_FONT_FAMILY = "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+
+// Member table fixed column widths (C4): member name / gross / settlement
+// pill columns are fixed; the remaining width is split evenly across
+// whichever category columns are currently included (1-5 of them).
+const MEMBER_NAME_COL_WIDTH = 170;
+const MEMBER_GROSS_COL_WIDTH = 120;
+const MEMBER_SETTLE_COL_WIDTH = 190;
+const MEMBER_MIN_CATEGORY_COL_WIDTH = 110;
 
 const COLOR = {
   background: "#ffffff",
@@ -45,6 +73,8 @@ const COLOR = {
   accent: "#047857",
   muted: "#64748b",
   transfer: "#0f172a",
+  tableHeaderBg: "#e8edf3",
+  tableHeaderText: "#334155",
 };
 
 const PILL_COLOR = {
@@ -83,15 +113,24 @@ export function buildSettlementShareModel(calculation, memberMap, include, power
     });
   }
 
+  // C4: same active-category-column set as the on-screen member table
+  // (settlementCategoryColumns), with the Power Crystal "non-transferable"
+  // sub-note carried alongside its column header.
+  const memberCategoryColumns = settlementCategoryColumns(include, t).map((column) => ({
+    ...column,
+    note: column.key === "powerCrystal" ? t("raffle.powerCrystalNonTransferable") : null,
+  }));
+
   const memberRows = calculation.members.map((member) => {
     const settlement = describeMemberSettlement(member, { t, carryoverEnabled: calculation.carryoverEnabled });
-    const pcAmount = pcPortionAmount(member);
     return {
       memberId: member.memberId,
       name: memberDisplayName(memberMap, member.memberId),
-      grossLabel: t("raffle.grossWon"),
+      categoryCells: memberCategoryColumns.map((column) => ({
+        key: column.key,
+        ...settlementMemberCategoryCell(member, column.key, { powerCrystalNesoRate }),
+      })),
       gross: neso(member.gross),
-      pcNote: pcAmount != null ? t("raffle.pcPortionNote", { amount: neso(pcAmount) }) : null,
       settlementKind: settlement.kind,
       settlementLabel: settlement.label,
       settlementAmount: settlement.amount != null ? neso(settlement.amount) : null,
@@ -111,10 +150,16 @@ export function buildSettlementShareModel(calculation, memberMap, include, power
     roundLine,
     summaryLines,
     baseShareLine: { label: t("raffle.baseShare"), value: neso(calculation.baseShare) },
-    actualTransferTotal: { label: t("raffle.actualTransferTotal"), value: neso(sumTransferAmounts(calculation.transfers)) },
     memberSectionTitle: t("raffle.memberBreakdown"),
+    memberColumnLabel: t("raffle.member"),
+    grossColumnLabel: t("raffle.grossWon"),
+    settlementColumnLabel: t("raffle.settlement"),
+    memberCategoryColumns,
     memberRows,
     transferSectionTitle: t("raffle.actualTransfers"),
+    transferNamesLabel: t("raffle.payer") + " → " + t("raffle.receiver"),
+    transferAmountLabel: t("raffle.amount"),
+    transferWalletLabel: t("raffle.receiverWallet"),
     transferRows,
     noTransfersText: t("raffle.noTransfers"),
     footer: SHARE_IMAGE_FOOTER,
@@ -125,9 +170,53 @@ function pillColorFor(kind) {
   return PILL_COLOR[kind] || PILL_COLOR.settled;
 }
 
+/** Left-to-right column layout for the member table (C4): member name (fixed) / one column per active category (evenly split) / gross (fixed) / settlement (fixed). */
+function computeMemberTableColumns(model, contentX, contentWidth) {
+  const categoryCount = model.memberCategoryColumns.length;
+  const fixedWidth = MEMBER_NAME_COL_WIDTH + MEMBER_GROSS_COL_WIDTH + MEMBER_SETTLE_COL_WIDTH;
+  const categoryWidth = categoryCount
+    ? Math.max(MEMBER_MIN_CATEGORY_COL_WIDTH, (contentWidth - fixedWidth) / categoryCount)
+    : 0;
+
+  const columns = [];
+  let x = contentX;
+  columns.push({ key: "member", label: model.memberColumnLabel, note: null, x, width: MEMBER_NAME_COL_WIDTH, align: "left" });
+  x += MEMBER_NAME_COL_WIDTH;
+  for (const column of model.memberCategoryColumns) {
+    columns.push({ key: column.key, label: column.label, note: column.note, x, width: categoryWidth, align: "right" });
+    x += categoryWidth;
+  }
+  columns.push({ key: "gross", label: model.grossColumnLabel, note: null, x, width: MEMBER_GROSS_COL_WIDTH, align: "right" });
+  x += MEMBER_GROSS_COL_WIDTH;
+  columns.push({ key: "settlement", label: model.settlementColumnLabel, note: null, x, width: MEMBER_SETTLE_COL_WIDTH, align: "right" });
+  return columns;
+}
+
 /**
- * Pure arithmetic layout pass: turns `model` into absolute box/row/text
- * positions plus the total canvas height. No ctx is touched here, so
+ * Left-to-right column layout for the transfer table (C5): names / amount /
+ * wallet, each a fixed fraction of contentWidth. Because every row shares
+ * this exact same column layout, the amount column's right edge sits at the
+ * same x on every row regardless of how long a row's names are -- the fix
+ * for amounts drifting out of vertical alignment under the old packed-text
+ * layout.
+ */
+function computeTransferTableColumns(model, contentX, contentWidth) {
+  const namesWidth = Math.round(contentWidth * 0.46);
+  const amountWidth = Math.round(contentWidth * 0.22);
+  const walletWidth = contentWidth - namesWidth - amountWidth;
+  let x = contentX;
+  const names = { key: "names", label: model.transferNamesLabel, x, width: namesWidth, align: "left" };
+  x += namesWidth;
+  const amount = { key: "amount", label: model.transferAmountLabel, x, width: amountWidth, align: "right" };
+  x += amountWidth;
+  const wallet = { key: "wallet", label: model.transferWalletLabel, x, width: walletWidth, align: "right" };
+  return { names, amount, wallet };
+}
+
+/**
+ * Pure arithmetic layout pass: turns `model` into absolute box/row/column/
+ * text positions plus the total canvas height. No ctx is touched here (aside
+ * from column widths, which are fixed allocations, not text-measured), so
  * measureSettlementShareImageHeight() (called before the <canvas> exists,
  * to size it) and drawSettlementShareImage() both derive from this exact
  * same computation and can never disagree about heights.
@@ -148,7 +237,7 @@ function layoutSections(model, width = SHARE_IMAGE_WIDTH) {
 
   y += BOX_GAP;
 
-  // Box 1: summary (total / members / PC rate / base share / actual transfer total).
+  // Box 1: summary (total / members / PC rate / base share).
   const summaryBoxY = y;
   const summaryLineYs = [];
   let summaryInnerY = summaryBoxY + BOX_PADDING;
@@ -157,15 +246,15 @@ function layoutSections(model, width = SHARE_IMAGE_WIDTH) {
     summaryInnerY += 26;
   }
   const baseShareY = summaryInnerY + 6;
-  summaryInnerY = baseShareY + 30;
-  const actualTransferTotalY = summaryInnerY;
-  const summaryBoxHeight = (actualTransferTotalY + 8 + BOX_PADDING) - summaryBoxY;
+  const summaryBoxHeight = (baseShareY + 8 + BOX_PADDING) - summaryBoxY;
   y = summaryBoxY + summaryBoxHeight + BOX_GAP;
 
-  // Box 2: member breakdown (heading + one fixed-height banded row per member).
+  // Box 2: member table (heading + header row + one fixed-height banded row per member).
   const memberBoxY = y;
   const memberHeadingY = memberBoxY + BOX_PADDING + 14;
-  const memberRowsTop = memberHeadingY + 20;
+  const memberTableTop = memberHeadingY + 18;
+  const memberRowsTop = memberTableTop + MEMBER_HEADER_HEIGHT;
+  const memberColumns = computeMemberTableColumns(model, contentX, contentWidth);
   const memberRows = model.memberRows.map((member, index) => ({
     member,
     index,
@@ -174,11 +263,13 @@ function layoutSections(model, width = SHARE_IMAGE_WIDTH) {
   const memberBoxHeight = (memberRowsTop - memberBoxY) + model.memberRows.length * MEMBER_ROW_HEIGHT + BOX_PADDING;
   y = memberBoxY + memberBoxHeight + BOX_GAP;
 
-  // Box 3: actual transfers (heading + one fixed-height banded row per transfer,
-  // or a single "no transfers" line when the list is empty).
+  // Box 3: transfer table (heading + header row + one fixed-height banded row
+  // per transfer, or a single "no transfers" line when the list is empty).
   const transferBoxY = y;
   const transferHeadingY = transferBoxY + BOX_PADDING + 14;
-  const transferRowsTop = transferHeadingY + 18;
+  const transferTableTop = transferHeadingY + 18;
+  const transferRowsTop = transferTableTop + TRANSFER_HEADER_HEIGHT;
+  const transferColumns = computeTransferTableColumns(model, contentX, contentWidth);
   const transferRowCount = Math.max(model.transferRows.length, 1);
   const transferRows = model.transferRows.length
     ? model.transferRows.map((transfer, index) => ({
@@ -202,9 +293,24 @@ function layoutSections(model, width = SHARE_IMAGE_WIDTH) {
     title,
     boss,
     round,
-    summaryBox: { y: summaryBoxY, height: summaryBoxHeight, lineYs: summaryLineYs, baseShareY, actualTransferTotalY },
-    memberBox: { y: memberBoxY, height: memberBoxHeight, headingY: memberHeadingY, rows: memberRows },
-    transferBox: { y: transferBoxY, height: transferBoxHeight, headingY: transferHeadingY, rows: transferRows, emptyY: emptyTransfersY },
+    summaryBox: { y: summaryBoxY, height: summaryBoxHeight, lineYs: summaryLineYs, baseShareY },
+    memberBox: {
+      y: memberBoxY,
+      height: memberBoxHeight,
+      headingY: memberHeadingY,
+      headerY: memberTableTop,
+      columns: memberColumns,
+      rows: memberRows,
+    },
+    transferBox: {
+      y: transferBoxY,
+      height: transferBoxHeight,
+      headingY: transferHeadingY,
+      headerY: transferTableTop,
+      columns: transferColumns,
+      rows: transferRows,
+      emptyY: emptyTransfersY,
+    },
     footer,
   };
 }
@@ -220,6 +326,28 @@ function drawText(ctx, { text, x, y, font, color, align = "left" }) {
   ctx.textAlign = align;
   ctx.fillText(text, x, y);
   ctx.textAlign = "left";
+}
+
+/**
+ * Truncates `text` to fit within `maxWidth` at `font`, appending an ellipsis
+ * ("…") when it doesn't fit (binary search over the longest fitting prefix).
+ * Falls back to the untruncated text when `ctx.measureText` isn't available
+ * (e.g. a minimal test mock ctx) instead of throwing.
+ */
+function truncateToWidth(ctx, text, font, maxWidth) {
+  if (typeof ctx.measureText !== "function" || !Number.isFinite(maxWidth)) return text;
+  ctx.font = font;
+  if (ctx.measureText(text).width <= maxWidth) return text;
+  const ellipsis = "…";
+  let low = 0;
+  let high = text.length;
+  while (low < high) {
+    const mid = Math.ceil((low + high) / 2);
+    const candidate = text.slice(0, mid) + ellipsis;
+    if (ctx.measureText(candidate).width <= maxWidth) low = mid;
+    else high = mid - 1;
+  }
+  return low > 0 ? text.slice(0, low) + ellipsis : ellipsis;
 }
 
 /** Fills (and optionally strokes) a rounded rect, falling back to a plain rect when ctx.roundRect isn't available (older engines / test mocks). */
@@ -253,74 +381,122 @@ function drawSectionBox(ctx, x, y, width, height) {
   drawRoundedRect(ctx, x, y, width, height, BOX_RADIUS, { fill: COLOR.boxFill, stroke: COLOR.boxBorder });
 }
 
-/** One member row: name (+ small PC-conversion note) on the left half, a color-coded pay/receive/settled pill spanning the right half. */
-function drawMemberRow(ctx, contentX, contentWidth, row) {
-  const { member, index, y } = row;
-  const bandColor = index % 2 === 0 ? COLOR.bandWhite : COLOR.bandAlt;
-  ctx.fillStyle = bandColor;
-  ctx.fillRect(contentX, y, contentWidth, MEMBER_ROW_HEIGHT);
+function columnTextX(column) {
+  return column.align === "left" ? column.x + CELL_PADDING : column.x + column.width - CELL_PADDING;
+}
 
-  const leftHalfWidth = contentWidth * 0.5;
-  // Name always sits on the row's first text line (y+22), whether or not a
-  // PC note follows on the second line -- keeps the name/gross-label row
-  // grid-aligned across every member row, not just the ones with a note.
-  drawText(ctx, { text: member.name, x: contentX + BOX_PADDING, y: y + 22, font: `bold 16px ${FONT_FAMILY}`, color: COLOR.heading });
-  if (member.pcNote) {
-    drawText(ctx, { text: member.pcNote, x: contentX + BOX_PADDING, y: y + 40, font: `12px ${FONT_FAMILY}`, color: COLOR.muted });
+/** Draws a table header band spanning `columns`, with each column's label (and optional sub-note, e.g. Power Crystal's "non-transferable") right/left-aligned per column. */
+function drawTableHeader(ctx, columns, y, height) {
+  const first = columns[0];
+  const last = columns[columns.length - 1];
+  ctx.fillStyle = COLOR.tableHeaderBg;
+  ctx.fillRect(first.x, y, (last.x + last.width) - first.x, height);
+  for (const column of columns) {
+    const textX = columnTextX(column);
+    drawText(ctx, { text: column.label, x: textX, y: y + 17, font: `bold 12px ${FONT_FAMILY}`, color: COLOR.tableHeaderText, align: column.align });
+    if (column.note) {
+      drawText(ctx, { text: column.note, x: textX, y: y + 31, font: `10px ${FONT_FAMILY}`, color: COLOR.tableHeaderText, align: column.align });
+    }
   }
-
-  const grossRightX = contentX + leftHalfWidth - 10;
-  drawText(ctx, { text: member.grossLabel, x: grossRightX, y: y + 22, font: `11px ${FONT_FAMILY}`, color: COLOR.muted, align: "right" });
-  drawText(ctx, { text: member.gross, x: grossRightX, y: y + 40, font: `bold 15px ${FONT_FAMILY}`, color: COLOR.heading, align: "right" });
-
-  const pillColor = pillColorFor(member.settlementKind);
-  const pillX = contentX + leftHalfWidth + 8;
-  const pillWidth = contentWidth - leftHalfWidth - 8 - BOX_PADDING;
-  const pillY = y + (MEMBER_ROW_HEIGHT - PILL_HEIGHT) / 2;
-  drawRoundedRect(ctx, pillX, pillY, pillWidth, PILL_HEIGHT, PILL_HEIGHT / 2, { fill: pillColor.bg });
-  const pillText = member.settlementAmount ? member.settlementLabel + " " + member.settlementAmount : member.settlementLabel;
-  drawText(ctx, {
-    text: pillText,
-    x: pillX + pillWidth / 2,
-    y: pillY + PILL_HEIGHT / 2 + 5,
-    font: `bold 14px ${FONT_FAMILY}`,
-    color: pillColor.text,
-    align: "center",
-  });
 }
 
 /**
- * One transfer row (LULU-103 C3): "A → B AMOUNT" packed tightly on the left
- * (amount immediately after the names, bold), the receiver's full wallet
- * address right-aligned in small monospace text on the right, alternating
- * band. `ctx.measureText` positions the amount right after the name text;
- * when unavailable (e.g. a minimal test mock ctx) the amount simply starts
- * at the row's left edge instead of throwing.
+ * One member-table row (C4): member name / active category cells / gross /
+ * settlement pill, each drawn within its fixed column so every row reads as
+ * a proper table (not a two-block card). Category cells reuse
+ * settlementMemberCategoryCell's `{ primary, secondary, zero }` shape --
+ * `zero` values render dimmed, matching the on-screen table's zero-value
+ * dimming rule.
  */
-function drawTransferRow(ctx, contentX, contentWidth, row) {
+function drawMemberTableRow(ctx, columns, row) {
+  const { member, index, y } = row;
+  const first = columns[0];
+  const last = columns[columns.length - 1];
+  const bandColor = index % 2 === 0 ? COLOR.bandWhite : COLOR.bandAlt;
+  ctx.fillStyle = bandColor;
+  ctx.fillRect(first.x, y, (last.x + last.width) - first.x, MEMBER_ROW_HEIGHT);
+
+  const primaryY = y + 24;
+  const secondaryY = y + 42;
+
+  for (const column of columns) {
+    const textX = columnTextX(column);
+    if (column.key === "member") {
+      const nameFont = `bold 14px ${FONT_FAMILY}`;
+      const name = truncateToWidth(ctx, member.name, nameFont, column.width - CELL_PADDING * 2);
+      drawText(ctx, { text: name, x: textX, y: primaryY, font: nameFont, color: COLOR.heading, align: column.align });
+      continue;
+    }
+    if (column.key === "gross") {
+      drawText(ctx, { text: member.gross, x: textX, y: primaryY, font: `bold 13px ${FONT_FAMILY}`, color: COLOR.heading, align: column.align });
+      continue;
+    }
+    if (column.key === "settlement") {
+      const pillWidth = column.width - CELL_PADDING * 2;
+      const pillX = column.x + CELL_PADDING;
+      const pillY = y + (MEMBER_ROW_HEIGHT - PILL_HEIGHT) / 2;
+      const pillColor = pillColorFor(member.settlementKind);
+      drawRoundedRect(ctx, pillX, pillY, pillWidth, PILL_HEIGHT, PILL_HEIGHT / 2, { fill: pillColor.bg });
+      const pillText = member.settlementAmount ? member.settlementLabel + " " + member.settlementAmount : member.settlementLabel;
+      drawText(ctx, {
+        text: pillText,
+        x: pillX + pillWidth / 2,
+        y: pillY + PILL_HEIGHT / 2 + 5,
+        font: `bold 12px ${FONT_FAMILY}`,
+        color: pillColor.text,
+        align: "center",
+      });
+      continue;
+    }
+    const cell = member.categoryCells.find((entry) => entry.key === column.key);
+    if (!cell) continue;
+    drawText(ctx, {
+      text: cell.primary,
+      x: textX,
+      y: primaryY,
+      font: cell.zero ? `12px ${FONT_FAMILY}` : `bold 12px ${FONT_FAMILY}`,
+      color: cell.zero ? COLOR.muted : COLOR.heading,
+      align: column.align,
+    });
+    if (cell.secondary) {
+      drawText(ctx, { text: cell.secondary, x: textX, y: secondaryY, font: `10px ${FONT_FAMILY}`, color: COLOR.muted, align: column.align });
+    }
+  }
+}
+
+/**
+ * One transfer-table row (C5): "SENDER → RECEIVER" left-aligned (truncated
+ * to fit, longest-name-safe), the amount right-aligned at the transfer
+ * table's fixed amount-column edge (identical x on every row -- this is the
+ * fix for amounts drifting out of vertical alignment under the old
+ * packed-text layout), and the receiver's wallet right-aligned at the box's
+ * right edge in small monospace text.
+ */
+function drawTransferTableRow(ctx, columns, row) {
   const { transfer, index, y } = row;
   const bandColor = index % 2 === 0 ? COLOR.bandWhite : COLOR.bandAlt;
   ctx.fillStyle = bandColor;
-  ctx.fillRect(contentX, y, contentWidth, TRANSFER_ROW_HEIGHT);
+  ctx.fillRect(columns.names.x, y, (columns.wallet.x + columns.wallet.width) - columns.names.x, TRANSFER_ROW_HEIGHT);
 
   const textY = y + TRANSFER_ROW_HEIGHT / 2 + 5;
-  const nameFont = `15px ${FONT_FAMILY}`;
-  const nameText = transfer.from + " → " + transfer.to + " ";
-  drawText(ctx, { text: nameText, x: contentX + BOX_PADDING, y: textY, font: nameFont, color: COLOR.transfer });
-  ctx.font = nameFont;
-  const nameWidth = typeof ctx.measureText === "function" ? ctx.measureText(nameText).width : 0;
+  const nameFont = `14px ${FONT_FAMILY}`;
+  const nameText = truncateToWidth(ctx, transfer.from + " → " + transfer.to, nameFont, columns.names.width - CELL_PADDING * 2);
+  drawText(ctx, { text: nameText, x: columns.names.x + CELL_PADDING, y: textY, font: nameFont, color: COLOR.transfer });
+
   drawText(ctx, {
     text: transfer.amount,
-    x: contentX + BOX_PADDING + nameWidth,
+    x: columns.amount.x + columns.amount.width - CELL_PADDING,
     y: textY,
-    font: `bold 15px ${FONT_FAMILY}`,
+    font: `bold 14px ${FONT_FAMILY}`,
     color: COLOR.heading,
+    align: "right",
   });
+
   drawText(ctx, {
     text: transfer.wallet,
-    x: contentX + contentWidth - BOX_PADDING,
+    x: columns.wallet.x + columns.wallet.width - CELL_PADDING,
     y: textY,
-    font: `12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`,
+    font: `12px ${MONOSPACE_FONT_FAMILY}`,
     color: COLOR.muted,
     align: "right",
   });
@@ -359,15 +535,8 @@ export function drawSettlementShareImage(ctx, model, { width = SHARE_IMAGE_WIDTH
     font: `bold 20px ${FONT_FAMILY}`,
     color: COLOR.accent,
   });
-  drawText(ctx, {
-    text: model.actualTransferTotal.label + ": " + model.actualTransferTotal.value,
-    x: contentX + BOX_PADDING,
-    y: layout.summaryBox.actualTransferTotalY,
-    font: `15px ${FONT_FAMILY}`,
-    color: COLOR.heading,
-  });
 
-  // Box 2: member breakdown.
+  // Box 2: member table (C4).
   drawSectionBox(ctx, contentX, layout.memberBox.y, contentWidth, layout.memberBox.height);
   drawText(ctx, {
     text: model.memberSectionTitle,
@@ -376,11 +545,12 @@ export function drawSettlementShareImage(ctx, model, { width = SHARE_IMAGE_WIDTH
     font: `bold 16px ${FONT_FAMILY}`,
     color: COLOR.heading,
   });
+  drawTableHeader(ctx, layout.memberBox.columns, layout.memberBox.headerY, MEMBER_HEADER_HEIGHT);
   for (const row of layout.memberBox.rows) {
-    drawMemberRow(ctx, contentX, contentWidth, row);
+    drawMemberTableRow(ctx, layout.memberBox.columns, row);
   }
 
-  // Box 3: actual transfers.
+  // Box 3: transfer table (C5).
   drawSectionBox(ctx, contentX, layout.transferBox.y, contentWidth, layout.transferBox.height);
   drawText(ctx, {
     text: model.transferSectionTitle,
@@ -390,8 +560,9 @@ export function drawSettlementShareImage(ctx, model, { width = SHARE_IMAGE_WIDTH
     color: COLOR.heading,
   });
   if (layout.transferBox.rows.length) {
+    drawTableHeader(ctx, [layout.transferBox.columns.names, layout.transferBox.columns.amount, layout.transferBox.columns.wallet], layout.transferBox.headerY, TRANSFER_HEADER_HEIGHT);
     for (const row of layout.transferBox.rows) {
-      drawTransferRow(ctx, contentX, contentWidth, row);
+      drawTransferTableRow(ctx, layout.transferBox.columns, row);
     }
   } else {
     drawText(ctx, {

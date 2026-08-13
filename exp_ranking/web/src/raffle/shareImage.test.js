@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import ja from "../i18n/locales/ja.json";
 import { calculateSettlement } from "./domain/settlement.js";
-import { neso } from "./uiText.js";
+import { neso, settlementCategoryColumns, settlementMemberCategoryCell } from "./uiText.js";
 import {
   buildSettlementShareModel,
   drawSettlementShareImage,
@@ -54,19 +54,13 @@ const memberMap = {
 const include = { coin: false, equipment: false, bossNeso: true, powerCrystal: true, ascendantNeso: false };
 
 describe("buildSettlementShareModel", () => {
-  it("includes every member row, every transfer row, and the PC-conversion note (acceptance criterion 3)", () => {
+  it("includes every member row and every transfer row", () => {
     const calculation = compositeCalculation();
     const model = buildSettlementShareModel(calculation, memberMap, include, "1.2", t);
 
     expect(model.memberRows.map((row) => row.name)).toEqual(["Alice", "Bob", "Cleo"]);
     expect(model.transferRows).toHaveLength(calculation.transfers.length);
     expect(calculation.transfers.length).toBeGreaterThan(0);
-
-    const aliceRow = model.memberRows.find((row) => row.memberId === "a");
-    expect(aliceRow.pcNote).toContain("PC");
-    expect(aliceRow.pcNote).toContain("83");
-    expect(model.memberRows.find((row) => row.memberId === "b").pcNote).toBeNull();
-    expect(model.memberRows.find((row) => row.memberId === "c").pcNote).toBeNull();
   });
 
   it("labels who pays/receives using the same rule as the settlement UI (describeMemberSettlement)", () => {
@@ -76,13 +70,11 @@ describe("buildSettlementShareModel", () => {
     expect(kinds).toEqual({ a: "pays", b: "receives", c: "receives" });
   });
 
-  it("numbers match calculation exactly -- total/baseShare/actual-transfer-total are not recomputed independently", () => {
+  it("numbers match calculation exactly -- total/baseShare are not recomputed independently", () => {
     const calculation = compositeCalculation();
     const model = buildSettlementShareModel(calculation, memberMap, include, "1.2", t);
     expect(model.summaryLines[0].value).toBe(neso(calculation.total));
     expect(model.baseShareLine.value).toBe(neso(calculation.baseShare));
-    const manualTransferTotal = calculation.transfers.reduce((sum, transfer) => sum + BigInt(transfer.amount), 0n).toString();
-    expect(model.actualTransferTotal.value).toBe(neso(manualTransferTotal));
   });
 
   it("states the PC conversion is included in the base-share label (C1 regression pin)", () => {
@@ -98,10 +90,11 @@ describe("buildSettlementShareModel", () => {
     expect(model.transferSectionTitle).toBe(t("raffle.actualTransfers"));
   });
 
-  it("no longer carries a baseShareNote field (retired per post-launch feedback round 2)", () => {
+  it("no longer carries a baseShareNote field (retired per post-launch feedback round 2) or an actualTransferTotal field (retired per user instruction)", () => {
     const calculation = compositeCalculation();
     const model = buildSettlementShareModel(calculation, memberMap, include, "1.2", t);
     expect(model.baseShareNote).toBeUndefined();
+    expect(model.actualTransferTotal).toBeUndefined();
   });
 
   it("carries the boss label and round line through untouched when provided", () => {
@@ -120,6 +113,53 @@ describe("buildSettlementShareModel", () => {
     const model = buildSettlementShareModel(calculation, memberMap, include, "1.2", t);
     expect(model.roundLine).toBe("");
     expect(model.bossLine).toBe("");
+  });
+});
+
+// C4: the member section is a real table mirroring SettlementResult.jsx's
+// member breakdown table (member / active category columns / gross /
+// settlement), built from the same shared uiText.js helpers so the two
+// tables can never disagree about columns or a member's cell value. Raffle
+// history and assigned-share are intentionally excluded (user instruction).
+describe("buildSettlementShareModel member table (C4)", () => {
+  it("mirrors the on-screen member table's active category columns", () => {
+    const calculation = compositeCalculation();
+    const model = buildSettlementShareModel(calculation, memberMap, include, "1.2", t);
+    expect(model.memberCategoryColumns.map((column) => column.key)).toEqual(settlementCategoryColumns(include, t).map((column) => column.key));
+  });
+
+  it("excludes raffle-history and assigned-share from every member row", () => {
+    const calculation = compositeCalculation();
+    const model = buildSettlementShareModel(calculation, memberMap, include, "1.2", t);
+    for (const row of model.memberRows) {
+      expect(row).not.toHaveProperty("hasHistory");
+      expect(row).not.toHaveProperty("assignedShare");
+    }
+  });
+
+  it("attaches the non-transferable note only to the Power Crystal column header", () => {
+    const calculation = compositeCalculation();
+    const model = buildSettlementShareModel(calculation, memberMap, include, "1.2", t);
+    const pcColumn = model.memberCategoryColumns.find((column) => column.key === "powerCrystal");
+    expect(pcColumn.note).toBe(t("raffle.powerCrystalNonTransferable"));
+    for (const column of model.memberCategoryColumns) {
+      if (column.key !== "powerCrystal") expect(column.note).toBeNull();
+    }
+  });
+
+  it("gives each member row one categoryCells entry per active column, matching settlementMemberCategoryCell exactly (no new computation)", () => {
+    const calculation = compositeCalculation();
+    const model = buildSettlementShareModel(calculation, memberMap, include, "1.2", t);
+    const aliceRow = model.memberRows.find((row) => row.memberId === "a");
+    const aliceMember = calculation.members.find((member) => member.memberId === "a");
+    const pcCell = aliceRow.categoryCells.find((cell) => cell.key === "powerCrystal");
+    expect(pcCell).toEqual({ key: "powerCrystal", ...settlementMemberCategoryCell(aliceMember, "powerCrystal", { powerCrystalNesoRate: "1.2" }) });
+    expect(pcCell.primary).toContain("100 PC");
+    expect(pcCell.secondary).toContain("83");
+
+    const bobRow = model.memberRows.find((row) => row.memberId === "b");
+    const bossCell = bobRow.categoryCells.find((cell) => cell.key === "bossNeso");
+    expect(bossCell).toEqual({ key: "bossNeso", primary: "0", secondary: null, zero: true });
   });
 });
 
@@ -169,6 +209,26 @@ describe("drawSettlementShareImage (smoke test)", () => {
     };
   }
 
+  // Like makeMockCtx, but also records every fillText call's (text, x) so
+  // column-alignment assertions (C4/C5: "does every row draw its amount at
+  // the same x") can inspect what was actually drawn.
+  function makeTrackingMockCtx() {
+    const fillTextCalls = [];
+    return {
+      fillTextCalls,
+      fillStyle: "",
+      strokeStyle: "",
+      lineWidth: 0,
+      font: "",
+      textAlign: "left",
+      fillRect: () => {},
+      strokeRect: () => {},
+      fillText: (text, x, y) => {
+        fillTextCalls.push({ text, x, y });
+      },
+    };
+  }
+
   it("draws without throwing, paints the canvas background, boxes every section, and bands every row", () => {
     const calculation = compositeCalculation();
     const model = buildSettlementShareModel(calculation, memberMap, include, "1.2", t, {
@@ -182,20 +242,20 @@ describe("drawSettlementShareImage (smoke test)", () => {
 
     expect(size.height).toBeGreaterThan(0);
     expect(size.width).toBeGreaterThan(0);
-    // canvas background(1) + 3 section boxes(3) + 1 band per member row(3) +
-    // 1 pill per member row(3) + 1 band per transfer row(>=1) -- a generous
-    // lower bound instead of an exact count so minor layout tweaks don't
-    // make this test brittle.
-    expect(ctx.calls.fillRect).toBeGreaterThanOrEqual(1 + 3 + model.memberRows.length * 2 + model.transferRows.length);
+    // canvas background(1) + 3 section boxes(3) + 2 table header bands(2) +
+    // 1 band per member row(3) + 1 pill per member row(3) + 1 band per
+    // transfer row(>=1) -- a generous lower bound instead of an exact count
+    // so minor layout tweaks don't make this test brittle.
+    expect(ctx.calls.fillRect).toBeGreaterThanOrEqual(1 + 3 + 2 + model.memberRows.length * 2 + model.transferRows.length);
     // 3 section box borders (fallback strokeRect, no ctx.roundRect on this mock).
     expect(ctx.calls.strokeRect).toBeGreaterThanOrEqual(3);
-    // title + boss + round + summary lines + baseShare + actualTransferTotal
-    // + 2 section headings + (name/gross-label/gross-value/pill(+pcNote) per
-    // member row) + transfer rows + footer.
+    // title + boss + round + summary lines + baseShare + 2 section headings +
+    // 2 table headers (member columns + transfer columns) + member-row cells
+    // + transfer-row cells + footer.
     expect(ctx.calls.fillText).toBeGreaterThan(15);
   });
 
-  it("draws without throwing when the mock ctx implements measureText (LULU-103 C3 amount positioning)", () => {
+  it("draws without throwing when the mock ctx implements measureText (name truncation / amount positioning)", () => {
     const calculation = compositeCalculation();
     const wallet = "0xEE158FbBF3507A4a7e42C112e49725db4875a5b9";
     const model = buildSettlementShareModel(calculation, memberMap, include, "1.2", t, { memberWallets: { b: wallet, c: wallet } });
@@ -204,6 +264,34 @@ describe("drawSettlementShareImage (smoke test)", () => {
 
     expect(() => drawSettlementShareImage(ctx, model)).not.toThrow();
     expect(model.transferRows.some((row) => row.wallet === wallet)).toBe(true);
+  });
+
+  it("aligns every transfer row's amount at the same fixed x (C5: fixes amounts drifting out of column under the old packed-text layout)", () => {
+    const calculation = compositeCalculation();
+    const model = buildSettlementShareModel(calculation, memberMap, include, "1.2", t);
+    expect(model.transferRows.length).toBeGreaterThan(1);
+    const ctx = makeTrackingMockCtx();
+
+    drawSettlementShareImage(ctx, model);
+
+    const amountXs = new Set(
+      ctx.fillTextCalls.filter((call) => model.transferRows.some((row) => row.amount === call.text)).map((call) => call.x),
+    );
+    expect(amountXs.size).toBe(1);
+  });
+
+  it("aligns every member row's gross value at the same fixed x regardless of name length (C4 table columns)", () => {
+    const calculation = compositeCalculation();
+    const model = buildSettlementShareModel(calculation, memberMap, include, "1.2", t);
+    expect(model.memberRows.length).toBeGreaterThan(1);
+    const ctx = makeTrackingMockCtx();
+
+    drawSettlementShareImage(ctx, model);
+
+    const grossXs = new Set(
+      ctx.fillTextCalls.filter((call) => model.memberRows.some((row) => row.gross === call.text)).map((call) => call.x),
+    );
+    expect(grossXs.size).toBe(1);
   });
 
   it("still draws (with a placeholder 'no transfers' line) when there are no transfers to show", () => {
