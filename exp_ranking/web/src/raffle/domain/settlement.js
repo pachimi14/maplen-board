@@ -48,11 +48,20 @@ export function parseDecimalRate(value) {
   const match = RATE_PATTERN.exec(String(value ?? ""));
   if (!match || match[1].length > MAX_INPUT_DIGITS) return { ok: false, code: "invalid_rate" };
   const fraction = match[2] || "";
+  const numerator = BigInt(match[1] + fraction);
+  if (numerator === 0n) return { ok: false, code: "invalid_rate" };
   return {
     ok: true,
-    numerator: BigInt(match[1] + fraction),
+    numerator,
     denominator: 10n ** BigInt(fraction.length),
   };
+}
+
+// Rounds a non-negative BigInt division to the nearest integer, ties rounding
+// up (round half up), using only exact integer arithmetic (no Number/float
+// division): round(dividend / divisor) == floor((2*dividend + divisor) / (2*divisor)).
+function divideRoundHalfUp(dividend, divisor) {
+  return (dividend * 2n + divisor) / (2n * divisor);
 }
 
 function salePriceToProceeds(salePriceNeso) {
@@ -133,12 +142,10 @@ export function calculateSettlement(input) {
       : 0n;
     let powerCrystalNeso = 0n;
     if (include.powerCrystal && rate.ok) {
-      const product = powerCrystalAmount * rate.numerator;
-      if (product % rate.denominator !== 0n) {
-        errors.push(problem("fractional_neso", "powerCrystalNesoRate", memberId));
-      } else {
-        powerCrystalNeso = product / rate.denominator;
-      }
+      // NESO conversion is a division ("1 NESO = [rate] Power Crystal"):
+      // powerCrystalNeso = powerCrystalAmount / rate, rounded half up using
+      // exact BigInt arithmetic (powerCrystalAmount * rate.denominator / rate.numerator).
+      powerCrystalNeso = divideRoundHalfUp(powerCrystalAmount * rate.denominator, rate.numerator);
     }
 
     let coinQuantity = 0n;

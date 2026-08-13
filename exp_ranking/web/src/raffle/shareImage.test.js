@@ -26,6 +26,8 @@ const t = makeT(ja);
 // PC rate 1.2 composite case (IMPL_PLAN_RAFFLE_VALUE_CLARITY_SHARE.md
 // acceptance criterion 1/3): one member wins boss NESO + Power Crystal
 // (converted at a >1 rate), the other two win nothing and receive a share.
+// Rate 1.2 means "1 NESO = 1.2 Power Crystal" (LULU-099 divide semantics):
+// 100 PC / 1.2 = 83.33... -> rounds half up to 83.
 function compositeCalculation() {
   const result = calculateSettlement({
     boss: "WILL",
@@ -62,7 +64,7 @@ describe("buildSettlementShareModel", () => {
 
     const aliceRow = model.memberRows.find((row) => row.memberId === "a");
     expect(aliceRow.pcNote).toContain("PC");
-    expect(aliceRow.pcNote).toContain("120");
+    expect(aliceRow.pcNote).toContain("83");
     expect(model.memberRows.find((row) => row.memberId === "b").pcNote).toBeNull();
     expect(model.memberRows.find((row) => row.memberId === "c").pcNote).toBeNull();
   });

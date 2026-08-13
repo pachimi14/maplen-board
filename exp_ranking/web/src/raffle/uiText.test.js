@@ -221,7 +221,9 @@ describe("pcPortionAmount (C1: value-vs-actual-NESO clarity, acceptance criterio
     // This directly backs the "member card shows an 'incl. PC conversion'
     // note" half of the acceptance criterion: SettlementResult.jsx gates
     // that note on this exact function.
-    expect(pcPortionAmount(result.members[0])).toBe("120");
+    // Rate 1.2 means "1 NESO = 1.2 Power Crystal" (LULU-099 divide
+    // semantics): 100 PC / 1.2 = 83.33... -> rounds half up to 83.
+    expect(pcPortionAmount(result.members[0])).toBe("83");
     expect(pcPortionAmount(result.members[1])).toBeNull();
   });
 
