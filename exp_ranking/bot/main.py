@@ -446,6 +446,40 @@ def fetch_ranking_min_level(
     )
 
 
+def warn_if_ranking_cap_reached(
+    ranking: list[dict[str, Any]], max_pages: int, logger: logging.Logger
+) -> None:
+    """Warn (do not fail) when the fetched count hits the RANKING_MAX_PAGES cap.
+
+    Called by run() *after* fetch_ranking_min_level() has already returned
+    (i.e. this is a caller-side check on the final result count -- it does
+    not touch fetch_ranking_min_level's loop body, retry handling, or its
+    "empty page" / "short page" stop conditions, which are LULU-004 and
+    left untouched; see docs/IMPL_PLAN_ranking-cap.md §2.2).
+
+    fetch_ranking_min_level() only logs at `info` level when it stops
+    because of an empty page or a short (<10 entries) page -- it never logs
+    anything distinguishing "ran out of real data" from "ran out of
+    max_pages", so hitting the page cap was previously silent. If the
+    fetched count is >= max_pages * API_MAX_PAGE_SIZE, the loop most likely
+    exhausted its page budget rather than reaching the true end of the
+    ranking, so the result may be truncated.
+    """
+    cap = max_pages * API_MAX_PAGE_SIZE
+    fetched = len(ranking)
+    if fetched >= cap:
+        logger.warning(
+            "Ranking fetch reached the RANKING_MAX_PAGES cap: fetched=%s "
+            "characters, cap=%s (max_pages=%s x API_MAX_PAGE_SIZE=%s per "
+            "page). The result may be truncated and not represent the full "
+            "population above min_level; consider raising RANKING_MAX_PAGES.",
+            fetched,
+            cap,
+            max_pages,
+            API_MAX_PAGE_SIZE,
+        )
+
+
 def bootstrap_database(
     db_path: Path, logger: logging.Logger
 ) -> dict[str, int]:
@@ -884,6 +918,7 @@ def run() -> int:
             config.ranking_request_delay_sec(),
             max_pages,
         )
+        warn_if_ranking_cap_reached(ranking, max_pages, logger)
         changed_count = validate_ranking_freshness(
             ranking,
             baseline_rows,

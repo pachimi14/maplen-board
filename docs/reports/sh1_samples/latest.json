@@ -1,0 +1,181 @@
+{
+ "latestUpdatedAt": "2026-08-04T16:40:00Z",
+ "starForce": [
+  {
+   "itemUpgradeType": "UPGRADE_STARFORCE",
+   "itemUpgradeSubType": "STARFORCE",
+   "itemUpgrade": 9,
+   "closePrice": "1772666243009000000000000"
+  },
+  {
+   "itemUpgradeType": "UPGRADE_STARFORCE",
+   "itemUpgradeSubType": "STARFORCE",
+   "itemUpgrade": 11,
+   "closePrice": "3315559424212000000000000"
+  },
+  {
+   "itemUpgradeType": "UPGRADE_STARFORCE",
+   "itemUpgradeSubType": "STARFORCE",
+   "itemUpgrade": 13,
+   "closePrice": "4269419644700000000000000"
+  },
+  {
+   "itemUpgradeType": "UPGRADE_STARFORCE",
+   "itemUpgradeSubType": "STARFORCE",
+   "itemUpgrade": 15,
+   "closePrice": "4690628905436000000000000"
+  },
+  {
+   "itemUpgradeType": "UPGRADE_STARFORCE",
+   "itemUpgradeSubType": "STARFORCE",
+   "itemUpgrade": 16,
+   "closePrice": "4106113282859000000000000"
+  },
+  {
+   "itemUpgradeType": "UPGRADE_STARFORCE",
+   "itemUpgradeSubType": "STARFORCE",
+   "itemUpgrade": 0,
+   "closePrice": "413352802423000000000000"
+  },
+  {
+   "itemUpgradeType": "UPGRADE_STARFORCE",
+   "itemUpgradeSubType": "STARFORCE",
+   "itemUpgrade": 1,
+   "closePrice": "727978571653000000000000"
+  },
+  {
+   "itemUpgradeType": "UPGRADE_STARFORCE",
+   "itemUpgradeSubType": "STARFORCE",
+   "itemUpgrade": 2,
+   "closePrice": "770426522428000000000000"
+  },
+  {
+   "itemUpgradeType": "UPGRADE_STARFORCE",
+   "itemUpgradeSubType": "STARFORCE",
+   "itemUpgrade": 3,
+   "closePrice": "822597456148000000000000"
+  },
+  {
+   "itemUpgradeType": "UPGRADE_STARFORCE",
+   "itemUpgradeSubType": "STARFORCE",
+   "itemUpgrade": 4,
+   "closePrice": "862153677607000000000000"
+  },
+  {
+   "itemUpgradeType": "UPGRADE_STARFORCE",
+   "itemUpgradeSubType": "STARFORCE",
+   "itemUpgrade": 5,
+   "closePrice": "917749904628000000000000"
+  },
+  {
+   "itemUpgradeType": "UPGRADE_STARFORCE",
+   "itemUpgradeSubType": "STARFORCE",
+   "itemUpgrade": 6,
+   "closePrice": "873889601118000000000000"
+  },
+  {
+   "itemUpgradeType": "UPGRADE_STARFORCE",
+   "itemUpgradeSubType": "STARFORCE",
+   "itemUpgrade": 7,
+   "closePrice": "909225384351000000000000"
+  },
+  {
+   "itemUpgradeType": "UPGRADE_STARFORCE",
+   "itemUpgradeSubType": "STARFORCE",
+   "itemUpgrade": 8,
+   "closePrice": "1543887471391000000000000"
+  },
+  {
+   "itemUpgradeType": "UPGRADE_STARFORCE",
+   "itemUpgradeSubType": "STARFORCE",
+   "itemUpgrade": 10,
+   "closePrice": "2293229756863000000000000"
+  },
+  {
+   "itemUpgradeType": "UPGRADE_STARFORCE",
+   "itemUpgradeSubType": "STARFORCE",
+   "itemUpgrade": 12,
+   "closePrice": "3749519349230000000000000"
+  },
+  {
+   "itemUpgradeType": "UPGRADE_STARFORCE",
+   "itemUpgradeSubType": "STARFORCE",
+   "itemUpgrade": 14,
+   "closePrice": "3383024151286000000000000"
+  },
+  {
+   "itemUpgradeType": "UPGRADE_STARFORCE",
+   "itemUpgradeSubType": "STARFORCE",
+   "itemUpgrade": 17,
+   "closePrice": "3951165611808000000000000"
+  },
+  {
+   "itemUpgradeType": "UPGRADE_STARFORCE",
+   "itemUpgradeSubType": "STARFORCE",
+   "itemUpgrade": 19,
+   "closePrice": "2969830361816000000000000"
+  },
+  {
+   "itemUpgradeType": "UPGRADE_STARFORCE",
+   "itemUpgradeSubType": "STARFORCE",
+   "itemUpgrade": 18,
+   "closePrice": "3692919493389000000000000"
+  },
+  {
+   "itemUpgradeType": "UPGRADE_STARFORCE",
+   "itemUpgradeSubType": "STARFORCE",
+   "itemUpgrade": 20,
+   "closePrice": "2711584243397000000000000"
+  },
+  {
+   "itemUpgradeType": "UPGRADE_STARFORCE",
+   "itemUpgradeSubType": "STARFORCE",
+   "itemUpgrade": 21,
+   "closePrice": "2711584243397000000000000"
+  },
+  {
+   "itemUpgradeType": "UPGRADE_STARFORCE",
+   "itemUpgradeSubType": "STARFORCE",
+   "itemUpgrade": 22,
+   "closePrice": "2711584243397000000000000"
+  }
+ ],
+ "prospective": [
+  {
+   "itemUpgradeType": "UPGRADE_PROSPECTIVE",
+   "itemUpgradeSubType": "SUSPICIOUS",
+   "itemUpgrade": 0,
+   "closePrice": "145325988228000000000000"
+  },
+  {
+   "itemUpgradeType": "UPGRADE_PROSPECTIVE",
+   "itemUpgradeSubType": "SUSPICIOUS_ADDITIONAL",
+   "itemUpgrade": 0,
+   "closePrice": "127431719550000000000000"
+  },
+  {
+   "itemUpgradeType": "UPGRADE_PROSPECTIVE",
+   "itemUpgradeSubType": "RED",
+   "itemUpgrade": 0,
+   "closePrice": "416312729169000000000000"
+  },
+  {
+   "itemUpgradeType": "UPGRADE_PROSPECTIVE",
+   "itemUpgradeSubType": "BLACK",
+   "itemUpgrade": 0,
+   "closePrice": "624500318892000000000000"
+  },
+  {
+   "itemUpgradeType": "UPGRADE_PROSPECTIVE",
+   "itemUpgradeSubType": "ADDITIONAL",
+   "itemUpgrade": 0,
+   "closePrice": "567540853157000000000000"
+  },
+  {
+   "itemUpgradeType": "UPGRADE_PROSPECTIVE",
+   "itemUpgradeSubType": "WHITE_ADDITIONAL",
+   "itemUpgrade": 0,
+   "closePrice": "781983580212000000000000"
+  }
+ ]
+}

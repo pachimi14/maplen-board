@@ -1,0 +1,206 @@
+{
+ "item_id": 1382265,
+ "run_started_at": "2026-08-04T17:14:49.070323+00:00",
+ "latest_updated_at": "2026-08-04T16:40:00Z",
+ "latest_item_upgrade_set": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9,
+  10,
+  11,
+  12,
+  13,
+  14,
+  15,
+  16,
+  17,
+  18,
+  19,
+  20,
+  21,
+  22
+ ],
+ "latest_close_price_by_upgrade": {
+  "9": 1772666243009000000000000,
+  "11": 3315559424212000000000000,
+  "13": 4269419644700000000000000,
+  "15": 4690628905436000000000000,
+  "16": 4106113282859000000000000,
+  "0": 413352802423000000000000,
+  "1": 727978571653000000000000,
+  "2": 770426522428000000000000,
+  "3": 822597456148000000000000,
+  "4": 862153677607000000000000,
+  "5": 917749904628000000000000,
+  "6": 873889601118000000000000,
+  "7": 909225384351000000000000,
+  "8": 1543887471391000000000000,
+  "10": 2293229756863000000000000,
+  "12": 3749519349230000000000000,
+  "14": 3383024151286000000000000,
+  "17": 3951165611808000000000000,
+  "19": 2969830361816000000000000,
+  "18": 3692919493389000000000000,
+  "20": 2711584243397000000000000,
+  "21": 2711584243397000000000000,
+  "22": 2711584243397000000000000
+ },
+ "m6_timing_ms_samples": [
+  156.0,
+  125.0,
+  141.0,
+  140.0,
+  125.0
+ ],
+ "m6_timing_ms_median": 140.0,
+ "m6_point_count": 3510,
+ "m6_window_days_requested": 200.0,
+ "m3_oldest_date": "2026-03-08T01:00:00Z",
+ "m3_newest_date": "2026-08-04T16:00:00Z",
+ "m3_days_ago": 149.7,
+ "m6_expected_points_if_continuous": 3592,
+ "m7_period2_observed_delta_seconds": [
+  3600,
+  7200,
+  10800,
+  14400
+ ],
+ "m5_total_rows": 3510,
+ "m5_zero_sum_enhance_rows": 3111,
+ "m5_zero_sum_enhance_rows_with_endprice": 3111,
+ "m1_rows": [
+  {
+   "itemUpgrade": 0,
+   "point_used": "last",
+   "point_date": "2026-08-04T16:00:00Z",
+   "endPrice": 413352.802423,
+   "closePrice_raw": 413352802423000000000000,
+   "ratio_closePrice_over_endPrice": 1e+18
+  },
+  {
+   "itemUpgrade": 0,
+   "point_used": "second_last",
+   "point_date": "2026-08-04T15:00:00Z",
+   "endPrice": 416195.669014,
+   "closePrice_raw": 413352802423000000000000,
+   "ratio_closePrice_over_endPrice": 9.931693989086072e+17
+  },
+  {
+   "itemUpgrade": 10,
+   "point_used": "last",
+   "point_date": "2026-08-04T16:00:00Z",
+   "endPrice": 2293229.756863,
+   "closePrice_raw": 2293229756863000000000000,
+   "ratio_closePrice_over_endPrice": 1.0000000000000001e+18
+  },
+  {
+   "itemUpgrade": 10,
+   "point_used": "second_last",
+   "point_date": "2026-08-04T15:00:00Z",
+   "endPrice": 2313695.405234,
+   "closePrice_raw": 2293229756863000000000000,
+   "ratio_closePrice_over_endPrice": 9.911545623833184e+17
+  },
+  {
+   "itemUpgrade": 17,
+   "point_used": "last",
+   "point_date": "2026-08-04T16:00:00Z",
+   "endPrice": 3951165.611808,
+   "closePrice_raw": 3951165611808000000000000,
+   "ratio_closePrice_over_endPrice": 1e+18
+  },
+  {
+   "itemUpgrade": 17,
+   "point_used": "second_last",
+   "point_date": "2026-08-04T15:00:00Z",
+   "endPrice": 3167819.052604,
+   "closePrice_raw": 3951165611808000000000000,
+   "ratio_closePrice_over_endPrice": 1.2472826086957448e+18
+  },
+  {
+   "itemUpgrade": 21,
+   "point_used": "last",
+   "point_date": "2026-08-04T16:00:00Z",
+   "endPrice": 2711584.243397,
+   "closePrice_raw": 2711584243397000000000000,
+   "ratio_closePrice_over_endPrice": 1.0000000000000001e+18
+  },
+  {
+   "itemUpgrade": 21,
+   "point_used": "second_last",
+   "point_date": "2026-08-04T15:00:00Z",
+   "endPrice": 2754625.263134,
+   "closePrice_raw": 2711584243397000000000000,
+   "ratio_closePrice_over_endPrice": 9.843749999998072e+17
+  }
+ ],
+ "m1_last_point_ratio_mean": 1e+18,
+ "m1_last_point_ratio_max_relative_deviation": 1.28e-16,
+ "m2_status_code": 200,
+ "m2_response_item_upgrade": 0,
+ "m2_point_count": 235,
+ "m4_history_boundary_probe": [
+  {
+   "itemUpgrade": 22,
+   "status_code": 200,
+   "point_count": 235
+  },
+  {
+   "itemUpgrade": 23,
+   "status_code": 200,
+   "point_count": 0
+  },
+  {
+   "itemUpgrade": 24,
+   "status_code": 200,
+   "point_count": 0
+  },
+  {
+   "itemUpgrade": 25,
+   "status_code": 500,
+   "point_count": 0
+  }
+ ],
+ "m4_latest_item_upgrade_set": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9,
+  10,
+  11,
+  12,
+  13,
+  14,
+  15,
+  16,
+  17,
+  18,
+  19,
+  20,
+  21,
+  22
+ ],
+ "total_requests": 14,
+ "requests_by_endpoint": {
+  "latest": 1,
+  "history": 13
+ },
+ "status_code_counts": {
+  "200": 13,
+  "500": 1
+ },
+ "run_finished_at": "2026-08-04T17:15:03.518678+00:00"
+}

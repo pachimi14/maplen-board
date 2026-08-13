@@ -1,0 +1,151 @@
+import { describe, expect, it } from "vitest";
+import { flattenCandidates, matchesEquipmentQuery } from "./equipmentSearch.js";
+
+// IMPL_PLAN_SH9 §3-3/(c): the exact shape /sf-history/equipment sends after
+// gen_item_list.py resolves alias names -- one representative group
+// (AbsoLab Mage Gloves) whose non-representative members include AbsoLab
+// Knight Gloves, the real "search by a non-representative name" example
+// used in this slice's completion report (there is no "AbsoLab Warrior
+// Gloves" in the actual catalog -- this game's AbsoLab job-line naming is
+// Knight/Mage/Archer/Bandit/Pirate, not "Warrior").
+const ITEMS = [
+  {
+    itemId: 1082637,
+    itemName: "AbsoLab Mage Gloves",
+    aliasItemIds: [1082636, 1082637, 1082638, 1082639, 1082640],
+    maxStar: 22,
+    aliases: [
+      { itemId: 1082636, itemName: "AbsoLab Knight Gloves" },
+      { itemId: 1082637, itemName: "AbsoLab Mage Gloves" },
+      { itemId: 1082638, itemName: "AbsoLab Archer Gloves" },
+      { itemId: 1082639, itemName: "AbsoLab Bandit Gloves" },
+      { itemId: 1082640, itemName: "AbsoLab Pirate Gloves" },
+    ],
+  },
+  {
+    itemId: 1022232,
+    itemName: "Black Bean Mark",
+    aliasItemIds: [1022232],
+    maxStar: 20,
+    // no `aliases` at all -- exercises the pre-SH9-shape fallback path.
+    aliases: [],
+  },
+];
+
+describe("flattenCandidates (IMPL_PLAN_SH9 §3-3)", () => {
+  it("produces one row per alias, each tagged with its group's representative", () => {
+    const rows = flattenCandidates(ITEMS);
+    expect(rows).toHaveLength(6); // 5 AbsoLab Gloves aliases + 1 Black Bean Mark self-row
+    const knightGloves = rows.find((r) => r.itemName === "AbsoLab Knight Gloves");
+    expect(knightGloves).toEqual({
+      key: "1082637-1082636",
+      representativeItemId: 1082637,
+      representativeItemName: "AbsoLab Mage Gloves",
+      itemId: 1082636,
+      itemName: "AbsoLab Knight Gloves",
+      maxStar: 22,
+    });
+  });
+
+  it("falls back to a single self-named row when `aliases` is empty", () => {
+    const rows = flattenCandidates(ITEMS);
+    const blackBean = rows.filter((r) => r.representativeItemId === 1022232);
+    expect(blackBean).toEqual([
+      {
+        key: "1022232-1022232",
+        representativeItemId: 1022232,
+        representativeItemName: "Black Bean Mark",
+        itemId: 1022232,
+        itemName: "Black Bean Mark",
+        maxStar: 20,
+      },
+    ]);
+  });
+});
+
+// IMPL_PLAN_SH14 §3 (2026-08-05, user decision): candidates are now sorted
+// alphabetically by `itemName` via `localeCompare`, across the *whole*
+// mixed representative+alias list (a group's aliases no longer stay
+// clumped together by their group's original position in `items`).
+describe("flattenCandidates: alphabetical order (IMPL_PLAN_SH14 §3)", () => {
+  it("sorts the mixed representative+alias rows by itemName ascending, not grouped by their source item", () => {
+    const rows = flattenCandidates(ITEMS);
+    const names = rows.map((r) => r.itemName);
+    expect(names).toEqual([
+      "AbsoLab Archer Gloves",
+      "AbsoLab Bandit Gloves",
+      "AbsoLab Knight Gloves",
+      "AbsoLab Mage Gloves",
+      "AbsoLab Pirate Gloves",
+      "Black Bean Mark",
+    ]);
+    // Confirms via `localeCompare` (not a bare `<`) and never assumes the
+    // rows are already grouped by their originating `items` entry.
+    const sorted = [...names].sort((a, b) => a.localeCompare(b));
+    expect(names).toEqual(sorted);
+  });
+
+  it("interleaves aliases from two different representative groups purely by name (not clumped by group)", () => {
+    const items = [
+      {
+        itemId: 1,
+        itemName: "Zebra Coat",
+        maxStar: 20,
+        aliases: [
+          { itemId: 1, itemName: "Zebra Coat" },
+          { itemId: 2, itemName: "Apple Coat" }, // alias of group 1, but alphabetically first
+        ],
+      },
+      {
+        itemId: 3,
+        itemName: "Mango Hat",
+        maxStar: 20,
+        aliases: [{ itemId: 3, itemName: "Mango Hat" }],
+      },
+    ];
+    const names = flattenCandidates(items).map((r) => r.itemName);
+    expect(names).toEqual(["Apple Coat", "Mango Hat", "Zebra Coat"]);
+  });
+});
+
+describe("matchesEquipmentQuery + flattenCandidates together (design §7: search all, resolve to representative)", () => {
+  it("finds a non-representative item by its own name (the plan's (c) example)", () => {
+    const rows = flattenCandidates(ITEMS).filter((row) => matchesEquipmentQuery(row, "AbsoLab Knight Gloves"));
+    expect(rows).toHaveLength(1);
+    expect(rows[0].itemId).toBe(1082636);
+    // The representative that `prices`/`latest` must be called with -- never
+    // the searched item's own id (design §7: "取得・表示は代表").
+    expect(rows[0].representativeItemId).toBe(1082637);
+    expect(rows[0].representativeItemName).toBe("AbsoLab Mage Gloves");
+  });
+
+  it("also finds it by its own itemId", () => {
+    const rows = flattenCandidates(ITEMS).filter((row) => matchesEquipmentQuery(row, "1082636"));
+    expect(rows.map((r) => r.itemId)).toEqual([1082636]);
+  });
+
+  it("is case-insensitive and matches on a partial name", () => {
+    const rows = flattenCandidates(ITEMS).filter((row) => matchesEquipmentQuery(row, "knight glo"));
+    expect(rows.map((r) => r.itemId)).toEqual([1082636]);
+  });
+
+  it("an empty query matches everything", () => {
+    const all = flattenCandidates(ITEMS);
+    expect(all.filter((row) => matchesEquipmentQuery(row, ""))).toHaveLength(all.length);
+  });
+});
+
+// IMPL_PLAN_SH28 §1-1/(b) (2026-08-06 user decision): the candidate display
+// in EquipmentSelector.jsx no longer shows `#<itemId>`, but the match
+// condition here is untouched -- searching by the bare numeric itemId must
+// still find the item. Uses the plan's own worked example (1382265 ->
+// Arcane Umbra Staff) so this fails loudly if a future edit ever couples
+// matching to the (now ID-less) display string.
+describe("SH28: ID search survives removing the id from the display (IMPL_PLAN_SH28 §1-1/(b))", () => {
+  it("finds an item by its bare numeric itemId even though it is never shown", () => {
+    const items = [{ itemId: 1382265, itemName: "Arcane Umbra Staff", maxStar: 22, aliases: [] }];
+    const rows = flattenCandidates(items).filter((row) => matchesEquipmentQuery(row, "1382265"));
+    expect(rows).toHaveLength(1);
+    expect(rows[0].itemName).toBe("Arcane Umbra Staff");
+  });
+});

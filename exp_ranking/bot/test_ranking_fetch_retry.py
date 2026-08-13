@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 import config
 import main
 
@@ -102,3 +104,32 @@ def test_freshness_accepts_changed_snapshot() -> None:
     ranking = [{"rank": 1, "characterName": "Same", "level": 250, "exp": 124}]
 
     assert main.validate_ranking_freshness(ranking, baseline, min_changed=1) == 1
+
+
+def test_warn_if_ranking_cap_reached_fires_at_cap(caplog) -> None:
+    max_pages = 2
+    cap = max_pages * main.API_MAX_PAGE_SIZE  # 20
+    ranking = _page(1) + _page(11)  # exactly 20 entries -> at the cap
+    logger = logging.getLogger("test_ranking_cap")
+
+    with caplog.at_level(logging.WARNING, logger="test_ranking_cap"):
+        main.warn_if_ranking_cap_reached(ranking, max_pages, logger)
+
+    warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+    assert len(warnings) == 1
+    message = warnings[0].getMessage()
+    assert str(cap) in message
+    assert str(len(ranking)) in message
+    assert "RANKING_MAX_PAGES" in message
+
+
+def test_warn_if_ranking_cap_reached_silent_below_cap(caplog) -> None:
+    max_pages = 2
+    ranking = _page(1) + _page(11)[:9]  # 19 entries, one short of the cap (20)
+    logger = logging.getLogger("test_ranking_cap")
+
+    with caplog.at_level(logging.WARNING, logger="test_ranking_cap"):
+        main.warn_if_ranking_cap_reached(ranking, max_pages, logger)
+
+    warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+    assert warnings == []

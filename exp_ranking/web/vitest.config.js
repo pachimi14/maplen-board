@@ -16,6 +16,7 @@ export default defineConfig({
       "src/board/**/*.test.js",
       "src/taskManager/**/*.test.js",
       "src/raffle/**/*.test.js",
+      "src/sfhistory/**/*.test.js",
       "src/*.test.js",
     ],
   },

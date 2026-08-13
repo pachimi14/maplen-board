@@ -4,6 +4,7 @@
   },
   "app": {
     "openDailyDashboard": "Task Manager",
+    "openSfHistory": "Enhance History",
     "pageTitle": "Clasificación de EXP de MSU",
     "pageDescription": "Clasificación de nivel y ganancias de EXP diarias, semanales y mensuales de personajes de nivel 225 o superior, basada en la clasificación oficial de MSU.",
     "metaTitle": "Lulumi Tools | Clasificación de EXP de MapleStory N",
@@ -543,5 +544,69 @@
     "postText": "{{name}} Lv.{{level}} {{percent}}% | Lulumi Tools",
     "main7d": "Ganancia 7 d?as",
     "main30d": "Ganancia 30 d?as"
+  },
+  "sfhistory": {
+    "pageTitle": "Enhance History",
+    "pageDescription": "Elige un equipo y un rango de estrellas para ver cómo ha evolucionado su coste esperado de mejora y en qué nivel se sitúa el valor actual frente a ese historial.",
+    "loading": "Cargando...",
+    "equipment": {
+      "label": "Equipo",
+      "searchPlaceholder": "Buscar por nombre de objeto o ID",
+      "noMatch": "No se encontró ningún equipo coincidente",
+      "maxStarBadge": "hasta ☆{{maxStar}}",
+      "loadError": "No se pudo cargar la lista de equipo. Vuelve a intentarlo más tarde."
+    },
+    "starRange": {
+      "startLabel": "Inicio ☆",
+      "targetLabel": "Objetivo ☆",
+      "presetsLabel": "Preajustes",
+      "presetDisabledHint": "Este objeto solo puede mejorarse hasta ☆{{maxStar}}, por lo que no se puede seleccionar"
+    },
+    "period": {
+      "label": "Período",
+      "d7": "7D",
+      "d14": "14D",
+      "d30": "30D",
+      "d90": "90D",
+      "d150": "150D"
+    },
+    "summary": {
+      "current": "Actual",
+      "currentUnavailable": "Precio actual no disponible",
+      "currentUnavailableHint": "No se pudo obtener el precio de origen. No se sustituye por el último valor histórico.",
+      "currentAsOf": "A fecha de {{timestamp}}",
+      "periodAverage": "Media del período",
+      "periodHigh": "Máximo del período",
+      "periodLow": "Mínimo del período",
+      "currentPosition": "Posición actual",
+      "percentileCheaperThan": "Más barato que el {{percent}}% de este período",
+      "percentileLowest": "El más barato de este período",
+      "percentileHighest": "El más caro de este período",
+      "noConfirmedData": "No hay datos confirmados en este período"
+    },
+    "chart": {
+      "legendExpected": "Esperado",
+      "legendAverage": "Media del período",
+      "legendHigh": "Máximo del período",
+      "legendLow": "Mínimo del período",
+      "tooltipDeltaFromPrev": "vs anterior {{delta}}",
+      "tooltipDeltaFromAverage": "vs media del período {{delta}}",
+      "tooltipBucketRange": "Barra {{start}}–{{end}}",
+      "tooltipBucketRangeOpen": "Barra {{start}}–{{end}} (aún no cerrada)",
+      "provisionalLegend": "El tramo discontinuo es un valor provisional del bloque de 4 horas actual, que todavía no se ha cerrado.",
+      "loadError": "No se pudo cargar el historial de precios. Vuelve a intentarlo más tarde.",
+      "empty": "No hay datos para mostrar"
+    },
+    "heatmap": {
+      "title": "Día de la semana x Franja horaria",
+      "axisNote": "Filas: día de la semana (UTC). Columnas: hora local ({{zone}}; UTC debajo de cada columna)",
+      "periodNote": "Agregado del período seleccionado -- unos {{sampleRange}} puntos por celda",
+      "empty": "Todavía no hay suficientes datos para resumir",
+      "cellTooltip": "{{value}}",
+      "noData": "Sin datos",
+      "lowestBadge": "Más bajo",
+      "highestBadge": "Más alto",
+      "disclaimer": "Solo muestra la mediana; no es una recomendación para mejorar en un día o franja horaria concretos."
+    }
   }
 }
