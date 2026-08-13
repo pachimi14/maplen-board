@@ -286,6 +286,74 @@ def test_mixed_will_difficulties_create_separate_candidates_for_user_selection()
     assert clears[1]["historyMemberIds"] == ["m5", "m6"]
     assert all(clear["partyCount"] == 6 and len(clear["members"]) == 6 for clear in clears)
 
+
+def test_five_and_six_person_hard_will_clusters_both_return_as_independent_candidates() -> None:
+    # LULU-096 user scenario: A-E (5 characters) clear Hard Will as a 5-person party while F
+    # (a 6th roster member) clears the same boss/difficulty separately in a 6-person party.
+    # Both must surface as independent selectable candidates so their rewards can be combined
+    # and split across the full 6-person saved roster.
+    member_ids = tuple(f"m{index}" for index in range(1, 7))
+    request = request_for(*member_ids)
+    five_person_times = [f"2026-07-23T14:0{index}:00Z" for index in range(5)]
+    histories = {
+        member_id: [{
+            "raffledAt": request.raffledAt,
+            "layerId": 205044,
+            "clearInformations": [{"clearedAt": five_person_times[index], "partyCount": 5}],
+            "prizes": [{"itemId": 1, "winCount": {"value": "500000"}}],
+        }]
+        for index, member_id in enumerate(member_ids[:5])
+    }
+    histories["m6"] = [{
+        "raffledAt": request.raffledAt,
+        "layerId": 205044,
+        "clearInformations": [{"clearedAt": "2026-07-23T20:00:00Z", "partyCount": 6}],
+        "prizes": [{"itemId": 1, "winCount": {"value": "900000"}}],
+    }]
+    layers = [{"layerId": 205044, "boss": {"bossName": "Will", "difficulty": "DIFFICULTY_HARD", "raffleLayerName": "Hard Will"}}]
+
+    clears = normalize_live_history(request, histories, layers, {})["clears"]
+
+    assert len(clears) == 2
+    assert {clear["clearId"] for clear in clears} == {"clear-will-hard-p5", "clear-will-hard-p6"}
+    five_clear = next(clear for clear in clears if clear["partyCount"] == 5)
+    six_clear = next(clear for clear in clears if clear["partyCount"] == 6)
+    assert five_clear["boss"] == "WILL" and five_clear["bossDifficulty"] == "HARD"
+    assert five_clear["historyMemberIds"] == ["m1", "m2", "m3", "m4", "m5"]
+    assert [member["bossNeso"] for member in five_clear["members"]] == ["500000"] * 5 + ["0"]
+    assert six_clear["historyMemberIds"] == ["m6"]
+    assert [member["bossNeso"] for member in six_clear["members"]] == ["0"] * 5 + ["900000"]
+
+
+def test_ambiguous_party_count_cluster_is_excluded_without_affecting_other_candidates() -> None:
+    request = request_for("m1", "m2", "m3", "m4", "m5")
+    histories = {
+        # partyCount=6: two disjoint one-hour windows of equal size (m1+m2 vs m3+m4) tie for
+        # the largest cluster, so this partyCount cannot be resolved and must be dropped with
+        # a warning while the clean partyCount=5 candidate below is still returned.
+        "m1": [{"raffledAt": request.raffledAt, "layerId": 205044, "clearInformations": [{"clearedAt": "2026-07-23T14:00:00Z", "partyCount": 6}], "prizes": []}],
+        "m2": [{"raffledAt": request.raffledAt, "layerId": 205044, "clearInformations": [{"clearedAt": "2026-07-23T14:10:00Z", "partyCount": 6}], "prizes": []}],
+        "m3": [{"raffledAt": request.raffledAt, "layerId": 205044, "clearInformations": [{"clearedAt": "2026-07-23T18:00:00Z", "partyCount": 6}], "prizes": []}],
+        "m4": [{"raffledAt": request.raffledAt, "layerId": 205044, "clearInformations": [{"clearedAt": "2026-07-23T18:10:00Z", "partyCount": 6}], "prizes": []}],
+        "m5": [],
+    }
+    for index, member_id in enumerate(("m1", "m2", "m5")):
+        histories[member_id].append({
+            "raffledAt": request.raffledAt,
+            "layerId": 205044,
+            "clearInformations": [{"clearedAt": f"2026-07-23T20:0{index}:00Z", "partyCount": 5}],
+            "prizes": [],
+        })
+    layers = [{"layerId": 205044, "boss": {"bossName": "Will", "difficulty": "DIFFICULTY_HARD", "raffleLayerName": "Hard Will"}}]
+
+    result = normalize_live_history(request, histories, layers, {})
+
+    assert [clear["partyCount"] for clear in result["clears"]] == [5]
+    assert result["clears"][0]["clearId"] == "clear-will-hard-p5"
+    assert result["clears"][0]["historyMemberIds"] == ["m1", "m2", "m5"]
+    assert result["warnings"] == [{"code": "ambiguous_party_cluster", "boss": "WILL", "bossDifficulty": "HARD", "partyCount": 6}]
+
+
 def test_shared_contract_fixture_matches_fixture_normalizer() -> None:
     root = Path(__file__).resolve().parents[3]
     fixture = json.loads((root / "testdata" / "raffle" / "v1" / "cases" / "fixture-lucid.json").read_text(encoding="utf-8"))

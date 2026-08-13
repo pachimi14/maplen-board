@@ -319,44 +319,36 @@ def normalize_live_history(request: CreateJobRequest, character_histories: dict[
                 for _history, _cleared_at, party_count in histories
                 if 1 <= party_count <= 6
             })
-            viable_clusters = []
-            cluster_was_ambiguous = False
+            # Every observed party size that resolves to a one-hour-window cluster is emitted
+            # as its own clear candidate (LULU-096): the same boss/difficulty can legitimately
+            # have multiple independent clears (e.g. a 5-person party and a separate 6-person
+            # party both clearing Hard Will), and the caller decides which to combine.
             for official_party_count in observed_party_counts:
                 cluster, ambiguous = _one_hour_party_cluster(member_histories, official_party_count)
-                cluster_was_ambiguous = cluster_was_ambiguous or ambiguous
                 if cluster and len(cluster) <= official_party_count:
-                    viable_clusters.append((len(cluster), official_party_count, cluster))
-            if not viable_clusters:
-                if cluster_was_ambiguous:
-                    warnings.append({"code": "ambiguous_party_cluster", "boss": boss_code, "bossDifficulty": difficulty})
-                continue
-            largest_history_count = max(value[0] for value in viable_clusters)
-            largest_clusters = [value for value in viable_clusters if value[0] == largest_history_count]
-            if len(largest_clusters) != 1:
-                warnings.append({"code": "ambiguous_party_cluster", "boss": boss_code, "bossDifficulty": difficulty})
-                continue
-            _history_count, official_party_count, cluster = largest_clusters[0]
-            if cluster_was_ambiguous:
-                warnings.append({"code": "ambiguous_party_cluster", "boss": boss_code, "bossDifficulty": difficulty})
-            members = []
-            history_member_ids = []
-            for character in request.characters:
-                match = cluster.get(character.memberId)
-                if match is not None:
-                    history, _party_count = match
-                    ascendant = _ascendant_for_boss(exact_histories.get(character.memberId, []), layers_by_id, history)
-                    members.append(_member_settlement(character.memberId, boss_code, history, ascendant, item_metadata, difficulty.lower()))
-                    history_member_ids.append(character.memberId)
-                else:
-                    members.append(_empty_member_settlement(character.memberId))
-            clears.append({
-                "clearId": f"clear-{boss_code.lower()}-{difficulty.lower()}",
-                "boss": boss_code,
-                "bossDifficulty": difficulty,
-                "ascendantTier": ascendant_tier,
-                "partyCount": official_party_count,
-                "historyMemberIds": history_member_ids,
-                "complete": True,
-                "members": members,
-            })
+                    if ambiguous:
+                        warnings.append({"code": "ambiguous_party_cluster", "boss": boss_code, "bossDifficulty": difficulty, "partyCount": official_party_count})
+                    members = []
+                    history_member_ids = []
+                    for character in request.characters:
+                        match = cluster.get(character.memberId)
+                        if match is not None:
+                            history, _party_count = match
+                            ascendant = _ascendant_for_boss(exact_histories.get(character.memberId, []), layers_by_id, history)
+                            members.append(_member_settlement(character.memberId, boss_code, history, ascendant, item_metadata, difficulty.lower()))
+                            history_member_ids.append(character.memberId)
+                        else:
+                            members.append(_empty_member_settlement(character.memberId))
+                    clears.append({
+                        "clearId": f"clear-{boss_code.lower()}-{difficulty.lower()}-p{official_party_count}",
+                        "boss": boss_code,
+                        "bossDifficulty": difficulty,
+                        "ascendantTier": ascendant_tier,
+                        "partyCount": official_party_count,
+                        "historyMemberIds": history_member_ids,
+                        "complete": True,
+                        "members": members,
+                    })
+                elif ambiguous:
+                    warnings.append({"code": "ambiguous_party_cluster", "boss": boss_code, "bossDifficulty": difficulty, "partyCount": official_party_count})
     return {"raffleResults": raffle_results, "clears": clears, "warnings": warnings, "errors": errors}
