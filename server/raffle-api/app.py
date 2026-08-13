@@ -79,6 +79,7 @@ def _live_processor(settings: Settings, client: MsuClient, layer_cache: BoundedT
     def process(request: CreateJobRequest, update, cancel_event):
         started_at = time.monotonic()
         histories_by_member: dict[str, list[dict]] = {}
+        member_wallets: dict[str, str] = {}
         errors: list[dict] = []
         item_metadata: dict[int, dict] = {}
         attempted_item_ids: set[int] = set()
@@ -130,7 +131,7 @@ def _live_processor(settings: Settings, client: MsuClient, layer_cache: BoundedT
 
         for index, character in enumerate(request.characters):
             if cancel_event.is_set():
-                return {"raffleResults": [], "clears": [], "warnings": [], "errors": []}
+                return {"raffleResults": [], "clears": [], "warnings": [], "errors": [], "memberWallets": {}}
             update(index, "fetching")
             try:
                 resolved = client.get_character_private(character.assetKey)
@@ -138,6 +139,11 @@ def _live_processor(settings: Settings, client: MsuClient, layer_cache: BoundedT
                 if not wallet_address:
                     errors.append({"code": "wallet_not_available", "memberId": character.memberId})
                 else:
+                    # Record the resolved owner wallet regardless of whether the
+                    # subsequent history fetch below succeeds: the wallet itself
+                    # was resolved, and transfer notifications (LULU-103) need it
+                    # even if this member's raffle history could not be fetched.
+                    member_wallets[character.memberId] = wallet_address
                     member_histories = client.get_character_history(
                         character.assetKey, wallet_address, request.raffledAt
                     )
@@ -150,9 +156,15 @@ def _live_processor(settings: Settings, client: MsuClient, layer_cache: BoundedT
             update(index + 1, "fetching")
 
         update(len(request.characters), "normalizing")
-        return normalize_live_history(
+        result = normalize_live_history(
             request, histories_by_member, layers, item_metadata, initial_errors=errors
         )
+        # memberWallets carries each requested member's own owner wallet
+        # (wallet override wins) so the web client can render/copy transfer
+        # notifications. Never logged, never cached (job results only live in
+        # the in-memory job queue for job_ttl_seconds).
+        result["memberWallets"] = member_wallets
+        return result
 
     return process
 

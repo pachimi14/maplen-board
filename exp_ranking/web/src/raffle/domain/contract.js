@@ -15,9 +15,26 @@ const ASCENDANT_TIER_BY_CLEAR = Object.freeze({
 });
 const INTEGER_PATTERN = /^\d+$/;
 const ITEM_ICON_PATTERN = /^https:\/\/api-static\.msu\.io\/itemimages\/[A-Za-z0-9_./-]+$/;
+const WALLET_PATTERN = /^0x[0-9a-fA-F]{40}$/;
 
 function validIntegerString(value) {
   return typeof value === "string" && INTEGER_PATTERN.test(value) && value.length <= 60;
+}
+
+// memberWallets (LULU-069/LULU-103): each requested party member's own owner
+// wallet, keyed by memberId. Malformed entries are dropped silently (not a
+// hard schema failure) -- a missing/invalid wallet degrades to "wallet
+// unknown for this member" in the UI rather than invalidating the whole job
+// payload.
+function normalizeMemberWallets(value) {
+  const result = {};
+  if (!value || typeof value !== "object") return result;
+  for (const [memberId, wallet] of Object.entries(value)) {
+    if (typeof memberId === "string" && memberId && typeof wallet === "string" && WALLET_PATTERN.test(wallet)) {
+      result[memberId] = wallet;
+    }
+  }
+  return result;
 }
 
 export function normalizeJobPayload(payload) {
@@ -89,6 +106,7 @@ export function normalizeJobPayload(payload) {
       clears: payload.clears,
       warnings: Array.isArray(payload.warnings) ? payload.warnings : [],
       errors: Array.isArray(payload.errors) ? payload.errors : [],
+      memberWallets: normalizeMemberWallets(payload.memberWallets),
     },
   };
 }

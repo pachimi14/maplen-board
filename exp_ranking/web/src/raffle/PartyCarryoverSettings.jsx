@@ -1,6 +1,6 @@
 import { useTranslation } from "../i18n/I18nContext.jsx";
 
-export default function PartyCarryoverSettings({ party, updateParty }) {
+export default function PartyCarryoverSettings({ party, members, updateParty }) {
   const { t } = useTranslation();
 
   function setCarryover(assetKey, value) {
@@ -24,7 +24,7 @@ export default function PartyCarryoverSettings({ party, updateParty }) {
       {party.carryoverEnabled ? <>
         <p className="raffle-carryover-sign-help">{t("raffle.carryoverSignHelp")}</p>
         <div className="raffle-carryover-grid">
-          {party.members.map((member) => <label key={member.assetKey} className="raffle-carryover-member">
+          {(members || party.members).map((member) => <label key={member.assetKey} className="raffle-carryover-member">
             <span>{member.displayName}</span>
             <input
               className="raffle-input"

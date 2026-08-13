@@ -100,4 +100,37 @@ describe("normalizeJobPayload", () => {
     const result = normalizeJobPayload(fixture.expectedJob);
     expect(result.ok).toBe(true);
     expect(result.data.clears.map((clear) => clear.boss)).toEqual(["LUCID", "WILL"]);
-  });});
+    expect(result.data.memberWallets).toEqual({ "member-1": "0x0b89e0acd94a1998c9c7c7ba707d8e639cd44135" });
+  });
+});
+
+// LULU-069/LULU-103: memberWallets carries each requested member's own owner
+// wallet. Format-validated only (0x + 40 hex); malformed entries are dropped
+// without failing the whole payload.
+describe("normalizeJobPayload memberWallets (LULU-069/LULU-103)", () => {
+  it("keeps well-formed 0x + 40-hex wallet entries", () => {
+    const value = payload({ memberWallets: { "member-1": "0xEE158FbBF3507A4a7e42C112e49725db4875a5b9" } });
+    const result = normalizeJobPayload(value);
+    expect(result.ok).toBe(true);
+    expect(result.data.memberWallets).toEqual({ "member-1": "0xEE158FbBF3507A4a7e42C112e49725db4875a5b9" });
+  });
+
+  it("silently drops malformed wallet entries instead of failing the whole payload", () => {
+    const value = payload({
+      memberWallets: {
+        "member-1": "not-a-wallet",
+        "member-2": "0x1234", // too short
+        "member-3": 12345, // not a string
+      },
+    });
+    const result = normalizeJobPayload(value);
+    expect(result.ok).toBe(true);
+    expect(result.data.memberWallets).toEqual({});
+  });
+
+  it("defaults to an empty object when memberWallets is missing/invalid", () => {
+    expect(normalizeJobPayload(payload()).data.memberWallets).toEqual({});
+    expect(normalizeJobPayload(payload({ memberWallets: null })).data.memberWallets).toEqual({});
+    expect(normalizeJobPayload(payload({ memberWallets: "not-an-object" })).data.memberWallets).toEqual({});
+  });
+});
