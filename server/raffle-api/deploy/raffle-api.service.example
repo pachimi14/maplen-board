@@ -10,7 +10,7 @@ Group=botuser
 WorkingDirectory=/home/botuser/apps/lulumi-tools-raffle-api
 EnvironmentFile=/etc/lulumi-tools/raffle-api.env
 Environment=RAFFLE_API_ITEM_CACHE_DB=/var/lib/lulumi-tools-raffle-api/item-metadata.sqlite3
-ExecStart=/home/botuser/apps/lulumi-tools-raffle-api/.venv/bin/python -m uvicorn app:app --host 127.0.0.1 --port 8782 --workers 1 --no-access-log
+ExecStart=/home/botuser/apps/lulumi-tools-raffle-api/.venv/bin/python -m uvicorn app:app --host 127.0.0.1 --port 8786 --workers 1 --no-access-log
 Restart=on-failure
 RestartSec=5
 TimeoutStopSec=15
@@ -19,7 +19,7 @@ PrivateTmp=true
 StateDirectory=lulumi-tools-raffle-api
 StateDirectoryMode=0700
 ProtectSystem=strict
-ProtectHome=true
+ProtectHome=read-only
 ProtectKernelTunables=true
 ProtectKernelModules=true
 ProtectControlGroups=true

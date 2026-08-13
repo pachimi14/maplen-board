@@ -46,7 +46,7 @@ RAFFLE_API_ALLOWED_ORIGINS=https://lulumi-tools.com
 
 ## 配備
 
-`deploy/raffle-api.service.example` は127.0.0.1:8782で起動します。`deploy/Caddyfile.example` の `/raffle/*` handleだけを既存の `api.lulumi-tools.com` site blockへ統合してください。既存 `/img/*` とGitHub Pages経路は変更しません。
+`deploy/raffle-api.service.example` は127.0.0.1:8786で起動します。`deploy/Caddyfile.example` の `/raffle/*` handleだけを既存の `api.lulumi-tools.com` site blockへ統合してください。既存 `/img/*` とGitHub Pages経路は変更しません。
 
 配備前に、ポート競合、既存img-proxy、`MemAvailable >= 256 MiB`を確認します。ローカルユーザー確認と別途配備承認を得るまでVPSへ反映しません。
 
