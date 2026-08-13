@@ -33,6 +33,12 @@
 - [ ] **P3(出血停止)完了・本番反映済**(db.gz の新規コミットが止まっている)
 - [ ] **P4(v1廃止)完了**
 - [ ] **P5(ローカルbat確認)完了**
+- [ ] **P5.5(Google Drive 世代バックアップ)完了**(`docs/IMPL_PLAN_T12_P5_5_GOOGLE_DRIVE_BACKUP.md` §8。Release が完全DBの唯一の保存先になる P6 の前に、独立した退避先を確立しておく)
+  - [ ] **Google Drive への日次バックアップが実装済み**
+  - [ ] **連続3回以上成功**
+  - [ ] **直近7日保持ポリシーが実証済み**
+  - [ ] **Release DB と Google Drive DB の内容一致を確認済み**
+  - [ ] **Google Drive から実際にDBを復元する手順を実証済み**(`docs/T12_P5_5_RESTORE_GUIDE.md`)
 - [ ] **GitHub Actions 停止済**(3 workflow を disable = §3 Step 1)
 - [ ] **実行中の Workflow が 0件**(`gh run list --status in_progress` が空)
 - [ ] **working tree clean**(`git status` に未コミット変更なし)
