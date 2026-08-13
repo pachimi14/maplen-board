@@ -99,6 +99,7 @@ export default function SettlementResult({ calculation, include, memberMap, memb
         bossLabel,
         roundLocalText,
         roundUtcText,
+        memberWallets,
       });
       const blob = await renderSettlementShareImageBlob(model);
       const copied = await copyPngBlobToClipboard(blob);
@@ -204,12 +205,18 @@ export default function SettlementResult({ calculation, include, memberMap, memb
           {transferCopyStatus === "copied" ? t("raffle.transferNotificationCopied") : null}
           {transferCopyStatus === "failed" ? t("raffle.transferNotificationFailed") : null}
         </p> : null}
-        {calculation.transfers.length ? <ul className="raffle-transfer-list">{calculation.transfers.map((transfer, index) => <li key={transfer.fromMemberId + ":" + transfer.toMemberId + ":" + index} className="raffle-transfer-row">
-          <span className="raffle-transfer-payer">{memberName(memberMap, transfer.fromMemberId)}</span>
-          <span className="raffle-transfer-arrow" aria-hidden="true">→</span>
-          <span className="raffle-transfer-receiver">{memberName(memberMap, transfer.toMemberId)}</span>
-          <strong className="raffle-transfer-amount">{neso(transfer.amount)}</strong>
-        </li>)}</ul> : <p className="raffle-no-transfers">{t("raffle.noTransfers")}</p>}
+        {calculation.transfers.length ? <ul className="raffle-transfer-list">{calculation.transfers.map((transfer, index) => {
+          const wallet = resolveMemberWallet(memberWallets, transfer.toMemberId);
+          return <li key={transfer.fromMemberId + ":" + transfer.toMemberId + ":" + index} className="raffle-transfer-row">
+            <span className="raffle-transfer-left">
+              <span className="raffle-transfer-payer">{memberName(memberMap, transfer.fromMemberId)}</span>
+              <span className="raffle-transfer-arrow" aria-hidden="true">→</span>
+              <span className="raffle-transfer-receiver">{memberName(memberMap, transfer.toMemberId)}</span>
+              <strong className="raffle-transfer-amount">{neso(transfer.amount)}</strong>
+            </span>
+            <span className="raffle-transfer-wallet">{wallet || t("raffle.walletUnavailable")}</span>
+          </li>;
+        })}</ul> : <p className="raffle-no-transfers">{t("raffle.noTransfers")}</p>}
       </section>
 
       <section className="raffle-settlement-section raffle-breakdown-section">

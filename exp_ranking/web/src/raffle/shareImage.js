@@ -20,7 +20,7 @@
 // actual <canvas>, calls toBlob) and is intentionally not unit-tested, the
 // same way components/ShareImageButton.jsx's canvas/DOM glue isn't.
 
-import { describeMemberSettlement, memberDisplayName, neso, pcPortionAmount, sumTransferAmounts } from "./uiText.js";
+import { describeMemberSettlement, memberDisplayName, neso, pcPortionAmount, resolveMemberWallet, sumTransferAmounts } from "./uiText.js";
 
 const SHARE_IMAGE_TITLE = "Raffle Settlement";
 const SHARE_IMAGE_FOOTER = "lulumi-tools.com";
@@ -60,11 +60,14 @@ const PILL_COLOR = {
  * on-screen UI uses, so the image can never drift from what's on screen.
  *
  * `context` carries display-only extras that aren't part of `calculation`
- * (the combined boss/difficulty label and the localized round timestamp);
- * all are optional and default to "".
+ * (the combined boss/difficulty label, the localized round timestamp, and
+ * `memberWallets` for the transfer rows' receiver wallet -- LULU-103 C3:
+ * including the wallet in the shared image is explicit user instruction,
+ * replacing the earlier "never put wallet in the copy result" rule); all are
+ * optional and default to "" / {}.
  */
 export function buildSettlementShareModel(calculation, memberMap, include, powerCrystalNesoRate, t, context = {}) {
-  const { bossLabel = "", roundLocalText = "", roundUtcText = "" } = context;
+  const { bossLabel = "", roundLocalText = "", roundUtcText = "", memberWallets = {} } = context;
   const roundLine = roundLocalText && roundUtcText
     ? t("raffle.targetRoundValue", { local: roundLocalText, utc: roundUtcText })
     : "";
@@ -99,6 +102,7 @@ export function buildSettlementShareModel(calculation, memberMap, include, power
     from: memberDisplayName(memberMap, transfer.fromMemberId),
     to: memberDisplayName(memberMap, transfer.toMemberId),
     amount: neso(transfer.amount),
+    wallet: resolveMemberWallet(memberWallets, transfer.toMemberId) || t("raffle.walletUnavailable"),
   }));
 
   return {
@@ -285,7 +289,14 @@ function drawMemberRow(ctx, contentX, contentWidth, row) {
   });
 }
 
-/** One transfer row: "A → B" on the left, the amount right-aligned in bold, alternating band. */
+/**
+ * One transfer row (LULU-103 C3): "A → B AMOUNT" packed tightly on the left
+ * (amount immediately after the names, bold), the receiver's full wallet
+ * address right-aligned in small monospace text on the right, alternating
+ * band. `ctx.measureText` positions the amount right after the name text;
+ * when unavailable (e.g. a minimal test mock ctx) the amount simply starts
+ * at the row's left edge instead of throwing.
+ */
 function drawTransferRow(ctx, contentX, contentWidth, row) {
   const { transfer, index, y } = row;
   const bandColor = index % 2 === 0 ? COLOR.bandWhite : COLOR.bandAlt;
@@ -293,13 +304,24 @@ function drawTransferRow(ctx, contentX, contentWidth, row) {
   ctx.fillRect(contentX, y, contentWidth, TRANSFER_ROW_HEIGHT);
 
   const textY = y + TRANSFER_ROW_HEIGHT / 2 + 5;
-  drawText(ctx, { text: transfer.from + " → " + transfer.to, x: contentX + BOX_PADDING, y: textY, font: `15px ${FONT_FAMILY}`, color: COLOR.transfer });
+  const nameFont = `15px ${FONT_FAMILY}`;
+  const nameText = transfer.from + " → " + transfer.to + " ";
+  drawText(ctx, { text: nameText, x: contentX + BOX_PADDING, y: textY, font: nameFont, color: COLOR.transfer });
+  ctx.font = nameFont;
+  const nameWidth = typeof ctx.measureText === "function" ? ctx.measureText(nameText).width : 0;
   drawText(ctx, {
     text: transfer.amount,
-    x: contentX + contentWidth - BOX_PADDING,
+    x: contentX + BOX_PADDING + nameWidth,
     y: textY,
     font: `bold 15px ${FONT_FAMILY}`,
     color: COLOR.heading,
+  });
+  drawText(ctx, {
+    text: transfer.wallet,
+    x: contentX + contentWidth - BOX_PADDING,
+    y: textY,
+    font: `12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`,
+    color: COLOR.muted,
     align: "right",
   });
 }
