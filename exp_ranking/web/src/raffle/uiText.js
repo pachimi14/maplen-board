@@ -178,7 +178,8 @@ export function sumTransferAmounts(transfers) {
 /**
  * Returns a settlement member's PC-converted NESO portion (decimal string)
  * when it is non-zero, else null. Gates the "incl. PC conversion" note on
- * the settlement card (SettlementResult.jsx).
+ * both the settlement card (SettlementResult.jsx) and the share image
+ * (shareImage.js, C2).
  */
 export function pcPortionAmount(member) {
   try {
@@ -186,6 +187,44 @@ export function pcPortionAmount(member) {
   } catch {
     return null;
   }
+}
+
+/**
+ * Formats a decimal-string NESO amount as "1,234" using a fixed en-US
+ * grouping regardless of the app's active display language -- matches every
+ * other raw NESO amount rendered in the raffle calculator.
+ */
+export function formatNeso(value) {
+  try {
+    return BigInt(value).toLocaleString("en-US");
+  } catch {
+    return String(value ?? "");
+  }
+}
+
+/** Formats a decimal-string NESO amount with its unit suffix, e.g. "1,234 NESO". */
+export function neso(value) {
+  return formatNeso(value) + " NESO";
+}
+
+/** Resolves a settlement member's display name, falling back to the raw memberId. */
+export function memberDisplayName(memberMap, memberId) {
+  return memberMap?.[memberId]?.displayName || memberId;
+}
+
+/**
+ * Describes a settlement member's transfer status as
+ * `{ kind: "pays" | "receives" | "settled", label, amount }` (`amount` is
+ * the raw decimal-string NESO value, or null when nothing is owed). Shared
+ * by the settlement result cards/table (SettlementResult.jsx) and the
+ * share-image model (shareImage.js) so both always agree on who
+ * pays/receives/is settled -- the same rule is never re-implemented twice.
+ */
+export function describeMemberSettlement(member, { t, carryoverEnabled }) {
+  if (BigInt(member.payment) > 0n) return { kind: "pays", label: t("raffle.pays"), amount: member.payment };
+  if (BigInt(member.receipt) > 0n) return { kind: "receives", label: t("raffle.receives"), amount: member.receipt };
+  const noTransfer = carryoverEnabled && BigInt(member.nextCarryover) !== 0n;
+  return { kind: "settled", label: t(noTransfer ? "raffle.noTransferThisWeek" : "raffle.settled"), amount: null };
 }
 
 /** Smoothly scrolls an element into view, respecting reduced-motion preference. */

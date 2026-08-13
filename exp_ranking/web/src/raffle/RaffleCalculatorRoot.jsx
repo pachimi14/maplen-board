@@ -272,6 +272,9 @@ export default function RaffleCalculatorRoot() {
   const dropNameByDropId = activeClear
     ? Object.fromEntries(activeClear.members.flatMap((member) => member.drops.map((drop) => [drop.dropId, drop.name])))
     : {};
+  const activeClearBossLabel = activeClear
+    ? [...new Set(activeClear.sourceClears.map((clear) => formatPartyClearTitle(clear)))].join(", ")
+    : "";
 
   useEffect(() => {
     if (activeSetting?.calculated?.ok) scrollElementIntoView(settlementRef.current);
@@ -379,7 +382,7 @@ export default function RaffleCalculatorRoot() {
                     <button type="button" className="raffle-button-primary w-full" disabled={!distributionRosterConfirmed} onClick={() => calculateBoss(activeClear)}>{t("raffle.calculateDistribution")}</button>
                     {!distributionRosterConfirmed ? <p className="raffle-hint-text">{t("raffle.confirmBeforeCalculate")}</p> : null}
                     <div ref={settlementRef}>
-                      {activeSetting.calculated ? activeSetting.calculated.ok ? <SettlementResult calculation={activeSetting.calculated} include={activeSetting.include} memberMap={jobResult.memberMap} powerCrystalNesoRate={activeSetting.powerCrystalNesoRate} /> : <div role="alert" className="space-y-1 rounded-xl border border-rose-400 bg-rose-50 p-3 text-sm text-rose-900">{activeSetting.calculated.errors.map((error, index) => <p key={index}>{describeSettlementError(error, { t, memberMap: jobResult.memberMap, dropNameByDropId })}</p>)}</div> : null}
+                      {activeSetting.calculated ? activeSetting.calculated.ok ? <SettlementResult calculation={activeSetting.calculated} include={activeSetting.include} memberMap={jobResult.memberMap} powerCrystalNesoRate={activeSetting.powerCrystalNesoRate} bossLabel={activeClearBossLabel} roundLocalText={targetRoundLocalText} roundUtcText={targetRoundUtcText} /> : <div role="alert" className="space-y-1 rounded-xl border border-rose-400 bg-rose-50 p-3 text-sm text-rose-900">{activeSetting.calculated.errors.map((error, index) => <p key={index}>{describeSettlementError(error, { t, memberMap: jobResult.memberMap, dropNameByDropId })}</p>)}</div> : null}
                     </div>
                   </div> : null}
                 </> : <p className="text-sm text-slate-500">{t("raffle.noPartyClears")}</p>}

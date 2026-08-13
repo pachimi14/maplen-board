@@ -661,10 +661,31 @@ html[data-theme-depth="deep"] .raffle-ascendant-tier-line span {
   color: #0f172a;
 }
 
-.raffle-settlement-result > h3 {
+.raffle-settlement-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
   padding: 0.9rem 1rem 0;
+}
+
+.raffle-settlement-header > h3 {
   font-size: 1rem;
   font-weight: 900;
+}
+
+.raffle-share-image-button {
+  flex-shrink: 0;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.8rem;
+}
+
+.raffle-share-status {
+  margin: 0.4rem 1rem 0;
+  color: #047857;
+  font-size: 0.78rem;
+  font-weight: 700;
 }
 
 .raffle-hero-metrics {
@@ -1047,7 +1068,8 @@ html[data-theme-depth="deep"] .raffle-hero-tile {
 
 html[data-theme-depth="deep"] .raffle-hero-tile span,
 html[data-theme-depth="deep"] .raffle-hero-tile strong,
-html[data-theme-depth="deep"] .raffle-hero-tile-note {
+html[data-theme-depth="deep"] .raffle-hero-tile-note,
+html[data-theme-depth="deep"] .raffle-share-status {
   color: var(--theme-deep-accent, #34d399);
 }
 
@@ -1194,9 +1216,13 @@ html[data-theme-depth="deep"] .raffle-settled {
     padding-inline: 0.75rem;
   }
 
-  .raffle-settlement-result > h3,
+  .raffle-settlement-header,
   .raffle-settlement-section {
     padding-inline: 0.75rem;
+  }
+
+  .raffle-share-status {
+    margin-inline: 0.75rem;
   }
 
   .raffle-settlement-formula {
