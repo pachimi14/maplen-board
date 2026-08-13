@@ -1,21 +1,15 @@
+import { useState } from "react";
 import { useTranslation } from "../i18n/I18nContext.jsx";
-import { pcPortionAmount, sumTransferAmounts } from "./uiText.js";
-
-function formatNeso(value) {
-  try {
-    return BigInt(value).toLocaleString("en-US");
-  } catch {
-    return String(value ?? "");
-  }
-}
-
-function memberName(memberMap, memberId) {
-  return memberMap?.[memberId]?.displayName || memberId;
-}
-
-function neso(value) {
-  return formatNeso(value) + " NESO";
-}
+import {
+  describeMemberSettlement,
+  formatNeso,
+  memberDisplayName as memberName,
+  neso,
+  pcPortionAmount,
+  sumTransferAmounts,
+} from "./uiText.js";
+import { buildSettlementShareModel, renderSettlementShareImageBlob, settlementShareFileName } from "./shareImage.js";
+import { copyPngBlobToClipboard, downloadBlob } from "../shareImageIO.js";
 
 function signedNeso(value) {
   try {
@@ -37,8 +31,10 @@ function EquipmentIcons({ drops }) {
   })}</span>;
 }
 
-export default function SettlementResult({ calculation, include, memberMap, powerCrystalNesoRate }) {
+export default function SettlementResult({ calculation, include, memberMap, powerCrystalNesoRate, bossLabel = "", roundLocalText = "", roundUtcText = "" }) {
   const { t } = useTranslation();
+  const [shareBusy, setShareBusy] = useState(false);
+  const [shareStatus, setShareStatus] = useState("idle");
   const actualTransferTotal = sumTransferAmounts(calculation.transfers);
   const categoryColumns = [
     include.bossNeso ? { key: "bossNeso", label: t("raffle.item_bossNeso"), total: calculation.categoryTotals.bossNeso } : null,
@@ -79,20 +75,56 @@ export default function SettlementResult({ calculation, include, memberMap, powe
   }
 
   function settlementBadgeClassName(member) {
-    if (BigInt(member.payment) > 0n) return "raffle-payment";
-    if (BigInt(member.receipt) > 0n) return "raffle-receipt";
+    const kind = describeMemberSettlement(member, { t, carryoverEnabled: calculation.carryoverEnabled }).kind;
+    if (kind === "pays") return "raffle-payment";
+    if (kind === "receives") return "raffle-receipt";
     return "raffle-settled";
   }
 
   function settlementBadgeContent(member) {
-    if (BigInt(member.payment) > 0n) return <>{t("raffle.pays")}<strong>{neso(member.payment)}</strong></>;
-    if (BigInt(member.receipt) > 0n) return <>{t("raffle.receives")}<strong>{neso(member.receipt)}</strong></>;
-    return t(calculation.carryoverEnabled && BigInt(member.nextCarryover) !== 0n ? "raffle.noTransferThisWeek" : "raffle.settled");
+    const info = describeMemberSettlement(member, { t, carryoverEnabled: calculation.carryoverEnabled });
+    return info.amount != null ? <>{info.label}<strong>{neso(info.amount)}</strong></> : info.label;
+  }
+
+  async function handleCopyResultImage() {
+    if (shareBusy) return;
+    setShareBusy(true);
+    setShareStatus("generating");
+    try {
+      const model = buildSettlementShareModel(calculation, memberMap, include, powerCrystalNesoRate, t, {
+        bossLabel,
+        roundLocalText,
+        roundUtcText,
+      });
+      const blob = await renderSettlementShareImageBlob(model);
+      const copied = await copyPngBlobToClipboard(blob);
+      if (copied) {
+        setShareStatus("copied");
+      } else {
+        downloadBlob(blob, settlementShareFileName());
+        setShareStatus("downloadedFallback");
+      }
+    } catch {
+      setShareStatus("failed");
+    } finally {
+      setShareBusy(false);
+    }
   }
 
   return (
     <article className="raffle-settlement-result">
-      <h3>{t("raffle.settlementSummary")}</h3>
+      <div className="raffle-settlement-header">
+        <h3>{t("raffle.settlementSummary")}</h3>
+        <button type="button" className="raffle-button-secondary raffle-share-image-button" disabled={shareBusy} onClick={handleCopyResultImage}>
+          {t("raffle.copyResultImage")}
+        </button>
+      </div>
+      {shareStatus !== "idle" ? <p role="status" className="raffle-share-status">
+        {shareStatus === "generating" ? t("raffle.shareImageGenerating") : null}
+        {shareStatus === "copied" ? t("raffle.shareImageCopied") : null}
+        {shareStatus === "downloadedFallback" ? t("raffle.shareImageDownloadedFallback") : null}
+        {shareStatus === "failed" ? t("raffle.shareImageFailed") : null}
+      </p> : null}
 
       <div className="raffle-hero-metrics">
         <div className="raffle-hero-tile">
