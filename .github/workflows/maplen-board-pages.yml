@@ -334,6 +334,14 @@ jobs:
     permissions:
       # gh release upload requires contents: write (contents: read returns 403)
       contents: write
+    # T12 P5.5 §2.1.1: expose the SHA-256 of whatever this job actually
+    # persisted to the Release Asset (empty if nothing was persisted), so
+    # backup-gdrive (below) can prove -- by re-downloading the Release Asset
+    # and comparing hashes -- that it is backing up the exact same DB this
+    # run just published, not some other run's Asset.
+    outputs:
+      sha256: ${{ steps.persist.outputs.sha256 }}
+      uploaded: ${{ steps.persist.outputs.uploaded }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -361,6 +369,7 @@ jobs:
       # persistence path, a failure here must fail the run visibly rather
       # than be silently swallowed.
       - name: Persist ranking.db to Release store (sole durable store, T12 P3)
+        id: persist
         if: always()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -368,12 +377,96 @@ jobs:
         run: |
           if [ ! -f exp_ranking/bot/data/ranking.db ]; then
             echo "No local ranking.db to persist to Release store"
+            echo "uploaded=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           cd exp_ranking/bot
           python -c "
+          import hashlib
+          import os
           from pathlib import Path
-          from release_store import sync_db_to_release
+          from release_store import download_current_asset, sync_db_to_release
+
           result = sync_db_to_release(Path('data/ranking.db'))
           print(f'release_store sync (pages): {result}')
+
+          output_path = os.environ['GITHUB_OUTPUT']
+          if not result.get('uploaded'):
+              with open(output_path, 'a', encoding='utf-8') as f:
+                  print('uploaded=false', file=f)
+              raise SystemExit(0)
+
+          # T12 P5.5 sec2.1.1: re-download the Release Asset we just
+          # persisted, and record its SHA-256 as this job's output. This is
+          # the sole hand-off medium to backup-gdrive -- it re-downloads the
+          # same Asset and compares hashes (V0) to prove it is backing up
+          # this exact DB, not a different run's Asset (Release conflict).
+          verify_gz = Path('released_asset_for_backup_sha256.db.gz')
+          if not download_current_asset(verify_gz):
+              raise SystemExit(
+                  'release asset re-download for sha256 output failed unexpectedly '
+                  '(unexpected: sync_db_to_release just uploaded it)'
+              )
+          sha256 = hashlib.sha256(verify_gz.read_bytes()).hexdigest()
+          print(f'released-db-sha256={sha256}')
+          with open(output_path, 'a', encoding='utf-8') as f:
+              print(f'sha256={sha256}', file=f)
+              print('uploaded=true', file=f)
           "
+
+  # T12 P5.5: daily generational backup to Google Drive, independent of the
+  # GitHub Release db-store (§0 "3層の役割分担"). Runs only after commit-db
+  # (Release persist) has succeeded and actually persisted a DB this run
+  # (§2.1: Release update -> Drive backup -> retention delete, strictly in
+  # that order -- delete is always last, enforced inside gdrive_backup_job.py
+  # itself, not by this job's structure). `needs: [build, commit-db]` mirrors
+  # the plan's explicit dependency chain (commit-db already needs build; build
+  # is not otherwise used here since this job re-downloads the Release Asset
+  # rather than consuming build's artifact, §2.1.1).
+  #
+  # SKIP-day / [web-only] runs (no new fetched data) are *not* specially
+  # excluded here: commit-db still persists (typically byte-identical)
+  # content and this job still uploads+verifies it, but gdrive_backup_job.py's
+  # same-UTC-day dedup (gdrive_backup_retention.py, §2.3) collapses same-day
+  # duplicates down to the latest on the very next run, so repeat runs on a
+  # quiet day are a safe no-op rather than unbounded storage growth.
+  backup-gdrive:
+    needs: [build, commit-db]
+    if: |
+      always() &&
+      needs.commit-db.result == 'success' &&
+      needs.commit-db.outputs.uploaded == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      # Only re-downloads the Release Asset (gh release download) for V0/V7;
+      # never uploads to the Release, so contents: read is enough (least
+      # privilege -- contrast with commit-db's contents: write).
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-backup.txt
+
+      - name: Install backup dependencies
+        run: pip install -r requirements-backup.txt
+
+      - name: Run Google Drive backup (T12 P5.5)
+        working-directory: exp_ranking/bot
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          GDRIVE_CLIENT_ID: ${{ secrets.GDRIVE_CLIENT_ID }}
+          GDRIVE_CLIENT_SECRET: ${{ secrets.GDRIVE_CLIENT_SECRET }}
+          GDRIVE_REFRESH_TOKEN: ${{ secrets.GDRIVE_REFRESH_TOKEN }}
+          GDRIVE_BACKUP_FOLDER_ID: ${{ secrets.GDRIVE_BACKUP_FOLDER_ID }}
+          GDRIVE_BACKUP_EXPECTED_SHA256: ${{ needs.commit-db.outputs.sha256 }}
+          GDRIVE_BACKUP_RUN_ID: ${{ github.run_id }}
+        run: python gdrive_backup_job.py
