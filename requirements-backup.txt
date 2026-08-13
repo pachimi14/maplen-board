@@ -1,0 +1,14 @@
+# Google Drive バックアップ: CI（GitHub Actions）本番ジョブ用
+#
+# NOTE: このファイルは T12 P5.5 の第一段階では未使用（作成のみ）。
+#       backup-gdrive workflow ジョブの配線は後続コミットで行う。
+#
+# refresh token → access token の更新には google-auth のみで足りるため、
+# ブラウザ同意を必要とする google-auth-oauthlib は含めない
+#（ローカル初期設定専用。requirements-backup-setup.txt を参照）。
+#
+# 参照: docs/IMPL_PLAN_T12_P5_5_GOOGLE_DRIVE_BACKUP.md §2.6.1
+#       docs/T12_P5_5_SETUP_GUIDE.md
+
+google-auth>=2.29.0,<3
+google-api-python-client>=2.100.0,<3

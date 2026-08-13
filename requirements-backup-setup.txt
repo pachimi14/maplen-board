@@ -1,0 +1,11 @@
+# Google Drive バックアップ: ローカル初期設定（OAuth 同意・refresh token 取得）専用
+#
+# 用途: tools/gdrive_backup_setup.py をローカルPCで1回だけ実行するための依存。
+#       CI（GitHub Actions）にはインストールしない。
+#       CI 本番ジョブ用は requirements-backup.txt を参照。
+#
+# 参照: docs/IMPL_PLAN_T12_P5_5_GOOGLE_DRIVE_BACKUP.md §2.6.1
+#       docs/T12_P5_5_SETUP_GUIDE.md
+
+google-auth-oauthlib>=1.2.0,<2
+google-api-python-client>=2.100.0,<3
