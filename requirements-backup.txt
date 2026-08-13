@@ -1,4 +1,4 @@
-# Google Drive バックアップ: CI（GitHub Actions）本番ジョブ用
+﻿# Google Drive バックアップ: CI（GitHub Actions）本番ジョブ用
 #
 # NOTE: このファイルは T12 P5.5 の第一段階では未使用（作成のみ）。
 #       backup-gdrive workflow ジョブの配線は後続コミットで行う。
