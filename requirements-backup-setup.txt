@@ -1,4 +1,4 @@
-# Google Drive バックアップ: ローカル初期設定（OAuth 同意・refresh token 取得）専用
+﻿# Google Drive バックアップ: ローカル初期設定（OAuth 同意・refresh token 取得）専用
 #
 # 用途: tools/gdrive_backup_setup.py をローカルPCで1回だけ実行するための依存。
 #       CI（GitHub Actions）にはインストールしない。
