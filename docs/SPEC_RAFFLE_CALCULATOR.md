@@ -17,9 +17,9 @@ MapleHubの操作体験を参考にするが、コードや内部ロジックは
 
 - キャラクターごとの公式ラッフル履歴を読み込み、Lucid・Will・その他ボスを含む取得結果をすべて表示する。
 - 保存PTを分配対象者として扱い、同一開催回・同一Lucid / Will難易度・同一公式PT人数・ラッフル参加時刻の幅1時間以内を満たす履歴群を分配候補として検出する。公式討伐人数、保存PT内の履歴参加人数、保存PTの分配人数は独立して扱い、不一致時はユーザーが明示確認した場合だけ保存PT人数で計算する。履歴がないメンバーも獲得0で均等分配へ含める。
-- ボスNESO、Power Crystal、Ascendant NESO、コイン売却額、装備売却額を選択に応じてNESO価値へ換算する。
+- ボスNESO、Power Crystal、Ascendant NESO、コイン・装備の手数料控除後受取額を選択に応じてNESO価値へ換算する。
 - `Power Crystal 1 = X NESO` の換算レートをユーザーが指定できる。
-- 分配はボスごとに独立して行う。LucidではPhantasma Coin、WillではArachno Coinだけを対象とし、実際の取得者がドロップ1件ごとの売却総額を入力する。
+- 分配はボスごとに独立して行う。LucidではPhantasma Coin、WillではArachno Coinだけを対象とし、実際の取得者がドロップ1件ごとの売却価格（手数料控除前）を入力し、販売手数料5%を自動控除する。
 - パーティ内で均等分配した場合の差額と、必要な送金一覧を表示する。
 
 ## 2. 初期版の対象外
@@ -91,7 +91,7 @@ VPSが停止していてもLulumi-Toolsの画面自体は表示できること�
 - Power Crystal表示は「個数」ではなく、`50M + 50M + 50M = 150M`のような量の合計として表示される。
 - `Party Clears`は保存パーティを分配対象者として、PT内のいずれかのキャラクターに存在するLucid / Will履歴を難易度別に確認・選択する画面とする。
 
-これらは参考動作であり、画面や内部処理を複製する根拠にはしない。Lulumi-Toolsでは秘密キー保護、ドロップ1件ごとの売却総額入力、不完全履歴の検出を追加する。
+これらは参考動作であり、画面や内部処理を複製する根拠にはしない。Lulumi-Toolsでは秘密キー保護、ドロップ1件ごとの売却価格入力と手数料自動計算、不完全履歴の検出を追加する。
 
 ## 4. 画面とナビゲーション
 
@@ -130,7 +130,7 @@ VPSが停止していてもLulumi-Toolsの画面自体は表示できること�
 5. `Raffle Results`でPTメンバーを1人選び、そのキャラクターが当該開催回で当選した全ラッフルを確認する。ボス種別は限定しない。`Ascendant Tier Raffle`は開催回内で1つにまとめ、各当選を`階層名 - 難易度 ボス名`形式で表示する。対応はDawning 1＝Normal Guardian Angel Slime、Dawning 2＝Easy Lucid、Blessed 1＝Hard Lotus、Blessed 2＝Hard Damien、Mystic＝Normal Lucid、Luminous＝Easy Will、Glorious＝Normal Will、Divine＝Hard Lucid、Eternal＝Hard Willとする。表示順はこの表の下側を高Tierとして、EternalからDawning 1へのTier降順とする。
    - 選択キャラクターの当選を全件集計し、合計NESOと券の額面換算後の合計Power Crystalを常時表示する。同名報酬のアイテム別合計一覧は初期状態で折り畳む。
 6. `Party Clears`で、同一公式PT人数を持ち、複数履歴ではラッフル参加時刻が1時間以内に収まるLucidまたはWillを難易度別候補として確認する。各候補は`Normal Will + Glorious Ascendant`のように公式難易度と対応Ascendant Tierを一体表示し、討伐人数／履歴参加人数／分配人数を併記する。3人数が不一致なら候補ごとの確認チェックを必須とする。同一ボスに複数候補がある場合はチェックで1件以上を選び、複数選択時は獲得額を合算する。
-7. ボスタブ内で分配へ含める項目を選び、必要な売却額とPower Crystal換算率を入力する。
+7. ボスタブ内で分配へ含める項目を選び、必要な売却価格とPower Crystal換算率を入力する。
 8. 「分配計算」を押し、各メンバーの獲得価値、均等取り分、差額、送金一覧を確認する。
 
 履歴取得中は、待ち行列、キャラクター取得、履歴取得、正規化の進行段階と経過時間を表示する。実際の完了人数だけを表示し、推測値は使わない。未キャッシュ6キャラクターの通常時目標は30秒以内とする。
@@ -167,7 +167,7 @@ wallet指定を許可しても任意のMSU APIパスは指定できず、サー�
 - 保存先: localStorage
 - 外部サーバーへのパーティ設定保存: 行わない
 
-パーティごとの保存対象はパーティ名、キャラクターのasset key、表示名、持ち越し利用フラグ、メンバー別の前回持ち越し額とする。分配項目、Power Crystal換算率、ドロップ売却額、wallet override、生履歴、APIキーは保存しない。
+パーティごとの保存対象はパーティ名、キャラクターのasset key、表示名、持ち越し利用フラグ、メンバー別の前回持ち越し額とする。分配項目、Power Crystal換算率、ドロップ売却価格、wallet override、生履歴、APIキーは保存しない。
 
 ## 7. 公式ラッフル開催回
 
@@ -199,17 +199,17 @@ LucidではPhantasma Coin、WillではArachno Coinだけをコインとして扱
 
 Power Crystalを選択した場合、ボスタブ単位で`Power Crystal 1 = X NESO`を入力する。初期値は`1`。0以上、小数18桁以下の有限10進数を許可し、1 NESO未満の端数が出る場合は丸めず計算を停止する。
 
-Power Crystalは均等な権利額を求めるための価値には含めるが、キャラクター間で交換・送付できないため実送金の原資には含めない。送金可能額はボスNESO、Ascendant NESO、コイン売却額、装備売却額の合計に限定する。
+Power Crystalは均等な権利額を求めるための価値には含めるが、キャラクター間で交換・送付できないため実送金の原資には含めない。送金可能額はボスNESO、Ascendant NESO、コイン・装備の手数料控除後受取額の合計に限定する。
 
 ### 8.3 コイン・装備ドロップ
 
-コインまたは装備ドロップを選択した場合、API履歴で実際に当選したドロップを取得者ごと・ドロップ1件ごとに表示し、その売却総額をNESO整数で入力する。
+コインまたは装備ドロップを選択した場合、API履歴で実際に当選したドロップを取得者ごと・ドロップ1件ごとに表示し、その売却価格（手数料控除前）をNESO整数で入力する。入力欄の直下に販売手数料5%控除後の受取額を即時表示し、分配計算には控除後受取額だけを使用する。控除後受取額は `floor(売却価格 × 95 / 100)` とする。
 
 - コイン1個の単価入力ではない。
 - 当該カテゴリを獲得していないメンバーには入力欄を出さない。
 - 複数装備は1件ごとに別入力とする。
 - 空欄は未設定、`0`は無価値として明示した値とする。
-- 売却額は当該計算中だけ保持し、localStorageへ保存しない。
+- 売却価格は当該計算中だけ保持し、localStorageへ保存しない。
 - コインは当選数量を表示する。
 - 装備は公式item metadataのアイコンを表示し、ホバーまたは支援技術向けラベルでアイテム名と数量を確認できるようにする。
 
@@ -277,11 +277,11 @@ gross(c)
   = checked(BOSS_NESO)       ? bossNeso(c) : 0
   + checked(POWER_CRYSTAL)   ? powerCrystalAmount(c) × powerCrystalNesoRate : 0
   + checked(ASCENDANT_NESO)  ? ascendantNeso(c) : 0
-  + checked(COIN)            ? Σ coinDropSaleNeso(c, drop) : 0
-  + checked(EQUIPMENT)       ? Σ equipmentDropSaleNeso(c, drop) : 0
+  + checked(COIN)            ? Σ coinDropSaleProceedsNeso(c, drop) : 0
+  + checked(EQUIPMENT)       ? Σ equipmentDropSaleProceedsNeso(c, drop) : 0
 ```
 
-コイン・装備がチェック済みで対象ドロップの売却額が空欄なら計算しない。未チェック項目の入力値や公式数量は計算へ含めない。
+コイン・装備がチェック済みで対象ドロップの売却価格が空欄なら計算しない。未チェック項目の入力値や公式数量は計算へ含めない。
 
 ### 10.2 均等分配
 
@@ -304,8 +304,8 @@ PT設定で持ち越しを有効にした場合、メンバーごとに前回持
 transferableNeso(c)
   = checked(BOSS_NESO)      ? bossNeso(c) : 0
   + checked(ASCENDANT_NESO) ? ascendantNeso(c) : 0
-  + checked(COIN)           ? Σ coinDropSaleNeso(c, drop) : 0
-  + checked(EQUIPMENT)      ? Σ equipmentDropSaleNeso(c, drop) : 0
+  + checked(COIN)           ? Σ coinDropSaleProceedsNeso(c, drop) : 0
+  + checked(EQUIPMENT)      ? Σ equipmentDropSaleProceedsNeso(c, drop) : 0
 
 adjustedBalance(c) = gross(c) - assignedShare(c) - previousCarryover(c)
 actualPayment(c) = min(max(adjustedBalance(c), 0), transferableNeso(c))
@@ -315,7 +315,7 @@ actualPayment(c) = min(max(adjustedBalance(c), 0), transferableNeso(c))
 
 ### 10.4 ボス分離
 
-LucidとWillが両方存在する場合は別タブ、別設定、別計算、別送金一覧とし、ボス間では相殺しない。同一ボス内に複数難易度の履歴候補がある場合はユーザーがチェックで選択し、1件選択ならその候補だけ、複数選択なら選択候補のBoss NESO・Power Crystal・Ascendant NESO・コイン・装備売却額をメンバー別に合算して1回の分配を行う。
+LucidとWillが両方存在する場合は別タブ、別設定、別計算、別送金一覧とし、ボス間では相殺しない。同一ボス内に複数難易度の履歴候補がある場合はユーザーがチェックで選択し、1件選択ならその候補だけ、複数選択なら選択候補のBoss NESO・Power Crystal・Ascendant NESO・コイン・装備の手数料控除後受取額をメンバー別に合算して1回の分配を行う。
 
 ### 10.5 不完全なパーティ履歴
 
@@ -619,7 +619,7 @@ fixtureにはAPIキー、wallet、実ユーザーの不要な識別情報を含�
 - 参加人数1〜6人
 - 合計額が人数で割り切れる場合と余る場合
 - Power Crystal換算レート0、1、0.8、1.25
-- コイン・装備のドロップ1件ごとに異なる売却総額
+- コイン・装備のドロップ1件ごとに異なる売却価格と、5%控除後受取額の端数切り捨て
 - 非常に大きい整数
 - 同一開催回・同一ボスでEasy / Normal / Hardの候補を最大3件生成し、ユーザーの複数選択時は合算する
 - LucidとWillを続けて計算しても、分配結果・送金一覧がボスをまたいで相殺されない
@@ -641,7 +641,7 @@ fixtureにはAPIキー、wallet、実ユーザーの不要な識別情報を含�
 4. `Raffle Results`でPT内のキャラクターを選び、そのキャラクターの当該開催回の全当選ラッフルを1件ごとに表示できる。
 5. 同一公式PT人数かつラッフル参加時刻の幅1時間以内を満たすLucid / Willを難易度別に`Party Clears`へ表示する。討伐人数・履歴参加人数・分配人数を1〜6人で独立して扱い、6-4-6、6-5-5その他の組み合わせも候補表示できる。不一致時は候補ごとの明示確認後だけ保存PT全員で分配する。同一ボスの複数難易度はチェック選択でき、複数選択時は選択候補を合算する。全6対応についてボス難易度とAscendant Tierを一体表示する。
 6. Power Crystal 1に対するNESO換算レートは各ボスタブで初期値1から変更でき、小数レートも正確に計算できる。
-7. コイン・装備を選択した場合だけ、実際の取得者へドロップ1件ごとの売却総額入力を表示し、LucidとWillの値・残高・送金結果を混在させない。
+7. コイン・装備を選択した場合だけ、実際の取得者へドロップ1件ごとの売却価格入力と5%控除後受取額を表示し、LucidとWillの値・残高・送金結果を混在させない。
 8. Lucid・Will・その他ボスを含む取得済みラッフル結果が`Raffle Results`へ欠落なく表示される。
 9. Lucid・Will以外のクリアと、Florin等の対象外通貨が分配計算へ混入しない。
 10. ブラウザの通信先に`openapi.msu.io`が現れず、MSU公式API通信は新VPSだけから行われる。
@@ -692,8 +692,8 @@ fixtureにはAPIキー、wallet、実ユーザーの不要な識別情報を含�
 | バックエンド | 新VPS上の独立`raffle-api`プロセス | 画像プロキシと同一プロセスへの同居は障害範囲と保守責任が混ざる |
 | キャラクター追加 | VPSバックエンドによる公式API完全一致名前検索、Navigator URL | raw asset key直接入力は利用者に不要な内部識別子を露出する |
 | Power Crystal換算レートの初期値 | `1` | 各ボスタブで利用者が変更できる |
-| コイン・装備の価格 | 対象カテゴリ選択時、実際の取得者についてドロップ1件ごとの売却総額を必須入力 | 個数単価ではなく実売却総額を扱う |
-| 売却額の紐付け先 | `prizes`に対象ドロップが記録された履歴のキャラクターとドロップ1件 | 公式データとの対応をfixtureで固定する |
+| コイン・装備の価格 | 対象カテゴリ選択時、実際の取得者についてドロップ1件ごとの売却価格（手数料控除前）を必須入力 | 5%控除後受取額を直下に表示し、分配には控除後だけを使う |
+| 売却価格の紐付け先 | `prizes`に対象ドロップが記録された履歴のキャラクターとドロップ1件 | 公式データとの対応をfixtureで固定する |
 | その他アイテム | 初期版では除外し警告 | 手動査定を入れると入力・検証範囲が増える |
 | Incomplete履歴 | 自動計算しない | 強制計算は誤精算の可能性がある |
 | 余りNESO | パーティ表示順へ1ずつ配分 | asset key順等も可能だが利用者には分かりにくい |
