@@ -1041,10 +1041,22 @@ html[data-theme-depth="deep"] .raffle-ascendant-tier-line span {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem;
+  justify-content: space-between;
+  gap: 0.5rem 0.85rem;
   border-radius: 0.7rem;
   background: #ecfdf5;
   padding: 0.65rem 0.85rem;
+}
+
+/* LULU-103 C3: name + amount packed together on the left ("who pays whom
+   how much" at a glance); the receiver's wallet moves to the row's right
+   edge instead of leaving a big gap between the names and the amount. */
+.raffle-transfer-left {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem;
+  min-width: 0;
 }
 
 .raffle-transfer-payer {
@@ -1065,11 +1077,19 @@ html[data-theme-depth="deep"] .raffle-ascendant-tier-line span {
 }
 
 .raffle-transfer-amount {
-  margin-left: auto;
   color: #0f172a;
   font-size: 1rem;
   font-variant-numeric: tabular-nums;
   font-weight: 900;
+}
+
+.raffle-transfer-wallet {
+  overflow-wrap: anywhere;
+  margin-left: auto;
+  color: #64748b;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.72rem;
+  user-select: all;
 }
 
 .raffle-no-transfers {
@@ -1172,6 +1192,10 @@ html[data-theme-depth="deep"] .raffle-transfer-amount {
 }
 
 html[data-theme-depth="deep"] .raffle-transfer-arrow {
+  color: #94a3b8;
+}
+
+html[data-theme-depth="deep"] .raffle-transfer-wallet {
   color: #94a3b8;
 }
 

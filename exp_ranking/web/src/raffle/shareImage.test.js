@@ -123,6 +123,27 @@ describe("buildSettlementShareModel", () => {
   });
 });
 
+// LULU-103 C3: the receiver's wallet is now part of the share image itself
+// (explicit user instruction, replacing the earlier "never put wallet in the
+// copy result" rule) so the same notification-worthy detail is visible on
+// both the screen and the shared image.
+describe("buildSettlementShareModel transfer wallets (LULU-103 C3)", () => {
+  it("attaches the receiver's own wallet to each transfer row", () => {
+    const calculation = compositeCalculation();
+    const wallet = "0xEE158FbBF3507A4a7e42C112e49725db4875a5b9";
+    const model = buildSettlementShareModel(calculation, memberMap, include, "1.2", t, { memberWallets: { b: wallet, c: wallet } });
+    expect(model.transferRows.length).toBeGreaterThan(0);
+    for (const row of model.transferRows) expect(row.wallet).toBe(wallet);
+  });
+
+  it("falls back to the localized placeholder for a transfer row when the receiver's wallet is unknown", () => {
+    const calculation = compositeCalculation();
+    const model = buildSettlementShareModel(calculation, memberMap, include, "1.2", t);
+    expect(model.transferRows.length).toBeGreaterThan(0);
+    for (const row of model.transferRows) expect(row.wallet).toBe(t("raffle.walletUnavailable"));
+  });
+});
+
 describe("drawSettlementShareImage (smoke test)", () => {
   // No ctx.roundRect on this mock (mirrors real engines that predate it), so
   // drawRoundedRect() falls back to fillRect/strokeRect -- exercising both
@@ -172,6 +193,17 @@ describe("drawSettlementShareImage (smoke test)", () => {
     // + 2 section headings + (name/gross-label/gross-value/pill(+pcNote) per
     // member row) + transfer rows + footer.
     expect(ctx.calls.fillText).toBeGreaterThan(15);
+  });
+
+  it("draws without throwing when the mock ctx implements measureText (LULU-103 C3 amount positioning)", () => {
+    const calculation = compositeCalculation();
+    const wallet = "0xEE158FbBF3507A4a7e42C112e49725db4875a5b9";
+    const model = buildSettlementShareModel(calculation, memberMap, include, "1.2", t, { memberWallets: { b: wallet, c: wallet } });
+    const ctx = makeMockCtx();
+    ctx.measureText = (text) => ({ width: text.length * 7 });
+
+    expect(() => drawSettlementShareImage(ctx, model)).not.toThrow();
+    expect(model.transferRows.some((row) => row.wallet === wallet)).toBe(true);
   });
 
   it("still draws (with a placeholder 'no transfers' line) when there are no transfers to show", () => {
