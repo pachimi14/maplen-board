@@ -23,7 +23,7 @@ function initialModel() {
 function initialBossSetting() {
   return {
     include: { coin: true, equipment: true, bossNeso: true, powerCrystal: true, ascendantNeso: true },
-    powerCrystalNesoRate: "1",
+    powerCrystalNesoRate: "1.1",
     saleNesoByDropId: {},
     calculated: null,
   };
@@ -366,7 +366,7 @@ export default function RaffleCalculatorRoot() {
                       </label>)}</div>
                     </fieldset> : null}
                     <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">{ITEM_KEYS.map((key) => <label key={key} className="flex items-center gap-2 rounded-lg border border-slate-200 p-2 text-sm dark:border-slate-700"><input type="checkbox" checked={activeSetting.include[key]} onChange={(event) => updateBossSetting(activeClear.boss, (setting) => ({ ...setting, include: { ...setting.include, [key]: event.target.checked } }))} />{t("raffle.item_" + key)}</label>)}</div>
-                    {activeSetting.include.powerCrystal ? <label className="raffle-label max-w-xl">{t("raffle.powerCrystalRate")}<div className="raffle-rate-inline mt-1"><span>{t("raffle.powerCrystalRatePrefix")}</span><input className="raffle-input raffle-rate-input" inputMode="decimal" value={activeSetting.powerCrystalNesoRate} onChange={(event) => updateBossSetting(activeClear.boss, (setting) => ({ ...setting, powerCrystalNesoRate: event.target.value }))} /><span>{t("raffle.powerCrystalRateSuffix")}</span></div></label> : null}
+                    {activeSetting.include.powerCrystal ? <label className="raffle-label max-w-xl">{t("raffle.powerCrystalRate")}<div className="raffle-rate-inline mt-1"><span>{t("raffle.powerCrystalRatePrefix")}</span><input className="raffle-input raffle-rate-input" inputMode="decimal" value={activeSetting.powerCrystalNesoRate} onChange={(event) => updateBossSetting(activeClear.boss, (setting) => ({ ...setting, powerCrystalNesoRate: event.target.value }))} /><span>{t("raffle.powerCrystalRateSuffix")}</span></div><span className="mt-1 block text-xs font-normal text-slate-500 dark:text-slate-400">{t("raffle.powerCrystalRateHelp")}</span></label> : null}
                     {activeClear.members.flatMap((member) => member.drops.map((drop) => ({ member, drop }))).filter(({ drop }) => drop.category === "COIN" ? activeSetting.include.coin : activeSetting.include.equipment).map(({ member, drop }) => {
                       const salePrice = activeSetting.saleNesoByDropId[drop.dropId] || "";
                       const saleProceeds = calculateSaleProceedsNeso(salePrice);
