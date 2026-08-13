@@ -102,7 +102,7 @@
     "baseShare": "ส่วนแบ่งต่อคน (รวมการแปลง PC)",
     "pcPortionNote": "รวมการแปลง PC {{amount}} (โอนไม่ได้)",
     "actualTransferTotal": "ยอด NESO ที่โอนจริงทั้งหมด",
-    "remainder": "เศษ (+1 ตามลำดับปาร์ตี้)",
+    "remainder": "เศษ (+1 ตามลำดับชื่อตัวละคร)",
     "settlementFormula": "ชำระยอดชนะรวม − ส่วนแบ่ง − ยอดยกมาก่อนหน้า (รับ + / จ่าย −)",
     "categoryBreakdown": "ยอดรวมตามหมวด",
     "category": "หมวด",

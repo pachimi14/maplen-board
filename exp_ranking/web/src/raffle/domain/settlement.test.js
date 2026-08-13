@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { calculateSaleProceedsNeso, calculateSettlement, parseDecimalRate } from "./settlement.js";
+import { sortPartyMembers } from "./partyOrder.js";
 
 function clearInput(overrides = {}) {
   return {
@@ -262,5 +263,63 @@ describe("Power Crystal rate divide conversion (LULU-099)", () => {
       expect(result.ok).toBe(false);
       expect(result.errors).toContainEqual(expect.objectContaining({ code: "invalid_rate" }));
     }
+  });
+});
+
+// LULU-104: Party member order is normalized (sortPartyMembers) before
+// memberId assignment, so the remainder allocation and transfer pairing no
+// longer depend on the order the member was typed/added in. IMPL_PLAN
+// acceptance criterion 1: same member set, different input order -> the
+// remainder-assignment and transfer list are byte-for-byte identical.
+describe("member order normalization feeds a stable settlement (LULU-104)", () => {
+  const GROSS_BY_ASSET_KEY = { "asset-charlie": "100", "asset-bob": "0", "asset-alice": "0" };
+  const RAW_MEMBERS = {
+    alice: { assetKey: "asset-alice", displayName: "Alice" },
+    bob: { assetKey: "asset-bob", displayName: "Bob" },
+    charlie: { assetKey: "asset-charlie", displayName: "Charlie" },
+  };
+
+  function runSettlementForOrder(rawOrder) {
+    const sorted = sortPartyMembers(rawOrder);
+    const partyOrder = sorted.map((_, index) => "member-" + String(index + 1));
+    const members = sorted.map((member, index) => ({
+      memberId: partyOrder[index],
+      bossNeso: GROSS_BY_ASSET_KEY[member.assetKey],
+      powerCrystalAmount: "0",
+      ascendantNeso: "0",
+      drops: [],
+    }));
+    return calculateSettlement({
+      boss: "LUCID",
+      complete: true,
+      historyMemberIds: partyOrder,
+      partyOrder,
+      include: { coin: false, equipment: false, bossNeso: true, powerCrystal: false, ascendantNeso: false },
+      powerCrystalNesoRate: "1",
+      saleNesoByDropId: {},
+      members,
+    });
+  }
+
+  it("produces the same remainder allocation and transfer list regardless of input order", () => {
+    const orderings = [
+      [RAW_MEMBERS.alice, RAW_MEMBERS.bob, RAW_MEMBERS.charlie],
+      [RAW_MEMBERS.charlie, RAW_MEMBERS.alice, RAW_MEMBERS.bob],
+      [RAW_MEMBERS.bob, RAW_MEMBERS.charlie, RAW_MEMBERS.alice],
+    ];
+    const results = orderings.map((order) => runSettlementForOrder(order));
+    for (const result of results) expect(result.ok).toBe(true);
+    for (const result of results.slice(1)) expect(result).toEqual(results[0]);
+
+    // Canonical order (casefolded name, code point descending) is
+    // Charlie, Bob, Alice -> memberId member-1/2/3 respectively. The 100
+    // NESO total does not divide evenly by 3 (baseShare 33, remainder 1),
+    // so Charlie (index 0 in canonical order) receives the +1.
+    expect(results[0].remainder).toBe(1);
+    expect(results[0].members.map((member) => member.assignedShare)).toEqual(["34", "33", "33"]);
+    expect(results[0].transfers).toEqual([
+      { fromMemberId: "member-1", toMemberId: "member-2", amount: "33" },
+      { fromMemberId: "member-1", toMemberId: "member-3", amount: "33" },
+    ]);
   });
 });

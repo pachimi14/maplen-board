@@ -102,7 +102,7 @@
     "baseShare": "Phần chia mỗi người (gồm quy đổi PC)",
     "pcPortionNote": "Gồm quy đổi PC {{amount}} (không thể chuyển)",
     "actualTransferTotal": "Tổng NESO thực tế được chuyển",
-    "remainder": "Phần dư (+1 theo thứ tự party)",
+    "remainder": "Phần dư (+1 theo thứ tự tên nhân vật)",
     "settlementFormula": "Thanh toán tổng trúng − phần được chia − số dư lần trước (nhận + / trả −).",
     "categoryBreakdown": "Tổng theo hạng mục",
     "category": "Hạng mục",

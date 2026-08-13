@@ -102,7 +102,7 @@
     "baseShare": "每人分配價值（含PC換算）",
     "pcPortionNote": "其中PC換算 {{amount}}（不可送金）",
     "actualTransferTotal": "實際送金NESO合計",
-    "remainder": "餘額（依隊伍順序 +1）",
+    "remainder": "餘額（依角色名稱順序 +1）",
     "settlementFormula": "結算中獎總額 − 分配權利額 − 前次結轉（收款＋／付款－）。",
     "categoryBreakdown": "分類合計",
     "category": "項目",
