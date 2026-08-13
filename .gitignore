@@ -24,3 +24,9 @@ exp_ranking/web/dist/
 
 # Local snapshot export (optional)
 exp_ranking/bot/data/msu_ranking_snapshot.csv
+
+# Raffle API local persistent metadata cache
+server/raffle-api/*.sqlite3*
+
+# Local Codex/Claude workspace metadata
+.claude/

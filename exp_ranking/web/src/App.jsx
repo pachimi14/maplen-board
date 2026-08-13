@@ -6,6 +6,7 @@ import RankingListView from "./pages/RankingListView";
 import CharacterDetailView from "./pages/CharacterDetailView";
 import GroupCompareView from "./pages/GroupCompareView";
 import TaskManagerRoot from "./taskManager/TaskManagerRoot.jsx";
+import RaffleCalculatorRoot from "./raffle/RaffleCalculatorRoot.jsx";
 import { useDashboardStore } from "./taskManager/storage/useDashboardStore.js";
 import SfHistoryRoot from "./sfhistory/SfHistoryRoot.jsx";
 const RANKING_THEME_STORAGE_KEY = "maplen-board-ranking-theme-v1";
@@ -43,6 +44,7 @@ function AppShell() {
   const dashboardStore = useDashboardStore();
   const [rankingTheme, setRankingTheme] = useState(loadRankingTheme);
   const isTaskManagerRoute = route.name === "dashboard" || route.name === "tasks" || route.name === "schedule";
+  const isRaffleRoute = route.name === "raffle";
   // IMPL_PLAN_SH10 §1-2: `#/starforce` (SfHistoryRoot) reads/writes the same
   // `useDashboardStore` theme as the Task Manager trio (see
   // SfHistoryRoot.jsx's own comment), so it must share this effect's theme
@@ -51,7 +53,10 @@ function AppShell() {
   // overwrites the dataset with `rankingTheme` right after SfHistoryRoot
   // mounts. This flag only decides which store this dataset-write effect
   // reads from; it does not change which routes render TaskManagerRoot
-  // (`isTaskManagerRoute` above still gates that, unchanged).
+  // (`isTaskManagerRoute` above still gates that, unchanged). Raffle Calculator
+  // is not part of this flag: it keeps using `rankingTheme` (the site-wide
+  // ranking theme), matching its `isRaffleRoute` branch below which passes
+  // `rankingTheme`/`siteHeaderVariant` to `SiteHeader`, not the dashboard store.
   const usesDashboardTheme = isTaskManagerRoute || route.name === "starforce";
   const activeTheme = usesDashboardTheme
     ? { themeColor: dashboardStore.state.themeColor || "green", themeDepth: dashboardStore.state.themeDepth || "deep" }
@@ -76,6 +81,14 @@ function AppShell() {
 
   const updateRankingTheme = (nextTheme) => setRankingTheme(normalizeRankingTheme(nextTheme));
 
+  if (isRaffleRoute) {
+    return (
+      <div className="site-theme ranking-root min-h-screen bg-slate-50 dark:bg-slate-950">
+        <SiteHeader active="raffle" variant={siteHeaderVariant} theme={rankingTheme} onThemeChange={updateRankingTheme} />
+        <RaffleCalculatorRoot />
+      </div>
+    );
+  }
   if (isTaskManagerRoute) {
     return <TaskManagerRoot route={route} />;
   }

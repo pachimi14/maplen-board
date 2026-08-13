@@ -38,6 +38,7 @@ export function SiteHeader({ active = "", variant = "light", theme = null, onThe
             <a href={resolveSiteNavHref("#/")} aria-current={active === "ranking" ? "page" : undefined} className={`rounded-lg px-2.5 py-2 text-xs font-semibold transition sm:px-3 sm:text-sm ${active === "ranking" ? selected : idle}`}>EXP Ranking</a>
             <a href={resolveSiteNavHref("#/dashboard")} aria-current={active === "daily" ? "page" : undefined} className={`rounded-lg px-2.5 py-2 text-xs font-semibold transition sm:px-3 sm:text-sm ${active === "daily" ? selected : idle}`}>{t("app.openDailyDashboard")}</a>
             <a href="#/starforce" aria-current={active === "sfhistory" ? "page" : undefined} className={`rounded-lg px-2.5 py-2 text-xs font-semibold transition sm:px-3 sm:text-sm ${active === "sfhistory" ? selected : idle}`}>{t("app.openSfHistory")}</a>
+            <a href={resolveSiteNavHref("#/raffle")} aria-current={active === "raffle" ? "page" : undefined} className={`rounded-lg px-2.5 py-2 text-xs font-semibold transition sm:px-3 sm:text-sm ${active === "raffle" ? selected : idle}`}>Raffle Calculator</a>
           </nav>
         </div>
         <div className="flex shrink-0 items-center gap-2">
