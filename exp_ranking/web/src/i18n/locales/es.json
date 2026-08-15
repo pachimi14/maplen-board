@@ -637,7 +637,7 @@
     },
     "prices": {
       "star": "Estrella",
-      "price": "Precio",
+      "price": "Precio (NESO)",
       "status": "Estado",
       "priceWindow": "Ventana de precio",
       "formingBadge": "Formándose",

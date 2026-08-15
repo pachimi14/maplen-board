@@ -637,7 +637,7 @@
     },
     "prices": {
       "star": "星",
-      "price": "價格",
+      "price": "價格 (NESO)",
       "status": "狀態",
       "priceWindow": "價格時間窗",
       "formingBadge": "價格形成中",

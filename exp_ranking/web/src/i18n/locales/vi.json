@@ -637,7 +637,7 @@
     },
     "prices": {
       "star": "Sao",
-      "price": "Giá",
+      "price": "Giá (NESO)",
       "status": "Trạng thái",
       "priceWindow": "Khung thời gian giá",
       "formingBadge": "Đang hình thành giá",
