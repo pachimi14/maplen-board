@@ -621,5 +621,45 @@
       "highestBadge": "最高",
       "disclaimer": "中央値を示すものであり、特定の曜日・時間帯での強化を推奨するものではありません。"
     }
+  },
+  "sfhistoryDiscovery": {
+    "pageDescription": "追加されたばかりの装備の価格形成を追跡します。",
+    "loading": "読み込み中...",
+    "equipment": {
+      "label": "装備",
+      "searchPlaceholder": "アイテム名またはアイテムIDで検索",
+      "noMatch": "該当する装備が見つかりません",
+      "matchedAliases": "一致: {{names}}",
+      "loadError": "監視対象の装備リストを読み込めませんでした。しばらくしてから再読み込みしてください。",
+      "empty": "現在追跡中の装備はありません。",
+      "inconsistentWarning": "直近の走査でこのグループの職業違い装備間に不一致が見つかりました。最後に確認できたデータを表示しています。"
+    },
+    "prices": {
+      "star": "星",
+      "price": "価格 (NESO)",
+      "status": "状態",
+      "settledAt": "形成済みになった時刻",
+      "settledRange": "{{start}} 〜 {{end}}",
+      "settledRangeTooltip": "{{start}} 〜 {{end}} の間に価格形成済みになったことを観測しました(5分間隔のポーリングのため、これ以上正確な時刻は特定できません)。",
+      "formingBadge": "価格形成中",
+      "settledBadge": "形成済み",
+      "noData": "データなし",
+      "loadError": "この装備の価格を読み込めませんでした。しばらくしてから再読み込みしてください。",
+      "observedAt": "観測時刻: {{timestamp}}",
+      "observedAtStale": "(記録が止まっている可能性があります。最新でない場合があります)",
+      "neverPolled": "まだ記録がありません。"
+    },
+    "recent": {
+      "title": "最近形成済みになった帯",
+      "subtitle": "装備は全ての帯が形成済みになってから{{days}}日間、一覧に残ります。価格表を引き続き確認できます。",
+      "empty": "直近{{days}}日以内に価格が形成済みになった装備はありません。",
+      "loadError": "最近価格が形成済みになった装備を読み込めませんでした。しばらくしてから再読み込みしてください。",
+      "endedBetween": "{{start}} 〜 {{end}} の間に終了しました"
+    }
+  },
+  "sfhistoryTabs": {
+    "navLabel": "SF履歴ページ",
+    "sfHistory": "SF History",
+    "newEquipment": "New Equipment"
   }
 }

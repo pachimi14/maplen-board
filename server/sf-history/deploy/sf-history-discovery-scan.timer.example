@@ -1,0 +1,17 @@
+[Unit]
+Description=Run sf-history-discovery-scan.service once a day
+
+[Timer]
+# IMPL_PLAN_SH32 §2 A: once a day is enough for the *judgment* (which
+# equipment currently has a DISCOVERY band) -- Component B (the 5-minute
+# poll, sf-history-discovery-poll.timer.example) is what actually catches a
+# DISCOVERY -> CHANGE transition; this scan only needs to keep the monitored
+# -group list itself up to date. Offset/RandomizedDelaySec chosen to avoid
+# colliding with sf-history-update.timer.example's :43 slots and to run once
+# the day has clearly turned over.
+OnCalendar=*-*-* 02:17:00
+Persistent=true
+RandomizedDelaySec=180
+
+[Install]
+WantedBy=timers.target
