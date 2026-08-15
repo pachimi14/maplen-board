@@ -639,7 +639,9 @@
       "star": "Star",
       "price": "Price (NESO)",
       "status": "Status",
-      "priceWindow": "Price window",
+      "settledAt": "Settled at",
+      "settledRange": "{{start}} – {{end}}",
+      "settledRangeTooltip": "Observed sometime between {{start}} and {{end}} (5-minute polling interval -- the exact instant is not known more precisely than that).",
       "formingBadge": "Forming",
       "settledBadge": "Settled",
       "noData": "No data yet",
@@ -649,7 +651,8 @@
       "neverPolled": "Not polled yet."
     },
     "recent": {
-      "title": "Recently ended",
+      "title": "Recently settled bands",
+      "subtitle": "Equipment stays listed here for {{days}} days after all its bands settle, so its own price table stays reachable.",
       "empty": "No price has settled in the last {{days}} days.",
       "loadError": "Could not load recently-settled prices. Please reload later.",
       "endedBetween": "ended sometime between {{start}} and {{end}}"

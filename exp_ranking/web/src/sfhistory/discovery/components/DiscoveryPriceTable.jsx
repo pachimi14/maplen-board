@@ -21,7 +21,20 @@ import { formatDiscoveryPrice } from "../domain/priceFormat.js";
  * into this column's own header (`prices.price` = "Price (NESO)"-style, 6
  * locales) -- repeating it on all 25 rows was both redundant and part of
  * what made the decimal point ragged (a variable-width suffix trailing a
- * variable-width number). */
+ * variable-width number).
+ *
+ * Post-review follow-up 2 (実機レビュー, "SF内の帯がいつ形成済みに変わった
+ * のか"): the old `priceWindow` column (the same polling timestamp
+ * repeated on all 25 rows, duplicating the "observed as of" line above the
+ * table) is replaced with `settledAt` -- THIS band's own observed
+ * DISCOVERY -> CHANGE flip (`row.windowStart`/`row.windowEnd`,
+ * `db.find_discovery_transitions_for_item` server-side). `-` for a band
+ * that has not shown that flip yet (still forming, or -- indistinguishably
+ * -- already settled before monitoring started; never a guess, plan:
+ * "推測して埋めない"). Shown as an explicit two-endpoint RANGE, never a
+ * single instant (plan: "遷移の時刻は「5分の幅」までしか特定できない...
+ * 「何時何分に切り替わった」と断定する表示にしない" -- same discipline
+ * `DiscoveryRecentList.jsx`'s own `endedBetween` already follows). */
 export default function DiscoveryPriceTable({ bands, upgradeCount = 25 }) {
   const { t, language } = useTranslation();
   const rows = buildBandRows(bands, upgradeCount);
@@ -33,35 +46,47 @@ export default function DiscoveryPriceTable({ bands, upgradeCount = 25 }) {
           <th className="py-1.5 pr-3 font-medium">{t("sfhistoryDiscovery.prices.star")}</th>
           <th className="py-1.5 pr-3 font-medium text-right">{t("sfhistoryDiscovery.prices.price")}</th>
           <th className="py-1.5 pr-3 font-medium">{t("sfhistoryDiscovery.prices.status")}</th>
-          <th className="py-1.5 font-medium">{t("sfhistoryDiscovery.prices.priceWindow")}</th>
+          <th className="py-1.5 font-medium">{t("sfhistoryDiscovery.prices.settledAt")}</th>
         </tr>
       </thead>
       <tbody className="divide-y divide-slate-800">
-        {rows.map((row) => (
-          <tr key={row.itemUpgrade}>
-            <td className="py-1.5 pr-3 text-slate-200">☆{row.star}</td>
-            <td
-              className="py-1.5 pr-3 text-slate-100 text-right tabular-nums"
-              title={row.price != null ? formatDiscoveryPrice(row.price) : undefined}
-            >
-              {formatDiscoveryPrice(row.price)}
-            </td>
-            <td className="py-1.5 pr-3">
-              {row.isDiscovery ? (
-                <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-300">
-                  {t("sfhistoryDiscovery.prices.formingBadge")}
-                </span>
-              ) : row.step ? (
-                <span className="text-xs text-slate-500">{t("sfhistoryDiscovery.prices.settledBadge")}</span>
-              ) : (
-                <span className="text-xs text-slate-600">{t("sfhistoryDiscovery.prices.noData")}</span>
-              )}
-            </td>
-            <td className="py-1.5 text-slate-400">
-              {row.priceAt ? formatTooltipDate(row.priceAt, { locale: language }) : "--"}
-            </td>
-          </tr>
-        ))}
+        {rows.map((row) => {
+          const hasSettledWindow = row.windowStart != null && row.windowEnd != null;
+          const rangeVars = hasSettledWindow
+            ? {
+                start: formatTooltipDate(row.windowStart, { locale: language }),
+                end: formatTooltipDate(row.windowEnd, { locale: language }),
+              }
+            : null;
+          return (
+            <tr key={row.itemUpgrade}>
+              <td className="py-1.5 pr-3 text-slate-200">☆{row.star}</td>
+              <td
+                className="py-1.5 pr-3 text-slate-100 text-right tabular-nums"
+                title={row.price != null ? formatDiscoveryPrice(row.price) : undefined}
+              >
+                {formatDiscoveryPrice(row.price)}
+              </td>
+              <td className="py-1.5 pr-3">
+                {row.isDiscovery ? (
+                  <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-300">
+                    {t("sfhistoryDiscovery.prices.formingBadge")}
+                  </span>
+                ) : row.step ? (
+                  <span className="text-xs text-slate-500">{t("sfhistoryDiscovery.prices.settledBadge")}</span>
+                ) : (
+                  <span className="text-xs text-slate-600">{t("sfhistoryDiscovery.prices.noData")}</span>
+                )}
+              </td>
+              <td
+                className="py-1.5 text-slate-400"
+                title={hasSettledWindow ? t("sfhistoryDiscovery.prices.settledRangeTooltip", rangeVars) : undefined}
+              >
+                {hasSettledWindow ? t("sfhistoryDiscovery.prices.settledRange", rangeVars) : "-"}
+              </td>
+            </tr>
+          );
+        })}
       </tbody>
     </table>
   );

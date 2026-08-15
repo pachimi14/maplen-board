@@ -639,7 +639,9 @@
       "star": "Sao",
       "price": "Giá (NESO)",
       "status": "Trạng thái",
-      "priceWindow": "Khung thời gian giá",
+      "settledAt": "Ổn định lúc",
+      "settledRange": "{{start}} – {{end}}",
+      "settledRangeTooltip": "Được ghi nhận trong khoảng từ {{start}} đến {{end}} (khoảng ghi nhận 5 phút -- không thể xác định thời điểm chính xác hơn).",
       "formingBadge": "Đang hình thành giá",
       "settledBadge": "Đã ổn định",
       "noData": "Chưa có dữ liệu",
@@ -649,7 +651,8 @@
       "neverPolled": "Chưa được ghi nhận."
     },
     "recent": {
-      "title": "Vừa kết thúc",
+      "title": "Các dải giá vừa ổn định",
+      "subtitle": "Trang bị vẫn xuất hiện trong danh sách này trong {{days}} ngày sau khi tất cả các dải đã ổn định, để bảng giá của nó vẫn có thể truy cập được.",
       "empty": "Không có giá nào ổn định trong {{days}} ngày qua.",
       "loadError": "Không thể tải các giá vừa ổn định. Vui lòng tải lại sau.",
       "endedBetween": "đã kết thúc trong khoảng từ {{start}} đến {{end}}"

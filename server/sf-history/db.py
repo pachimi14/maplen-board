@@ -474,6 +474,40 @@ def list_active_discovery_monitored_groups(conn: sqlite3.Connection) -> list[dic
     return [_monitored_group_row_to_dict(row) for row in cur.fetchall()]
 
 
+def list_visible_discovery_monitored_groups(conn: sqlite3.Connection, *, since_iso: str) -> list[dict[str, Any]]:
+    """IMPL_PLAN_SH33 follow-up (post-review, ユーザー実機レビュー): every
+    ACTIVE group, PLUS every group deactivated on or after ``since_iso`` --
+    "全帯が形成済みになった装備が30日間は一覧に残り、表(帯ごとの遷移時刻)が
+    引き続き見られる" (a fully-settled item must not vanish from
+    ``discovery_equipment`` the instant `scripts/scan_discovery.py`
+    deactivates it, or its own transition-time table in
+    ``discovery_prices`` becomes unreachable).
+
+    ``last_scan_at`` doubles as "when this row was last touched by a scan
+    run" -- for an ACTIVE group that advances every daily scan (irrelevant
+    here, it is already included via ``is_active = 1``); for an INACTIVE
+    group it is frozen at the exact run that flipped ``is_active`` to 0
+    (``deactivate_discovery_groups_not_in``/``deactivate_discovery_group``,
+    the only two writers that ever touch an inactive row's ``last_scan_at``
+    again) -- i.e. it IS the deactivation timestamp for an inactive row,
+    which is exactly the recency this function needs to filter on.
+
+    Deliberately a NEW function rather than widening
+    ``list_active_discovery_monitored_groups`` itself: that function is also
+    `scripts/poll_discovery.py`'s (Component B) own poll-target list, which
+    must keep polling ONLY truly-active groups (a fully-settled item has
+    nothing left to observe -- polling it would waste budget and contradict
+    the very reason it was deactivated). Only `app.py`'s
+    ``discovery_equipment`` route calls this one.
+    """
+    cur = conn.execute(
+        f"SELECT {_MONITORED_GROUP_COLUMNS} FROM sf_discovery_monitored_groups "
+        "WHERE is_active = 1 OR last_scan_at >= ? ORDER BY representative_item_id",
+        (since_iso,),
+    )
+    return [_monitored_group_row_to_dict(row) for row in cur.fetchall()]
+
+
 def list_all_discovery_monitored_groups(conn: sqlite3.Connection) -> list[dict[str, Any]]:
     """Active AND inactive (plan §5(k): "記録は永久に残す") -- used by the
     "recent" transitions lookup, which must still resolve a name for a group
@@ -635,3 +669,46 @@ def find_recent_discovery_transitions(
             }
         )
     return results
+
+
+def find_discovery_transitions_for_item(conn: sqlite3.Connection, item_id: int) -> dict[int, tuple[str, str]]:
+    """IMPL_PLAN_SH33 follow-up (post-review): the per-item, all-bands
+    counterpart of ``find_recent_discovery_transitions`` above -- ``item_
+    upgrade -> (windowStart, windowEnd)`` for every band of ONE item that
+    has ever recorded a DISCOVERY -> CHANGE flip (``discovery.
+    find_transition``), NOT windowed by recency (unlike the function above,
+    which exists for the cross-item "recent activity" feed and IS windowed
+    by ``since_iso`` -- this one backs `discovery_prices`' own per-band
+    "when did this band settle" column, which has no reason to hide an
+    old transition just because it happened more than N days ago).
+
+    A band absent from the returned dict never showed an observed flip in
+    the recorded history -- either still DISCOVERY, or already CHANGE in the
+    very first row ever recorded for it (i.e. it settled before monitoring
+    started, so the true instant is unknowable) -- both cases are
+    deliberately indistinguishable here (plan: "推測して埋めない", never
+    invent a value for either).
+
+    One query for the whole item (not one query per band, unlike the
+    N-combo loop above, which has to scan every item this service has ever
+    touched and so cannot narrow by item_id up front) -- grouping into
+    per-band row lists happens in Python before handing each to
+    ``discovery.find_transition``.
+    """
+    import discovery  # local import: keeps db.py's top-level imports DB-only
+
+    cur = conn.execute(
+        "SELECT item_upgrade, price_at, step FROM sf_discovery_price_history "
+        "WHERE item_id = ? ORDER BY item_upgrade, price_at",
+        (item_id,),
+    )
+    rows_by_upgrade: dict[int, list[tuple[str, str]]] = {}
+    for item_upgrade, price_at, step in cur.fetchall():
+        rows_by_upgrade.setdefault(item_upgrade, []).append((price_at, step))
+
+    transitions: dict[int, tuple[str, str]] = {}
+    for item_upgrade, rows in rows_by_upgrade.items():
+        transition = discovery.find_transition(rows)
+        if transition is not None:
+            transitions[item_upgrade] = transition
+    return transitions

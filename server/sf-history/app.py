@@ -538,10 +538,22 @@ def latest(request: Request, itemId: str | None = None) -> JSONResponse:
 def discovery_equipment(request: Request) -> JSONResponse:
     """plan §5(g): the monitored-equipment list -- one row per ACTIVE
     representative group (job-variant aliases folded, never one row per
-    alias -- §5(g): "3行にする。15行にしない")."""
+    alias -- §5(g): "3行にする。15行にしない").
+
+    IMPL_PLAN_SH33 follow-up (post-review): ALSO includes any group
+    deactivated within the last `SF_HISTORY_DISCOVERY_RECENT_DAYS` days
+    (same env var/default `discovery_recent` below already uses -- one
+    retention window, not a second one invented for this) --
+    `db.list_visible_discovery_monitored_groups` -- so a fully-settled item
+    does not vanish from the picker/selector the instant every one of its
+    bands settles, which would otherwise make its own transition-time table
+    in `discovery_prices` below unreachable. `isActive` is exposed so a
+    caller can tell the two cases apart without a second request.
+    """
+    since_iso = _format_iso_utc(datetime.now(timezone.utc) - timedelta(days=_discovery_recent_days_default()))
     conn = db.connect(_db_path())
     try:
-        groups = db.list_active_discovery_monitored_groups(conn)
+        groups = db.list_visible_discovery_monitored_groups(conn, since_iso=since_iso)
     finally:
         conn.close()
 
@@ -553,6 +565,7 @@ def discovery_equipment(request: Request) -> JSONResponse:
             "aliases": group["aliases"],
             "stepsConsistent": group["stepsConsistent"],
             "lastScanAt": group["lastScanAt"],
+            "isActive": group["isActive"],
         }
         for group in groups
     ]
@@ -569,6 +582,16 @@ def discovery_prices(request: Request, itemId: str | None = None) -> JSONRespons
     (never an alias) -- unlike `/sf-history/prices`, there is no alias ->
     representative resolution here because `discovery_equipment` above never
     exposes an alias as its own selectable row in the first place.
+
+    IMPL_PLAN_SH33 follow-up (post-review): each band also carries
+    `windowStart`/`windowEnd` -- the observed DISCOVERY -> CHANGE flip for
+    THAT band (`db.find_discovery_transitions_for_item`,
+    `discovery.find_transition`'s own 5-minute-poll uncertainty window,
+    same field names `discovery_recent` below already uses for the same
+    concept). Both `null` when this band's flip was never observed (still
+    DISCOVERY, or already CHANGE in the very first recorded row -- settled
+    before monitoring started, so the true instant is unknowable and is
+    never guessed at).
     """
     item_id, error_response = _parse_item_id(itemId, request)
     if error_response is not None:
@@ -580,12 +603,14 @@ def discovery_prices(request: Request, itemId: str | None = None) -> JSONRespons
         if group is None:
             return _error(f"unknown discovery itemId {item_id}", request, status_code=404)
         bands, observed_at = db.latest_discovery_bands_for_item(conn, item_id)
+        transitions = db.find_discovery_transitions_for_item(conn, item_id)
     finally:
         conn.close()
 
     band_payload = []
     for upgrade in range(discovery.UPGRADE_COUNT):
         band = bands.get(upgrade)
+        transition = transitions.get(upgrade)
         band_payload.append(
             {
                 "itemUpgrade": upgrade,
@@ -593,6 +618,8 @@ def discovery_prices(request: Request, itemId: str | None = None) -> JSONRespons
                 "step": band["step"] if band else None,
                 "priceAt": band["priceAt"] if band else None,
                 "isDiscovery": bool(band and band["step"] == discovery.DISCOVERY_STEP),
+                "windowStart": transition[0] if transition else None,
+                "windowEnd": transition[1] if transition else None,
             }
         )
 

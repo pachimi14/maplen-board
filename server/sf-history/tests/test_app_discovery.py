@@ -32,13 +32,23 @@ def _env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 def _seed_group(
-    db_path: Path, *, representative_item_id: int = 1004808, is_active: bool = True, equip_part_type: str = "CAP"
+    db_path: Path,
+    *,
+    representative_item_id: int = 1004808,
+    is_active: bool = True,
+    equip_part_type: str = "CAP",
+    now: str = "2026-08-15T00:00:00Z",
 ) -> None:
     # ★2026-08-15 fix: `equip_part_type` is part of the group's real identity
     # (schema.sql's partial unique index) -- a caller seeding more than one
     # ACTIVE group in the same test must pass distinct values, or the second
     # insert raises sqlite3.IntegrityError (exactly the guard rail
     # docs/reports/SH32_DISCOVERY.md's fix section describes).
+    #
+    # IMPL_PLAN_SH33 follow-up: `now` is now overridable (default unchanged)
+    # -- `last_scan_at` doubles as the deactivation timestamp for an inactive
+    # row (db.list_visible_discovery_monitored_groups's own docstring), so
+    # tests of that 30-day visibility window need to control it directly.
     conn = db.connect(db_path)
     db.upsert_discovery_monitored_group(
         conn,
@@ -54,18 +64,22 @@ def _seed_group(
         ],
         steps_consistent=True,
         is_active=is_active,
-        now="2026-08-15T00:00:00Z",
+        now=now,
     )
     conn.close()
 
 
 # --- discovery_equipment: (g) 3 rows, never aliases as their own rows -------
+# IMPL_PLAN_SH33 follow-up (post-review): (m) a group deactivated (all bands
+# settled) stays listed for SF_HISTORY_DISCOVERY_RECENT_DAYS (default 30)
+# days, so its own transition-time table in discovery_prices stays
+# reachable -- only a group deactivated LONGER ago than that actually drops
+# out of the list.
 
 
-def test_discovery_equipment_lists_only_active_groups(_env: Path) -> None:
+def test_discovery_equipment_lists_active_groups(_env: Path) -> None:
     _seed_group(_env, representative_item_id=1004808, is_active=True, equip_part_type="CAP")
     _seed_group(_env, representative_item_id=1053063, is_active=True, equip_part_type="CLOTHES")
-    _seed_group(_env, representative_item_id=9999999, is_active=False, equip_part_type="SHOULDER")
 
     response = app_module.discovery_equipment(_request())
     body = json.loads(response.body)
@@ -73,6 +87,38 @@ def test_discovery_equipment_lists_only_active_groups(_env: Path) -> None:
     assert set(body.keys()) == set(CONTRACT["discoveryEquipment"]["root"])
     for item in body["items"]:
         assert set(item.keys()) == set(CONTRACT["discoveryEquipment"]["item"])
+        assert item["isActive"] is True
+
+
+def test_discovery_equipment_keeps_a_recently_deactivated_group_visible(_env: Path) -> None:
+    """(m): a group whose bands all settled 5 days ago (well within the
+    30-day default) is still listed -- and reports isActive: False so a
+    caller can tell it apart from a still-active one."""
+    now = datetime.now(timezone.utc)
+    recent_deactivation = (now - timedelta(days=5)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    _seed_group(_env, representative_item_id=1004808, is_active=True, equip_part_type="CAP")
+    _seed_group(_env, representative_item_id=1053063, is_active=False, equip_part_type="CLOTHES", now=recent_deactivation)
+
+    response = app_module.discovery_equipment(_request())
+    body = json.loads(response.body)
+    is_active_by_id = {item["itemId"]: item["isActive"] for item in body["items"]}
+    assert is_active_by_id == {1004808: True, 1053063: False}
+    for item in body["items"]:
+        assert set(item.keys()) == set(CONTRACT["discoveryEquipment"]["item"])
+
+
+def test_discovery_equipment_drops_a_group_deactivated_long_ago(_env: Path) -> None:
+    """(m)'s other half: a group deactivated 200 days ago (well outside the
+    30-day default) has fallen out of the visibility window -- this is the
+    ORIGINAL "only active groups" behavior, still true past the window."""
+    now = datetime.now(timezone.utc)
+    old_deactivation = (now - timedelta(days=200)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    _seed_group(_env, representative_item_id=1004808, is_active=True, equip_part_type="CAP")
+    _seed_group(_env, representative_item_id=9999999, is_active=False, equip_part_type="SHOULDER", now=old_deactivation)
+
+    response = app_module.discovery_equipment(_request())
+    body = json.loads(response.body)
+    assert {item["itemId"] for item in body["items"]} == {1004808}
 
 
 def test_discovery_equipment_empty_when_nothing_monitored(_env: Path) -> None:
@@ -109,6 +155,58 @@ def test_discovery_prices_returns_25_bands_with_discovery_badges(_env: Path) -> 
     assert no_badge_bands == change_bands
     for band in body["bands"]:
         assert set(band.keys()) == set(CONTRACT["discoveryPrices"]["band"])
+    # (k)'s "settled before monitoring started" case: every band here has
+    # exactly ONE recorded row (no DISCOVERY row ever seen before it), so
+    # NONE of them -- including the "CHANGE" ones -- has an observed flip.
+    assert all(b["windowStart"] is None and b["windowEnd"] is None for b in body["bands"])
+
+
+# --- discovery_prices: IMPL_PLAN_SH33 follow-up -- per-band windowStart/
+# windowEnd (post-review, "SF内の帯がいつ形成済みに変わったのか") ----------
+
+
+def test_discovery_prices_reports_the_observed_transition_for_a_settled_band(_env: Path) -> None:
+    """(k): a band that recorded DISCOVERY, then CHANGE, carries that
+    observed flip's window -- reusing discovery.find_transition, same
+    5-minute-poll uncertainty window as discovery_recent's windowStart/
+    windowEnd (plan §2 B: never a single invented instant)."""
+    _seed_group(_env, representative_item_id=1053063)
+    conn = db.connect(_env)
+    db.upsert_discovery_price_points(
+        conn, 1053063, 3,
+        [
+            {"priceAt": "2026-08-14T10:00:00Z", "endAt": None, "price": 1.0, "step": "STEP_TYPE_DISCOVERY"},
+            {"priceAt": "2026-08-14T10:05:00Z", "endAt": None, "price": 1.0, "step": "STEP_TYPE_CHANGE"},
+        ],
+        "2026-08-14T10:05:05Z",
+    )
+    # A still-DISCOVERY band, for contrast in the same response.
+    db.upsert_discovery_price_points(
+        conn, 1053063, 4,
+        [{"priceAt": "2026-08-15T09:28:00Z", "endAt": None, "price": 1.0, "step": "STEP_TYPE_DISCOVERY"}],
+        "2026-08-15T09:28:05Z",
+    )
+    conn.close()
+
+    response = app_module.discovery_prices(_request(), itemId="1053063")
+    body = json.loads(response.body)
+    band3 = next(b for b in body["bands"] if b["itemUpgrade"] == 3)
+    band4 = next(b for b in body["bands"] if b["itemUpgrade"] == 4)
+    assert band3["windowStart"] == "2026-08-14T10:00:00Z"
+    assert band3["windowEnd"] == "2026-08-14T10:05:00Z"
+    # (j): a band still in DISCOVERY (never transitioned) is null, not a
+    # guess.
+    assert band4["windowStart"] is None
+    assert band4["windowEnd"] is None
+
+
+def test_discovery_prices_never_polled_band_has_null_window(_env: Path) -> None:
+    """(j): a band Component B has never polled at all is also null (never
+    invents a window for data that does not exist)."""
+    _seed_group(_env, representative_item_id=1004808)
+    response = app_module.discovery_prices(_request(), itemId="1004808")
+    body = json.loads(response.body)
+    assert all(b["windowStart"] is None and b["windowEnd"] is None for b in body["bands"])
 
 
 def test_discovery_prices_404_for_unknown_item(_env: Path) -> None:

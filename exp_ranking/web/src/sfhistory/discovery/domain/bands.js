@@ -29,6 +29,13 @@ export function buildBandRows(bands, upgradeCount = 25) {
       step: band?.step ?? null,
       priceAt: band?.priceAt ?? null,
       isDiscovery: band?.isDiscovery === true,
+      // IMPL_PLAN_SH33 follow-up (post-review): this band's own observed
+      // DISCOVERY -> CHANGE flip window -- null (never guessed) when this
+      // band has not shown one yet (`discoverySource.js`'s own
+      // normalizeDiscoveryPricesPayload already guarantees both are either
+      // a non-empty string or null, never undefined).
+      windowStart: band?.windowStart ?? null,
+      windowEnd: band?.windowEnd ?? null,
     });
   }
   return rows;

@@ -639,7 +639,9 @@
       "star": "星",
       "price": "價格 (NESO)",
       "status": "狀態",
-      "priceWindow": "價格時間窗",
+      "settledAt": "形成時間",
+      "settledRange": "{{start}} – {{end}}",
+      "settledRangeTooltip": "觀測到於 {{start}} 至 {{end}} 之間形成(每 5 分鐘輪詢一次 -- 無法得知更精確的時間點)。",
       "formingBadge": "價格形成中",
       "settledBadge": "已形成",
       "noData": "尚無資料",
@@ -649,7 +651,8 @@
       "neverPolled": "尚未有記錄。"
     },
     "recent": {
-      "title": "最近結束",
+      "title": "最近已形成的區間",
+      "subtitle": "裝備在所有區間都形成價格後,仍會在此清單中保留 {{days}} 天,方便繼續查看該裝備的價格表。",
       "empty": "過去 {{days}} 天內沒有價格已形成的裝備。",
       "loadError": "無法載入最近價格已形成的資料，請稍後重新載入。",
       "endedBetween": "於 {{start}} 至 {{end}} 之間結束"

@@ -639,7 +639,9 @@
       "star": "星",
       "price": "価格 (NESO)",
       "status": "状態",
-      "priceWindow": "価格の時刻窓",
+      "settledAt": "形成済みになった時刻",
+      "settledRange": "{{start}} 〜 {{end}}",
+      "settledRangeTooltip": "{{start}} 〜 {{end}} の間に価格形成済みになったことを観測しました(5分間隔のポーリングのため、これ以上正確な時刻は特定できません)。",
       "formingBadge": "価格形成中",
       "settledBadge": "形成済み",
       "noData": "データなし",
@@ -649,7 +651,8 @@
       "neverPolled": "まだ記録がありません。"
     },
     "recent": {
-      "title": "最近終了",
+      "title": "最近形成済みになった帯",
+      "subtitle": "装備は全ての帯が形成済みになってから{{days}}日間、一覧に残ります。価格表を引き続き確認できます。",
       "empty": "直近{{days}}日以内に価格が形成済みになった装備はありません。",
       "loadError": "最近価格が形成済みになった装備を読み込めませんでした。しばらくしてから再読み込みしてください。",
       "endedBetween": "{{start}} 〜 {{end}} の間に終了しました"

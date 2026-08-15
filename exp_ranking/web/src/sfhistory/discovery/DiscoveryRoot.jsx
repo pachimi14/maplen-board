@@ -173,6 +173,17 @@ export default function DiscoveryRoot() {
 
         <section>
           <h2 className="text-lg font-semibold text-slate-100">{t("sfhistoryDiscovery.recent.title")}</h2>
+          {/* IMPL_PLAN_SH33 follow-up (post-review): explains WHY this list
+              exists -- not "these items ended" (equipment-level framing the
+              user found off-target) but "an item stays reachable, with its
+              own per-band settling-time table, for `days` days after it
+              fully settles" (plan §5(m)). Only rendered once `recentState.
+              days` is known (ready/error both still resolve a numeric
+              `days` -- `idle`/`loading` do not, so this never shows a
+              placeholder "{{days}}" before the real value loads). */}
+          {typeof recentState.days === "number" ? (
+            <p className="mt-0.5 text-sm text-slate-400">{t("sfhistoryDiscovery.recent.subtitle", { days: recentState.days })}</p>
+          ) : null}
           <div className="sfh-summary-card mt-2">
             {recentState.status === "error" ? (
               <p className="py-4 text-sm text-amber-400">{t("sfhistoryDiscovery.recent.loadError")}</p>

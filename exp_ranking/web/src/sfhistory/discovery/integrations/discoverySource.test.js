@@ -18,6 +18,7 @@ const equipmentPayload = {
       ],
       stepsConsistent: true,
       lastScanAt: "2026-08-15T02:17:00Z",
+      isActive: true,
     },
   ],
 };
@@ -28,8 +29,16 @@ const pricesPayload = {
   upgradeCount: 25,
   observedAt: "2026-08-15T09:28:05Z",
   bands: [
-    { itemUpgrade: 0, price: 1.0, step: "STEP_TYPE_DISCOVERY", priceAt: "2026-08-15T09:28:00Z", isDiscovery: true },
-    { itemUpgrade: 10, price: 2.0, step: "STEP_TYPE_CHANGE", priceAt: "2026-08-15T09:28:00Z", isDiscovery: false },
+    { itemUpgrade: 0, price: 1.0, step: "STEP_TYPE_DISCOVERY", priceAt: "2026-08-15T09:28:00Z", isDiscovery: true, windowStart: null, windowEnd: null },
+    {
+      itemUpgrade: 10,
+      price: 2.0,
+      step: "STEP_TYPE_CHANGE",
+      priceAt: "2026-08-15T09:28:00Z",
+      isDiscovery: false,
+      windowStart: "2026-08-14T10:00:00Z",
+      windowEnd: "2026-08-14T10:05:00Z",
+    },
   ],
 };
 
@@ -67,6 +76,18 @@ describe("normalizeDiscoveryEquipmentPayload", () => {
     expect(normalizeDiscoveryEquipmentPayload(null).ok).toBe(false);
     expect(normalizeDiscoveryEquipmentPayload({}).ok).toBe(false);
   });
+
+  // IMPL_PLAN_SH33 follow-up (post-review, (m)): isActive -- a group kept
+  // listed past deactivation for the 30-day retention window.
+  it("keeps isActive: false when the server says so", () => {
+    const result = normalizeDiscoveryEquipmentPayload({ items: [{ itemId: 1, itemName: "A", isActive: false }] });
+    expect(result.items[0].isActive).toBe(false);
+  });
+
+  it("defaults isActive to true unless the server explicitly says false", () => {
+    const result = normalizeDiscoveryEquipmentPayload({ items: [{ itemId: 1, itemName: "A" }] });
+    expect(result.items[0].isActive).toBe(true);
+  });
 });
 
 // --- normalizeDiscoveryPricesPayload ------------------------------------------
@@ -88,12 +109,23 @@ describe("normalizeDiscoveryPricesPayload", () => {
 
   it("observedAt/price/step/priceAt are null, never invented, when a band was never polled", () => {
     const result = normalizeDiscoveryPricesPayload(
-      { itemId: 1, itemName: "X", upgradeCount: 1, observedAt: null, bands: [{ itemUpgrade: 0, price: null, step: null, priceAt: null, isDiscovery: false }] },
+      { itemId: 1, itemName: "X", upgradeCount: 1, observedAt: null, bands: [{ itemUpgrade: 0, price: null, step: null, priceAt: null, isDiscovery: false, windowStart: null, windowEnd: null }] },
       1,
     );
     expect(result.observedAt).toBeNull();
     expect(result.bands[0].price).toBeNull();
     expect(result.bands[0].step).toBeNull();
+    expect(result.bands[0].windowStart).toBeNull();
+    expect(result.bands[0].windowEnd).toBeNull();
+  });
+
+  // IMPL_PLAN_SH33 follow-up (post-review): windowStart/windowEnd -- this
+  // band's own observed DISCOVERY -> CHANGE flip.
+  it("keeps windowStart/windowEnd when the server reports an observed transition", () => {
+    const result = normalizeDiscoveryPricesPayload(pricesPayload, 1053063);
+    expect(result.bands[0].windowStart).toBeNull(); // still DISCOVERY -- never observed
+    expect(result.bands[1].windowStart).toBe("2026-08-14T10:00:00Z");
+    expect(result.bands[1].windowEnd).toBe("2026-08-14T10:05:00Z");
   });
 });
 
