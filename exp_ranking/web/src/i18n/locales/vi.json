@@ -621,5 +621,45 @@
       "highestBadge": "Cao nhất",
       "disclaimer": "Chỉ hiển thị giá trị trung vị, không khuyến nghị nâng cấp vào một thứ hoặc khung giờ cụ thể."
     }
+  },
+  "sfhistoryDiscovery": {
+    "pageDescription": "Theo dõi quá trình hình thành giá của trang bị vừa được thêm vào.",
+    "loading": "Đang tải...",
+    "equipment": {
+      "label": "Trang bị",
+      "searchPlaceholder": "Tìm theo tên vật phẩm hoặc ID vật phẩm",
+      "noMatch": "Không tìm thấy trang bị phù hợp",
+      "matchedAliases": "Khớp với: {{names}}",
+      "loadError": "Không thể tải danh sách trang bị đang theo dõi. Vui lòng tải lại sau.",
+      "empty": "Hiện không có trang bị nào đang được theo dõi.",
+      "inconsistentWarning": "Lần quét gần nhất phát hiện sự không khớp giữa các biến thể nghề trong nhóm này. Đang hiển thị dữ liệu xác nhận gần nhất."
+    },
+    "prices": {
+      "star": "Sao",
+      "price": "Giá (NESO)",
+      "status": "Trạng thái",
+      "settledAt": "Ổn định lúc",
+      "settledRange": "{{start}} – {{end}}",
+      "settledRangeTooltip": "Được ghi nhận trong khoảng từ {{start}} đến {{end}} (khoảng ghi nhận 5 phút -- không thể xác định thời điểm chính xác hơn).",
+      "formingBadge": "Đang hình thành giá",
+      "settledBadge": "Đã ổn định",
+      "noData": "Chưa có dữ liệu",
+      "loadError": "Không thể tải giá của trang bị này. Vui lòng tải lại sau.",
+      "observedAt": "Ghi nhận lúc {{timestamp}}",
+      "observedAtStale": "(bộ ghi có thể đã dừng -- dữ liệu này có thể đã cũ)",
+      "neverPolled": "Chưa được ghi nhận."
+    },
+    "recent": {
+      "title": "Các dải giá vừa ổn định",
+      "subtitle": "Trang bị vẫn xuất hiện trong danh sách này trong {{days}} ngày sau khi tất cả các dải đã ổn định, để bảng giá của nó vẫn có thể truy cập được.",
+      "empty": "Không có giá nào ổn định trong {{days}} ngày qua.",
+      "loadError": "Không thể tải các giá vừa ổn định. Vui lòng tải lại sau.",
+      "endedBetween": "đã kết thúc trong khoảng từ {{start}} đến {{end}}"
+    }
+  },
+  "sfhistoryTabs": {
+    "navLabel": "Các trang Lịch sử SF",
+    "sfHistory": "SF History",
+    "newEquipment": "New Equipment"
   }
 }

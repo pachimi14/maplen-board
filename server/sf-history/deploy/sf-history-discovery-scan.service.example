@@ -1,0 +1,25 @@
+[Unit]
+Description=Lulumi Tools SF price history -- DISCOVERY daily scan (one-shot)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# One-shot, NOT a daemon -- same "ワンショット + timer" discipline as
+# sf-history-update.service.example (design §5.2 / OPS-1's lesson).
+# IMPL_PLAN_SH32 §0 F8: a full run walks 472 items (~4 minutes, measured).
+Type=oneshot
+User=botuser
+Group=botuser
+WorkingDirectory=/home/botuser/apps/lulumi-tools-sf-history
+Environment=SF_HISTORY_DB_PATH=/home/botuser/apps/lulumi-tools-sf-history/data/sf_price_history.sqlite
+# ★秘密情報: MSU_OPEN_API_KEY is intentionally NOT set here -- provision it via
+# an EnvironmentFile (root-owned, 0600), same discipline as
+# server/raffle-api's deploy docs and this service's own README.md. Never
+# paste the key value into this unit file.
+EnvironmentFile=/etc/lulumi-tools/sf-history-discovery.env
+ExecStart=/home/botuser/apps/lulumi-tools-sf-history/.venv/bin/python scripts/scan_discovery.py
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

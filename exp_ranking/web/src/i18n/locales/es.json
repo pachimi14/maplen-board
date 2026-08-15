@@ -621,5 +621,45 @@
       "highestBadge": "Más alto",
       "disclaimer": "Solo muestra la mediana; no es una recomendación para mejorar en un día o franja horaria concretos."
     }
+  },
+  "sfhistoryDiscovery": {
+    "pageDescription": "Sigue cómo se forman los precios del equipo recién añadido.",
+    "loading": "Cargando...",
+    "equipment": {
+      "label": "Equipo",
+      "searchPlaceholder": "Buscar por nombre de objeto o ID de objeto",
+      "noMatch": "No se encontró equipo coincidente",
+      "matchedAliases": "Coincidencia: {{names}}",
+      "loadError": "No se pudo cargar la lista de equipo monitorizado. Vuelve a intentarlo más tarde.",
+      "empty": "No hay equipo en seguimiento actualmente.",
+      "inconsistentWarning": "El último escaneo encontró una discrepancia entre las variantes de clase de este grupo. Mostrando los últimos datos confirmados."
+    },
+    "prices": {
+      "star": "Estrella",
+      "price": "Precio (NESO)",
+      "status": "Estado",
+      "settledAt": "Fijado a las",
+      "settledRange": "{{start}} – {{end}}",
+      "settledRangeTooltip": "Se observó en algún momento entre {{start}} y {{end}} (intervalo de sondeo de 5 minutos -- no se puede precisar más el instante exacto).",
+      "formingBadge": "Formándose",
+      "settledBadge": "Fijado",
+      "noData": "Sin datos todavía",
+      "loadError": "No se pudieron cargar los precios de este equipo. Vuelve a intentarlo más tarde.",
+      "observedAt": "Observado a las {{timestamp}}",
+      "observedAtStale": "(el sondeo puede haberse detenido -- esto podría estar desactualizado)",
+      "neverPolled": "Todavía no se ha sondeado."
+    },
+    "recent": {
+      "title": "Bandas fijadas recientemente",
+      "subtitle": "El equipo permanece en esta lista durante {{days}} días después de que todas sus bandas se fijan, para que su propia tabla de precios siga siendo accesible.",
+      "empty": "Ningún precio se ha fijado en los últimos {{days}} días.",
+      "loadError": "No se pudieron cargar los precios fijados recientemente. Vuelve a intentarlo más tarde.",
+      "endedBetween": "finalizó en algún momento entre {{start}} y {{end}}"
+    }
+  },
+  "sfhistoryTabs": {
+    "navLabel": "Páginas de historial de SF",
+    "sfHistory": "SF History",
+    "newEquipment": "New Equipment"
   }
 }
