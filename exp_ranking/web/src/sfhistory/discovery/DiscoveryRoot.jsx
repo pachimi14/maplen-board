@@ -6,6 +6,7 @@ import { setDashboardThemeColor, setDashboardThemeDepth } from "../../taskManage
 import { discoverySource } from "./integrations/discoverySource.js";
 import { formatTooltipDate } from "../domain/format.js";
 import { isObservationStale } from "./domain/bands.js";
+import SfHistoryTabs from "../SfHistoryTabs.jsx";
 import DiscoveryEquipmentSelector from "./components/DiscoveryEquipmentSelector.jsx";
 import DiscoveryPriceTable from "./components/DiscoveryPriceTable.jsx";
 import DiscoveryRecentList from "./components/DiscoveryRecentList.jsx";
@@ -116,6 +117,10 @@ export default function DiscoveryRoot() {
     <div className="site-theme sfh-root min-h-screen">
       <SiteHeader active="sfhistory" theme={theme} onThemeChange={handleThemeChange} />
       <main className="mx-auto max-w-6xl space-y-5 px-4 py-6 md:px-8">
+        {/* IMPL_PLAN_SH33 §3 (A): same tab bar as SfHistoryRoot.jsx, active
+            on this page's own tab. */}
+        <SfHistoryTabs active="discovery" />
+
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{t("sfhistoryDiscovery.pageTitle")}</h1>
           <p className="mt-1.5 max-w-3xl text-sm text-slate-400">{t("sfhistoryDiscovery.pageDescription")}</p>

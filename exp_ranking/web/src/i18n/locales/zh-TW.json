@@ -653,5 +653,10 @@
       "loadError": "無法載入最近結束的 DISCOVERY 期間，請稍後重新載入。",
       "endedBetween": "於 {{start}} 至 {{end}} 之間結束"
     }
+  },
+  "sfhistoryTabs": {
+    "navLabel": "SF 紀錄頁面",
+    "sfHistory": "SF History",
+    "newEquipment": "New Equipment"
   }
 }

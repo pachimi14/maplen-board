@@ -653,5 +653,10 @@
       "loadError": "ไม่สามารถโหลดช่วง DISCOVERY ที่เพิ่งสิ้นสุดได้ โปรดโหลดใหม่ภายหลัง",
       "endedBetween": "สิ้นสุดในช่วงระหว่าง {{start}} ถึง {{end}}"
     }
+  },
+  "sfhistoryTabs": {
+    "navLabel": "หน้าประวัติ SF",
+    "sfHistory": "SF History",
+    "newEquipment": "New Equipment"
   }
 }

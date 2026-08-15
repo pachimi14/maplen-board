@@ -653,5 +653,10 @@
       "loadError": "Could not load recently-ended DISCOVERY periods. Please reload later.",
       "endedBetween": "ended sometime between {{start}} and {{end}}"
     }
+  },
+  "sfhistoryTabs": {
+    "navLabel": "SF History pages",
+    "sfHistory": "SF History",
+    "newEquipment": "New Equipment"
   }
 }

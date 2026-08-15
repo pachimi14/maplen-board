@@ -653,5 +653,10 @@
       "loadError": "Không thể tải các giai đoạn DISCOVERY vừa kết thúc. Vui lòng tải lại sau.",
       "endedBetween": "đã kết thúc trong khoảng từ {{start}} đến {{end}}"
     }
+  },
+  "sfhistoryTabs": {
+    "navLabel": "Các trang Lịch sử SF",
+    "sfHistory": "SF History",
+    "newEquipment": "New Equipment"
   }
 }
