@@ -630,6 +630,7 @@
       "label": "Equipment",
       "searchPlaceholder": "Search by item name or item ID",
       "noMatch": "No matching equipment found",
+      "matchedAliases": "Matched: {{names}}",
       "loadError": "Could not load the monitored-equipment list. Please reload later.",
       "empty": "No equipment is currently in a DISCOVERY period.",
       "inconsistentWarning": "The latest scan found a mismatch between this group's job variants. Showing the last confirmed data."

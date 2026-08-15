@@ -630,6 +630,7 @@
       "label": "裝備",
       "searchPlaceholder": "以物品名稱或物品 ID 搜尋",
       "noMatch": "找不到符合的裝備",
+      "matchedAliases": "符合：{{names}}",
       "loadError": "無法載入監控中的裝備清單，請稍後重新載入。",
       "empty": "目前沒有裝備處於 DISCOVERY 期間。",
       "inconsistentWarning": "最近一次掃描發現此群組的職業變體之間資料不一致，正顯示最後一次確認的資料。"
