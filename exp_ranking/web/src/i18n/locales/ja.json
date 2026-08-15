@@ -630,6 +630,7 @@
       "label": "装備",
       "searchPlaceholder": "アイテム名またはアイテムIDで検索",
       "noMatch": "該当する装備が見つかりません",
+      "matchedAliases": "一致: {{names}}",
       "loadError": "監視対象の装備リストを読み込めませんでした。しばらくしてから再読み込みしてください。",
       "empty": "現在DISCOVERY期間中の装備はありません。",
       "inconsistentWarning": "直近の走査でこのグループの職業違い装備間に不一致が見つかりました。最後に確認できたデータを表示しています。"

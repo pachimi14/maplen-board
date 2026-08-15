@@ -630,6 +630,7 @@
       "label": "Trang bị",
       "searchPlaceholder": "Tìm theo tên vật phẩm hoặc ID vật phẩm",
       "noMatch": "Không tìm thấy trang bị phù hợp",
+      "matchedAliases": "Khớp với: {{names}}",
       "loadError": "Không thể tải danh sách trang bị đang theo dõi. Vui lòng tải lại sau.",
       "empty": "Hiện không có trang bị nào trong giai đoạn DISCOVERY.",
       "inconsistentWarning": "Lần quét gần nhất phát hiện sự không khớp giữa các biến thể nghề trong nhóm này. Đang hiển thị dữ liệu xác nhận gần nhất."

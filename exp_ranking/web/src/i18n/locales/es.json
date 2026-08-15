@@ -630,6 +630,7 @@
       "label": "Equipo",
       "searchPlaceholder": "Buscar por nombre de objeto o ID de objeto",
       "noMatch": "No se encontró equipo coincidente",
+      "matchedAliases": "Coincidencia: {{names}}",
       "loadError": "No se pudo cargar la lista de equipo monitorizado. Vuelve a intentarlo más tarde.",
       "empty": "Ningún equipo está actualmente en un periodo DISCOVERY.",
       "inconsistentWarning": "El último escaneo encontró una discrepancia entre las variantes de clase de este grupo. Mostrando los últimos datos confirmados."
