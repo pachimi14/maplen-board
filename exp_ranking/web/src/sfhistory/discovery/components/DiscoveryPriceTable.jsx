@@ -3,9 +3,14 @@ import { formatExactNeso, formatTooltipDate } from "../../domain/format.js";
 import { buildBandRows } from "../domain/bands.js";
 
 /** plan §1/§5(h): the full ☆1-25 price/step table for one monitored
- * representative, with a DISCOVERY badge on every band still in a bonus
- * period -- this page's own addition (plan §3: "既存のチャートページに
- * バッジを出さない", so it lives only here). */
+ * representative, with a "Forming" badge on every band whose price has not
+ * settled yet -- this page's own addition (plan §3: "既存のチャートページに
+ * バッジを出さない", so it lives only here). IMPL_PLAN_SH33 §2 (C): the
+ * badge text is "Forming"/"Settled" (`prices.formingBadge`/
+ * `prices.settledBadge`) -- the underlying `row.isDiscovery`/`row.step`
+ * fields still carry the upstream `STEP_TYPE_DISCOVERY`/`STEP_TYPE_CHANGE`
+ * literal (bands.js/the API), unchanged; only the label shown for them is
+ * renamed here. */
 export default function DiscoveryPriceTable({ bands, upgradeCount = 25 }) {
   const { t, language } = useTranslation();
   const rows = buildBandRows(bands, upgradeCount);
@@ -30,10 +35,10 @@ export default function DiscoveryPriceTable({ bands, upgradeCount = 25 }) {
             <td className="py-1.5 pr-3">
               {row.isDiscovery ? (
                 <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-300">
-                  {t("sfhistoryDiscovery.prices.discoveryBadge")}
+                  {t("sfhistoryDiscovery.prices.formingBadge")}
                 </span>
               ) : row.step ? (
-                <span className="text-xs text-slate-500">{t("sfhistoryDiscovery.prices.endedBadge")}</span>
+                <span className="text-xs text-slate-500">{t("sfhistoryDiscovery.prices.settledBadge")}</span>
               ) : (
                 <span className="text-xs text-slate-600">{t("sfhistoryDiscovery.prices.noData")}</span>
               )}

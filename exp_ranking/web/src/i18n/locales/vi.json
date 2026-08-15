@@ -623,8 +623,8 @@
     }
   },
   "sfhistoryDiscovery": {
-    "pageTitle": "DISCOVERY (Giai đoạn thưởng)",
-    "pageDescription": "Trang bị đang trong giai đoạn thưởng DISCOVERY, được ghi lại mỗi 5 phút. Trang này không bao giờ gọi trực tiếp đến máy chủ chính thức -- chỉ hiển thị những gì đã được ghi lại.",
+    "pageTitle": "Trang bị mới",
+    "pageDescription": "Trang bị vừa được thêm vào, được kiểm tra giá mỗi 5 phút. Giao dịch vẫn còn ít nên giá gần bằng 0 chỉ đơn giản có nghĩa là thị trường chưa xác định được giá. Trang này không bao giờ gọi trực tiếp đến máy chủ chính thức -- chỉ hiển thị những gì đã được ghi lại.",
     "loading": "Đang tải...",
     "equipment": {
       "label": "Trang bị",
@@ -632,7 +632,7 @@
       "noMatch": "Không tìm thấy trang bị phù hợp",
       "matchedAliases": "Khớp với: {{names}}",
       "loadError": "Không thể tải danh sách trang bị đang theo dõi. Vui lòng tải lại sau.",
-      "empty": "Hiện không có trang bị nào trong giai đoạn DISCOVERY.",
+      "empty": "Hiện không có trang bị nào đang được theo dõi.",
       "inconsistentWarning": "Lần quét gần nhất phát hiện sự không khớp giữa các biến thể nghề trong nhóm này. Đang hiển thị dữ liệu xác nhận gần nhất."
     },
     "prices": {
@@ -640,18 +640,18 @@
       "price": "Giá",
       "status": "Trạng thái",
       "priceWindow": "Khung thời gian giá",
-      "discoveryBadge": "DISCOVERY",
-      "endedBadge": "Đã kết thúc",
+      "formingBadge": "Đang hình thành giá",
+      "settledBadge": "Đã ổn định",
       "noData": "Chưa có dữ liệu",
-      "loadError": "Không thể tải giá DISCOVERY của trang bị này. Vui lòng tải lại sau.",
+      "loadError": "Không thể tải giá của trang bị này. Vui lòng tải lại sau.",
       "observedAt": "Ghi nhận lúc {{timestamp}}",
       "observedAtStale": "(bộ ghi có thể đã dừng -- dữ liệu này có thể đã cũ)",
       "neverPolled": "Chưa được ghi nhận."
     },
     "recent": {
       "title": "Vừa kết thúc",
-      "empty": "Không có giai đoạn DISCOVERY nào kết thúc trong {{days}} ngày qua.",
-      "loadError": "Không thể tải các giai đoạn DISCOVERY vừa kết thúc. Vui lòng tải lại sau.",
+      "empty": "Không có giá nào ổn định trong {{days}} ngày qua.",
+      "loadError": "Không thể tải các giá vừa ổn định. Vui lòng tải lại sau.",
       "endedBetween": "đã kết thúc trong khoảng từ {{start}} đến {{end}}"
     }
   },

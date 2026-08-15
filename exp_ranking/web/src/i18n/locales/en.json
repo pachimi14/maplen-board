@@ -623,8 +623,8 @@
     }
   },
   "sfhistoryDiscovery": {
-    "pageTitle": "DISCOVERY (Bonus Period)",
-    "pageDescription": "Equipment currently in a DISCOVERY bonus period, polled every 5 minutes. This page never fetches from the official server directly -- it only shows what has already been recorded.",
+    "pageTitle": "New Equipment",
+    "pageDescription": "Recently added equipment, price-checked every 5 minutes. Trading is still limited for these, so a price near zero simply means the market hasn't settled on one yet. This page never fetches from the official server directly -- it only shows what has already been recorded.",
     "loading": "Loading...",
     "equipment": {
       "label": "Equipment",
@@ -632,7 +632,7 @@
       "noMatch": "No matching equipment found",
       "matchedAliases": "Matched: {{names}}",
       "loadError": "Could not load the monitored-equipment list. Please reload later.",
-      "empty": "No equipment is currently in a DISCOVERY period.",
+      "empty": "No equipment is currently being tracked.",
       "inconsistentWarning": "The latest scan found a mismatch between this group's job variants. Showing the last confirmed data."
     },
     "prices": {
@@ -640,18 +640,18 @@
       "price": "Price",
       "status": "Status",
       "priceWindow": "Price window",
-      "discoveryBadge": "DISCOVERY",
-      "endedBadge": "Ended",
+      "formingBadge": "Forming",
+      "settledBadge": "Settled",
       "noData": "No data yet",
-      "loadError": "Could not load this equipment's DISCOVERY prices. Please reload later.",
+      "loadError": "Could not load this equipment's prices. Please reload later.",
       "observedAt": "Observed as of {{timestamp}}",
       "observedAtStale": "(the poller may have stopped -- this may be out of date)",
       "neverPolled": "Not polled yet."
     },
     "recent": {
       "title": "Recently ended",
-      "empty": "No DISCOVERY period has ended in the last {{days}} days.",
-      "loadError": "Could not load recently-ended DISCOVERY periods. Please reload later.",
+      "empty": "No price has settled in the last {{days}} days.",
+      "loadError": "Could not load recently-settled prices. Please reload later.",
       "endedBetween": "ended sometime between {{start}} and {{end}}"
     }
   },
