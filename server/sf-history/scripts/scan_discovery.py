@@ -225,10 +225,36 @@ def run_scan(
         if not any(discovery.is_monitored(m["steps"]) for m in members):
             continue  # not a candidate this run -- plan §1 judge range
 
-        representative = pick_representative_item(members)
-        if representative is None:
-            continue
-        representative_id = int(representative["itemId"])
+        # ★2026-08-15 fix (統括 検収差し戻し): the group's identity is
+        # `group_key`, not whichever member currently has the highest
+        # weekCount -- `pick_representative_item` is only ever called again
+        # when this group has NEVER been registered before, or when its
+        # already-fixed representative has dropped out of the group's own
+        # current member list (logged below, the one case a fixed
+        # representative is allowed to change).
+        member_by_id = {int(m["itemId"]): m for m in members}
+        existing = db.get_discovery_monitored_group_by_group_key(
+            conn, equip_level_type, equip_type, equip_part_type
+        )
+        if existing is not None and existing["itemId"] in member_by_id:
+            representative = member_by_id[existing["itemId"]]
+            representative_id = existing["itemId"]
+        else:
+            if existing is not None:
+                print(
+                    f"scan_discovery: WARNING representative item={existing['itemId']} for group "
+                    f"{group_key} is no longer among the group's current members -- re-selecting "
+                    "a new representative (the only case a fixed representative may change)",
+                    file=sys.stderr,
+                )
+                # Clears the old row's slot in the partial unique index
+                # (schema.sql, WHERE is_active = 1) BEFORE the new
+                # representative's row is inserted below -- ordering matters.
+                db.deactivate_discovery_group(conn, existing["itemId"], now=now_iso)
+            representative = pick_representative_item(members)
+            if representative is None:
+                continue
+            representative_id = int(representative["itemId"])
 
         member_steps = {int(m["itemId"]): m["steps"] for m in members}
         consistent = discovery.steps_consistent(member_steps)
