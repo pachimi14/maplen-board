@@ -1,4 +1,4 @@
-// IMPL_PLAN_SH33 §1 (D): the NESO price display for THIS page only.
+// IMPL_PLAN_SH33 §1 (D): the price display for THIS page only.
 // `formatExactNeso` in `../../domain/format.js` -- shared with #/starforce's
 // own chart tooltip/summary cards/heatmap tooltip -- is left byte-for-byte
 // untouched by this plan (plan §5: "formatCompactNeso" 触らない, acceptance
@@ -16,21 +16,33 @@
 // `formatExactNeso`'s own `maximumFractionDigits: 2` is exactly what
 // collapsed every such ☆1-10 value to the indistinguishable "0.00 NESO"
 // this plan exists to fix (plan §1-1) -- this page's own values are shown
-// at up to 6 decimals instead, with trailing zeros dropped (plan §1-3:
-// "0.000001" / "1,132,506.562014" / "23,758.94"-style trimming) so a fully-
-// settled, exactly-round price does not grow spurious zeros either.
+// at exactly 6 decimals instead.
 //
-// `0` is only ever returned for a value that is actually 0 (plan §1-3: "0
-// と表示してよいのは、値が本当に0のときだけ") -- every other value keeps at
-// least the digits needed to distinguish it from 0.
+// IMPL_PLAN_SH33 follow-up (post-review, 実機レビュー): the first version of
+// this function trimmed trailing zeros (plan §1-3's own "23,758.94"-style
+// example), which produced a RAGGED decimal point across the 25-row table
+// (some rows 6 decimals, some 5, some 0) -- worse to read than the "0 NESO"
+// bug this plan set out to fix. Every value is now padded to exactly 6
+// decimals unconditionally (never trimmed), so every row's decimal point
+// lines up under a right-aligned, `tabular-nums` column
+// (DiscoveryPriceTable.jsx). No information is lost either way -- the 7th
+// digit onward is always 0 regardless -- this is a pure alignment fix.
+// The literal " NESO" unit suffix has also moved OUT of this function: it
+// is now the column header's job (`prices.price` = "Price (NESO)"-style,
+// 6 locales) rather than being repeated on all 25 rows, which was itself
+// part of what pushed the decimal point around (a variable-width suffix
+// after a variable-width number).
+//
+// `0.000000` is only ever returned for a value that is actually 0 (plan
+// §1-3 / follow-up (d): "値が本当に0のときだけ...になる。丸めて0にしない
+// 性質は維持") -- a genuine 1e-6 value still renders as `0.000001`, never
+// rounds down to all zeros.
 export function formatDiscoveryPrice(value) {
   if (value == null || !Number.isFinite(value)) return "--";
   const sign = value < 0 ? "-" : "";
   const abs = Math.abs(value);
   const fixed = abs.toFixed(6);
   const [intPart, fracPart] = fixed.split(".");
-  const trimmedFrac = fracPart.replace(/0+$/, "");
   const intFormatted = Number(intPart).toLocaleString("en-US");
-  const digits = trimmedFrac ? `${intFormatted}.${trimmedFrac}` : intFormatted;
-  return `${sign}${digits} NESO`;
+  return `${sign}${intFormatted}.${fracPart}`;
 }

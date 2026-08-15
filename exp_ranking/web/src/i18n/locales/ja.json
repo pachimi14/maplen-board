@@ -637,7 +637,7 @@
     },
     "prices": {
       "star": "星",
-      "price": "価格",
+      "price": "価格 (NESO)",
       "status": "状態",
       "priceWindow": "価格の時刻窓",
       "formingBadge": "価格形成中",

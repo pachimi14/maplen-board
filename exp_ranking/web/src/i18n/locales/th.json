@@ -637,7 +637,7 @@
     },
     "prices": {
       "star": "ดาว",
-      "price": "ราคา",
+      "price": "ราคา (NESO)",
       "status": "สถานะ",
       "priceWindow": "ช่วงเวลาราคา",
       "formingBadge": "กำลังกำหนดราคา",

@@ -637,7 +637,7 @@
     },
     "prices": {
       "star": "Star",
-      "price": "Price",
+      "price": "Price (NESO)",
       "status": "Status",
       "priceWindow": "Price window",
       "formingBadge": "Forming",
