@@ -183,6 +183,14 @@ export function parseHash(hash) {
     return { name: path.slice(1), query };
   }
 
+  // IMPL_PLAN_SH32 §2 C: `#/starforce/discovery` -- the DISCOVERY (bonus
+  // period) page, a SEPARATE route/root component from `#/starforce` below
+  // (plan §4: "既存の #/starforce は1ピクセルも変えない"). Checked before
+  // the `/starforce` exact-match so it is never swallowed by that branch.
+  if (path === "/starforce/discovery") {
+    return { name: "starforceDiscovery", query };
+  }
+
   // IMPL_PLAN_SH5 §1: `#/starforce` -- the SF cost history chart screen
   // (design DESIGN_SF_COST_HISTORY.md U2). Added as its own block rather
   // than folded into the dashboard/tasks/schedule check above, so that
@@ -201,9 +209,11 @@ function buildHash(route) {
     ? `/character/${encodeURIComponent(route.historyKey)}`
     : route?.name === "group"
       ? "/group"
-      : route?.name === "dashboard" || route?.name === "tasks" || route?.name === "schedule" || route?.name === "raffle" || route?.name === "starforce"
-        ? `/${route.name}`
-        : "/";
+      : route?.name === "starforceDiscovery"
+        ? "/starforce/discovery"
+        : route?.name === "dashboard" || route?.name === "tasks" || route?.name === "schedule" || route?.name === "raffle" || route?.name === "starforce"
+          ? `/${route.name}`
+          : "/";
   return `#${path}${search ? `?${search}` : ""}`;
 }
 
@@ -394,6 +404,15 @@ export function navigateToTool(name, options = {}) {
 export function navigateToStarforce(options = {}) {
   applyRoute(
     (base) => ({ name: "starforce", query: normalizeQuery(base.query) }),
+    options,
+  );
+}
+
+/** Navigates to `#/starforce/discovery` (IMPL_PLAN_SH32 §2 C), keeping the
+ * shared query shape. */
+export function navigateToStarforceDiscovery(options = {}) {
+  applyRoute(
+    (base) => ({ name: "starforceDiscovery", query: normalizeQuery(base.query) }),
     options,
   );
 }

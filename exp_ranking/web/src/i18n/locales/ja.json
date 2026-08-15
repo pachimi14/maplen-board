@@ -621,5 +621,37 @@
       "highestBadge": "最高",
       "disclaimer": "中央値を示すものであり、特定の曜日・時間帯での強化を推奨するものではありません。"
     }
+  },
+  "sfhistoryDiscovery": {
+    "pageTitle": "DISCOVERY（ボーナス期間）",
+    "pageDescription": "現在DISCOVERYボーナス期間中の装備を5分ごとに記録して表示します。このページは公式サーバーへ直接アクセスせず、すでに記録済みのデータのみを表示します。",
+    "loading": "読み込み中...",
+    "equipment": {
+      "label": "装備",
+      "searchPlaceholder": "アイテム名またはアイテムIDで検索",
+      "noMatch": "該当する装備が見つかりません",
+      "loadError": "監視対象の装備リストを読み込めませんでした。しばらくしてから再読み込みしてください。",
+      "empty": "現在DISCOVERY期間中の装備はありません。",
+      "inconsistentWarning": "直近の走査でこのグループの職業違い装備間に不一致が見つかりました。最後に確認できたデータを表示しています。"
+    },
+    "prices": {
+      "star": "星",
+      "price": "価格",
+      "status": "状態",
+      "priceWindow": "価格の時刻窓",
+      "discoveryBadge": "DISCOVERY",
+      "endedBadge": "終了済み",
+      "noData": "データなし",
+      "loadError": "この装備のDISCOVERY価格を読み込めませんでした。しばらくしてから再読み込みしてください。",
+      "observedAt": "観測時刻: {{timestamp}}",
+      "observedAtStale": "(記録が止まっている可能性があります。最新でない場合があります)",
+      "neverPolled": "まだ記録がありません。"
+    },
+    "recent": {
+      "title": "最近終了",
+      "empty": "直近{{days}}日以内に終了したDISCOVERY期間はありません。",
+      "loadError": "最近終了したDISCOVERY期間を読み込めませんでした。しばらくしてから再読み込みしてください。",
+      "endedBetween": "{{start}} 〜 {{end}} の間に終了しました"
+    }
   }
 }

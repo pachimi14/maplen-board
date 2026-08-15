@@ -621,5 +621,37 @@
       "highestBadge": "Más alto",
       "disclaimer": "Solo muestra la mediana; no es una recomendación para mejorar en un día o franja horaria concretos."
     }
+  },
+  "sfhistoryDiscovery": {
+    "pageTitle": "DISCOVERY (periodo de bonificación)",
+    "pageDescription": "Equipo actualmente en un periodo de bonificación DISCOVERY, sondeado cada 5 minutos. Esta página nunca consulta el servidor oficial directamente -- solo muestra lo que ya se ha registrado.",
+    "loading": "Cargando...",
+    "equipment": {
+      "label": "Equipo",
+      "searchPlaceholder": "Buscar por nombre de objeto o ID de objeto",
+      "noMatch": "No se encontró equipo coincidente",
+      "loadError": "No se pudo cargar la lista de equipo monitorizado. Vuelve a intentarlo más tarde.",
+      "empty": "Ningún equipo está actualmente en un periodo DISCOVERY.",
+      "inconsistentWarning": "El último escaneo encontró una discrepancia entre las variantes de clase de este grupo. Mostrando los últimos datos confirmados."
+    },
+    "prices": {
+      "star": "Estrella",
+      "price": "Precio",
+      "status": "Estado",
+      "priceWindow": "Ventana de precio",
+      "discoveryBadge": "DISCOVERY",
+      "endedBadge": "Finalizado",
+      "noData": "Sin datos todavía",
+      "loadError": "No se pudieron cargar los precios DISCOVERY de este equipo. Vuelve a intentarlo más tarde.",
+      "observedAt": "Observado a las {{timestamp}}",
+      "observedAtStale": "(el sondeo puede haberse detenido -- esto podría estar desactualizado)",
+      "neverPolled": "Todavía no se ha sondeado."
+    },
+    "recent": {
+      "title": "Finalizado recientemente",
+      "empty": "Ningún periodo DISCOVERY ha finalizado en los últimos {{days}} días.",
+      "loadError": "No se pudieron cargar los periodos DISCOVERY finalizados recientemente. Vuelve a intentarlo más tarde.",
+      "endedBetween": "finalizó en algún momento entre {{start}} y {{end}}"
+    }
   }
 }

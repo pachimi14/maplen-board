@@ -9,6 +9,7 @@ import TaskManagerRoot from "./taskManager/TaskManagerRoot.jsx";
 import RaffleCalculatorRoot from "./raffle/RaffleCalculatorRoot.jsx";
 import { useDashboardStore } from "./taskManager/storage/useDashboardStore.js";
 import SfHistoryRoot from "./sfhistory/SfHistoryRoot.jsx";
+import DiscoveryRoot from "./sfhistory/discovery/DiscoveryRoot.jsx";
 import { useSiteTheme } from "./siteTheme.js";
 
 const RANKING_THEME_STORAGE_KEY = "maplen-board-ranking-theme-v1";
@@ -53,7 +54,11 @@ function AppShell() {
   // theme-separation change: it's neither the dashboard store nor
   // `rankingTheme` -- the `isRaffleRoute` branch below sources `activeTheme`
   // from it directly.
-  const usesDashboardTheme = isTaskManagerRoute || route.name === "starforce";
+  // IMPL_PLAN_SH32 §2 C: `#/starforce/discovery` (DiscoveryRoot) shares the
+  // same dashboard theme source as `#/starforce` (see SfHistoryRoot.jsx's
+  // own comment on this exact flag) -- added to the SAME condition rather
+  // than a new one, since it needs identical treatment for identical reasons.
+  const usesDashboardTheme = isTaskManagerRoute || route.name === "starforce" || route.name === "starforceDiscovery";
   const activeTheme = usesDashboardTheme
     ? { themeColor: dashboardStore.state.themeColor || "green", themeDepth: dashboardStore.state.themeDepth || "deep" }
     : isRaffleRoute
@@ -80,6 +85,15 @@ function AppShell() {
   }
   if (isTaskManagerRoute) {
     return <TaskManagerRoot route={route} />;
+  }
+
+  // IMPL_PLAN_SH32 §2 C: `#/starforce/discovery` -- new route, own root
+  // component, checked before `starforce` below (both are "not
+  // isTaskManagerRoute" branches, order between them does not matter, but
+  // this keeps the two visually paired). §4: "既存の #/starforce は1ピクセ
+  // ルも変えない" -- the `starforce` branch right below is untouched.
+  if (route.name === "starforceDiscovery") {
+    return <DiscoveryRoot />;
   }
 
   // IMPL_PLAN_SH5 §1: `#/starforce` -- new route, own root component, does

@@ -32,6 +32,7 @@ from fastapi.responses import JSONResponse
 
 import aggregate
 import db
+import discovery
 import fetch_latest
 from fetch_latest import LatestPriceCache, UpstreamLatestError
 
@@ -42,6 +43,14 @@ DEFAULT_ALLOWED_ORIGINS = ("https://lulumi-tools.com",)
 
 DISPLAY_WINDOW_DAYS = 150  # design §10: "4時間足・最大150日"
 UPGRADE_COUNT = 22  # itemUpgrade 0..21 (plan §8 condition 6)
+
+# IMPL_PLAN_SH32 §2 C: the `/sf-history/discovery/*` routes below are pure DB
+# reads (plan §5(i): "上流を叩かない") -- `app.state.latest_cache` (the only
+# upstream-call path this service has) is never referenced by any of them.
+# `discovery.UPGRADE_COUNT` (25, itemUpgrade 0..24 -- plan §1's DISPLAY
+# range) is deliberately wider than `UPGRADE_COUNT` above (22, the existing
+# chart endpoints' range) -- do not conflate the two.
+DEFAULT_DISCOVERY_RECENT_DAYS = 30  # plan §5(k), overridable per env below AND per-request ?days=
 
 
 def _latest_ttl_seconds() -> float:
@@ -192,6 +201,23 @@ def _parse_item_id(raw: str | None, request: Request) -> tuple[int | None, JSONR
 
 def _format_iso_utc(dt: datetime) -> str:
     return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _discovery_recent_days_default() -> int:
+    """plan §5(k): "日数が設定で変えられる" -- env-configured default,
+    additionally overridable per-request via `?days=` (see
+    `discovery_recent` below). A non-positive or unparseable value falls
+    back to `DEFAULT_DISCOVERY_RECENT_DAYS` rather than producing an
+    always-empty or unbounded window.
+    """
+    raw = os.getenv("SF_HISTORY_DISCOVERY_RECENT_DAYS")
+    if not raw:
+        return DEFAULT_DISCOVERY_RECENT_DAYS
+    try:
+        value = int(raw)
+    except ValueError:
+        return DEFAULT_DISCOVERY_RECENT_DAYS
+    return value if value > 0 else DEFAULT_DISCOVERY_RECENT_DAYS
 
 
 # --- routes -------------------------------------------------------------
@@ -497,3 +523,129 @@ def latest(request: Request, itemId: str | None = None) -> JSONResponse:
         return _error(f"upstream enhance-price/latest failed: {exc}", request, status_code=503)
 
     return _json(result, request)
+
+
+# --- IMPL_PLAN_SH32 §2 C: DISCOVERY (bonus period) page -- DB reads only ----
+# None of these three routes ever touches `request.app.state.latest_cache`
+# (or any other upstream) -- plan §5(i): "リクエスト時の上流アクセスはゼロ".
+# `sf_discovery_monitored_groups`/`sf_discovery_price_history` are written
+# exclusively by scripts/scan_discovery.py (Component A) and
+# scripts/poll_discovery.py (Component B); nothing under `/sf-history/
+# discovery/*` ever writes to them.
+
+
+@app.get("/sf-history/discovery/equipment")
+def discovery_equipment(request: Request) -> JSONResponse:
+    """plan §5(g): the monitored-equipment list -- one row per ACTIVE
+    representative group (job-variant aliases folded, never one row per
+    alias -- §5(g): "3行にする。15行にしない")."""
+    conn = db.connect(_db_path())
+    try:
+        groups = db.list_active_discovery_monitored_groups(conn)
+    finally:
+        conn.close()
+
+    items = [
+        {
+            "itemId": group["itemId"],
+            "itemName": group["itemName"],
+            "aliasItemIds": group["aliasItemIds"],
+            "aliases": group["aliases"],
+            "stepsConsistent": group["stepsConsistent"],
+            "lastScanAt": group["lastScanAt"],
+        }
+        for group in groups
+    ]
+    return _json({"items": items}, request)
+
+
+@app.get("/sf-history/discovery/prices")
+def discovery_prices(request: Request, itemId: str | None = None) -> JSONResponse:
+    """plan §1/§5(h)/(j): the full ☆1-25 (itemUpgrade 0..24) price/step list
+    for one monitored representative, plus `observedAt` -- the freshest poll
+    timestamp across every band (plan §5(j): "観測時刻を必ず表示する", so a
+    stalled poller is visible to the caller rather than silently serving an
+    old value as if it were current). `itemId` must be a representative
+    (never an alias) -- unlike `/sf-history/prices`, there is no alias ->
+    representative resolution here because `discovery_equipment` above never
+    exposes an alias as its own selectable row in the first place.
+    """
+    item_id, error_response = _parse_item_id(itemId, request)
+    if error_response is not None:
+        return error_response
+
+    conn = db.connect(_db_path())
+    try:
+        group = db.get_discovery_monitored_group(conn, item_id)
+        if group is None:
+            return _error(f"unknown discovery itemId {item_id}", request, status_code=404)
+        bands, observed_at = db.latest_discovery_bands_for_item(conn, item_id)
+    finally:
+        conn.close()
+
+    band_payload = []
+    for upgrade in range(discovery.UPGRADE_COUNT):
+        band = bands.get(upgrade)
+        band_payload.append(
+            {
+                "itemUpgrade": upgrade,
+                "price": band["price"] if band else None,
+                "step": band["step"] if band else None,
+                "priceAt": band["priceAt"] if band else None,
+                "isDiscovery": bool(band and band["step"] == discovery.DISCOVERY_STEP),
+            }
+        )
+
+    return _json(
+        {
+            "itemId": item_id,
+            "itemName": group["itemName"],
+            "upgradeCount": discovery.UPGRADE_COUNT,
+            "observedAt": observed_at,
+            "bands": band_payload,
+        },
+        request,
+    )
+
+
+@app.get("/sf-history/discovery/recent")
+def discovery_recent(request: Request, days: str | None = None) -> JSONResponse:
+    """plan §2 C / §5(k): bands that flipped DISCOVERY -> CHANGE within the
+    last `days` (default `SF_HISTORY_DISCOVERY_RECENT_DAYS`, itself defaulting
+    to 30) -- across every group this service has EVER monitored, active or
+    since deactivated (plan §5(k): "記録は永久に残す(表示期間だけの話)").
+    `windowStart`/`windowEnd` are the last-seen-DISCOVERY / first-seen-CHANGE
+    poll timestamps (plan §2 B: "「5分の幅」までしか特定できない" -- never a
+    single invented instant).
+    """
+    if days is not None and days.strip():
+        try:
+            requested = int(days)
+        except ValueError:
+            return _error("days must be an integer", request, status_code=400)
+        window_days = requested if requested > 0 else _discovery_recent_days_default()
+    else:
+        window_days = _discovery_recent_days_default()
+
+    since_iso = _format_iso_utc(datetime.now(timezone.utc) - timedelta(days=window_days))
+
+    conn = db.connect(_db_path())
+    try:
+        transitions = db.find_recent_discovery_transitions(conn, since_iso=since_iso)
+        names_by_item_id = {
+            group["itemId"]: group["itemName"] for group in db.list_all_discovery_monitored_groups(conn)
+        }
+    finally:
+        conn.close()
+
+    items = [
+        {
+            "itemId": transition["itemId"],
+            "itemName": names_by_item_id.get(transition["itemId"]),
+            "itemUpgrade": transition["itemUpgrade"],
+            "windowStart": transition["windowStart"],
+            "windowEnd": transition["windowEnd"],
+        }
+        for transition in transitions
+    ]
+    return _json({"days": window_days, "items": items}, request)
