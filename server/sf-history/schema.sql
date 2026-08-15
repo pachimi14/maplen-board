@@ -51,3 +51,74 @@ CREATE TABLE IF NOT EXISTS sf_price_history_4h (
     generated_at   TEXT    NOT NULL,
     PRIMARY KEY (item_id, item_upgrade, price_at)
 );
+
+-- IMPL_PLAN_SH32: DISCOVERY (bonus period) auto-detection/recording/page.
+-- New tables only -- sf_price_history_hourly/_4h are untouched (plan §3/§4).
+-- See discovery.py for the parsing/judging rules these tables feed.
+
+-- One row per daily scan run (Component A). Summary/audit only.
+CREATE TABLE IF NOT EXISTS sf_discovery_scan_runs (
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_at            TEXT    NOT NULL,
+    groups_total      INTEGER NOT NULL,
+    items_total       INTEGER NOT NULL,
+    items_failed      INTEGER NOT NULL,
+    monitored_groups  INTEGER NOT NULL,
+    duration_ms       REAL    NOT NULL
+);
+
+-- One row per representative *group* ever judged to have a DISCOVERY band in
+-- itemUpgrade 0..21 (plan §1 judge range). `is_active` is flipped to 0 by a
+-- later scan that no longer finds a qualifying band for this group -- the
+-- row itself is never deleted (plan §2 A-1 / §5(k): "記録は永久に残す"), so
+-- `aliases_json` stays resolvable for the "recent" page even after a group
+-- goes fully quiet. `steps_consistent` is the A-1 F7-for-step check (§5(g-3)):
+-- 0 means the most recent scan found the alias members' steps did not all
+-- match the representative's -- upsert is then SKIPPED for that scan (this
+-- row keeps whatever it last held), only the warning/scan-raw rows record it.
+CREATE TABLE IF NOT EXISTS sf_discovery_monitored_groups (
+    representative_item_id INTEGER NOT NULL PRIMARY KEY,
+    item_name               TEXT,
+    equip_level_type        TEXT    NOT NULL,
+    equip_type               TEXT    NOT NULL,
+    equip_part_type         TEXT    NOT NULL,
+    alias_item_ids_json     TEXT    NOT NULL,  -- JSON array of ints (incl. representative)
+    aliases_json            TEXT    NOT NULL,  -- JSON array of {itemId, itemName}
+    steps_consistent        INTEGER NOT NULL,  -- 1/0
+    is_active                INTEGER NOT NULL,  -- 1 while currently monitored
+    first_seen_at           TEXT    NOT NULL,
+    last_scan_at            TEXT    NOT NULL
+);
+
+-- Raw per-item, per-band step snapshot for every member of a *candidate*
+-- group (plan §2: "走査の記録は生のまま残す(15装備ぶん)"). Append-only, one
+-- set of rows per scan run -- never overwritten, kept even when that run's
+-- consistency check failed (the audit trail is unconditional).
+CREATE TABLE IF NOT EXISTS sf_discovery_scan_raw (
+    run_id       INTEGER NOT NULL REFERENCES sf_discovery_scan_runs(id),
+    item_id      INTEGER NOT NULL,
+    item_upgrade INTEGER NOT NULL,
+    step         TEXT,
+    fetched_at   TEXT    NOT NULL,
+    PRIMARY KEY (run_id, item_id, item_upgrade)
+);
+
+-- Component B: 5-minute poll of the monitored representatives ONLY (plan §2
+-- B / A-1: "alias は叩かない" -- never populated for a non-representative
+-- itemId). One row per (item_id, item_upgrade, price_at) -- `price_at` is
+-- that point's own window start (the upstream `currentPrice`/`previousPrice`
+-- `startDate`), upserted so the same window is never duplicated (§5(e)).
+-- `price` is CONVERTED (divided by fetch_latest.PRICE_DIVISOR), matching
+-- that module's existing convention for this exact upstream (openapi
+-- dynamicprice) -- unlike sf_price_history_hourly/_4h's `end_price`, which
+-- stores a DIFFERENT upstream field that is already unconverted-scale.
+CREATE TABLE IF NOT EXISTS sf_discovery_price_history (
+    item_id      INTEGER NOT NULL,
+    item_upgrade INTEGER NOT NULL,
+    price_at     TEXT    NOT NULL,   -- window start (ISO8601 UTC)
+    end_at       TEXT,               -- window end
+    price        REAL    NOT NULL,
+    step         TEXT    NOT NULL,
+    fetched_at   TEXT    NOT NULL,
+    PRIMARY KEY (item_id, item_upgrade, price_at)
+);
