@@ -1,6 +1,7 @@
 import { useTranslation } from "../../../i18n/I18nContext.jsx";
-import { formatExactNeso, formatTooltipDate } from "../../domain/format.js";
+import { formatTooltipDate } from "../../domain/format.js";
 import { buildBandRows } from "../domain/bands.js";
+import { formatDiscoveryPrice } from "../domain/priceFormat.js";
 
 /** plan §1/§5(h): the full ☆1-25 price/step table for one monitored
  * representative, with a "Forming" badge on every band whose price has not
@@ -29,8 +30,8 @@ export default function DiscoveryPriceTable({ bands, upgradeCount = 25 }) {
         {rows.map((row) => (
           <tr key={row.itemUpgrade}>
             <td className="py-1.5 pr-3 text-slate-200">☆{row.star}</td>
-            <td className="py-1.5 pr-3 text-slate-100" title={row.price != null ? formatExactNeso(row.price) : undefined}>
-              {row.price != null ? formatExactNeso(row.price) : "--"}
+            <td className="py-1.5 pr-3 text-slate-100 tabular-nums" title={row.price != null ? formatDiscoveryPrice(row.price) : undefined}>
+              {formatDiscoveryPrice(row.price)}
             </td>
             <td className="py-1.5 pr-3">
               {row.isDiscovery ? (
