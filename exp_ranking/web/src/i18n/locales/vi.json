@@ -623,8 +623,7 @@
     }
   },
   "sfhistoryDiscovery": {
-    "pageTitle": "Trang bị mới",
-    "pageDescription": "Trang bị vừa được thêm vào, được kiểm tra giá mỗi 5 phút. Giao dịch vẫn còn ít nên giá gần bằng 0 chỉ đơn giản có nghĩa là thị trường chưa xác định được giá. Trang này không bao giờ gọi trực tiếp đến máy chủ chính thức -- chỉ hiển thị những gì đã được ghi lại.",
+    "pageDescription": "Theo dõi quá trình hình thành giá của trang bị vừa được thêm vào.",
     "loading": "Đang tải...",
     "equipment": {
       "label": "Trang bị",

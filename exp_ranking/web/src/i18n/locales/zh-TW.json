@@ -623,8 +623,7 @@
     }
   },
   "sfhistoryDiscovery": {
-    "pageTitle": "新裝備",
-    "pageDescription": "剛新增的裝備，每 5 分鐘記錄一次價格。目前交易量仍然很少，價格接近 0 只是代表市場尚未形成價格。此頁面不會直接呼叫官方伺服器 -- 僅顯示已記錄的資料。",
+    "pageDescription": "追蹤剛新增裝備的價格形成過程。",
     "loading": "載入中...",
     "equipment": {
       "label": "裝備",

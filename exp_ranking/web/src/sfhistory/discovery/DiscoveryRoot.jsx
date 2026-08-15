@@ -121,10 +121,12 @@ export default function DiscoveryRoot() {
             on this page's own tab. */}
         <SfHistoryTabs active="discovery" />
 
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t("sfhistoryDiscovery.pageTitle")}</h1>
-          <p className="mt-1.5 max-w-3xl text-sm text-slate-400">{t("sfhistoryDiscovery.pageDescription")}</p>
-        </div>
+        {/* Post-review follow-up (実機レビュー): no <h1> here -- the tab bar
+            right above already reads "New Equipment" (SfHistoryTabs.jsx),
+            so a second, page-level heading repeating that same name added
+            nothing. `sfhistoryDiscovery.pageTitle` is removed outright (not
+            emptied) -- see the i18n locale files' own diff. */}
+        <p className="max-w-3xl text-sm text-slate-400">{t("sfhistoryDiscovery.pageDescription")}</p>
 
         {equipmentState.status === "loading" ? (
           <p className="text-sm text-slate-400">{t("sfhistoryDiscovery.loading")}</p>

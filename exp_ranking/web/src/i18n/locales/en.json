@@ -623,8 +623,7 @@
     }
   },
   "sfhistoryDiscovery": {
-    "pageTitle": "New Equipment",
-    "pageDescription": "Recently added equipment, price-checked every 5 minutes. Trading is still limited for these, so a price near zero simply means the market hasn't settled on one yet. This page never fetches from the official server directly -- it only shows what has already been recorded.",
+    "pageDescription": "Tracks how prices form for newly added equipment.",
     "loading": "Loading...",
     "equipment": {
       "label": "Equipment",

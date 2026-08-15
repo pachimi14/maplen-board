@@ -623,8 +623,7 @@
     }
   },
   "sfhistoryDiscovery": {
-    "pageTitle": "Equipo nuevo",
-    "pageDescription": "Equipo añadido recientemente, con el precio comprobado cada 5 minutos. El volumen de operaciones aún es bajo, así que un precio cercano a cero solo significa que el mercado todavía no ha fijado uno. Esta página nunca consulta el servidor oficial directamente -- solo muestra lo que ya se ha registrado.",
+    "pageDescription": "Sigue cómo se forman los precios del equipo recién añadido.",
     "loading": "Cargando...",
     "equipment": {
       "label": "Equipo",
