@@ -1,0 +1,17 @@
+[Unit]
+Description=Run sf-history-discovery-poll.service every 5 minutes
+
+[Timer]
+# IMPL_PLAN_SH32 §2 B: 5-minute cadence is the accepted-precision trade-off
+# (plan §2 B: "5分間隔で受け入れる精度の劣化" -- the upstream itself updates
+# every ~1 minute, F9, so a DISCOVERY -> CHANGE flip is only ever localized
+# to a 5-minute window, never a precise instant; see app.py's
+# `/sf-history/discovery/recent` docstring). RandomizedDelaySec kept small
+# (this must stay close to its 5-minute cadence, unlike the daily/4-hourly
+# jobs above).
+OnCalendar=*:0/5
+Persistent=true
+RandomizedDelaySec=15
+
+[Install]
+WantedBy=timers.target

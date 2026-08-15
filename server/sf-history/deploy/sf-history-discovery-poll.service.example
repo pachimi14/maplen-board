@@ -1,0 +1,25 @@
+[Unit]
+Description=Lulumi Tools SF price history -- DISCOVERY 5-minute poll (one-shot)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# One-shot, NOT a daemon -- same discipline as the other sf-history *.service
+# examples. IMPL_PLAN_SH32 §2 B: currently 3 representative itemIds -> 3
+# upstream requests per run when there is anything monitored at all; 0
+# requests (no key needed) when there is nothing to poll (plan §5(l)).
+Type=oneshot
+User=botuser
+Group=botuser
+WorkingDirectory=/home/botuser/apps/lulumi-tools-sf-history
+Environment=SF_HISTORY_DB_PATH=/home/botuser/apps/lulumi-tools-sf-history/data/sf_price_history.sqlite
+# ★秘密情報: same EnvironmentFile as sf-history-discovery-scan.service.example
+# -- only actually required when there is at least one active monitored
+# group (poll_discovery.py checks that BEFORE requiring the key).
+EnvironmentFile=/etc/lulumi-tools/sf-history-discovery.env
+ExecStart=/home/botuser/apps/lulumi-tools-sf-history/.venv/bin/python scripts/poll_discovery.py
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
