@@ -1,0 +1,49 @@
+import { useTranslation } from "../../../i18n/I18nContext.jsx";
+import { formatExactNeso, formatTooltipDate } from "../../domain/format.js";
+import { buildBandRows } from "../domain/bands.js";
+
+/** plan §1/§5(h): the full ☆1-25 price/step table for one monitored
+ * representative, with a DISCOVERY badge on every band still in a bonus
+ * period -- this page's own addition (plan §3: "既存のチャートページに
+ * バッジを出さない", so it lives only here). */
+export default function DiscoveryPriceTable({ bands, upgradeCount = 25 }) {
+  const { t, language } = useTranslation();
+  const rows = buildBandRows(bands, upgradeCount);
+
+  return (
+    <table className="w-full text-sm">
+      <thead>
+        <tr className="text-left text-slate-400">
+          <th className="py-1.5 pr-3 font-medium">{t("sfhistoryDiscovery.prices.star")}</th>
+          <th className="py-1.5 pr-3 font-medium">{t("sfhistoryDiscovery.prices.price")}</th>
+          <th className="py-1.5 pr-3 font-medium">{t("sfhistoryDiscovery.prices.status")}</th>
+          <th className="py-1.5 font-medium">{t("sfhistoryDiscovery.prices.priceWindow")}</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-slate-800">
+        {rows.map((row) => (
+          <tr key={row.itemUpgrade}>
+            <td className="py-1.5 pr-3 text-slate-200">☆{row.star}</td>
+            <td className="py-1.5 pr-3 text-slate-100" title={row.price != null ? formatExactNeso(row.price) : undefined}>
+              {row.price != null ? formatExactNeso(row.price) : "--"}
+            </td>
+            <td className="py-1.5 pr-3">
+              {row.isDiscovery ? (
+                <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-300">
+                  {t("sfhistoryDiscovery.prices.discoveryBadge")}
+                </span>
+              ) : row.step ? (
+                <span className="text-xs text-slate-500">{t("sfhistoryDiscovery.prices.endedBadge")}</span>
+              ) : (
+                <span className="text-xs text-slate-600">{t("sfhistoryDiscovery.prices.noData")}</span>
+              )}
+            </td>
+            <td className="py-1.5 text-slate-400">
+              {row.priceAt ? formatTooltipDate(row.priceAt, { locale: language }) : "--"}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}

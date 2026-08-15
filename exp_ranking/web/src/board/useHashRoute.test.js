@@ -100,6 +100,33 @@ describe("parseHash: Task Manager routes", () => {
   });
 });
 
+describe("parseHash: #/starforce/discovery (IMPL_PLAN_SH32 §2 C)", () => {
+  it("parses '#/starforce' as 'starforce' (existing route, no regression)", async () => {
+    const { parseHash } = await freshModule();
+    expect(parseHash("#/starforce").name).toBe("starforce");
+  });
+
+  it("parses '#/starforce/discovery' as its own route, not 'starforce'", async () => {
+    const { parseHash } = await freshModule();
+    const route = parseHash("#/starforce/discovery");
+    expect(route.name).toBe("starforceDiscovery");
+  });
+
+  it("round-trips '#/starforce/discovery' through navigateToStarforceDiscovery", async () => {
+    installFakeWindow("#/");
+    const { navigateToStarforceDiscovery, parseHash } = await freshModule();
+    navigateToStarforceDiscovery();
+    await flushRouteCommit();
+    expect(globalThis.window.location.hash).toBe("#/starforce/discovery");
+    expect(parseHash(globalThis.window.location.hash).name).toBe("starforceDiscovery");
+  });
+
+  it("an unknown /starforce/* sub-path still falls back to list (never crashes)", async () => {
+    const { parseHash } = await freshModule();
+    expect(parseHash("#/starforce/nonsense").name).toBe("list");
+  });
+});
+
 describe("navigateToGroup / navigateToList round trip (T4b §22.4)", () => {
   it("navigateToGroup() from the list produces '#/group', preserving the current query", async () => {
     installFakeWindow("#/?sort=weekly&minLevel=230");

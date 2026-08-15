@@ -621,5 +621,37 @@
       "highestBadge": "最高",
       "disclaimer": "僅顯示中位數，並非建議在特定星期或時段進行強化。"
     }
+  },
+  "sfhistoryDiscovery": {
+    "pageTitle": "DISCOVERY（獎勵期間）",
+    "pageDescription": "目前處於 DISCOVERY 獎勵期間的裝備，每 5 分鐘記錄一次。此頁面不會直接呼叫官方伺服器 -- 僅顯示已記錄的資料。",
+    "loading": "載入中...",
+    "equipment": {
+      "label": "裝備",
+      "searchPlaceholder": "以物品名稱或物品 ID 搜尋",
+      "noMatch": "找不到符合的裝備",
+      "loadError": "無法載入監控中的裝備清單，請稍後重新載入。",
+      "empty": "目前沒有裝備處於 DISCOVERY 期間。",
+      "inconsistentWarning": "最近一次掃描發現此群組的職業變體之間資料不一致，正顯示最後一次確認的資料。"
+    },
+    "prices": {
+      "star": "星",
+      "price": "價格",
+      "status": "狀態",
+      "priceWindow": "價格時間窗",
+      "discoveryBadge": "DISCOVERY",
+      "endedBadge": "已結束",
+      "noData": "尚無資料",
+      "loadError": "無法載入此裝備的 DISCOVERY 價格，請稍後重新載入。",
+      "observedAt": "觀測時間：{{timestamp}}",
+      "observedAtStale": "(記錄程式可能已停止 -- 此資料可能已過時)",
+      "neverPolled": "尚未有記錄。"
+    },
+    "recent": {
+      "title": "最近結束",
+      "empty": "過去 {{days}} 天內沒有 DISCOVERY 期間結束。",
+      "loadError": "無法載入最近結束的 DISCOVERY 期間，請稍後重新載入。",
+      "endedBetween": "於 {{start}} 至 {{end}} 之間結束"
+    }
   }
 }

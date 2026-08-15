@@ -621,5 +621,37 @@
       "highestBadge": "Highest",
       "disclaimer": "Shows the median only -- not a recommendation to enhance on any particular weekday or time."
     }
+  },
+  "sfhistoryDiscovery": {
+    "pageTitle": "DISCOVERY (Bonus Period)",
+    "pageDescription": "Equipment currently in a DISCOVERY bonus period, polled every 5 minutes. This page never fetches from the official server directly -- it only shows what has already been recorded.",
+    "loading": "Loading...",
+    "equipment": {
+      "label": "Equipment",
+      "searchPlaceholder": "Search by item name or item ID",
+      "noMatch": "No matching equipment found",
+      "loadError": "Could not load the monitored-equipment list. Please reload later.",
+      "empty": "No equipment is currently in a DISCOVERY period.",
+      "inconsistentWarning": "The latest scan found a mismatch between this group's job variants. Showing the last confirmed data."
+    },
+    "prices": {
+      "star": "Star",
+      "price": "Price",
+      "status": "Status",
+      "priceWindow": "Price window",
+      "discoveryBadge": "DISCOVERY",
+      "endedBadge": "Ended",
+      "noData": "No data yet",
+      "loadError": "Could not load this equipment's DISCOVERY prices. Please reload later.",
+      "observedAt": "Observed as of {{timestamp}}",
+      "observedAtStale": "(the poller may have stopped -- this may be out of date)",
+      "neverPolled": "Not polled yet."
+    },
+    "recent": {
+      "title": "Recently ended",
+      "empty": "No DISCOVERY period has ended in the last {{days}} days.",
+      "loadError": "Could not load recently-ended DISCOVERY periods. Please reload later.",
+      "endedBetween": "ended sometime between {{start}} and {{end}}"
+    }
   }
 }

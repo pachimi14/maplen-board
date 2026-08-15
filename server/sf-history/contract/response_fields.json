@@ -13,5 +13,20 @@
     "$comment": "GET /sf-history/equipment. `root` and `item` are both always fully present (no optional keys on this endpoint).",
     "root": ["generatedAt", "excluded", "items"],
     "item": ["itemId", "itemName", "aliasItemIds", "maxStar", "aliases"]
+  },
+  "discoveryEquipment": {
+    "$comment": "IMPL_PLAN_SH32 -- GET /sf-history/discovery/equipment. `root` and `item` are both always fully present.",
+    "root": ["items"],
+    "item": ["itemId", "itemName", "aliasItemIds", "aliases", "stepsConsistent", "lastScanAt"]
+  },
+  "discoveryPrices": {
+    "$comment": "IMPL_PLAN_SH32 -- GET /sf-history/discovery/prices?itemId=. `root` and `band` are both always fully present -- a band never polled yet still appears with price/step/priceAt: null, isDiscovery: false.",
+    "root": ["itemId", "itemName", "upgradeCount", "observedAt", "bands"],
+    "band": ["itemUpgrade", "price", "step", "priceAt", "isDiscovery"]
+  },
+  "discoveryRecent": {
+    "$comment": "IMPL_PLAN_SH32 -- GET /sf-history/discovery/recent. `root` and `item` are both always fully present.",
+    "root": ["days", "items"],
+    "item": ["itemId", "itemName", "itemUpgrade", "windowStart", "windowEnd"]
   }
 }
