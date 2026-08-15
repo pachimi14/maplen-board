@@ -65,6 +65,45 @@ def test_parse_steps_raises_on_missing_starforce() -> None:
         discovery.parse_dynamicprice_steps({})
 
 
+# --- pick_representative_item (★2026-08-15 VPS fix -- §5(u)/(v)) ------------
+
+
+def test_pick_representative_item_picks_highest_week_count() -> None:
+    items = [
+        {"itemId": 1004808, "weekCount": 3153},
+        {"itemId": 1004811, "weekCount": 4112},
+        {"itemId": 1004809, "weekCount": 2109},
+    ]
+    result = discovery.pick_representative_item(items)
+    assert result["itemId"] == 1004811
+
+
+def test_pick_representative_item_none_for_empty_input() -> None:
+    assert discovery.pick_representative_item([]) is None
+
+
+def test_pick_representative_item_treats_missing_week_count_as_zero() -> None:
+    items = [{"itemId": 1, "weekCount": 0}, {"itemId": 2}]
+    result = discovery.pick_representative_item(items)
+    assert result["itemId"] == 1  # tie at 0 -- lower itemId wins deterministically
+
+
+def test_v_pick_representative_item_is_deterministic_regardless_of_input_order() -> None:
+    """(v): a weekCount tie must resolve the same way no matter which order
+    the API happens to list the tied candidates in -- ascending itemId."""
+    a = {"itemId": 1004810, "weekCount": 500}
+    b = {"itemId": 1004808, "weekCount": 500}  # tied with a, lower itemId
+    c = {"itemId": 1004812, "weekCount": 100}
+
+    result_order_1 = discovery.pick_representative_item([a, b, c])
+    result_order_2 = discovery.pick_representative_item([b, a, c])
+    result_order_3 = discovery.pick_representative_item([c, b, a])
+
+    assert result_order_1["itemId"] == 1004808
+    assert result_order_2["itemId"] == 1004808
+    assert result_order_3["itemId"] == 1004808
+
+
 # --- is_monitored (§5(c): ☆23-25 never used in judgment) --------------------
 
 

@@ -73,6 +73,27 @@ DBレベルの防御(部分ユニークインデックス)自体のテストも�
 
 **既存 (a)〜(p) との整合**: この修正で新たに部分ユニークインデックスが有効になったことで、複数のACTIVEグループを同一グループ識別子で擬似的に seed していた既存テストのヘルパー(`tests/test_app_discovery.py::_seed_group` / `tests/test_poll_discovery.py::_seed_active_group`)が現実には起こり得ない状態を作っていたことが判明し、`equip_part_type` を呼び出し側で区別するよう修正した(3件のテストのみ、アサーション自体は無変更)。
 
+## 1.6 ★VPS 検収差し戻し修正(2026-08-15、5本目のコミット)
+
+**症状**: VPS(`163.44.118.206`)で `sf-history-discovery-scan.service` が即座に `ModuleNotFoundError: No module named 'item_catalog'` で失敗。原因は `scripts/scan_discovery.py` が代表選定のため maplenEnhancebot の `item_catalog` を import していたが、`server/sf-history/` は VPS に単独配置(`/home/botuser/apps/lulumi-tools-sf-history/`)であり maplenEnhancebot が存在しないため。ローカルには両リポジトリが並んで存在するためテスト・手元実行では検出できなかった。
+
+**統括裁定(計画書 A-1 の欠落・統括の責任)**: 「代表の選び方は既存 `pick_representative_item()` と同じ規則」という記述を「その関数を import する」と読んだのは妥当だが、VPS配置構成が受け入れ基準に無かったのも欠陥。
+
+### 修正内容
+
+1. **`discovery.py`**: `pick_representative_item()` を**新規実装**(maplenEnhancebot への import を廃止)。ルールは `item_catalog.py` の同名関数と同一(週間強化回数最大)である旨をコメントに明記(出典)。**同点時は itemId 昇順**で決定性を保証(`min(items, key=lambda item: (-weekCount, itemId))`)。旧実装(`max()`)は同点で入力順依存だったが、代表固定(コミット `6dd4966`)の趣旨に反するため修正。
+2. **`scripts/scan_discovery.py`**: `_default_pick_representative_item()` / `DEFAULT_SOURCE_REPO` / `--source-repo` 引数を**削除**。`run_scan()` の `pick_representative_item` 引数はテスト注入口として維持し、デフォルトを `discovery.pick_representative_item` に変更。
+3. **`scripts/gen_item_list.py`**(SF History の既存31装備リスト生成スクリプト)は**対象外**(DISCOVERY機能のランタイムサービスではなく、ローカルで手動実行する生成スクリプトのため、maplenEnhancebot 読み取り専用importは元々の設計どおり継続)。
+
+### 受け入れ基準(追加分)の実測
+
+| # | 内容 | テスト | 結果 |
+|---|---|---|---|
+| **(u)** | `scan_discovery.py`/`poll_discovery.py`/`discovery.py`/`app.py`/`db.py` が `server/sf-history/` の外を import しない | `tests/test_no_cross_repo_imports.py`(5モジュール × サブプロセスimport検証 + 静的import文検出、計10件) | ✅ |
+| **(v)** | weekCount 同点時、入力順を入れ替えても同じ代表 | `tests/test_discovery.py::test_v_pick_representative_item_is_deterministic_regardless_of_input_order` | ✅ |
+
+(u) は `PYTHONPATH` を除去したクリーンな `sys.path`(`server/sf-history/` のみ)でサブプロセス import する方式(統括提案どおり)+ 実import文の静的検出(コメント上の言及は誤検出しない正規表現)の二段構え。加えて、実際の VPS 起動経路そのもの(`python scripts/scan_discovery.py --help` / `poll_discovery.py --help` を `PYTHONPATH` 除去環境でサブプロセス実行)でも手元で再現・確認済み(returncode 0)。
+
 ### ★F8「エラー0」の意味についての注記(統括裁定によりコード変更なし)
 
 統括の裁定により **本件はコードを変更しない**。§2(a) に記載した実測は、後日「F8『エラー0』は HTTP ステータスのみの意味(ペイロード形状異常=価格データなしの102件は含まない)」という理解で読むこと。統括が独立に60件サンプル検証し、`Sacred Rosary`/`Evolving Wrist Armor` 等の強化不可能な装備が該当することを確認済み(統括裁定に基づきここに転記)。
@@ -164,9 +185,10 @@ sf_discovery_scan_raw: 375 rows (15 items x 25 bands) -- exactly the §1 "15装�
 
 ```
 python -m pytest -q (server/sf-history)      : 159 passed  (C コミット時点)
-                                                169 passed  (検収差し戻し修正コミット後 -- (q)(r)(s)(t) 4件 +
-                                                             db層6件 追加、既存3件は group identity 修正のみ)
-npm run test (exp_ranking/web, vitest)       : 676 passed / 59 files(修正後も再実行・不変)
+                                                169 passed  (検収差し戻し①: 代表固定修正後)
+                                                183 passed  (検収差し戻し②: VPS依存除去修正後 --
+                                                             (u)(v) 計14件 追加)
+npm run test (exp_ranking/web, vitest)       : 676 passed / 59 files(2回の修正後も再実行・不変)
 npm run build (exp_ranking/web, vite build)  : 成功(dist/ 生成、2404 modules transformed)
 ```
 
