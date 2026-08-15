@@ -653,5 +653,10 @@
       "loadError": "No se pudieron cargar los periodos DISCOVERY finalizados recientemente. Vuelve a intentarlo más tarde.",
       "endedBetween": "finalizó en algún momento entre {{start}} y {{end}}"
     }
+  },
+  "sfhistoryTabs": {
+    "navLabel": "Páginas de historial de SF",
+    "sfHistory": "SF History",
+    "newEquipment": "New Equipment"
   }
 }

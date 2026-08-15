@@ -6,6 +6,7 @@ import { setDashboardThemeColor, setDashboardThemeDepth } from "../taskManager/d
 import { sfHistorySource } from "./integrations/sfHistorySource.js";
 import { DEFAULT_PERIOD, defaultPresetForMaxStar, isValidStarRange, selectInitialItem } from "./domain/series.js";
 import { buildScreenModel, isRangeReady } from "./domain/viewModel.js";
+import SfHistoryTabs from "./SfHistoryTabs.jsx";
 import EquipmentSelector from "./components/EquipmentSelector.jsx";
 import StarRangeSelector from "./components/StarRangeSelector.jsx";
 import PeriodTabs from "./components/PeriodTabs.jsx";
@@ -173,6 +174,11 @@ export default function SfHistoryRoot() {
     <div className="site-theme sfh-root min-h-screen">
       <SiteHeader active="sfhistory" theme={theme} onThemeChange={handleThemeChange} />
       <main className="mx-auto max-w-6xl space-y-5 px-4 py-6 md:px-8">
+        {/* IMPL_PLAN_SH33 §3 (A): in-page tab bar to `#/starforce/discovery`
+            and back -- both pages render the same component (§5(g): "両
+            ページに同じタブが出る"). */}
+        <SfHistoryTabs active="sfHistory" />
+
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{t("sfhistory.pageTitle")}</h1>
           <p className="mt-1.5 max-w-3xl text-sm text-slate-400">{t("sfhistory.pageDescription")}</p>

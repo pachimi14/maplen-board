@@ -653,5 +653,10 @@
       "loadError": "最近終了したDISCOVERY期間を読み込めませんでした。しばらくしてから再読み込みしてください。",
       "endedBetween": "{{start}} 〜 {{end}} の間に終了しました"
     }
+  },
+  "sfhistoryTabs": {
+    "navLabel": "SF履歴ページ",
+    "sfHistory": "SF History",
+    "newEquipment": "New Equipment"
   }
 }
