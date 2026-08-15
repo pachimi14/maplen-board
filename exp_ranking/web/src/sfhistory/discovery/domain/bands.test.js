@@ -20,6 +20,23 @@ describe("buildBandRows", () => {
     const rows = buildBandRows([], 25);
     expect(rows).toHaveLength(25);
     expect(rows.every((r) => r.price === null && r.step === null && r.isDiscovery === false)).toBe(true);
+    expect(rows.every((r) => r.windowStart === null && r.windowEnd === null)).toBe(true);
+  });
+
+  // IMPL_PLAN_SH33 follow-up (post-review): windowStart/windowEnd -- this
+  // band's own observed DISCOVERY -> CHANGE flip window.
+  it("carries windowStart/windowEnd through when the server reports an observed transition", () => {
+    const rows = buildBandRows(
+      [
+        { itemUpgrade: 3, price: 1, step: "STEP_TYPE_CHANGE", priceAt: "x", isDiscovery: false, windowStart: "2026-08-14T10:00:00Z", windowEnd: "2026-08-14T10:05:00Z" },
+        { itemUpgrade: 4, price: 1, step: "STEP_TYPE_DISCOVERY", priceAt: "x", isDiscovery: true, windowStart: null, windowEnd: null },
+      ],
+      25,
+    );
+    expect(rows[3].windowStart).toBe("2026-08-14T10:00:00Z");
+    expect(rows[3].windowEnd).toBe("2026-08-14T10:05:00Z");
+    expect(rows[4].windowStart).toBeNull();
+    expect(rows[4].windowEnd).toBeNull();
   });
 
   it("(h)/(c)-style real data: Suit pattern -- only 11-14,16 (itemUpgrade 10-13,15) lack the badge", () => {

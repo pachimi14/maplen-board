@@ -285,3 +285,106 @@ def test_find_recent_discovery_transitions_empty_when_no_flip_yet(tmp_path: Path
     transitions = db.find_recent_discovery_transitions(conn, since_iso="2026-01-01T00:00:00Z")
     assert transitions == []
     conn.close()
+
+
+# --- find_discovery_transitions_for_item -- IMPL_PLAN_SH33 follow-up ---------
+
+
+def test_find_discovery_transitions_for_item_returns_only_observed_flips(tmp_path: Path) -> None:
+    conn = db.connect(tmp_path / "x.sqlite")
+    db.apply_schema(conn)
+    db.upsert_discovery_price_points(
+        conn, 1053063, 3,
+        [
+            {"priceAt": "2026-08-14T10:00:00Z", "endAt": None, "price": 1.0, "step": "STEP_TYPE_DISCOVERY"},
+            {"priceAt": "2026-08-14T10:05:00Z", "endAt": None, "price": 1.0, "step": "STEP_TYPE_CHANGE"},
+        ],
+        "2026-08-14T10:05:05Z",
+    )
+    db.upsert_discovery_price_points(
+        conn, 1053063, 4,
+        [{"priceAt": "2026-08-15T09:28:00Z", "endAt": None, "price": 1.0, "step": "STEP_TYPE_DISCOVERY"}],
+        "2026-08-15T09:28:05Z",
+    )
+    transitions = db.find_discovery_transitions_for_item(conn, 1053063)
+    assert transitions == {3: ("2026-08-14T10:00:00Z", "2026-08-14T10:05:00Z")}  # band 4 absent -- still DISCOVERY
+    conn.close()
+
+
+def test_find_discovery_transitions_for_item_never_guesses_a_pre_monitoring_settle(tmp_path: Path) -> None:
+    """A band whose FIRST ever recorded row is already CHANGE (it settled
+    before monitoring started) must not appear -- the true instant is
+    unknowable, so this is deliberately indistinguishable from "unobserved"
+    (plan: "推測して埋めない")."""
+    conn = db.connect(tmp_path / "x.sqlite")
+    db.apply_schema(conn)
+    db.upsert_discovery_price_points(
+        conn, 1053063, 10,
+        [{"priceAt": "2026-08-15T09:28:00Z", "endAt": None, "price": 1.0, "step": "STEP_TYPE_CHANGE"}],
+        "2026-08-15T09:28:05Z",
+    )
+    transitions = db.find_discovery_transitions_for_item(conn, 1053063)
+    assert transitions == {}
+    conn.close()
+
+
+def test_find_discovery_transitions_for_item_empty_when_never_polled(tmp_path: Path) -> None:
+    conn = db.connect(tmp_path / "x.sqlite")
+    db.apply_schema(conn)
+    assert db.find_discovery_transitions_for_item(conn, 999) == {}
+    conn.close()
+
+
+def test_find_discovery_transitions_for_item_only_returns_that_items_own_bands(tmp_path: Path) -> None:
+    conn = db.connect(tmp_path / "x.sqlite")
+    db.apply_schema(conn)
+    for item_id in (1053063, 1053064):
+        db.upsert_discovery_price_points(
+            conn, item_id, 0,
+            [
+                {"priceAt": "2026-08-14T10:00:00Z", "endAt": None, "price": 1.0, "step": "STEP_TYPE_DISCOVERY"},
+                {"priceAt": "2026-08-14T10:05:00Z", "endAt": None, "price": 1.0, "step": "STEP_TYPE_CHANGE"},
+            ],
+            "2026-08-14T10:05:05Z",
+        )
+    transitions = db.find_discovery_transitions_for_item(conn, 1053063)
+    assert set(transitions.keys()) == {0}
+    conn.close()
+
+
+# --- list_visible_discovery_monitored_groups -- IMPL_PLAN_SH33 follow-up ----
+
+
+def test_list_visible_includes_active_and_recently_deactivated(tmp_path: Path) -> None:
+    conn = db.connect(tmp_path / "x.sqlite")
+    db.apply_schema(conn)
+    _seed_group(conn, representative_item_id=1004808, is_active=True, now="2026-08-15T00:00:00Z")
+    _seed_group(conn, representative_item_id=1053063, is_active=False, now="2026-08-10T00:00:00Z")
+
+    visible = db.list_visible_discovery_monitored_groups(conn, since_iso="2026-08-01T00:00:00Z")
+    assert {g["itemId"] for g in visible} == {1004808, 1053063}
+    conn.close()
+
+
+def test_list_visible_excludes_a_group_deactivated_before_since_iso(tmp_path: Path) -> None:
+    conn = db.connect(tmp_path / "x.sqlite")
+    db.apply_schema(conn)
+    _seed_group(conn, representative_item_id=1004808, is_active=True, now="2026-08-15T00:00:00Z")
+    _seed_group(conn, representative_item_id=9999999, is_active=False, now="2026-01-01T00:00:00Z")
+
+    visible = db.list_visible_discovery_monitored_groups(conn, since_iso="2026-08-01T00:00:00Z")
+    assert {g["itemId"] for g in visible} == {1004808}
+    conn.close()
+
+
+def test_list_visible_still_never_shows_a_poll_target_to_component_b(tmp_path: Path) -> None:
+    """list_active_discovery_monitored_groups (Component B's own poll-target
+    list) is untouched by this addition -- a recently-deactivated group must
+    NOT be polled again just because it is still visible in the equipment
+    list."""
+    conn = db.connect(tmp_path / "x.sqlite")
+    db.apply_schema(conn)
+    _seed_group(conn, representative_item_id=1053063, is_active=False, now="2026-08-10T00:00:00Z")
+    assert db.list_active_discovery_monitored_groups(conn) == []
+    assert len(db.list_visible_discovery_monitored_groups(conn, since_iso="2026-08-01T00:00:00Z")) == 1
+    conn.close()

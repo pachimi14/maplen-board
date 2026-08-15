@@ -46,6 +46,14 @@ export function normalizeDiscoveryEquipmentPayload(payload) {
         aliases,
         stepsConsistent: row.stepsConsistent !== false,
         lastScanAt: toNonEmptyStringOrNull(row.lastScanAt),
+        // IMPL_PLAN_SH33 follow-up (post-review, (m)): the server now keeps
+        // a fully-settled group listed for SF_HISTORY_DISCOVERY_RECENT_DAYS
+        // days past deactivation (so its own price table stays reachable)
+        // -- `isActive` is how a caller tells that case apart from a still-
+        // actively-monitored one. Defaults `true` for a payload that omits
+        // it (should not happen against a real server, but never silently
+        // mislabels a group "inactive" it has no evidence for).
+        isActive: row.isActive !== false,
       };
     });
   return { ok: true, code: "ok", items };
@@ -66,6 +74,14 @@ export function normalizeDiscoveryPricesPayload(payload, expectedItemId) {
       step: toNonEmptyStringOrNull(band.step),
       priceAt: toNonEmptyStringOrNull(band.priceAt),
       isDiscovery: band.isDiscovery === true,
+      // IMPL_PLAN_SH33 follow-up (post-review): this band's own observed
+      // DISCOVERY -> CHANGE flip (discovery.find_transition's 5-minute-poll
+      // window) -- null when never observed (still DISCOVERY, or already
+      // CHANGE in the very first row ever recorded -- settled before
+      // monitoring started). Same field names/shape as
+      // normalizeDiscoveryRecentPayload's own windowStart/windowEnd below.
+      windowStart: toNonEmptyStringOrNull(band.windowStart),
+      windowEnd: toNonEmptyStringOrNull(band.windowEnd),
     }));
   return {
     ok: true,
