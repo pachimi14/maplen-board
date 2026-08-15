@@ -31,7 +31,14 @@ def _env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return db_path
 
 
-def _seed_group(db_path: Path, *, representative_item_id: int = 1004808, is_active: bool = True) -> None:
+def _seed_group(
+    db_path: Path, *, representative_item_id: int = 1004808, is_active: bool = True, equip_part_type: str = "CAP"
+) -> None:
+    # ★2026-08-15 fix: `equip_part_type` is part of the group's real identity
+    # (schema.sql's partial unique index) -- a caller seeding more than one
+    # ACTIVE group in the same test must pass distinct values, or the second
+    # insert raises sqlite3.IntegrityError (exactly the guard rail
+    # docs/reports/SH32_DISCOVERY.md's fix section describes).
     conn = db.connect(db_path)
     db.upsert_discovery_monitored_group(
         conn,
@@ -39,7 +46,7 @@ def _seed_group(db_path: Path, *, representative_item_id: int = 1004808, is_acti
         item_name="Arcane Umbra Knight Hat",
         equip_level_type="RANGE_200_TO_209",
         equip_type="BOSS_ARCANE_UMBRA_SET",
-        equip_part_type="CAP",
+        equip_part_type=equip_part_type,
         alias_item_ids=[representative_item_id, representative_item_id + 1],
         aliases=[
             {"itemId": representative_item_id, "itemName": "Arcane Umbra Knight Hat"},
@@ -56,9 +63,9 @@ def _seed_group(db_path: Path, *, representative_item_id: int = 1004808, is_acti
 
 
 def test_discovery_equipment_lists_only_active_groups(_env: Path) -> None:
-    _seed_group(_env, representative_item_id=1004808, is_active=True)
-    _seed_group(_env, representative_item_id=1053063, is_active=True)
-    _seed_group(_env, representative_item_id=9999999, is_active=False)
+    _seed_group(_env, representative_item_id=1004808, is_active=True, equip_part_type="CAP")
+    _seed_group(_env, representative_item_id=1053063, is_active=True, equip_part_type="CLOTHES")
+    _seed_group(_env, representative_item_id=9999999, is_active=False, equip_part_type="SHOULDER")
 
     response = app_module.discovery_equipment(_request())
     body = json.loads(response.body)

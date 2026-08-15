@@ -301,3 +301,183 @@ def test_scan_ignores_a_group_with_no_candidate_and_writes_no_raw_rows_for_it(tm
     conn = db.connect(db_path)
     assert conn.execute("SELECT COUNT(*) FROM sf_discovery_scan_raw").fetchone()[0] == 0
     conn.close()
+
+
+# --- ★2026-08-15 fix (統括 検収差し戻し): representative is fixed per group,
+# not re-picked from weekCount every scan -- accept criteria (q)(r)(s)(t). ---
+
+
+def test_q_representative_does_not_change_when_weekcount_order_flips_across_scans(tmp_path: Path) -> None:
+    """(q): running the scan twice with the SAME membership but the
+    weekCount ordering reversed must keep the SAME representative both
+    times -- `pick_representative_item` is only consulted on the group's
+    FIRST scan; the second scan reuses the fixed one via group-identity
+    lookup."""
+    group_key = ("RANGE_200_TO_209", "BOSS_ARCANE_UMBRA_SET", "CAP")
+    db_path = tmp_path / "x.sqlite"
+
+    members_run1 = [
+        {"itemId": "1004808", "itemName": "Knight Hat", "weekCount": 3153},
+        {"itemId": "1004811", "itemName": "Thief Hat", "weekCount": 4112},  # highest -- wins run 1
+    ]
+    steps = _steps(discovery_bands={0, 5})
+    session1 = FakeSession(
+        groups=[_group(*group_key)], items_by_group_key={group_key: members_run1},
+        steps_by_item_id={1004808: steps, 1004811: steps},
+    )
+    scan_discovery.run_scan(db_path=db_path, fetcher=_make_fetcher(session1), pick_representative_item=_pick_by_week_count)
+
+    conn = db.connect(db_path)
+    assert db.list_active_discovery_monitored_groups(conn)[0]["itemId"] == 1004811
+    conn.close()
+
+    # Run 2: SAME two members, weekCount ORDER REVERSED (1004808 now wins by
+    # the raw rule) -- the fixed representative must NOT follow it.
+    members_run2 = [
+        {"itemId": "1004808", "itemName": "Knight Hat", "weekCount": 9999},
+        {"itemId": "1004811", "itemName": "Thief Hat", "weekCount": 1},
+    ]
+    session2 = FakeSession(
+        groups=[_group(*group_key)], items_by_group_key={group_key: members_run2},
+        steps_by_item_id={1004808: steps, 1004811: steps},
+    )
+    scan_discovery.run_scan(db_path=db_path, fetcher=_make_fetcher(session2), pick_representative_item=_pick_by_week_count)
+
+    conn = db.connect(db_path)
+    active = db.list_active_discovery_monitored_groups(conn)
+    assert len(active) == 1
+    assert active[0]["itemId"] == 1004811  # unchanged despite weekCount flip
+    conn.close()
+
+
+def test_r_two_identical_scans_do_not_duplicate_the_monitored_group_row(tmp_path: Path) -> None:
+    """(r): scanning the exact same data twice must not increase the row
+    count in sf_discovery_monitored_groups."""
+    group_key = ("RANGE_200_TO_209", "BOSS_ARCANE_UMBRA_SET", "CAP")
+    db_path = tmp_path / "x.sqlite"
+    members = [
+        {"itemId": "1004808", "itemName": "Knight Hat", "weekCount": 3153},
+        {"itemId": "1004811", "itemName": "Thief Hat", "weekCount": 4112},
+    ]
+    steps = _steps(discovery_bands={0})
+
+    def make_session() -> FakeSession:
+        return FakeSession(
+            groups=[_group(*group_key)], items_by_group_key={group_key: members},
+            steps_by_item_id={1004808: steps, 1004811: steps},
+        )
+
+    scan_discovery.run_scan(db_path=db_path, fetcher=_make_fetcher(make_session()), pick_representative_item=_pick_by_week_count)
+    scan_discovery.run_scan(db_path=db_path, fetcher=_make_fetcher(make_session()), pick_representative_item=_pick_by_week_count)
+
+    conn = db.connect(db_path)
+    total_rows = conn.execute("SELECT COUNT(*) FROM sf_discovery_monitored_groups").fetchone()[0]
+    assert total_rows == 1  # not 2
+    conn.close()
+
+
+def test_s_reselects_only_when_the_fixed_representative_drops_out_and_warns(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """(s): the fixed representative is only ever replaced when it is no
+    longer among the group's current members -- and that re-selection is
+    logged as a WARNING."""
+    group_key = ("RANGE_200_TO_209", "BOSS_ARCANE_UMBRA_SET", "CAP")
+    db_path = tmp_path / "x.sqlite"
+    steps = _steps(discovery_bands={0})
+
+    members_run1 = [
+        {"itemId": "1004808", "itemName": "Knight Hat", "weekCount": 100},
+        {"itemId": "1004811", "itemName": "Thief Hat", "weekCount": 1},
+    ]
+    session1 = FakeSession(
+        groups=[_group(*group_key)], items_by_group_key={group_key: members_run1},
+        steps_by_item_id={1004808: steps, 1004811: steps},
+    )
+    scan_discovery.run_scan(db_path=db_path, fetcher=_make_fetcher(session1), pick_representative_item=_pick_by_week_count)
+
+    conn = db.connect(db_path)
+    assert db.list_active_discovery_monitored_groups(conn)[0]["itemId"] == 1004808
+    conn.close()
+
+    # Run 2: 1004808 (the fixed representative) is GONE from the group's
+    # member list -- only 1004811 and a new member remain.
+    members_run2 = [
+        {"itemId": "1004811", "itemName": "Thief Hat", "weekCount": 5000},
+        {"itemId": "1004812", "itemName": "Pirate Hat", "weekCount": 1},
+    ]
+    session2 = FakeSession(
+        groups=[_group(*group_key)], items_by_group_key={group_key: members_run2},
+        steps_by_item_id={1004811: steps, 1004812: steps},
+    )
+    scan_discovery.run_scan(db_path=db_path, fetcher=_make_fetcher(session2), pick_representative_item=_pick_by_week_count)
+
+    conn = db.connect(db_path)
+    active = db.list_active_discovery_monitored_groups(conn)
+    assert len(active) == 1
+    assert active[0]["itemId"] == 1004811  # re-selected (highest weekCount of the NEW members)
+    all_groups = db.list_all_discovery_monitored_groups(conn)
+    assert len(all_groups) == 2  # old (now inactive) + new -- both kept, plan §5(k)
+    old_row = db.get_discovery_monitored_group(conn, 1004808)
+    assert old_row is not None
+    assert old_row["isActive"] is False
+    conn.close()
+
+    captured = capsys.readouterr()
+    assert "WARNING" in captured.err
+    assert "re-selecting" in captured.err
+
+
+def test_t_find_transition_stays_continuous_across_two_scans(tmp_path: Path) -> None:
+    """(t): with the representative fixed, sf_discovery_price_history rows
+    polled before AND after a second scan (with a flipped weekCount order)
+    stay under the SAME item_id -- find_transition sees them as one
+    continuous series and detects the flip, instead of the seam
+    silently swallowing it under two different representative ids."""
+    group_key = ("RANGE_200_TO_209", "BOSS_ARCANE_UMBRA_SET", "CAP")
+    db_path = tmp_path / "x.sqlite"
+    steps = _steps(discovery_bands={0})
+
+    members_run1 = [
+        {"itemId": "1004808", "itemName": "Knight Hat", "weekCount": 3153},
+        {"itemId": "1004811", "itemName": "Thief Hat", "weekCount": 4112},
+    ]
+    session1 = FakeSession(
+        groups=[_group(*group_key)], items_by_group_key={group_key: members_run1},
+        steps_by_item_id={1004808: steps, 1004811: steps},
+    )
+    scan_discovery.run_scan(db_path=db_path, fetcher=_make_fetcher(session1), pick_representative_item=_pick_by_week_count)
+
+    conn = db.connect(db_path)
+    representative_id = db.list_active_discovery_monitored_groups(conn)[0]["itemId"]
+    # Simulates Component B polling BEFORE the second scan: still DISCOVERY.
+    db.upsert_discovery_price_points(
+        conn, representative_id, 0,
+        [{"priceAt": "2026-08-15T00:00:00Z", "endAt": None, "price": 1.0, "step": "STEP_TYPE_DISCOVERY"}],
+        "2026-08-15T00:00:00Z",
+    )
+    conn.close()
+
+    # Second scan: weekCount order reversed (would have picked a DIFFERENT
+    # representative under the old, unfixed logic).
+    members_run2 = [
+        {"itemId": "1004808", "itemName": "Knight Hat", "weekCount": 9999},
+        {"itemId": "1004811", "itemName": "Thief Hat", "weekCount": 1},
+    ]
+    session2 = FakeSession(
+        groups=[_group(*group_key)], items_by_group_key={group_key: members_run2},
+        steps_by_item_id={1004808: steps, 1004811: steps},
+    )
+    scan_discovery.run_scan(db_path=db_path, fetcher=_make_fetcher(session2), pick_representative_item=_pick_by_week_count)
+
+    conn = db.connect(db_path)
+    assert db.list_active_discovery_monitored_groups(conn)[0]["itemId"] == representative_id  # unchanged
+    # Simulates Component B polling AFTER the second scan: now CHANGE (ended).
+    db.upsert_discovery_price_points(
+        conn, representative_id, 0,
+        [{"priceAt": "2026-08-15T00:10:00Z", "endAt": None, "price": 1.0, "step": "STEP_TYPE_CHANGE"}],
+        "2026-08-15T00:10:00Z",
+    )
+    transitions = db.find_recent_discovery_transitions(conn, since_iso="2026-01-01T00:00:00Z")
+    assert transitions == [
+        {"itemId": representative_id, "itemUpgrade": 0, "windowStart": "2026-08-15T00:00:00Z", "windowEnd": "2026-08-15T00:10:00Z"}
+    ]
+    conn.close()

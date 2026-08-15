@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 import db
 
 
@@ -126,6 +128,84 @@ def test_deactivate_is_a_noop_for_groups_still_active(tmp_path: Path) -> None:
     flipped = db.deactivate_discovery_groups_not_in(conn, {1004808}, now="2026-08-16T00:00:00Z")
     assert flipped == 0
     assert db.list_active_discovery_monitored_groups(conn)[0]["isActive"] is True
+    conn.close()
+
+
+# --- ★2026-08-15 fix: group-identity lookup / explicit single-row deactivate ---
+
+
+def test_get_discovery_monitored_group_by_group_key_finds_the_row(tmp_path: Path) -> None:
+    conn = db.connect(tmp_path / "x.sqlite")
+    db.apply_schema(conn)
+    _seed_group(conn)
+    row = db.get_discovery_monitored_group_by_group_key(conn, "RANGE_200_TO_209", "BOSS_ARCANE_UMBRA_SET", "CAP")
+    assert row is not None
+    assert row["itemId"] == 1004808
+    conn.close()
+
+
+def test_get_discovery_monitored_group_by_group_key_finds_an_inactive_row_too(tmp_path: Path) -> None:
+    """A group's identity must be resolvable even while inactive (plan §5(k))
+    -- scan_discovery.py relies on this to keep reusing the same
+    representative across an active/inactive/active cycle."""
+    conn = db.connect(tmp_path / "x.sqlite")
+    db.apply_schema(conn)
+    _seed_group(conn, is_active=False)
+    row = db.get_discovery_monitored_group_by_group_key(conn, "RANGE_200_TO_209", "BOSS_ARCANE_UMBRA_SET", "CAP")
+    assert row is not None
+    assert row["isActive"] is False
+    conn.close()
+
+
+def test_get_discovery_monitored_group_by_group_key_none_when_unknown(tmp_path: Path) -> None:
+    conn = db.connect(tmp_path / "x.sqlite")
+    db.apply_schema(conn)
+    assert db.get_discovery_monitored_group_by_group_key(conn, "X", "Y", "Z") is None
+    conn.close()
+
+
+def test_deactivate_discovery_group_flips_is_active_and_keeps_the_row(tmp_path: Path) -> None:
+    conn = db.connect(tmp_path / "x.sqlite")
+    db.apply_schema(conn)
+    _seed_group(conn)
+    db.deactivate_discovery_group(conn, 1004808, now="2026-08-16T00:00:00Z")
+    row = db.get_discovery_monitored_group(conn, 1004808)
+    assert row["isActive"] is False
+    assert row["lastScanAt"] == "2026-08-16T00:00:00Z"
+    conn.close()
+
+
+def test_partial_unique_index_rejects_a_second_active_row_for_the_same_group(tmp_path: Path) -> None:
+    """Defense in depth for the ★2026-08-15 fix: at most one ACTIVE row may
+    exist per group identity. Inserting a second active row for the SAME
+    group identity under a DIFFERENT representative_item_id must fail loudly
+    (IntegrityError) rather than silently duplicate -- this is what would
+    happen if scan_discovery.py's lookup-before-pick discipline were ever
+    bypassed by a future change."""
+    import sqlite3
+
+    conn = db.connect(tmp_path / "x.sqlite")
+    db.apply_schema(conn)
+    _seed_group(conn, representative_item_id=1004808, is_active=True)
+    with pytest.raises(sqlite3.IntegrityError):
+        _seed_group(conn, representative_item_id=1004811, is_active=True)
+    conn.close()
+
+
+def test_partial_unique_index_allows_a_superseded_inactive_row_to_coexist(tmp_path: Path) -> None:
+    """The rare re-selection path: deactivate the old representative's row
+    FIRST, then a new active row for the same group identity (different
+    representative_item_id) inserts cleanly -- both rows persist (plan
+    §5(k)), only one is ever active at a time."""
+    conn = db.connect(tmp_path / "x.sqlite")
+    db.apply_schema(conn)
+    _seed_group(conn, representative_item_id=1004808, is_active=True)
+    db.deactivate_discovery_group(conn, 1004808, now="2026-08-16T00:00:00Z")
+    _seed_group(conn, representative_item_id=1004811, is_active=True)  # must not raise
+
+    all_groups = db.list_all_discovery_monitored_groups(conn)
+    assert len(all_groups) == 2
+    assert db.list_active_discovery_monitored_groups(conn)[0]["itemId"] == 1004811
     conn.close()
 
 

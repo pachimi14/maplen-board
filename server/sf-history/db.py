@@ -491,6 +491,50 @@ def get_discovery_monitored_group(conn: sqlite3.Connection, representative_item_
     return _monitored_group_row_to_dict(row) if row else None
 
 
+def get_discovery_monitored_group_by_group_key(
+    conn: sqlite3.Connection, equip_level_type: str, equip_type: str, equip_part_type: str
+) -> dict[str, Any] | None:
+    """★2026-08-15 fix: the group's real identity lookup -- (equip_level_type,
+    equip_type, equip_part_type), NOT `representative_item_id`.
+    `scripts/scan_discovery.py` calls this BEFORE ever calling
+    `pick_representative_item` again, so an already-known group's
+    representative is reused (fixed) rather than re-picked every scan purely
+    because `weekCount` moved. Returns the row regardless of `is_active` --
+    a group's identity persists through an inactive period too (plan §5(k)).
+    Assumes at most one row per group identity, which the partial unique
+    index (`idx_discovery_monitored_groups_active_group_key`, schema.sql)
+    only actually guarantees for *active* rows -- a caller relying on this
+    returning the single true answer for an *inactive* group identity that
+    somehow has more than one historical row (should not happen if scan_
+    discovery.py's ordering discipline is followed) gets whichever SQLite
+    returns first; this has never been observed and is not defended against
+    further here.
+    """
+    cur = conn.execute(
+        f"SELECT {_MONITORED_GROUP_COLUMNS} FROM sf_discovery_monitored_groups "
+        "WHERE equip_level_type = ? AND equip_type = ? AND equip_part_type = ?",
+        (equip_level_type, equip_type, equip_part_type),
+    )
+    row = cur.fetchone()
+    return _monitored_group_row_to_dict(row) if row else None
+
+
+def deactivate_discovery_group(conn: sqlite3.Connection, representative_item_id: int, *, now: str) -> None:
+    """★2026-08-15 fix: explicitly deactivates ONE row by its
+    `representative_item_id` -- used only by `scripts/scan_discovery.py`'s
+    rare re-selection path (the previously-fixed representative dropped out
+    of the group's own member list). Must run BEFORE the new representative's
+    row is inserted: it clears the old row's slot in the partial unique
+    index (`idx_discovery_monitored_groups_active_group_key`, WHERE
+    is_active = 1) so the new row's insert never collides with it. A no-op
+    (still `UPDATE`s `last_scan_at`) if the row was already inactive."""
+    conn.execute(
+        "UPDATE sf_discovery_monitored_groups SET is_active = 0, last_scan_at = ? WHERE representative_item_id = ?",
+        (now, representative_item_id),
+    )
+    conn.commit()
+
+
 def upsert_discovery_price_points(
     conn: sqlite3.Connection,
     item_id: int,

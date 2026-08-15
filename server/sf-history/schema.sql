@@ -76,6 +76,22 @@ CREATE TABLE IF NOT EXISTS sf_discovery_scan_runs (
 -- 0 means the most recent scan found the alias members' steps did not all
 -- match the representative's -- upsert is then SKIPPED for that scan (this
 -- row keeps whatever it last held), only the warning/scan-raw rows record it.
+--
+-- ★2026-08-15 fix (統括 検収差し戻し -- IMPL_PLAN_SH32 §2 A-1 の欠落を修正):
+-- the group's real identity is (equip_level_type, equip_type, equip_part_type)
+-- -- NOT whichever member `pick_representative_item` currently favors by
+-- weekCount, which can (and does, in real data) flip from one daily scan to
+-- the next. `representative_item_id` is chosen ONCE, the first time a group
+-- becomes a monitoring candidate, and then kept FIXED across every later
+-- scan (scan_discovery.py now looks up the existing row by group identity
+-- BEFORE ever calling `pick_representative_item` again) -- re-picking a
+-- representative on every scan silently created a SECOND row (and orphaned
+-- `sf_discovery_price_history` under the old id, breaking `find_transition`
+-- at the seam) purely because of weekCount noise, with no actual change in
+-- which piece of gear this is. A representative is only ever re-picked in
+-- the rare case it drops out of the group's own member list entirely
+-- (scan_discovery.py logs a WARNING when that happens -- "黙って切り替わら
+-- ない").
 CREATE TABLE IF NOT EXISTS sf_discovery_monitored_groups (
     representative_item_id INTEGER NOT NULL PRIMARY KEY,
     item_name               TEXT,
@@ -89,6 +105,16 @@ CREATE TABLE IF NOT EXISTS sf_discovery_monitored_groups (
     first_seen_at           TEXT    NOT NULL,
     last_scan_at            TEXT    NOT NULL
 );
+
+-- Defense in depth for the fix above: at most ONE *active* row may exist per
+-- group identity at any time. A PARTIAL index (WHERE is_active = 1), not a
+-- plain UNIQUE constraint, so a superseded representative's row (kept
+-- forever, is_active flipped to 0 by the rare re-selection path) can coexist
+-- with its group's new active row -- both share the same group identity by
+-- construction, and that is expected/correct, not a duplicate registration.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_discovery_monitored_groups_active_group_key
+    ON sf_discovery_monitored_groups (equip_level_type, equip_type, equip_part_type)
+    WHERE is_active = 1;
 
 -- Raw per-item, per-band step snapshot for every member of a *candidate*
 -- group (plan §2: "走査の記録は生のまま残す(15装備ぶん)"). Append-only, one

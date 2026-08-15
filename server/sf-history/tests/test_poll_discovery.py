@@ -59,14 +59,17 @@ class FakeSession:
         return FakeResponse(200, payload)
 
 
-def _seed_active_group(conn, *, representative_item_id: int, aliases: list[int]) -> None:
+def _seed_active_group(conn, *, representative_item_id: int, aliases: list[int], equip_part_type: str = "CAP") -> None:
+    # ★2026-08-15 fix: `equip_part_type` is part of the group's real identity
+    # (schema.sql's partial unique index) -- a caller seeding more than one
+    # ACTIVE group in the same test must pass distinct values.
     db.upsert_discovery_monitored_group(
         conn,
         representative_item_id=representative_item_id,
         item_name=f"Item {representative_item_id}",
         equip_level_type="RANGE_200_TO_209",
         equip_type="BOSS_X",
-        equip_part_type="CAP",
+        equip_part_type=equip_part_type,
         alias_item_ids=aliases,
         aliases=[{"itemId": a, "itemName": f"Item {a}"} for a in aliases],
         steps_consistent=True,
@@ -103,9 +106,9 @@ def test_poll_hits_only_representatives_never_aliases(tmp_path: Path) -> None:
     db_path = tmp_path / "x.sqlite"
     conn = db.connect(db_path)
     db.apply_schema(conn)
-    _seed_active_group(conn, representative_item_id=1004808, aliases=[1004808, 1004809, 1004810, 1004811, 1004812])
-    _seed_active_group(conn, representative_item_id=1053063, aliases=[1053063, 1053064])
-    _seed_active_group(conn, representative_item_id=1152196, aliases=[1152196])
+    _seed_active_group(conn, representative_item_id=1004808, aliases=[1004808, 1004809, 1004810, 1004811, 1004812], equip_part_type="CAP")
+    _seed_active_group(conn, representative_item_id=1053063, aliases=[1053063, 1053064], equip_part_type="CLOTHES")
+    _seed_active_group(conn, representative_item_id=1152196, aliases=[1152196], equip_part_type="SHOULDER")
     conn.close()
 
     payload = _dynamicprice_payload(upgrades=[0, 1])
@@ -173,8 +176,8 @@ def test_poll_counts_a_failed_representative_and_keeps_going(tmp_path: Path) -> 
     db_path = tmp_path / "x.sqlite"
     conn = db.connect(db_path)
     db.apply_schema(conn)
-    _seed_active_group(conn, representative_item_id=1001, aliases=[1001])
-    _seed_active_group(conn, representative_item_id=1002, aliases=[1002])
+    _seed_active_group(conn, representative_item_id=1001, aliases=[1001], equip_part_type="CAP")
+    _seed_active_group(conn, representative_item_id=1002, aliases=[1002], equip_part_type="CLOTHES")
     conn.close()
 
     payload = _dynamicprice_payload(upgrades=[0])

@@ -41,6 +41,42 @@
 
 `scripts/scan_discovery.py` は 472装備の列挙(`/stats/enhance-group` 全フィルタ空)を**独自に実装**し、`item_catalog.fetch_enhance_groups`(既定 `boss_only=True`/`min_level=100`)は使わなかった(F6 の472件はそのフィルタでは得られないため)。一方で **代表の選定規則**(`pick_representative_item`、週間強化回数最大)は maplenEnhancebot から読み取り専用でそのまま import し、別ルールを発明しなかった(計画の明示的な指示どおり)。
 
+## 1.5 ★検収差し戻し修正(2026-08-15、4本目のコミット)
+
+**統括からの指摘(計画書 A-1 の欠落・統括の責任として明記)**: 「代表の選び方は既存 `pick_representative_item()` と同じ規則」とだけ書かれ、「一度決めたら固定する」が計画に書き落とされていた。`pick_representative_item()` は毎回「週間強化回数最大」を選ぶため、日次スキャンごとに代表 itemId が変わりうる(実際に統括の走査と本実装担当の走査で別の代表が選ばれた: `1004808/1053063/1152196` vs `1004811/1053064/1152199`)。`sf_discovery_monitored_groups` の主キーが `representative_item_id` のため、代表が変わるたびに**別行として二重登録**され、`sf_discovery_price_history` も分断されて `find_transition` が遷移を見落とす欠陥だった。
+
+### 修正内容
+
+1. **`schema.sql`**: `sf_discovery_monitored_groups` に **部分ユニークインデックス**を追加
+   `CREATE UNIQUE INDEX ... ON sf_discovery_monitored_groups(equip_level_type, equip_type, equip_part_type) WHERE is_active = 1`。
+   同じグループ識別子(3つ組)を持つ**アクティブな行は常に1つまで**という制約を DB レベルでも強制する(アプリ側のロジックが将来壊れても静かに二重化しない安全網)。旧代表(再選出で置き換わった行)は `is_active=0` のまま**永久に残る**(部分インデックスなので非アクティブ行同士・アクティブ行1つは共存可能)。
+2. **`db.py`**: `get_discovery_monitored_group_by_group_key()`(グループ識別子から既存行を検索)/ `deactivate_discovery_group()`(1行だけを明示的に非アクティブ化。再選出時、新しい行を挿入する**前**に呼ぶ必要がある=部分インデックスとの衝突回避のため順序が重要)を追加。
+3. **`scripts/scan_discovery.py`**: `run_scan()` のループを変更。**候補グループごとに、まず `get_discovery_monitored_group_by_group_key()` で既存行を検索**し、
+   - 既存の代表が今回の members に含まれていれば **その代表をそのまま使う**(`pick_representative_item` を呼ばない=選び直さない)
+   - 既存行が無い(初検出)場合のみ `pick_representative_item` を呼ぶ
+   - 既存の代表が members から消えていた場合のみ `pick_representative_item` で再選出し、**`sys.stderr` に WARNING を出力**してから旧行を `deactivate_discovery_group()` する
+
+### 開発用DBへの影響・移行
+
+本実装担当が実施した動作確認用の実スキャン(§2(a))は **1回のみ**だったため、修正前のコードでも二重登録は発生していない(3グループが1回ずつ登録されただけ)。`data/sf_price_history.sqlite`(gitignore対象・VPS未設置)に対して `db.apply_schema()`(=新しい部分ユニークインデックスの追加)を再実行し、**エラーなし・行数不変(3行)**を確認済み。**作り直しは不要だった。** 本番はまだVPS未設置のため、他に移行対象データは無い。
+
+### 受け入れ基準(追加分)の実測
+
+| # | 内容 | テスト | 結果 |
+|---|---|---|---|
+| **(q)** | weekCount の大小を入れ替えて2回スキャンしても代表が変わらない | `tests/test_scan_discovery.py::test_q_representative_does_not_change_when_weekcount_order_flips_across_scans` | ✅ |
+| **(r)** | 2回スキャンしても `sf_discovery_monitored_groups` の行が増えない | `tests/test_scan_discovery.py::test_r_two_identical_scans_do_not_duplicate_the_monitored_group_row` | ✅ |
+| **(s)** | 代表が member から消えた場合のみ再選出・WARN | `tests/test_scan_discovery.py::test_s_reselects_only_when_the_fixed_representative_drops_out_and_warns` | ✅ |
+| **(t)** | `find_transition` がスキャンをまたいで連続して遷移を検出 | `tests/test_scan_discovery.py::test_t_find_transition_stays_continuous_across_two_scans` | ✅ |
+
+DBレベルの防御(部分ユニークインデックス)自体のテストも追加: `tests/test_db_discovery.py::test_partial_unique_index_rejects_a_second_active_row_for_the_same_group` / `test_partial_unique_index_allows_a_superseded_inactive_row_to_coexist` / `test_get_discovery_monitored_group_by_group_key_*` / `test_deactivate_discovery_group_flips_is_active_and_keeps_the_row`。
+
+**既存 (a)〜(p) との整合**: この修正で新たに部分ユニークインデックスが有効になったことで、複数のACTIVEグループを同一グループ識別子で擬似的に seed していた既存テストのヘルパー(`tests/test_app_discovery.py::_seed_group` / `tests/test_poll_discovery.py::_seed_active_group`)が現実には起こり得ない状態を作っていたことが判明し、`equip_part_type` を呼び出し側で区別するよう修正した(3件のテストのみ、アサーション自体は無変更)。
+
+### ★F8「エラー0」の意味についての注記(統括裁定によりコード変更なし)
+
+統括の裁定により **本件はコードを変更しない**。§2(a) に記載した実測は、後日「F8『エラー0』は HTTP ステータスのみの意味(ペイロード形状異常=価格データなしの102件は含まない)」という理解で読むこと。統括が独立に60件サンプル検証し、`Sacred Rosary`/`Evolving Wrist Armor` 等の強化不可能な装備が該当することを確認済み(統括裁定に基づきここに転記)。
+
 ## 2. 受け入れ基準の実測
 
 (§8 テンプレート順)
@@ -127,8 +163,10 @@ sf_discovery_scan_raw: 375 rows (15 items x 25 bands) -- exactly the §1 "15装�
 ### (m) pytest / 契約 / npm test / build
 
 ```
-python -m pytest -q (server/sf-history)      : 159 passed
-npm run test (exp_ranking/web, vitest)       : 676 passed / 59 files
+python -m pytest -q (server/sf-history)      : 159 passed  (C コミット時点)
+                                                169 passed  (検収差し戻し修正コミット後 -- (q)(r)(s)(t) 4件 +
+                                                             db層6件 追加、既存3件は group identity 修正のみ)
+npm run test (exp_ranking/web, vitest)       : 676 passed / 59 files(修正後も再実行・不変)
 npm run build (exp_ranking/web, vite build)  : 成功(dist/ 生成、2404 modules transformed)
 ```
 
