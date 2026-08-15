@@ -148,6 +148,32 @@ def parse_dynamicprice_points(payload: dict[str, Any]) -> dict[int, list[dict[st
     return result
 
 
+def pick_representative_item(items: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """★2026-08-15 VPS fix (統括 検収差し戻し): the SAME rule as
+    maplenEnhancebot's `item_catalog.py::pick_representative_item` ("Pick the
+    item with the highest weekly enhancement count") -- re-implemented here,
+    not imported, because `server/sf-history/` is deployed to the VPS on its
+    own (`/home/botuser/apps/lulumi-tools-sf-history/`), with no
+    maplenEnhancebot checkout alongside it. `scripts/scan_discovery.py` used
+    to `import item_catalog` for exactly this one-line rule and crashed on
+    the VPS with `ModuleNotFoundError` the moment it ran there -- a rule this
+    small (plan §2 A-1: "別の規則を発明しない", satisfied here by copying the
+    *same* rule text, not inventing a different one) is not worth a
+    cross-repo runtime dependency.
+
+    One addition beyond maplenEnhancebot's version: a DETERMINISTIC tie-break
+    (ascending `itemId`) when `weekCount` ties. Plain `max()` (what
+    maplenEnhancebot's own one-liner uses) returns whichever tied candidate
+    the input happens to list first -- fine for that script's one-shot
+    catalog generation, but not here: `representative_item_id` is meant to
+    stay FIXED once chosen (commit 6dd4966's fix), so the pick itself must
+    not depend on the API's arbitrary same-count ordering (plan §5(v)).
+    """
+    if not items:
+        return None
+    return min(items, key=lambda item: (-int(item.get("weekCount") or 0), int(item["itemId"])))
+
+
 def is_monitored(steps: list[str | None]) -> bool:
     """plan §1: does this item have a DISCOVERY band in the JUDGE range
     (itemUpgrade 0..21)? ☆23-25 (itemUpgrade 22..24) are never consulted --

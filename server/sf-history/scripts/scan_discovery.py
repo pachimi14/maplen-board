@@ -8,12 +8,17 @@ timer" discipline as `scripts/update.py` (design §5.2, OPS-1's lesson).
    -> `/stats/enhance-group/items` (GET, per group) -- plan §0 F6: 84 groups,
    472 items. Both endpoints are the same unauthenticated `msu.io` Dynamic
    Pricing API `item_catalog.py` (maplenEnhancebot) already uses -- this
-   script does NOT reuse that module's `fetch_enhance_groups`/
-   `fetch_group_items` (those default to `boss_only=True`/`min_level=100`,
-   which would not enumerate the full 472; plan §0 F6 needs every group), it
-   only reuses `pick_representative_item` (plan §2 A-1: "別の規則を発明しな
-   い"), imported read-only exactly like `scripts/gen_item_list.py` already
-   does.
+   script does NOT import that module at all: `server/sf-history/` is
+   deployed to the VPS on its own, with no maplenEnhancebot checkout
+   alongside it (★2026-08-15 VPS fix -- see `discovery.pick_representative_
+   item`'s own docstring for the one function this module used to import
+   from there, and why it is a same-rule REIMPLEMENTATION now instead).
+
+   `discovery.pick_representative_item` picks the representative (plan §2
+   A-1: "別の規則を発明しない" -- satisfied by copying the same rule, not a
+   different one) -- only ever consulted once per group (representative
+   fixation, commit 6dd4966), so the tiny extra code this reimplementation
+   costs is not on any hot path.
 2. For every item, GET the official Open API `dynamicprice` endpoint (the
    SAME upstream `fetch_latest.py`'s `_fetch_openapi` calls, GET-only, so it
    goes through `fetcher.Fetcher` like every other HTTP call in this repo)
@@ -61,7 +66,6 @@ import fetch_latest  # noqa: E402
 import fetcher as fetcher_mod  # noqa: E402
 
 DEFAULT_DB_PATH = Path(__file__).resolve().parent.parent / "data" / "sf_price_history.sqlite"
-DEFAULT_SOURCE_REPO = Path(r"C:\Users\pachi\Desktop\maplenEnhancebot")
 
 ENHANCE_GROUP_URL = "https://msu.io/maplestoryn/api/msn/dynamicpricing/stats/enhance-group"
 ENHANCE_GROUP_ITEMS_URL = "https://msu.io/maplestoryn/api/msn/dynamicpricing/stats/enhance-group/items"
@@ -74,21 +78,6 @@ SCAN_MIN_INTERVAL_SEC = 0.25
 DEFAULT_MAX_REQUESTS = 900  # 1 (or 2) group-listing POST + 84 item-listing GET + 472 dynamicprice GET, with headroom
 
 PickRepresentativeItem = Callable[[list[dict[str, Any]]], dict[str, Any] | None]
-
-
-def _default_pick_representative_item(source_repo: Path) -> PickRepresentativeItem:
-    """maplenEnhancebot read-only import (never writes into that tree --
-    `sys.dont_write_bytecode` guard, same precedent as
-    `scripts/gen_item_list.py`'s `_load_source_modules`). Only ever called by
-    `main()` -- `run_scan` itself takes `pick_representative_item` as a
-    parameter so tests never need this import at all (offline, hermetic)."""
-    sys.dont_write_bytecode = True
-    source_repo_str = str(source_repo)
-    if source_repo_str not in sys.path:
-        sys.path.insert(0, source_repo_str)
-    import item_catalog  # type: ignore
-
-    return item_catalog.pick_representative_item
 
 
 def fetch_all_groups(fetcher: fetcher_mod.Fetcher, *, page_size: int = 100) -> list[dict[str, Any]]:
@@ -169,13 +158,16 @@ def run_scan(
     *,
     db_path: Path,
     fetcher: fetcher_mod.Fetcher,
-    pick_representative_item: PickRepresentativeItem,
+    pick_representative_item: PickRepresentativeItem = discovery.pick_representative_item,
     now: datetime | None = None,
 ) -> dict[str, Any]:
     """The full scan, given an already-constructed `fetcher` (tests inject a
-    fake session; `main()` below builds the real one) and a
-    `pick_representative_item` callable (tests inject a trivial stand-in so
-    they never need maplenEnhancebot on `sys.path` at all).
+    fake session; `main()` below builds the real one). `pick_representative_
+    item` defaults to `discovery.pick_representative_item` (the local,
+    dependency-free reimplementation -- ★2026-08-15 VPS fix) but stays
+    overridable as a plain parameter -- tests use this to inject a trivial
+    stand-in, and any future caller can swap the rule without touching this
+    function's own logic.
     """
     if now is None:
         now = datetime.now(timezone.utc)
@@ -326,7 +318,6 @@ def run_scan(
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--db", type=Path, default=DEFAULT_DB_PATH)
-    parser.add_argument("--source-repo", type=Path, default=DEFAULT_SOURCE_REPO)
     parser.add_argument("--max-requests", type=int, default=DEFAULT_MAX_REQUESTS)
     args = parser.parse_args()
 
@@ -339,10 +330,11 @@ def main() -> int:
     ftr.session.headers["x-nxopen-api-key"] = api_key
     ftr.session.headers["Content-Type"] = "application/json"
 
-    pick_representative_item = _default_pick_representative_item(args.source_repo)
-
     try:
-        result = run_scan(db_path=args.db, fetcher=ftr, pick_representative_item=pick_representative_item)
+        # `pick_representative_item` omitted -- defaults to `discovery.
+        # pick_representative_item` (★2026-08-15 VPS fix: no maplenEnhancebot
+        # dependency left to wire up here at all).
+        result = run_scan(db_path=args.db, fetcher=ftr)
     except (
         fetcher_mod.RequestBudgetExceededError,
         fetcher_mod.ConsecutiveTooManyRequestsError,
