@@ -38,6 +38,18 @@ def _payload(entries_by_upgrade: dict[int, dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _potential_payload(entries_by_cube_id: dict[int, dict[str, Any]]) -> dict[str, Any]:
+    """IMPL_PLAN_SH34: same shape as `_payload` above, but under
+    `data.currentPrices.potential` (cube itemId keys, not itemUpgrade)."""
+    return {
+        "data": {
+            "currentPrices": {
+                "potential": {str(k): v for k, v in entries_by_cube_id.items()}
+            }
+        }
+    }
+
+
 # --- parse_dynamicprice_steps ------------------------------------------------
 
 
@@ -252,3 +264,84 @@ def test_find_transition_takes_the_first_change_after_the_last_discovery() -> No
         ("2026-08-01T00:10:00Z", discovery.CHANGE_STEP),
     ]
     assert discovery.find_transition(rows) == ("2026-08-01T00:00:00Z", "2026-08-01T00:05:00Z")
+
+
+# --- IMPL_PLAN_SH34 §2-1: parse_dynamicprice_cube_points ----------------------
+
+
+def test_parse_cube_points_reads_the_potential_map_keyed_by_cube_item_id() -> None:
+    payload = _potential_payload(
+        {
+            2711000: _entry(
+                current_step=discovery.DISCOVERY_STEP,
+                current_price=str(int(1e18)),
+                start_date="2026-08-16T15:09:00Z",
+                previous_step=discovery.DISCOVERY_STEP,
+                previous_price=str(int(1e18)),
+                previous_start="2026-08-16T15:08:00Z",
+            ),
+            5062010: _entry(
+                current_step=discovery.CHANGE_STEP,
+                current_price="571963825511000000000000",
+                start_date="2026-08-16T15:09:00Z",
+                previous_step=discovery.CHANGE_STEP,
+                previous_price="572109820597000000000000",
+                previous_start="2026-08-16T15:08:00Z",
+            ),
+        }
+    )
+    points = discovery.parse_dynamicprice_cube_points(payload)
+    assert set(points.keys()) == {2711000, 5062010}
+    assert len(points[2711000]) == 2
+    assert points[2711000][0]["step"] == discovery.DISCOVERY_STEP
+    assert points[5062010][0]["price"] == pytest.approx(571963.825511)
+
+
+def test_parse_cube_points_returns_empty_dict_when_potential_absent() -> None:
+    """(G6): a payload with only `starforce` (no `potential` at all) is not
+    an error -- unlike `parse_dynamicprice_steps`'s `starforce` requirement."""
+    payload = _payload({0: _entry(current_step=discovery.CHANGE_STEP)})
+    assert discovery.parse_dynamicprice_cube_points(payload) == {}
+    assert discovery.parse_dynamicprice_cube_points({}) == {}
+    assert discovery.parse_dynamicprice_cube_points({"data": {"currentPrices": {}}}) == {}
+
+
+def test_parse_cube_points_ignores_non_numeric_keys() -> None:
+    payload = _potential_payload({2711000: _entry(current_step=discovery.DISCOVERY_STEP)})
+    payload["data"]["currentPrices"]["potential"]["not-a-cube-id"] = _entry(current_step=discovery.DISCOVERY_STEP)
+    points = discovery.parse_dynamicprice_cube_points(payload)
+    assert set(points.keys()) == {2711000}
+
+
+def test_parse_cube_points_drops_previous_when_absent() -> None:
+    payload = _potential_payload({2711000: _entry(current_step=discovery.CHANGE_STEP)})
+    points = discovery.parse_dynamicprice_cube_points(payload)
+    assert len(points[2711000]) == 1
+
+
+def test_parse_cube_points_a_seventh_unknown_cube_id_is_still_parsed() -> None:
+    """(d)/G6: this parser never assumes the 6-cube set -- any numeric key
+    under `potential` is read, whether or not `discovery.CUBE_NAMES` knows
+    it (naming is a separate, display-only concern -- see cube_display_name
+    tests below)."""
+    payload = _potential_payload({9999999: _entry(current_step=discovery.DISCOVERY_STEP)})
+    points = discovery.parse_dynamicprice_cube_points(payload)
+    assert set(points.keys()) == {9999999}
+
+
+# --- IMPL_PLAN_SH34 §2-2 (revised): cube_display_name / CUBE_NAMES -----------
+
+
+def test_cube_display_name_resolves_a_known_code() -> None:
+    assert discovery.cube_display_name(2711000) == "Occult Cube"
+    assert discovery.cube_display_name(5062503) == "White Cube"
+
+
+def test_cube_display_name_falls_back_to_the_code_for_an_unknown_id() -> None:
+    """(d): an unrecognized cube itemId is shown as the code itself, never a
+    guessed name."""
+    assert discovery.cube_display_name(9999999) == "9999999"
+
+
+def test_cube_names_has_exactly_the_six_observed_cubes() -> None:
+    assert set(discovery.CUBE_NAMES.keys()) == {2711000, 2730000, 5062009, 5062010, 5062500, 5062503}

@@ -209,6 +209,95 @@ def test_discovery_prices_never_polled_band_has_null_window(_env: Path) -> None:
     assert all(b["windowStart"] is None and b["windowEnd"] is None for b in body["bands"])
 
 
+# --- discovery_prices: IMPL_PLAN_SH34 §3 -- cubes (potential) ----------------
+
+
+def test_discovery_prices_cubes_is_empty_when_no_cube_data_recorded(_env: Path) -> None:
+    """(g): "キューブが1件も無い装備では、表ごと出さない" -- the API's own
+    contribution to that is an empty `cubes` array (never a placeholder
+    row), regardless of how many SF bands are recorded."""
+    _seed_group(_env, representative_item_id=1004808)
+    conn = db.connect(_env)
+    db.upsert_discovery_price_points(
+        conn, 1004808, 0,
+        [{"priceAt": "2026-08-15T09:28:00Z", "endAt": None, "price": 1.0, "step": "STEP_TYPE_DISCOVERY"}],
+        "2026-08-15T09:28:05Z",
+    )
+    conn.close()
+
+    response = app_module.discovery_prices(_request(), itemId="1004808")
+    body = json.loads(response.body)
+    assert body["cubes"] == []
+    assert set(body.keys()) == set(CONTRACT["discoveryPrices"]["root"])
+
+
+def test_discovery_prices_includes_cubes_with_resolved_names_in_code_order(_env: Path) -> None:
+    """(d)/(e)/(j): known cube codes resolve to their display name, sorted
+    by cube_item_id ascending (no invented ranking); an unrecognized code
+    (a hypothetical 7th cube) falls back to the code itself."""
+    _seed_group(_env, representative_item_id=1004808)
+    conn = db.connect(_env)
+    for cube_item_id, step in [(5062503, "STEP_TYPE_CHANGE"), (2711000, "STEP_TYPE_DISCOVERY"), (9999999, "STEP_TYPE_DISCOVERY")]:
+        db.upsert_discovery_cube_price_points(
+            conn, 1004808, cube_item_id,
+            [{"priceAt": "2026-08-16T15:09:00Z", "endAt": None, "price": 1.0, "step": step}],
+            "2026-08-16T15:09:05Z",
+        )
+    conn.close()
+
+    response = app_module.discovery_prices(_request(), itemId="1004808")
+    body = json.loads(response.body)
+    for cube in body["cubes"]:
+        assert set(cube.keys()) == set(CONTRACT["discoveryPrices"]["cube"])
+    assert [c["cubeItemId"] for c in body["cubes"]] == [2711000, 5062503, 9999999]  # (j): code order
+    names_by_id = {c["cubeItemId"]: c["cubeName"] for c in body["cubes"]}
+    assert names_by_id[2711000] == "Occult Cube"
+    assert names_by_id[5062503] == "White Cube"
+    assert names_by_id[9999999] == "9999999"  # (d): unknown code falls back to the code itself
+    is_discovery_by_id = {c["cubeItemId"]: c["isDiscovery"] for c in body["cubes"]}
+    assert is_discovery_by_id == {2711000: True, 5062503: False, 9999999: True}
+
+
+def test_discovery_prices_cube_windowStart_windowEnd_null_when_never_transitioned(_env: Path) -> None:
+    """(e): with the current real data, no cube has ever shown an observed
+    DISCOVERY -> CHANGE flip, so this is exactly the every-cube-null
+    fixture (same discipline as the SF band equivalent above)."""
+    _seed_group(_env, representative_item_id=1004808)
+    conn = db.connect(_env)
+    db.upsert_discovery_cube_price_points(
+        conn, 1004808, 2711000,
+        [{"priceAt": "2026-08-16T15:09:00Z", "endAt": None, "price": 1.0, "step": "STEP_TYPE_DISCOVERY"}],
+        "2026-08-16T15:09:05Z",
+    )
+    conn.close()
+
+    response = app_module.discovery_prices(_request(), itemId="1004808")
+    body = json.loads(response.body)
+    assert all(c["windowStart"] is None and c["windowEnd"] is None for c in body["cubes"])
+
+
+def test_discovery_prices_cube_reports_the_observed_transition_for_a_settled_cube(_env: Path) -> None:
+    """(e)'s other half: a cube that DID show a recorded flip carries it,
+    reusing discovery.find_transition (plan §3: same mechanism as SF)."""
+    _seed_group(_env, representative_item_id=1004808)
+    conn = db.connect(_env)
+    db.upsert_discovery_cube_price_points(
+        conn, 1004808, 5062010,
+        [
+            {"priceAt": "2026-08-14T10:00:00Z", "endAt": None, "price": 1.0, "step": "STEP_TYPE_DISCOVERY"},
+            {"priceAt": "2026-08-14T10:05:00Z", "endAt": None, "price": 1.0, "step": "STEP_TYPE_CHANGE"},
+        ],
+        "2026-08-14T10:05:05Z",
+    )
+    conn.close()
+
+    response = app_module.discovery_prices(_request(), itemId="1004808")
+    body = json.loads(response.body)
+    cube = next(c for c in body["cubes"] if c["cubeItemId"] == 5062010)
+    assert cube["windowStart"] == "2026-08-14T10:00:00Z"
+    assert cube["windowEnd"] == "2026-08-14T10:05:00Z"
+
+
 def test_discovery_prices_404_for_unknown_item(_env: Path) -> None:
     response = app_module.discovery_prices(_request(), itemId="42")
     assert response.status_code == 404

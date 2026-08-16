@@ -11,7 +11,7 @@ import fetcher as fetcher_mod
 import poll_discovery
 
 
-def _dynamicprice_payload(*, upgrades: list[int]) -> dict[str, Any]:
+def _dynamicprice_payload(*, upgrades: list[int], cube_item_ids: list[int] | None = None) -> dict[str, Any]:
     starforce = {
         str(u): {
             "currentPrice": {
@@ -29,7 +29,30 @@ def _dynamicprice_payload(*, upgrades: list[int]) -> dict[str, Any]:
         }
         for u in upgrades
     }
-    return {"data": {"currentPrices": {"starforce": starforce}}}
+    payload: dict[str, Any] = {"data": {"currentPrices": {"starforce": starforce}}}
+    if cube_item_ids:
+        # IMPL_PLAN_SH34 §2-1: the SAME response also carries `potential`
+        # (this is what confirms (a) -- no second request is ever made to
+        # get this, it rides along on the exact same fetcher.get() call).
+        potential = {
+            str(cid): {
+                "currentPrice": {
+                    "price": str(int(1e18)),
+                    "startDate": "2026-08-16T15:09:00Z",
+                    "endDate": "2026-08-16T15:10:00Z",
+                    "step": "STEP_TYPE_DISCOVERY",
+                },
+                "previousPrice": {
+                    "price": str(int(2e18)),
+                    "startDate": "2026-08-16T15:08:00Z",
+                    "endDate": "2026-08-16T15:09:00Z",
+                    "step": "STEP_TYPE_DISCOVERY",
+                },
+            }
+            for cid in cube_item_ids
+        }
+        payload["data"]["currentPrices"]["potential"] = potential
+    return payload
 
 
 class FakeResponse:
@@ -188,3 +211,97 @@ def test_poll_counts_a_failed_representative_and_keeps_going(tmp_path: Path) -> 
     assert result["polled"] == 1
     assert result["failed"] == 1
     assert result["requestsMade"] == 2  # both were attempted -- partial success, not abort
+
+
+# --- IMPL_PLAN_SH34 §2-1: cube (potential) recording -------------------------
+# (a): the accept criterion this whole plan hinges on -- writing cube data
+# must never add a request. Every test below re-asserts requestsMade against
+# the SAME expectation the pre-SH34 tests above already established.
+
+
+CUBE_ITEM_IDS = [2711000, 2730000, 5062009, 5062010, 5062500, 5062503]  # G4 -- test data only, not hardcoded in prod code
+
+
+def test_poll_writes_cube_points_from_the_same_response_with_no_extra_request(tmp_path: Path) -> None:
+    db_path = tmp_path / "x.sqlite"
+    conn = db.connect(db_path)
+    db.apply_schema(conn)
+    _seed_active_group(conn, representative_item_id=1004811, aliases=[1004811], equip_part_type="CAP")
+    conn.close()
+
+    payload = _dynamicprice_payload(upgrades=[0], cube_item_ids=CUBE_ITEM_IDS)
+    session = FakeSession({1004811: payload})
+    ftr = _make_fetcher(session)
+
+    result = poll_discovery.run_poll(db_path=db_path, fetcher=ftr)
+    assert result["requestsMade"] == 1  # (a): unchanged -- one GET, same as a starforce-only poll
+    assert result["rowsWritten"] == (1 * 2) + (6 * 2)  # 1 band + 6 cubes, current+previous each
+
+    conn = db.connect(db_path)
+    cubes, observed_at = db.latest_discovery_cubes_for_item(conn, 1004811)
+    assert set(cubes.keys()) == set(CUBE_ITEM_IDS)
+    assert observed_at is not None
+    conn.close()
+
+
+def test_poll_cube_upsert_is_idempotent_across_runs(tmp_path: Path) -> None:
+    """(c): polling the exact same upstream window twice must not add rows."""
+    db_path = tmp_path / "x.sqlite"
+    conn = db.connect(db_path)
+    db.apply_schema(conn)
+    _seed_active_group(conn, representative_item_id=1004811, aliases=[1004811])
+    conn.close()
+
+    payload = _dynamicprice_payload(upgrades=[0], cube_item_ids=CUBE_ITEM_IDS)
+    session = FakeSession({1004811: payload})
+    ftr = _make_fetcher(session)
+    poll_discovery.run_poll(db_path=db_path, fetcher=ftr)
+    poll_discovery.run_poll(db_path=db_path, fetcher=ftr)  # same startDates -- same upsert keys
+
+    conn = db.connect(db_path)
+    count = conn.execute("SELECT COUNT(*) FROM sf_discovery_cube_price_history WHERE item_id = 1004811").fetchone()[0]
+    assert count == 2 * len(CUBE_ITEM_IDS)  # current + previous per cube, not doubled
+    conn.close()
+
+
+def test_poll_with_no_potential_in_the_response_writes_zero_cube_rows(tmp_path: Path) -> None:
+    """(d)/G6: a response without a `potential` map at all (e.g. an older
+    upstream shape) must not crash the poll -- it simply writes zero cube
+    rows, exactly like before this plan."""
+    db_path = tmp_path / "x.sqlite"
+    conn = db.connect(db_path)
+    db.apply_schema(conn)
+    _seed_active_group(conn, representative_item_id=1004808, aliases=[1004808])
+    conn.close()
+
+    payload = _dynamicprice_payload(upgrades=[0])  # no cube_item_ids -- no `potential` key at all
+    session = FakeSession({1004808: payload})
+    ftr = _make_fetcher(session)
+    result = poll_discovery.run_poll(db_path=db_path, fetcher=ftr)
+    assert result["rowsWritten"] == 2  # starforce only, unchanged from the pre-SH34 behavior
+
+    conn = db.connect(db_path)
+    count = conn.execute("SELECT COUNT(*) FROM sf_discovery_cube_price_history").fetchone()[0]
+    assert count == 0
+    conn.close()
+
+
+def test_poll_writes_an_unrecognized_cube_id_too(tmp_path: Path) -> None:
+    """(d): a 7th (or otherwise unknown) cube itemId is still recorded --
+    naming (discovery.CUBE_NAMES) is a separate, app.py-level display
+    concern; the poll/storage layer never filters by a known-cube set."""
+    db_path = tmp_path / "x.sqlite"
+    conn = db.connect(db_path)
+    db.apply_schema(conn)
+    _seed_active_group(conn, representative_item_id=1004811, aliases=[1004811])
+    conn.close()
+
+    payload = _dynamicprice_payload(upgrades=[0], cube_item_ids=[9999999])
+    session = FakeSession({1004811: payload})
+    ftr = _make_fetcher(session)
+    poll_discovery.run_poll(db_path=db_path, fetcher=ftr)
+
+    conn = db.connect(db_path)
+    cubes, _ = db.latest_discovery_cubes_for_item(conn, 1004811)
+    assert set(cubes.keys()) == {9999999}
+    conn.close()

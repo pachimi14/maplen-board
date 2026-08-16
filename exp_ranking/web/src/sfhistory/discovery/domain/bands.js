@@ -41,6 +41,30 @@ export function buildBandRows(bands, upgradeCount = 25) {
   return rows;
 }
 
+/** IMPL_PLAN_SH34 §3/§4: the cube (potential) counterpart of
+ * `buildBandRows` -- `cubes` (server's normalized `cubes[]`, already
+ * data-driven -- NOT a fixed-length list like `bands`, plan §4: "キューブが
+ * 1件も無い装備では、表ごと出さない") sorted by `cubeItemId` ascending
+ * (defensive re-sort -- the server already sorts this way, plan §3: "序列を
+ * 発明しない" applies here too, so this never re-orders by anything other
+ * than the code itself). An empty input returns an empty row list -- the
+ * caller (`DiscoveryCubeTable.jsx`) uses that to render nothing at all.
+ */
+export function buildCubeRows(cubes) {
+  return [...(cubes ?? [])]
+    .filter((cube) => Number.isInteger(cube?.cubeItemId))
+    .sort((a, b) => a.cubeItemId - b.cubeItemId)
+    .map((cube) => ({
+      cubeItemId: cube.cubeItemId,
+      cubeName: typeof cube.cubeName === "string" && cube.cubeName ? cube.cubeName : String(cube.cubeItemId),
+      price: cube.price ?? null,
+      step: cube.step ?? null,
+      isDiscovery: cube.isDiscovery === true,
+      windowStart: cube.windowStart ?? null,
+      windowEnd: cube.windowEnd ?? null,
+    }));
+}
+
 // plan §5(j): "ポーラーが止まった場合に黙って古い値を出し続ける...それを
 // 利用者が見抜けるようにする". Component B's own cadence is 5 minutes
 // (poll_discovery.py); 3x that (15 minutes) is a deliberately generous

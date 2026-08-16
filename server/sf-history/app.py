@@ -592,6 +592,18 @@ def discovery_prices(request: Request, itemId: str | None = None) -> JSONRespons
     DISCOVERY, or already CHANGE in the very first recorded row -- settled
     before monitoring started, so the true instant is unknowable and is
     never guessed at).
+
+    IMPL_PLAN_SH34 §3: also carries `cubes` -- a SEPARATE array, parallel to
+    (never merged into) `bands` (plan: "bands の中に混ぜない"), one entry per
+    cube this item has ever had a `sf_discovery_cube_price_history` row for
+    (`db.latest_discovery_cubes_for_item` -- an item with none yet returns
+    `cubes: []`, never a placeholder row; plan §4: "キューブが1件も無い装備
+    では、表ごと出さない" is a frontend concern this empty list enables).
+    Order is `cube_item_id` ascending (`latest_discovery_cubes_for_item`'s
+    own `ORDER BY`) -- deterministic, no invented ranking (plan §3: "序列を
+    発明しない"). `cubeName` resolves via `discovery.cube_display_name`
+    (static 6-entry table, §2-2 revised) -- an unrecognized cube itemId
+    falls back to the code itself, never a guessed name.
     """
     item_id, error_response = _parse_item_id(itemId, request)
     if error_response is not None:
@@ -604,6 +616,8 @@ def discovery_prices(request: Request, itemId: str | None = None) -> JSONRespons
             return _error(f"unknown discovery itemId {item_id}", request, status_code=404)
         bands, observed_at = db.latest_discovery_bands_for_item(conn, item_id)
         transitions = db.find_discovery_transitions_for_item(conn, item_id)
+        cubes, _cube_observed_at = db.latest_discovery_cubes_for_item(conn, item_id)
+        cube_transitions = db.find_discovery_cube_transitions_for_item(conn, item_id)
     finally:
         conn.close()
 
@@ -623,6 +637,22 @@ def discovery_prices(request: Request, itemId: str | None = None) -> JSONRespons
             }
         )
 
+    cube_payload = []
+    for cube_item_id, cube in cubes.items():
+        cube_transition = cube_transitions.get(cube_item_id)
+        cube_payload.append(
+            {
+                "cubeItemId": cube_item_id,
+                "cubeName": discovery.cube_display_name(cube_item_id),
+                "price": cube["price"],
+                "step": cube["step"],
+                "priceAt": cube["priceAt"],
+                "isDiscovery": bool(cube["step"] == discovery.DISCOVERY_STEP),
+                "windowStart": cube_transition[0] if cube_transition else None,
+                "windowEnd": cube_transition[1] if cube_transition else None,
+            }
+        )
+
     return _json(
         {
             "itemId": item_id,
@@ -630,6 +660,7 @@ def discovery_prices(request: Request, itemId: str | None = None) -> JSONRespons
             "upgradeCount": discovery.UPGRADE_COUNT,
             "observedAt": observed_at,
             "bands": band_payload,
+            "cubes": cube_payload,
         },
         request,
     )

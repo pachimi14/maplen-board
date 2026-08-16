@@ -352,6 +352,105 @@ def test_find_discovery_transitions_for_item_only_returns_that_items_own_bands(t
     conn.close()
 
 
+# --- sf_discovery_cube_price_history -- IMPL_PLAN_SH34 §2-1 -----------------
+
+
+def test_upsert_discovery_cube_price_points_writes_current_and_previous(tmp_path: Path) -> None:
+    conn = db.connect(tmp_path / "x.sqlite")
+    db.apply_schema(conn)
+    points = [
+        {"priceAt": "2026-08-16T15:09:00Z", "endAt": "2026-08-16T15:10:00Z", "price": 1.0, "step": "STEP_TYPE_DISCOVERY"},
+        {"priceAt": "2026-08-16T15:08:00Z", "endAt": "2026-08-16T15:09:00Z", "price": 1.0, "step": "STEP_TYPE_DISCOVERY"},
+    ]
+    written = db.upsert_discovery_cube_price_points(conn, 1004811, 2711000, points, "2026-08-16T15:09:05Z")
+    assert written == 2
+
+    cubes, observed_at = db.latest_discovery_cubes_for_item(conn, 1004811)
+    assert cubes[2711000]["priceAt"] == "2026-08-16T15:09:00Z"  # most recent kept
+    assert observed_at == "2026-08-16T15:09:05Z"
+    conn.close()
+
+
+def test_upsert_discovery_cube_price_points_is_idempotent_same_window(tmp_path: Path) -> None:
+    """(c): the same (item_id, cube_item_id, price_at) written twice must
+    not create a second row."""
+    conn = db.connect(tmp_path / "x.sqlite")
+    db.apply_schema(conn)
+    point = [{"priceAt": "2026-08-16T15:09:00Z", "endAt": "2026-08-16T15:10:00Z", "price": 1.0, "step": "STEP_TYPE_DISCOVERY"}]
+    db.upsert_discovery_cube_price_points(conn, 1004811, 2711000, point, "2026-08-16T15:09:05Z")
+    db.upsert_discovery_cube_price_points(conn, 1004811, 2711000, point, "2026-08-16T15:14:05Z")  # re-poll, same window
+    count = conn.execute(
+        "SELECT COUNT(*) FROM sf_discovery_cube_price_history WHERE item_id=1004811 AND cube_item_id=2711000"
+    ).fetchone()[0]
+    assert count == 1
+    conn.close()
+
+
+def test_upsert_discovery_cube_price_points_never_touches_the_starforce_table(tmp_path: Path) -> None:
+    """(b): writing cube rows must never insert into
+    sf_discovery_price_history (the pre-existing, production-loaded table)."""
+    conn = db.connect(tmp_path / "x.sqlite")
+    db.apply_schema(conn)
+    point = [{"priceAt": "2026-08-16T15:09:00Z", "endAt": None, "price": 1.0, "step": "STEP_TYPE_DISCOVERY"}]
+    db.upsert_discovery_cube_price_points(conn, 1004811, 2711000, point, "2026-08-16T15:09:05Z")
+    count = conn.execute("SELECT COUNT(*) FROM sf_discovery_price_history").fetchone()[0]
+    assert count == 0
+    conn.close()
+
+
+def test_latest_discovery_cubes_for_item_empty_when_never_polled(tmp_path: Path) -> None:
+    conn = db.connect(tmp_path / "x.sqlite")
+    db.apply_schema(conn)
+    cubes, observed_at = db.latest_discovery_cubes_for_item(conn, 1004811)
+    assert cubes == {}
+    assert observed_at is None
+    conn.close()
+
+
+def test_latest_discovery_cubes_for_item_key_order_is_ascending_cube_item_id(tmp_path: Path) -> None:
+    """(j): the query is `ORDER BY cube_item_id`, so callers (app.py) never
+    need to re-sort to get the deterministic "code order" plan §3 requires."""
+    conn = db.connect(tmp_path / "x.sqlite")
+    db.apply_schema(conn)
+    for cube_item_id in (5062503, 2711000, 5062009):
+        db.upsert_discovery_cube_price_points(
+            conn, 1004811, cube_item_id,
+            [{"priceAt": "2026-08-16T15:09:00Z", "endAt": None, "price": 1.0, "step": "STEP_TYPE_DISCOVERY"}],
+            "2026-08-16T15:09:05Z",
+        )
+    cubes, _ = db.latest_discovery_cubes_for_item(conn, 1004811)
+    assert list(cubes.keys()) == [2711000, 5062009, 5062503]
+    conn.close()
+
+
+def test_find_discovery_cube_transitions_for_item_returns_only_observed_flips(tmp_path: Path) -> None:
+    conn = db.connect(tmp_path / "x.sqlite")
+    db.apply_schema(conn)
+    db.upsert_discovery_cube_price_points(
+        conn, 1004811, 5062010,
+        [
+            {"priceAt": "2026-08-14T10:00:00Z", "endAt": None, "price": 1.0, "step": "STEP_TYPE_DISCOVERY"},
+            {"priceAt": "2026-08-14T10:05:00Z", "endAt": None, "price": 1.0, "step": "STEP_TYPE_CHANGE"},
+        ],
+        "2026-08-14T10:05:05Z",
+    )
+    db.upsert_discovery_cube_price_points(
+        conn, 1004811, 2711000,
+        [{"priceAt": "2026-08-15T09:28:00Z", "endAt": None, "price": 1.0, "step": "STEP_TYPE_DISCOVERY"}],
+        "2026-08-15T09:28:05Z",
+    )
+    transitions = db.find_discovery_cube_transitions_for_item(conn, 1004811)
+    assert transitions == {5062010: ("2026-08-14T10:00:00Z", "2026-08-14T10:05:00Z")}  # 2711000 absent -- still DISCOVERY
+    conn.close()
+
+
+def test_find_discovery_cube_transitions_for_item_empty_when_never_polled(tmp_path: Path) -> None:
+    conn = db.connect(tmp_path / "x.sqlite")
+    db.apply_schema(conn)
+    assert db.find_discovery_cube_transitions_for_item(conn, 999) == {}
+    conn.close()
+
+
 # --- list_visible_discovery_monitored_groups -- IMPL_PLAN_SH33 follow-up ----
 
 

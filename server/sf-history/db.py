@@ -671,6 +671,104 @@ def find_recent_discovery_transitions(
     return results
 
 
+# --- IMPL_PLAN_SH34 §2-1: sf_discovery_cube_price_history access ------------
+# Same writer discipline as sf_discovery_price_history above (Component B /
+# poll_discovery.py only) -- see that table's schema.sql header comment.
+
+
+def upsert_discovery_cube_price_points(
+    conn: sqlite3.Connection,
+    item_id: int,
+    cube_item_id: int,
+    points: list[dict[str, Any]],
+    fetched_at: str,
+) -> int:
+    """UPSERT Component B's per-cube points -- the cube counterpart of
+    `upsert_discovery_price_points` above, same
+    `{"priceAt", "endAt", "price", "step"}` point shape
+    (`discovery.parse_dynamicprice_cube_points`), same
+    (item_id, cube_item_id, price_at) upsert-key discipline."""
+    rows = [
+        (item_id, cube_item_id, point["priceAt"], point.get("endAt"), point["price"], point["step"], fetched_at)
+        for point in points
+        if point.get("priceAt")
+    ]
+    if not rows:
+        return 0
+    conn.executemany(
+        """
+        INSERT INTO sf_discovery_cube_price_history
+            (item_id, cube_item_id, price_at, end_at, price, step, fetched_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(item_id, cube_item_id, price_at) DO UPDATE SET
+            end_at=excluded.end_at,
+            price=excluded.price,
+            step=excluded.step,
+            fetched_at=excluded.fetched_at
+        """,
+        rows,
+    )
+    conn.commit()
+    return len(rows)
+
+
+def latest_discovery_cubes_for_item(
+    conn: sqlite3.Connection, item_id: int
+) -> tuple[dict[int, dict[str, Any]], str | None]:
+    """The most recent (by `price_at`) row per `cube_item_id` for `item_id`,
+    plus the freshest `fetched_at` across all of them -- the cube
+    counterpart of `latest_discovery_bands_for_item`. The query is `ORDER BY
+    cube_item_id`, so the returned dict's key order is already the
+    deterministic "code order" `app.py`'s response uses (plan §3: "並び順は
+    決定的にする...コード順で構わない") -- callers do not need to re-sort.
+    Returns `({}, None)` if Component B has never polled this item's cubes
+    (also true for an item with none of its cube data recorded yet, even if
+    its bands have been -- plan §4: "キューブが1件も無い装備では、表ごと
+    出さない" is exactly this empty-dict case, left to the caller to act on).
+    """
+    cur = conn.execute(
+        "SELECT cube_item_id, price_at, end_at, price, step, fetched_at "
+        "FROM sf_discovery_cube_price_history WHERE item_id = ? ORDER BY cube_item_id, price_at",
+        (item_id,),
+    )
+    cubes: dict[int, dict[str, Any]] = {}
+    observed_at: str | None = None
+    for cube_item_id, price_at, end_at, price, step, fetched_at in cur.fetchall():
+        # ORDER BY price_at ASC per cube -- the last row seen per cube_item_id
+        # (dict overwrite) is always the most recent one.
+        cubes[cube_item_id] = {"priceAt": price_at, "endAt": end_at, "price": price, "step": step}
+        if observed_at is None or fetched_at > observed_at:
+            observed_at = fetched_at
+    return cubes, observed_at
+
+
+def find_discovery_cube_transitions_for_item(conn: sqlite3.Connection, item_id: int) -> dict[int, tuple[str, str]]:
+    """The cube counterpart of `find_discovery_transitions_for_item`: `cube_
+    item_id -> (windowStart, windowEnd)` for every cube of ONE item that has
+    ever recorded a DISCOVERY -> CHANGE flip (`discovery.find_transition`,
+    plan §3: "遷移時刻の導出は SF と同じ仕組み...別ロジックを作らない"). A
+    cube absent from the returned dict never showed an observed flip in the
+    recorded history (still DISCOVERY, or already CHANGE in the first row
+    ever recorded -- indistinguishable, "推測して埋めない" as with bands)."""
+    import discovery  # local import: keeps db.py's top-level imports DB-only
+
+    cur = conn.execute(
+        "SELECT cube_item_id, price_at, step FROM sf_discovery_cube_price_history "
+        "WHERE item_id = ? ORDER BY cube_item_id, price_at",
+        (item_id,),
+    )
+    rows_by_cube: dict[int, list[tuple[str, str]]] = {}
+    for cube_item_id, price_at, step in cur.fetchall():
+        rows_by_cube.setdefault(cube_item_id, []).append((price_at, step))
+
+    transitions: dict[int, tuple[str, str]] = {}
+    for cube_item_id, rows in rows_by_cube.items():
+        transition = discovery.find_transition(rows)
+        if transition is not None:
+            transitions[cube_item_id] = transition
+    return transitions
+
+
 def find_discovery_transitions_for_item(conn: sqlite3.Connection, item_id: int) -> dict[int, tuple[str, str]]:
     """IMPL_PLAN_SH33 follow-up (post-review): the per-item, all-bands
     counterpart of ``find_recent_discovery_transitions`` above -- ``item_
