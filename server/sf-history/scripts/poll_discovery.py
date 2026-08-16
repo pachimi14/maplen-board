@@ -11,6 +11,15 @@ the same official Open API `dynamicprice` endpoint scan_discovery.py and
 (`discovery.parse_dynamicprice_points` / `db.upsert_discovery_price_points`,
 plan §5(d)/(e)).
 
+IMPL_PLAN_SH34 §2-1: the SAME response also carries `data.currentPrices.
+potential` (cube/potential price formation) -- a field this module always
+received but discarded until now (plan §0 G6). This poll now ALSO parses it
+(`discovery.parse_dynamicprice_cube_points`) and upserts it into the
+separate `sf_discovery_cube_price_history` table
+(`db.upsert_discovery_cube_price_points`) -- no additional upstream request
+of any kind (plan accept criterion (a): still exactly one GET per
+representative).
+
 ★狙い (plan §2 B): catching the DISCOVERY -> CHANGE flip the moment it
 happens. Since `history` never replays a DISCOVERY band after the fact
 (plan §0 F2/F3), a poll that is skipped is data lost forever, not merely
@@ -96,6 +105,14 @@ def run_poll(*, db_path: Path, fetcher: fetcher_mod.Fetcher, now: datetime | Non
 
         for item_upgrade, points in points_by_band.items():
             rows_written += db.upsert_discovery_price_points(conn, item_id, item_upgrade, points, now_iso)
+
+        # IMPL_PLAN_SH34 §2-1: same response, no extra request -- see module
+        # docstring. `parse_dynamicprice_cube_points` never raises (a missing/
+        # malformed `potential` map just yields {}), so this never turns a
+        # successful starforce poll into a failure.
+        cube_points_by_cube_id = discovery.parse_dynamicprice_cube_points(payload)
+        for cube_item_id, points in cube_points_by_cube_id.items():
+            rows_written += db.upsert_discovery_cube_price_points(conn, item_id, cube_item_id, points, now_iso)
         polled += 1
 
     conn.close()
