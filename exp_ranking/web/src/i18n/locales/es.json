@@ -649,6 +649,10 @@
       "observedAtStale": "(el sondeo puede haberse detenido -- esto podría estar desactualizado)",
       "neverPolled": "Todavía no se ha sondeado."
     },
+    "cubes": {
+      "tableHeading": "Cubos",
+      "cube": "Cubo"
+    },
     "recent": {
       "title": "Bandas fijadas recientemente",
       "subtitle": "El equipo permanece en esta lista durante {{days}} días después de que todas sus bandas se fijan, para que su propia tabla de precios siga siendo accesible.",

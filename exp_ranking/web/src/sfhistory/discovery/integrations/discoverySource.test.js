@@ -40,6 +40,10 @@ const pricesPayload = {
       windowEnd: "2026-08-14T10:05:00Z",
     },
   ],
+  cubes: [
+    { cubeItemId: 2711000, cubeName: "Occult Cube", price: 0.000001, step: "STEP_TYPE_DISCOVERY", priceAt: "2026-08-16T15:18:00Z", isDiscovery: true, windowStart: null, windowEnd: null },
+    { cubeItemId: 5062010, cubeName: "Black Cube", price: 570649.869736, step: "STEP_TYPE_CHANGE", priceAt: "2026-08-16T15:18:00Z", isDiscovery: false, windowStart: null, windowEnd: null },
+  ],
 };
 
 const recentPayload = {
@@ -127,6 +131,48 @@ describe("normalizeDiscoveryPricesPayload", () => {
     expect(result.bands[1].windowStart).toBe("2026-08-14T10:00:00Z");
     expect(result.bands[1].windowEnd).toBe("2026-08-14T10:05:00Z");
   });
+
+  // IMPL_PLAN_SH34 §3/§4: cubes -- a separate list, not a fixed-length one.
+  it("keeps every cube with its resolved name and isDiscovery badge", () => {
+    const result = normalizeDiscoveryPricesPayload(pricesPayload, 1053063);
+    expect(result.cubes).toHaveLength(2);
+    expect(result.cubes[0]).toEqual({
+      cubeItemId: 2711000,
+      cubeName: "Occult Cube",
+      price: 0.000001,
+      step: "STEP_TYPE_DISCOVERY",
+      priceAt: "2026-08-16T15:18:00Z",
+      isDiscovery: true,
+      windowStart: null,
+      windowEnd: null,
+    });
+    expect(result.cubes[1].isDiscovery).toBe(false);
+  });
+
+  it("normalizes to an empty cubes array when the server omits it or the item has none recorded", () => {
+    const result = normalizeDiscoveryPricesPayload({ ...pricesPayload, cubes: [] }, 1053063);
+    expect(result.cubes).toEqual([]);
+    const withoutField = normalizeDiscoveryPricesPayload(
+      { itemId: 1053063, itemName: "X", upgradeCount: 0, observedAt: null, bands: [] },
+      1053063,
+    );
+    expect(withoutField.cubes).toEqual([]);
+  });
+
+  it("(d): an unresolved cube name falls back to the code itself as a string", () => {
+    const result = normalizeDiscoveryPricesPayload(
+      {
+        itemId: 1053063,
+        itemName: "X",
+        upgradeCount: 0,
+        observedAt: null,
+        bands: [],
+        cubes: [{ cubeItemId: 9999999, cubeName: "9999999", price: 1.0, step: "STEP_TYPE_DISCOVERY", priceAt: "x", isDiscovery: true, windowStart: null, windowEnd: null }],
+      },
+      1053063,
+    );
+    expect(result.cubes[0].cubeName).toBe("9999999");
+  });
 });
 
 // --- normalizeDiscoveryRecentPayload ------------------------------------------
@@ -160,7 +206,7 @@ describe("createDiscoverySource", () => {
     const source = createDiscoverySource({ baseUrl: "https://x", fetchImpl });
     const result = await source.loadPrices(1053063);
     expect(fetchImpl).toHaveBeenCalledWith("https://x/sf-history/discovery/prices?itemId=1053063", { signal: undefined });
-    expect(result).toEqual({ ok: false, code: "notFound", itemName: null, upgradeCount: 0, observedAt: null, bands: [] });
+    expect(result).toEqual({ ok: false, code: "notFound", itemName: null, upgradeCount: 0, observedAt: null, bands: [], cubes: [] });
   });
 
   it("loadRecent omits ?days= when not an integer, includes it otherwise", async () => {

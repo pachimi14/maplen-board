@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildBandRows, groupRecentByItem, isObservationStale, starForUpgrade } from "./bands.js";
+import { buildBandRows, buildCubeRows, groupRecentByItem, isObservationStale, starForUpgrade } from "./bands.js";
 
 describe("starForUpgrade", () => {
   it("is 1-based (itemUpgrade 0 -> ☆1, itemUpgrade 24 -> ☆25)", () => {
@@ -51,6 +51,38 @@ describe("buildBandRows", () => {
     const rows = buildBandRows(bands, 25);
     const noBadge = rows.filter((r) => !r.isDiscovery).map((r) => r.itemUpgrade);
     expect(new Set(noBadge)).toEqual(changeBands);
+  });
+});
+
+describe("buildCubeRows", () => {
+  it("returns [] for an empty/undefined input -- distinct from buildBandRows' fixed-length fill", () => {
+    expect(buildCubeRows([])).toEqual([]);
+    expect(buildCubeRows(undefined)).toEqual([]);
+  });
+
+  it("sorts by cubeItemId ascending regardless of input order (j: no invented ranking)", () => {
+    const rows = buildCubeRows([
+      { cubeItemId: 5062503, cubeName: "White Cube", price: 1, step: "STEP_TYPE_CHANGE", isDiscovery: false, windowStart: null, windowEnd: null },
+      { cubeItemId: 2711000, cubeName: "Occult Cube", price: 1, step: "STEP_TYPE_DISCOVERY", isDiscovery: true, windowStart: null, windowEnd: null },
+    ]);
+    expect(rows.map((r) => r.cubeItemId)).toEqual([2711000, 5062503]);
+  });
+
+  // (d): an unrecognized cube itemId's name is whatever the server already
+  // resolved it to (server-side fallback = the code itself) -- this layer
+  // only re-applies the SAME defensive fallback if that field is ever
+  // missing/blank, it never guesses a name of its own.
+  it("falls back to the code itself when cubeName is missing/blank", () => {
+    const rows = buildCubeRows([{ cubeItemId: 9999999, price: 1, step: "STEP_TYPE_DISCOVERY", isDiscovery: true, windowStart: null, windowEnd: null }]);
+    expect(rows[0].cubeName).toBe("9999999");
+  });
+
+  it("carries windowStart/windowEnd through when the server reports an observed transition", () => {
+    const rows = buildCubeRows([
+      { cubeItemId: 5062010, cubeName: "Black Cube", price: 1, step: "STEP_TYPE_CHANGE", isDiscovery: false, windowStart: "2026-08-14T10:00:00Z", windowEnd: "2026-08-14T10:05:00Z" },
+    ]);
+    expect(rows[0].windowStart).toBe("2026-08-14T10:00:00Z");
+    expect(rows[0].windowEnd).toBe("2026-08-14T10:05:00Z");
   });
 });
 
