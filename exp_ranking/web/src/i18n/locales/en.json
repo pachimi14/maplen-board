@@ -649,6 +649,9 @@
       "observedAtStale": "(the poller may have stopped -- this may be out of date)",
       "neverPolled": "Not polled yet."
     },
+    "cubes": {
+      "cube": "Cube"
+    },
     "recent": {
       "title": "Recently settled bands",
       "subtitle": "Equipment stays listed here for {{days}} days after all its bands settle, so its own price table stays reachable.",

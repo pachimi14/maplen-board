@@ -116,6 +116,28 @@ def _point_from_entry(entry: dict[str, Any] | None) -> dict[str, Any] | None:
     }
 
 
+def _points_for_entry(entry: dict[str, Any] | None) -> list[dict[str, Any]]:
+    """The CURRENT + (distinct) PREVIOUS point pair for one band/cube entry
+    -- shared by `parse_dynamicprice_points` and (IMPL_PLAN_SH34)
+    `parse_dynamicprice_cube_points`, both of which read the identical
+    `{currentPrice, previousPrice}` entry shape, just from a different map
+    (`starforce` vs `potential`, G1: same 2-value `step`)."""
+    if not isinstance(entry, dict):
+        return []
+    points: list[dict[str, Any]] = []
+    current_point = _point_from_entry(entry.get("currentPrice"))
+    if current_point is not None and current_point["priceAt"] is not None:
+        points.append(current_point)
+    previous_point = _point_from_entry(entry.get("previousPrice"))
+    if (
+        previous_point is not None
+        and previous_point["priceAt"] is not None
+        and previous_point["priceAt"] != (current_point or {}).get("priceAt")
+    ):
+        points.append(previous_point)
+    return points
+
+
 def parse_dynamicprice_points(payload: dict[str, Any]) -> dict[int, list[dict[str, Any]]]:
     """Component B's read: for every band (itemUpgrade -> points), both the
     `currentPrice` and `previousPrice` windows (plan §2 B: "1回で2点得られる"
@@ -132,19 +154,66 @@ def parse_dynamicprice_points(payload: dict[str, Any]) -> dict[int, list[dict[st
     for upgrade, entry in _numbered_entries(starforce):
         if not (0 <= upgrade < UPGRADE_COUNT) or not isinstance(entry, dict):
             continue
-        points: list[dict[str, Any]] = []
-        current_point = _point_from_entry(entry.get("currentPrice"))
-        if current_point is not None and current_point["priceAt"] is not None:
-            points.append(current_point)
-        previous_point = _point_from_entry(entry.get("previousPrice"))
-        if (
-            previous_point is not None
-            and previous_point["priceAt"] is not None
-            and previous_point["priceAt"] != (current_point or {}).get("priceAt")
-        ):
-            points.append(previous_point)
+        points = _points_for_entry(entry)
         if points:
             result[upgrade] = points
+    return result
+
+
+# --- IMPL_PLAN_SH34 §2-2 (revised, 統括 2026-08-17): cube (potential) display
+# names -- a static 6-entry table, NOT resolved via Navigator metadata (that
+# design was retracted as over-engineering for a set the user judged will
+# not grow: "キューブは6種しかありません...将来増える前提で組む必要はない").
+# Confirmed live via the official Open API (2026-08-16 probe, item 1004811):
+# `data.currentPrices.potential` is keyed by exactly these 6 cube itemIds.
+CUBE_NAMES: dict[int, str] = {
+    2711000: "Occult Cube",
+    2730000: "Bonus Occult Cube",
+    5062009: "Red Cube",
+    5062010: "Black Cube",
+    5062500: "Bonus Potential Cube",
+    5062503: "White Cube",
+}
+
+
+def cube_display_name(cube_item_id: int) -> str:
+    """This cube's display name, or -- plan §2-2's one remaining fallback --
+    the code itself (stringified) if `cube_item_id` is not in `CUBE_NAMES`.
+    Never a guessed/derived name: this is the "画面を壊さないための1行", not
+    an attempt to support an unknown cube's name."""
+    return CUBE_NAMES.get(cube_item_id, str(cube_item_id))
+
+
+def parse_dynamicprice_cube_points(payload: dict[str, Any]) -> dict[int, list[dict[str, Any]]]:
+    """IMPL_PLAN_SH34 §2-1 Component B: the `potential` sibling of
+    `parse_dynamicprice_points`, keyed by CUBE itemId (e.g. 2711000) rather
+    than itemUpgrade -- `data.currentPrices.potential` is itself keyed by
+    each cube's own itemId (string-formatted), with the identical
+    `{currentPrice, previousPrice}` shape `starforce` entries have (G1).
+
+    Unlike `_starforce_map`, a MISSING/malformed `potential` map is not an
+    error here -- returns `{}` -- this read is purely additive (G6: a field
+    this codebase's `poll_discovery.py` already receives on every
+    `dynamicprice` response but has always discarded), so it must never make
+    the existing `starforce` parse fail or `poll_discovery.py` abort.
+    """
+    data = payload.get("data")
+    if not isinstance(data, dict):
+        data = payload
+    current_prices = data.get("currentPrices")
+    potential = current_prices.get("potential") if isinstance(current_prices, dict) else None
+    if not isinstance(potential, dict):
+        return {}
+
+    result: dict[int, list[dict[str, Any]]] = {}
+    for key, entry in potential.items():
+        try:
+            cube_item_id = int(key)
+        except (TypeError, ValueError):
+            continue
+        points = _points_for_entry(entry)
+        if points:
+            result[cube_item_id] = points
     return result
 
 

@@ -649,6 +649,9 @@
       "observedAtStale": "(bộ ghi có thể đã dừng -- dữ liệu này có thể đã cũ)",
       "neverPolled": "Chưa được ghi nhận."
     },
+    "cubes": {
+      "cube": "Cube"
+    },
     "recent": {
       "title": "Các dải giá vừa ổn định",
       "subtitle": "Trang bị vẫn xuất hiện trong danh sách này trong {{days}} ngày sau khi tất cả các dải đã ổn định, để bảng giá của nó vẫn có thể truy cập được.",

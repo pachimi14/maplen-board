@@ -62,7 +62,7 @@ export function normalizeDiscoveryEquipmentPayload(payload) {
 /** `/sf-history/discovery/prices?itemId=` -> the ☆1-25 band list for one
  * monitored representative (plan §1/§5(h)/(j)). */
 export function normalizeDiscoveryPricesPayload(payload, expectedItemId) {
-  const empty = { itemName: null, upgradeCount: 0, observedAt: null, bands: [] };
+  const empty = { itemName: null, upgradeCount: 0, observedAt: null, bands: [], cubes: [] };
   if (!payload || payload.itemId !== expectedItemId || !Array.isArray(payload.bands)) {
     return { ok: false, code: "invalidFormat", ...empty };
   }
@@ -83,6 +83,28 @@ export function normalizeDiscoveryPricesPayload(payload, expectedItemId) {
       windowStart: toNonEmptyStringOrNull(band.windowStart),
       windowEnd: toNonEmptyStringOrNull(band.windowEnd),
     }));
+  // IMPL_PLAN_SH34 §3/§4: `cubes` is a SEPARATE list (never merged into
+  // `bands`) -- not a fixed-length list like `bands` (an item with no
+  // recorded cube data at all normalizes to `[]`, which is exactly the
+  // signal `DiscoveryCubeTable.jsx` uses to render nothing, plan §4:
+  // "キューブが1件も無い装備では、表ごと出さない"). `cubeName` is never
+  // translated here (server-resolved, plan §2-2: English in all locales,
+  // same as an equipment name) -- a missing/blank one still falls back to
+  // the code itself defensively, same discipline `itemName` above uses.
+  const cubes = Array.isArray(payload.cubes)
+    ? payload.cubes
+        .filter((cube) => Number.isInteger(cube?.cubeItemId))
+        .map((cube) => ({
+          cubeItemId: cube.cubeItemId,
+          cubeName: typeof cube.cubeName === "string" && cube.cubeName ? cube.cubeName : String(cube.cubeItemId),
+          price: toFiniteOrNull(cube.price),
+          step: toNonEmptyStringOrNull(cube.step),
+          priceAt: toNonEmptyStringOrNull(cube.priceAt),
+          isDiscovery: cube.isDiscovery === true,
+          windowStart: toNonEmptyStringOrNull(cube.windowStart),
+          windowEnd: toNonEmptyStringOrNull(cube.windowEnd),
+        }))
+    : [];
   return {
     ok: true,
     code: "ok",
@@ -90,6 +112,7 @@ export function normalizeDiscoveryPricesPayload(payload, expectedItemId) {
     upgradeCount: Number.isInteger(payload.upgradeCount) ? payload.upgradeCount : bands.length,
     observedAt: toNonEmptyStringOrNull(payload.observedAt),
     bands,
+    cubes,
   };
 }
 
@@ -127,7 +150,7 @@ export function createDiscoverySource({
     },
 
     async loadPrices(itemId, { signal } = {}) {
-      const empty = { itemName: null, upgradeCount: 0, observedAt: null, bands: [] };
+      const empty = { itemName: null, upgradeCount: 0, observedAt: null, bands: [], cubes: [] };
       try {
         const response = await fetchImpl(`${baseUrl}/sf-history/discovery/prices?itemId=${encodeURIComponent(itemId)}`, { signal });
         if (!response.ok) {

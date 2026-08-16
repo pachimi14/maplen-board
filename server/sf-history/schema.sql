@@ -148,3 +148,28 @@ CREATE TABLE IF NOT EXISTS sf_discovery_price_history (
     fetched_at   TEXT    NOT NULL,
     PRIMARY KEY (item_id, item_upgrade, price_at)
 );
+
+-- IMPL_PLAN_SH34 §2-1: the CUBE (potential) counterpart of
+-- sf_discovery_price_history above -- same 5-minute poll
+-- (scripts/poll_discovery.py), same upstream response (`data.currentPrices.
+-- potential`, read alongside `starforce` from the response that is already
+-- being fetched -- zero additional upstream requests, plan §0 G6). A NEW
+-- table rather than a column on sf_discovery_price_history: a cube is
+-- identified by its own itemId (`cube_item_id`), not by `item_upgrade`
+-- (plan §2-1: "キューブは item_upgrade で識別できない") -- and this keeps
+-- sf_discovery_price_history's schema, which already holds 4,350+ real
+-- rows in production, completely untouched (no migration).
+-- `cube_item_id` is whatever the upstream response's `potential` map key
+-- parses as (never a hardcoded enum) -- see discovery.py's
+-- `parse_dynamicprice_cube_points`/`CUBE_NAMES` for the (separately
+-- maintained, display-only) name lookup.
+CREATE TABLE IF NOT EXISTS sf_discovery_cube_price_history (
+    item_id      INTEGER NOT NULL,
+    cube_item_id INTEGER NOT NULL,
+    price_at     TEXT    NOT NULL,   -- window start (ISO8601 UTC)
+    end_at       TEXT,               -- window end
+    price        REAL    NOT NULL,
+    step         TEXT    NOT NULL,
+    fetched_at   TEXT    NOT NULL,
+    PRIMARY KEY (item_id, cube_item_id, price_at)
+);
