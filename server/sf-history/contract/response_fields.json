@@ -20,9 +20,10 @@
     "item": ["itemId", "itemName", "aliasItemIds", "aliases", "stepsConsistent", "lastScanAt", "isActive"]
   },
   "discoveryPrices": {
-    "$comment": "IMPL_PLAN_SH32 -- GET /sf-history/discovery/prices?itemId=. `root` and `band` are both always fully present -- a band never polled yet still appears with price/step/priceAt/windowStart/windowEnd: null, isDiscovery: false. IMPL_PLAN_SH33 follow-up: `windowStart`/`windowEnd` added -- this band's own observed DISCOVERY->CHANGE flip (null if never observed).",
-    "root": ["itemId", "itemName", "upgradeCount", "observedAt", "bands"],
-    "band": ["itemUpgrade", "price", "step", "priceAt", "isDiscovery", "windowStart", "windowEnd"]
+    "$comment": "IMPL_PLAN_SH32 -- GET /sf-history/discovery/prices?itemId=. `root` and `band` are both always fully present -- a band never polled yet still appears with price/step/priceAt/windowStart/windowEnd: null, isDiscovery: false. IMPL_PLAN_SH33 follow-up: `windowStart`/`windowEnd` added -- this band's own observed DISCOVERY->CHANGE flip (null if never observed). IMPL_PLAN_SH34 -- `cubes` added: a SEPARATE array (never merged into `bands`), one entry per cube this item has ever recorded a sf_discovery_cube_price_history row for (empty array if none yet -- unlike `bands`, this is NOT a fixed-length list). `cube` is the shape of each `cubes[]` entry.",
+    "root": ["itemId", "itemName", "upgradeCount", "observedAt", "bands", "cubes"],
+    "band": ["itemUpgrade", "price", "step", "priceAt", "isDiscovery", "windowStart", "windowEnd"],
+    "cube": ["cubeItemId", "cubeName", "price", "step", "priceAt", "isDiscovery", "windowStart", "windowEnd"]
   },
   "discoveryRecent": {
     "$comment": "IMPL_PLAN_SH32 -- GET /sf-history/discovery/recent. `root` and `item` are both always fully present.",
