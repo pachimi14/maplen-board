@@ -7,6 +7,7 @@ import { discoverySource } from "./integrations/discoverySource.js";
 import { formatTooltipDate } from "../domain/format.js";
 import { isObservationStale } from "./domain/bands.js";
 import SfHistoryTabs from "../SfHistoryTabs.jsx";
+import DiscoveryCubeTable from "./components/DiscoveryCubeTable.jsx";
 import DiscoveryEquipmentSelector from "./components/DiscoveryEquipmentSelector.jsx";
 import DiscoveryPriceTable from "./components/DiscoveryPriceTable.jsx";
 import DiscoveryRecentList from "./components/DiscoveryRecentList.jsx";
@@ -40,7 +41,7 @@ export default function DiscoveryRoot() {
   const [equipmentState, setEquipmentState] = useState({ status: "loading", items: [] });
   const [selectedItemId, setSelectedItemId] = useState(null);
   const [selectedAlias, setSelectedAlias] = useState(null); // { itemId, itemName } -- the exact row picked (may be an alias)
-  const [pricesState, setPricesState] = useState({ status: "idle", itemName: null, upgradeCount: 25, observedAt: null, bands: [] });
+  const [pricesState, setPricesState] = useState({ status: "idle", itemName: null, upgradeCount: 25, observedAt: null, bands: [], cubes: [] });
   const [recentState, setRecentState] = useState({ status: "loading", days: null, items: [] });
 
   useEffect(() => {
@@ -85,7 +86,7 @@ export default function DiscoveryRoot() {
     discoverySource.loadPrices(selectedItemId).then((result) => {
       if (cancelled) return;
       if (!result.ok) {
-        setPricesState({ status: "error", itemName: null, upgradeCount: 25, observedAt: null, bands: [] });
+        setPricesState({ status: "error", itemName: null, upgradeCount: 25, observedAt: null, bands: [], cubes: [] });
         return;
       }
       setPricesState({
@@ -94,6 +95,7 @@ export default function DiscoveryRoot() {
         upgradeCount: result.upgradeCount,
         observedAt: result.observedAt,
         bands: result.bands,
+        cubes: result.cubes,
       });
     });
     return () => {
@@ -167,6 +169,7 @@ export default function DiscoveryRoot() {
                     )}
                   </div>
                   <DiscoveryPriceTable bands={pricesState.bands} upgradeCount={pricesState.upgradeCount} />
+                  <DiscoveryCubeTable cubes={pricesState.cubes} />
                 </>
               )}
             </div>
