@@ -21,10 +21,6 @@ exp_ranking/
 
 旧バッチは `scripts/archive/bat/` に退避済み。
 
-### スナップショット履歴のシード（本番復旧用）
-
-`exp_ranking/bot/data/seed/rankings_seed.json` は **Git に含めます**（公開して問題ないランキングデータ）。CI が DB に無い日付（例: `2026-06-02`）だけを補完します。DB が揃ったらファイルと workflow の `IMPORT_SNAPSHOTS_JSON` を削除してよいです。
-
 ### ローカルと GitHub Pages でデータが違うとき
 
 DB は **GitHub Release `db-store`** に日次で保存されます（T12 P3 以降。**Git への日次コミットは廃止**）。  
