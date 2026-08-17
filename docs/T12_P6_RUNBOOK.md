@@ -33,12 +33,12 @@
 - [ ] **P3(出血停止)完了・本番反映済**(db.gz の新規コミットが止まっている)
 - [ ] **P4(v1廃止)完了**
 - [ ] **P5(ローカルbat確認)完了**
-- [ ] **P5.5(Google Drive 世代バックアップ)完了**(`docs/IMPL_PLAN_T12_P5_5_GOOGLE_DRIVE_BACKUP.md` §8。Release が完全DBの唯一の保存先になる P6 の前に、独立した退避先を確立しておく)
-  - [ ] **Google Drive への日次バックアップが実装済み**
-  - [ ] **連続3回以上成功**
-  - [ ] **直近7日保持ポリシーが実証済み**
-  - [ ] **Release DB と Google Drive DB の内容一致を確認済み**
-  - [ ] **Google Drive から実際にDBを復元する手順を実証済み**(`docs/T12_P5_5_RESTORE_GUIDE.md`)
+- [x] **P5.5(Google Drive 世代バックアップ)完了**(2026-08-17 クローズ = LULU-112)(`docs/IMPL_PLAN_T12_P5_5_GOOGLE_DRIVE_BACKUP.md` §8。Release が完全DBの唯一の保存先になる P6 の前に、独立した退避先を確立しておく)
+  - [x] **Google Drive への日次バックアップが実装済み**(PR #26 / 2026-08-13 本番稼働開始)
+  - [x] **連続3回以上成功**(2026-08-15〜08-17 に **7 run 連続成功**。要件3を超過)
+  - [x] **直近7日保持ポリシーが実証済み**(合成テストで7日/8日境界・最低世代数ガードを実証。**本番でも同一UTC日の重複排除による実削除が作動**: run `31987342633` で「保持ポリシーにより1件の古い世代を削除しました」。※経過日数(8日以上)による削除は世代が溜まる 2026-08-23 頃に自然発生する見込み=watch)
+  - [x] **Release DB と Google Drive DB の内容一致を確認済み**(2026-08-17 のドリルで **SHA-256 バイト完全一致** + 統計6項目一致)
+  - [x] **Google Drive から実際にDBを復元する手順を実証済み**(`docs/T12_P5_5_RESTORE_GUIDE.md` §6 に実施記録。2026-08-17 合格)
 - [ ] **GitHub Actions 停止済**(3 workflow を disable = §3 Step 1)
 - [ ] **実行中の Workflow が 0件**(`gh run list --status in_progress` が空)
 - [ ] **working tree clean**(`git status` に未コミット変更なし)
