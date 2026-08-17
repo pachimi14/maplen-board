@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-import json
 import logging
 import sqlite3
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Any
 from zoneinfo import ZoneInfo
 
 import config
@@ -37,80 +35,6 @@ def ranking_day_from_fetch(dt: datetime) -> str:
 
 def shift_iso_date(iso_date: str, *, days: int) -> str:
     return (date.fromisoformat(iso_date) + timedelta(days=days)).isoformat()
-
-
-def shift_chart_date(chart_date: str, *, days: int, year: int) -> str:
-    month_str, day_str = chart_date.strip().split("/", 1)
-    shifted = date(year, int(month_str), int(day_str)) + timedelta(days=days)
-    return f"{shifted.month:02d}/{shifted.day:02d}"
-
-
-def shift_mvp_json_dates(payload: dict[str, Any], *, days: int = -1) -> dict[str, Any]:
-    meta = payload.get("meta")
-    if not isinstance(meta, dict):
-        return payload
-
-    latest_raw = str(meta.get("latestSnapshotDate") or "").strip()
-    year = int(latest_raw[:4]) if len(latest_raw) >= 4 else date.today().year
-    if latest_raw:
-        meta["latestSnapshotDate"] = shift_iso_date(latest_raw, days=days)
-        year = int(meta["latestSnapshotDate"][:4])
-
-    gain_periods = meta.get("gainPeriods")
-    if isinstance(gain_periods, dict):
-        for period in gain_periods.values():
-            if not isinstance(period, dict):
-                continue
-            for key in ("periodStart", "periodEnd"):
-                raw = str(period.get(key) or "").strip()
-                if raw:
-                    period[key] = shift_iso_date(raw, days=days)
-
-    meta["rankingDayTimezone"] = "UTC"
-    meta["rankingDayResetsAt"] = (
-        "UTC 00:00 (= JST 09:00); snapshot label = prior UTC calendar day"
-    )
-
-    characters = payload.get("characters")
-    if not isinstance(characters, list):
-        return payload
-
-    for character in characters:
-        if not isinstance(character, dict):
-            continue
-        history = character.get("history")
-        if not isinstance(history, list):
-            continue
-        for point in history:
-            if not isinstance(point, dict):
-                continue
-            snapshot_raw = str(point.get("snapshotDate") or "").strip()
-            if snapshot_raw:
-                point["snapshotDate"] = shift_iso_date(snapshot_raw, days=days)
-            chart_raw = str(point.get("date") or "").strip()
-            if chart_raw and "/" in chart_raw:
-                point["date"] = shift_chart_date(chart_raw, days=days, year=year)
-
-    return payload
-
-
-def shift_mvp_json_file(json_path: Path, *, days: int = -1) -> bool:
-    if not json_path.exists():
-        return False
-    try:
-        payload = json.loads(json_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        logger.warning("Cannot shift MVP JSON %s: %s", json_path, exc)
-        return False
-    if not isinstance(payload, dict):
-        return False
-    shifted = shift_mvp_json_dates(payload, days=days)
-    json_path.write_text(
-        json.dumps(shifted, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
-    logger.info("Shifted MVP JSON snapshot dates by %s day(s): %s", days, json_path)
-    return True
 
 
 def shift_all_snapshot_dates(db_path: Path, *, days: int = -1) -> int:
