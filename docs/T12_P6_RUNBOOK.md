@@ -240,9 +240,36 @@ git diff origin/main HEAD
 > Step 3.5 を済ませていれば**完全に空**になる。**1行でも差分が出たら中止**し、原因を特定する(内容が変わっている=書換が意図を超えている)。
 
 ```bash
-git push --force origin main
-git push --force --tags origin        # タグがある場合のみ
+# ★1: plain --force を2回に分けてはいけない。main だけ成功してタグが失敗すると、
+#     旧タグが旧履歴を到達可能に保ち「サイズが減らない」P6 最悪の中間状態になる。
+#     --atomic なら両方成功か両方失敗のどちらかになる。
+# ★2: `git push --force --tags origin` は絶対に使わない(旧版の本書にあった誤り)。
+#     backup/pre-p6/* 等のローカル保全タグまで公開され、main に無いオブジェクトを
+#     remote に残す。push する ref は main と db-store だけを明示指定する。
+# ★3: --force-with-lease に「検証時のリモートSHA」を明示し、検証後にリモートが
+#     動いていたら push が拒否されるようにする。
+#     期待SHA は書換前に控えておく: gh api repos/<owner>/<repo>/commits/main --jq .sha
+#                                   git ls-remote --tags origin db-store
+git push --atomic --force-with-lease=refs/heads/main:<検証時のリモートmainのSHA> --force-with-lease=refs/tags/db-store:<検証時のリモートdb-storeのSHA> origin refs/heads/main:refs/heads/main refs/tags/db-store:refs/tags/db-store
 ```
+
+> **`db-store` タグも必ず同時に更新する**(2026-08-17 の実施で判明した必須事項)。
+> Release `db-store` のタグが旧コミットを指したままだと、**旧履歴が到達可能なまま
+> 残り GitHub の GC 対象外**になり、リモートのサイズは永久に減らない。
+> Release の**アセットは Release オブジェクトに属する**ため、タグ参照を移動しても
+> アセットは消えない(実施後に `state: uploaded`・サイズ・更新時刻の不変を実測確認)。
+> なお db.gz のみを変更していた旧コミットは filter-repo が空コミットとして刈るため、
+> タグは**生き残った直近の祖先へ再マップ**される(仕様どおりの挙動)。
+
+> **push 後に必ず `git reflog expire --expire=now --all && git gc --prune=now`**
+> (2026-08-17 の実施で判明)。書換後に一度でも `git fetch` してしまうと旧履歴が
+> ローカルへ戻る。それを消しても **reflog が旧 main を掴み続けるため gc だけでは
+> 減らない**。実測: 48MiB → (fetch) → 3.39GiB → (gc のみ) → 3.35GiB →
+> (reflog expire + gc) → **48.34MiB**。
+> なお**書換後の検証で `git fetch` は使わないこと**(旧履歴3.3GBを再取得してしまう)。
+> 内容同一性は **ルートツリーSHA の照合**で足りる:
+> `gh api repos/<owner>/<repo>/commits/main --jq .commit.tree.sha` と
+> `git rev-parse HEAD^{tree}` の一致。diff より厳密で、転送も発生しない。
 
 ### Step 7 — 復旧(worktree・CI)
 ```bash
@@ -284,11 +311,32 @@ cd restored-repo && git log --oneline -3     # Step 0 で記録したハッシ�
 
 ## 6. 完了条件
 
-- [ ] 書換後の**ローカルリポ < 400MB**
-- [ ] 履歴に `ranking.db.gz` の blob が **0件**
-- [ ] **web/bot のコード木が書換前と一致**(ツリーハッシュ)
-- [ ] pytest 全緑・web ビルド成功
-- [ ] CI 再開後の run が **全 job success**、**Release から復元**できている
-- [ ] **本番 v2 が無変化**
-- [ ] db.gz の新規コミットが **0/日**(P3 の効果が持続)
-- [ ] DECISION_LOG 更新(実測 before/after・GitHub 側 GC の状況)
+> **2026-08-17 実施・完了**(記録 = DECISION_LOG **LULU-113**)。実測値は下記。
+
+- [x] 書換後の**ローカルリポ < 400MB** → **3.35 GiB → 48.34 MiB**
+- [x] 履歴に `ranking.db.gz` の blob が **0件** → main 履歴 **109個 → 0個**
+      (別途1個が `refs/codex/turn-diffs/...` に残存。filter-repo は tree を指す ref を
+       扱えず skip する。**push 対象外なのでリモートには無影響**)
+- [x] **web/bot のコード木が書換前と一致**(ツリーハッシュ)
+      → web `7719a11d…` / bot `1e643255…` 一致。さらに**ルートツリー `62b79602…` が
+        リモート main と完全一致** = 内容が1バイトも変わっていないことの証明
+- [x] pytest 全緑・web ビルド成功 → bot **234 passed, 1 skipped** / web build ✓
+- [x] CI 再開後の run が **全 job success**、**Release から復元**できている
+      → run `32001217557` で build/deploy/commit-db/backup-gdrive 全 success、
+        **`release-db-restored=True`(293,720,064 バイト)**、guard は
+        `basis: v2_public=79 release=79` の二重実基準で作動
+- [x] **本番 v2 が無変化** → `latest=2026-08-16 / count=8550 / days=79`(書換前と同一)
+- [ ] db.gz の新規コミットが **0/日**(P3 の効果が持続) → **数日後に再確認**(watch)
+- [x] DECISION_LOG 更新(実測 before/after・GitHub 側 GC の状況) → LULU-113
+
+### 実施後に判明した重要事項(次回や類似作業のために)
+
+1. **リモートのサイズは減らない**(実測 3,514,447 KB → 3,514,544 KB でむしろ微増)。
+   原因は §4-1 の「GC が遅延する」だけではなく、**`refs/pull/*/head` が31本あり
+   旧コミットを到達可能に保っている**こと。これは **GitHub 管理の ref で利用者は
+   削除できない**。**リモートを実際に縮小するには GitHub Support への GC 依頼が必須**
+   (「遅延」ではなく「依頼しない限り永久に減らない」と理解すべき)。
+2. 本書 Step 6 に **`git push --force --tags origin` という危険な記述があった**
+   (2026-08-17 に修正)。実行していれば `backup/pre-p6/*` 26本が公開されていた。
+3. 書換後の検証で **`git fetch` を使ってはいけない**(旧履歴3.3GBを再取得する)。
+   実際に踏み、`reflog expire` + `gc --prune=now` で回収した(Step 6 の注記参照)。
