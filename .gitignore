@@ -36,3 +36,10 @@ token.json
 tools/token.json
 *.credentials.json
 client_secret*.json
+
+# Vite local env overrides (web). Untracked local dev config -- these hold
+# per-machine values (e.g. VITE_RAFFLE_API_BASE) and must never be committed.
+# Note: VITE_* vars are inlined into the browser bundle at build time, so they
+# are not secrets, but they are machine-specific and would break other setups.
+exp_ranking/web/.env.local
+exp_ranking/web/.env.*.local
