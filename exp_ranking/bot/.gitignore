@@ -1,6 +1,9 @@
 logs/
 data/*.db
-!data/ranking.db.gz
+# T12 P6: ranking.db.gz は Git 追跡をやめた(永続層は GitHub Release `db-store`)。
+# かつては `!data/ranking.db.gz` で明示的に追跡対象へ戻していたが、その否定
+# ルールを消し、逆に無視する。復活すると P6 で回収したサイズが再び増える。
+data/ranking.db.gz
 data/*.sqlite3
 data/ranking.legacy.db
 data/character_meta.json
