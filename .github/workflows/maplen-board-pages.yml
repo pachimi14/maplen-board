@@ -208,7 +208,6 @@ jobs:
           # S1 in the T12 P3 completion report.
           SNAPSHOT_IMPORT_FROM_V2_SHARDS: ${{ contains(github.event.head_commit.message, '[web-only]') && 'false' || 'true' }}
           PAGES_SITE_URL: https://lulumi-tools.com
-          IMPORT_SNAPSHOTS_JSON: data/seed/rankings_seed.json
           ENFORCE_JST_FETCH_WINDOW: ${{ github.event_name == 'schedule' && 'true' || '' }}
           SKIP_RUN_IF_RANKING_DAY_EXISTS: "true"
           SKIP_DEPLOY_IF_DAY_CAPTURED: ${{ github.event_name == 'schedule' && 'true' || 'false' }}

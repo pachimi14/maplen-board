@@ -16,3 +16,6 @@ __pycache__/
 .env
 credentials/*.json
 !credentials/.gitkeep
+# pytest が作る一時DB(test_asset_key_backfill.py 等が PID 付きで作成し、
+# Windows のファイルロックで消し残ることがある)。作業ツリーを汚さない。
+_test_*.db

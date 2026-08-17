@@ -182,29 +182,6 @@ def snapshot_import_from_v2_shards() -> bool:
     return raw in ("1", "true", "yes", "on")
 
 
-def snapshot_seed_json_path() -> Path:
-    default = str(BASE_DIR / "data" / "seed" / "rankings_seed.json")
-    return env_path("IMPORT_SNAPSHOTS_JSON", default)
-
-
-def should_import_snapshot_seed(db_path: Path, seed_path: Path) -> bool:
-    from sqlite_storage import count_snapshot_dates, list_snapshot_dates, snapshot_dates_in_mvp_json
-
-    if not seed_path.exists():
-        return False
-
-    seed_dates = snapshot_dates_in_mvp_json(seed_path)
-    if not seed_dates:
-        return False
-
-    db_dates = set(list_snapshot_dates(db_path))
-    missing = seed_dates - db_dates
-    if missing:
-        return True
-
-    return count_snapshot_dates(db_path) < len(seed_dates)
-
-
 def enforce_jst_fetch_window() -> bool:
     raw = os.environ.get("ENFORCE_JST_FETCH_WINDOW", "").strip().lower()
     return raw in ("1", "true", "yes", "on")
@@ -251,20 +228,6 @@ def skip_run_min_snapshot_rows() -> int:
 
 def ranking_day_skip_marker_path() -> Path:
     return BASE_DIR / "data" / ".ranking_day_complete"
-
-
-def resolve_snapshot_import_path(db_path: Path) -> Path | None:
-    """Pick a rankings.json seed when DB is missing snapshot days from that file."""
-    candidates: list[Path] = [snapshot_seed_json_path()]
-
-    local_json = BASE_DIR.parent / "web" / "public" / "data" / "rankings.json"
-    if local_json not in candidates:
-        candidates.append(local_json)
-
-    for path in candidates:
-        if path.exists() and should_import_snapshot_seed(db_path, path):
-            return path
-    return None
 
 
 def _read_snapshot_days(json_path: Path) -> int | None:

@@ -393,11 +393,11 @@ def test_bootstrap_database_reports_import_counts_for_method_label(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """挙動不変の確認: 既存の import 呼び出し結果を戻り値として露出するだけで、
-    デフォルト設定(seed/v2 いずれもインポートなし)では 0/0 になる。
-    T12 P4: v1(Pages) インポート層は撤去済み(pages_imported は常に 0)。"""
+    デフォルト設定(v2 インポートなし)では 0/0 になる。
+    T12 P4: v1(Pages) インポート層は撤去済み(pages_imported は常に 0)。
+    T12 P7: snapshot-seed インポート層も撤去済み。"""
     db_path = tmp_path / "ranking.db"
 
-    monkeypatch.setattr(main.config, "resolve_snapshot_import_path", lambda _db: None)
     monkeypatch.setattr(main.config, "snapshot_import_from_v2_shards", lambda: False)
 
     import logging

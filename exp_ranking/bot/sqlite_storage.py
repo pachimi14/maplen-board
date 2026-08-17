@@ -515,43 +515,6 @@ def list_snapshot_dates(db_path: Path) -> list[str]:
     return [str(row[0]) for row in rows if row[0]]
 
 
-def snapshot_dates_in_mvp_json(json_path: Path) -> set[str]:
-    import json
-
-    try:
-        payload = json.loads(json_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return set()
-
-    meta = payload.get("meta")
-    characters = payload.get("characters")
-    if not isinstance(meta, dict) or not isinstance(characters, list):
-        return set()
-
-    latest_date = str(meta.get("latestSnapshotDate") or "").strip()
-    if not latest_date:
-        return set()
-
-    dates: set[str] = set()
-    for character in characters:
-        if not isinstance(character, dict):
-            continue
-        history = character.get("history")
-        if not isinstance(history, list):
-            continue
-        for point in history:
-            if not isinstance(point, dict):
-                continue
-            snapshot_raw = str(point.get("snapshotDate") or "").strip()
-            if snapshot_raw:
-                dates.add(snapshot_raw)
-                continue
-            chart_date = str(point.get("date") or "").strip()
-            if chart_date and "/" in chart_date:
-                dates.add(_chart_date_to_iso(chart_date, latest_date))
-    return dates
-
-
 def count_snapshot_dates(db_path: Path) -> int:
     if not db_path.exists():
         return 0
@@ -654,135 +617,6 @@ def _chart_date_to_iso(chart_date: str, latest_snapshot_date: str) -> str:
     if candidate > latest:
         candidate = date(year - 1, month, day)
     return candidate.isoformat()
-
-
-def import_snapshots_from_mvp_json(db_path: Path, json_path: Path) -> int:
-    """Rebuild SQLite snapshot rows from rankings.json history (recovery).
-
-    T12 P4: the v1-Pages-URL-backed wrapper (`import_missing_snapshots_from_
-    url`) was removed here -- this function's only remaining caller is the
-    local snapshot-seed import in `main.bootstrap_database`
-    (`config.resolve_snapshot_import_path` / `IMPORT_SNAPSHOTS_JSON`), which
-    reads a repo-bundled fixture file, not the retired live Pages endpoint.
-    """
-    import json
-    from collections import defaultdict
-    from datetime import datetime, timezone
-
-
-    try:
-        payload = json.loads(json_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        logger.warning("Cannot import snapshots from %s: %s", json_path, exc)
-        return 0
-
-    characters = payload.get("characters")
-    meta = payload.get("meta")
-    if not isinstance(characters, list) or not isinstance(meta, dict):
-        return 0
-
-    latest_date = str(meta.get("latestSnapshotDate") or "").strip()
-    if not latest_date:
-        return 0
-
-    updated_raw = str(meta.get("updatedAt") or "").strip()
-    fetched_at = updated_raw or datetime.now(timezone.utc).isoformat(timespec="seconds")
-    _warn_if_unknown_exp_table_version(meta, source="rankings.json")
-
-    from level_exp import exp_table_for
-
-    pending: dict[str, list[dict[str, object]]] = defaultdict(list)
-    for character in characters:
-        if not isinstance(character, dict):
-            continue
-        name = str(character.get("name") or "").strip()
-        if not name:
-            continue
-        asset_key = str(character.get("characterAssetKey") or "").strip()
-        latest_rank = int(character.get("rank") or 0)
-        image_url = str(character.get("imageUrl") or "").strip()
-        history = character.get("history")
-        if not isinstance(history, list):
-            continue
-
-        for point in history:
-            if not isinstance(point, dict):
-                continue
-            snapshot_raw = str(point.get("snapshotDate") or "").strip()
-            if snapshot_raw:
-                snapshot_date = snapshot_raw
-            else:
-                chart_date = str(point.get("date") or "").strip()
-                if not chart_date or "/" not in chart_date:
-                    continue
-                snapshot_date = _chart_date_to_iso(chart_date, latest_date)
-            level = int(point.get("level") or 0)
-            percent = float(
-                point.get("levelExpPercent")
-                if point.get("levelExpPercent") is not None
-                else point.get("expPercent") or 0
-            )
-            # Era-aware (B'): each point's own snapshotDate picks its own
-            # table -- a single table for the whole import (the previous
-            # behavior, sourced from meta.expTable or a current-table
-            # fallback) mis-converts percent->exp for any point whose era
-            # differs from that one table (see docs/DECISION_LOG.md LULU-062).
-            required = exp_table_for(snapshot_date).get(level)
-            exp = int(required * percent / 100.0) if required else 0
-            pending[snapshot_date].append(
-                {
-                    "name": name,
-                    "asset_key": asset_key,
-                    "level": level,
-                    "exp": exp,
-                    "image_url": image_url,
-                    "sort_rank": latest_rank if latest_rank > 0 else 999_999,
-                }
-            )
-
-    if not pending:
-        return 0
-
-    init_db(db_path)
-    imported = 0
-    for snapshot_date in sorted(pending.keys()):
-        entries = sorted(
-            pending[snapshot_date],
-            key=lambda item: (int(item["sort_rank"]), str(item["name"]).casefold()),
-        )
-        rows: list[SnapshotRow] = []
-        for rank, entry in enumerate(entries, start=1):
-            rows.append(
-                SnapshotRow(
-                    snapshot_date=snapshot_date,
-                    rank=rank,
-                    rank_fluctuation=0,
-                    character_name=str(entry["name"]),
-                    class_code="",
-                    job_code="",
-                    level=int(entry["level"]),
-                    exp=int(entry["exp"]),
-                    image_url=str(entry["image_url"]),
-                    character_asset_key=str(entry["asset_key"]),
-                )
-            )
-        saved, _ = append_snapshots(db_path, rows, fetched_at)
-        imported += saved
-
-    if imported:
-        logger.info(
-            "Imported snapshot rows from MVP JSON: saved=%s days=%s source=%s",
-            imported,
-            count_snapshot_dates(db_path),
-            json_path,
-        )
-        from identity import build_name_to_asset_key_from_mvp_characters
-
-        name_to_key = build_name_to_asset_key_from_mvp_characters(characters)
-        if name_to_key:
-            backfill_character_asset_keys(db_path, name_to_asset_key=name_to_key)
-
-    return imported
 
 
 UNIQUE_SNAPSHOT_IDENTITY_INDEX = "idx_ranking_snapshot_date_asset_key"
@@ -1107,9 +941,9 @@ def import_snapshots_from_v2_json(
             snapshot_date = str(point.get("snapshotDate") or "").strip()
             if not snapshot_date:
                 # Defensive fallback for older/legacy JSON that only carries
-                # the short "MM/DD" chart label (mirrors
-                # import_snapshots_from_mvp_json's v1 behavior); current
-                # mvp_export.py always writes snapshotDate.
+                # the short "MM/DD" chart label (mirrors the retired T12 P7
+                # snapshot-seed import's v1 behavior); current mvp_export.py
+                # always writes snapshotDate.
                 chart_date = str(point.get("date") or "").strip()
                 if not chart_date or "/" not in chart_date:
                     continue
