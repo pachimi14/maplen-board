@@ -45,10 +45,8 @@ from sqlite_storage import (
     import_character_meta_file,
     init_db,
     import_missing_snapshots_from_v2_url,
-    import_snapshots_from_mvp_json,
     latest_snapshot_date,
     latest_snapshot_fetched_at,
-    list_snapshot_dates,
     load_all_snapshots,
     load_character_meta,
     load_snapshot_state_before,
@@ -56,7 +54,6 @@ from sqlite_storage import (
     parse_iso_datetime,
     reconcile_ranking_fetched_at_meta,
     set_app_meta,
-    snapshot_dates_in_mvp_json,
     LAST_RANKING_FETCHED_AT_KEY,
 )
 from utils import normalize_int
@@ -483,14 +480,16 @@ def warn_if_ranking_cap_reached(
 def bootstrap_database(
     db_path: Path, logger: logging.Logger
 ) -> dict[str, int]:
-    """DB を初期化し、legacy/seed/v2(シャード) の順で復元・補完する。
+    """DB を初期化し、legacy/v2(シャード) の順で復元・補完する。
 
     T12 P4: v1(Pages) の取り込み・hydrate 段(旧 `SNAPSHOT_IMPORT_FROM_PAGES`
     / `HYDRATE_META_FROM_PAGES` / 旧 `json_path` 引数)は撤去済み。worldId
     復旧は Release 復元(character_meta ごと保持)・v2シャード復元
     (`import_missing_snapshots_from_v2_url` が character_meta も再水和)・
     navigator の `sync_world_ids` の3経路で担保されることを事前実証済み
-    (docs/IMPL_PLAN_T12_P4.md §3.4.1 W1-W4)。
+    (docs/IMPL_PLAN_T12_P4.md §3.4.1 W1-W4)。T12 P7: コールドスタート用の
+    同梱スナップショットシードも撤去済み。復旧は cache → Release db-store →
+    v2シャードの3層で担保される(docs/IMPL_PLAN_T12_P7.md §2.1)。
 
     戻り値の `v2_imported` は、切り詰め公開防止ガード
     (snapshot_guard.py, T12 P3 §2.4)がログの「復元方法」を組み立てるための
@@ -513,24 +512,6 @@ def bootstrap_database(
             logger.info(
                 "Ranking snapshot days after legacy merge: %s",
                 count_snapshot_dates(db_path),
-            )
-
-    import_json = config.resolve_snapshot_import_path(db_path)
-    if import_json:
-        seed_dates = snapshot_dates_in_mvp_json(import_json)
-        db_dates_before = set(list_snapshot_dates(db_path))
-        missing = sorted(seed_dates - db_dates_before)
-        logger.info(
-            "Importing snapshot seed: %s (missing dates: %s)",
-            import_json,
-            missing or "none",
-        )
-        imported_rows = import_snapshots_from_mvp_json(db_path, import_json)
-        if imported_rows:
-            logger.info(
-                "Snapshot days after JSON import: %s (from %s)",
-                count_snapshot_dates(db_path),
-                import_json,
             )
 
     if config.snapshot_import_from_v2_shards():

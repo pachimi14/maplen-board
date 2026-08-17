@@ -187,20 +187,11 @@ def apply_ranking_day_label_migration(
 
     # T12 P4: this one-time migration previously also shifted dates inside
     # the local v1 rankings.json (`config.mvp_json_output_path()`, now
-    # retired). Only the bundled cold-start snapshot seed remains here.
-    seen_json: set[Path] = set()
-    json_paths: list[Path] = []
-    for path in (config.snapshot_seed_json_path(),):
-        resolved = path.resolve()
-        if resolved in seen_json:
-            continue
-        seen_json.add(resolved)
-        json_paths.append(path)
-
+    # retired). T12 P7: the bundled cold-start snapshot seed that remained
+    # here has also been retired (docs/IMPL_PLAN_T12_P7.md §2.1) -- no JSON
+    # files are shifted by this migration anymore, only the SQLite rows
+    # above and the skip marker below.
     shifted_json = 0
-    for path in json_paths:
-        if shift_mvp_json_file(path, days=days):
-            shifted_json += 1
 
     shift_ranking_day_skip_marker(days=days)
 

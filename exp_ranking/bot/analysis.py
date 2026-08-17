@@ -33,13 +33,13 @@ def select_canonical_snapshot_row(rows: list[SnapshotRow]) -> SnapshotRow:
     genuine daily API fetch rather than a recovery/reimport artifact:
 
     1. Prefer rows with a non-empty `class_code`/`job_code`. A real ranking-API
-       fetch always populates both; JSON-recovery reimports
-       (`import_snapshots_from_mvp_json`) always leave both blank, so this alone
-       resolves 77/118 real duplicate groups (verified against the production
-       DB, `exp_ranking/bot/data/ranking.db.gz`, decompressed and queried
-       2026-07-20). One group has *no* row with class/job populated (both
-       duplicate rows are themselves reimport artifacts); that group falls
-       through unfiltered to step 2.
+       fetch always populates both; JSON-recovery reimports (via the
+       snapshot-seed JSON import path retired in T12 P7) always leave both
+       blank, so this alone resolves 77/118 real duplicate groups (verified
+       against the production DB, `exp_ranking/bot/data/ranking.db.gz`,
+       decompressed and queried 2026-07-20). One group has *no* row with
+       class/job populated (both duplicate rows are themselves reimport
+       artifacts); that group falls through unfiltered to step 2.
     2. Among the remaining candidates, take the lowest `rank`. Because
        `ranking_snapshot` enforces `UNIQUE(snapshot_date, rank)`, two rows for
        the same `snapshot_date` can never share a `rank` -- this step is always

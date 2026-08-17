@@ -122,11 +122,10 @@ def _run_bootstrap_and_guard(
     # cache miss + Release unreachable: nothing pre-populates db_path here,
     # and config flags mirror the workflow env for this scenario (§5 step 2/3;
     # T12 P4: the v1-Pages import layer this used to also disable here
-    # -- SNAPSHOT_IMPORT_FROM_PAGES -- is removed entirely, so only the
-    # snapshot-seed layer (resolve_snapshot_import_path) needs disabling to
-    # isolate the v2 layer being tested; SNAPSHOT_IMPORT_FROM_V2_SHARDS=true
-    # per commit 3/7).
-    monkeypatch.setattr(main.config, "resolve_snapshot_import_path", lambda _db: None)
+    # -- SNAPSHOT_IMPORT_FROM_PAGES -- is removed entirely; T12 P7 removed
+    # the snapshot-seed layer entirely too, so the v2 layer being tested is
+    # now the only import layer left to isolate;
+    # SNAPSHOT_IMPORT_FROM_V2_SHARDS=true per commit 3/7).
     monkeypatch.setattr(main.config, "snapshot_import_from_v2_shards", lambda: True)
     monkeypatch.setattr(main.config, "restore_cache_hit", lambda: False)
     monkeypatch.setattr(main.config, "restore_release_restored", lambda: False)
