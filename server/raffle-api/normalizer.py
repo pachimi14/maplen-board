@@ -219,23 +219,50 @@ def _boss_distribution_context(layer: dict | None) -> tuple[str, str] | None:
     tier = ASCENDANT_TIER_BY_BOSS.get((boss_code, raw_difficulty))
     return (difficulty, tier) if difficulty and tier else None
 
-def _ascendant_for_boss(histories: list[dict], layers_by_id: dict[str, dict], boss_history: dict) -> dict | None:
+def _ascendant_for_boss(histories: list[dict], layers_by_id: dict[str, dict], boss_history: dict) -> tuple[dict | None, str | None]:
+    """Resolves the Ascendant-tier history entry that matches the boss/difficulty's target
+    tier (LULU-1xx). The upstream API has renamed/split Ascendant layer names before (e.g. a
+    single "Eternal Ascendant" tier became "Eternal Ascendant Hard Will" and
+    "Eternal Ascendant Chaos Guardian" per boss), so exact-name matching alone is not
+    reliable. Falls back to a prefix match, then narrows by the boss's own display name when
+    several tier variants share the same prefix.
+
+    Returns `(ascendant_history, missing_tier)`. `missing_tier` is set (with
+    `ascendant_history` left `None`) only when a target tier was expected but could not be
+    uniquely resolved, so the caller can raise a visible `ascendant_not_found` warning instead
+    of silently treating Power Crystal/Ascendant NESO as zero.
+    """
     boss_layer = layers_by_id.get(_layer_id(boss_history))
     if not isinstance(boss_layer, dict):
-        return None
+        return None, None
     context = _boss_distribution_context(boss_layer)
     if context is None:
-        return None
+        return None, None
     _difficulty, target_tier = context
-    matches = []
+    _boss_layer_name, boss_display_name, _boss_code = _layer_names(boss_layer)
+    target_tier_cf = target_tier.casefold()
+    boss_display_cf = boss_display_name.casefold()
+
+    candidates: list[tuple[str, dict]] = []
     for history in histories:
         layer = layers_by_id.get(_layer_id(history))
         if not _is_ascendant(layer):
             continue
         contents = layer.get("contents") if isinstance(layer.get("contents"), dict) else {}
-        if _text(contents.get("layerName")).casefold() == target_tier.casefold():
-            matches.append(history)
-    return matches[0] if len(matches) == 1 else None
+        candidates.append((_text(contents.get("layerName")), history))
+
+    exact = [history for name, history in candidates if name.casefold() == target_tier_cf]
+    if len(exact) == 1:
+        return exact[0], None
+    if len(exact) == 0:
+        prefix = [(name, history) for name, history in candidates if name.casefold().startswith(target_tier_cf)]
+        if len(prefix) == 1:
+            return prefix[0][1], None
+        if len(prefix) > 1:
+            narrowed = [history for name, history in prefix if boss_display_cf and boss_display_cf in name.casefold()]
+            if len(narrowed) == 1:
+                return narrowed[0], None
+    return None, target_tier
 
 
 def _sum_item(history: dict | None, item_id: int) -> int:
@@ -351,7 +378,7 @@ def normalize_live_history(request: CreateJobRequest, character_histories: dict[
                         match = cluster.get(character.memberId)
                         if match is not None:
                             history, _party_count = match
-                            ascendant = _ascendant_for_boss(exact_histories.get(character.memberId, []), layers_by_id, history)
+                            ascendant, _missing_tier = _ascendant_for_boss(exact_histories.get(character.memberId, []), layers_by_id, history)
                             members.append(_member_settlement(character.memberId, boss_code, history, ascendant, item_metadata, difficulty.lower()))
                             history_member_ids.append(character.memberId)
                         else:
