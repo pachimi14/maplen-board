@@ -86,6 +86,7 @@
     "item_ascendantNeso": "Ascendant NESO",
     "saleAmount": "売却価格（手数料控除前・NESO）",
     "saleProceeds": "手数料5%控除後の受取額",
+    "saleAmountBlankIsZero": "未入力の売却額は 0 として計算します。",
     "calculateDistribution": "分配計算",
     "noPartyClears": "PT全員で倒したLucidまたはWillはありません。",
     "partyCountConfirmationTitle": "討伐人数の確認",

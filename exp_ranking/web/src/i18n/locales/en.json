@@ -86,6 +86,7 @@
     "item_ascendantNeso": "Ascendant NESO",
     "saleAmount": "Sale price (before 5% fee, NESO)",
     "saleProceeds": "Proceeds after 5% fee",
+    "saleAmountBlankIsZero": "An unfilled sale price is calculated as 0.",
     "calculateDistribution": "Calculate settlement",
     "noPartyClears": "This full party has no Lucid or Will clear.",
     "partyCountConfirmationTitle": "Party size confirmation",

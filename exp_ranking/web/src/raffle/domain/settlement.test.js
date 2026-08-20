@@ -30,7 +30,23 @@ describe("calculateSaleProceedsNeso", () => {
   it("deducts the 5% sale fee using exact integer arithmetic", () => {
     expect(calculateSaleProceedsNeso("9500000")).toBe("9025000");
     expect(calculateSaleProceedsNeso("101")).toBe("95");
-    expect(calculateSaleProceedsNeso("")).toBeNull();
+  });
+
+  // G1 (LULU-119 follow-up, user ruling): a blank/whitespace-only sale price
+  // preview computes as 0 proceeds (not "unknown/null") -- it matches what
+  // calculateSettlement itself now does for an unfilled saleNesoByDropId
+  // entry, so the on-screen preview never disagrees with the real calculation.
+  it("treats a blank/whitespace-only value as 0 proceeds (matches calculateSettlement's unfilled-sale-price rule)", () => {
+    expect(calculateSaleProceedsNeso("")).toBe("0");
+    expect(calculateSaleProceedsNeso("   ")).toBe("0");
+    expect(calculateSaleProceedsNeso(undefined)).toBe("0");
+    expect(calculateSaleProceedsNeso(null)).toBe("0");
+  });
+
+  it("still rejects genuinely malformed (non-blank) values", () => {
+    expect(calculateSaleProceedsNeso("abc")).toBeNull();
+    expect(calculateSaleProceedsNeso("-5")).toBeNull();
+    expect(calculateSaleProceedsNeso("1".repeat(31))).toBeNull();
   });
 });
 
@@ -85,10 +101,45 @@ describe("calculateSettlement", () => {
     expect(result.total).toBe("600");
   });
 
-  it("requires one sale amount for every selected drop", () => {
+  // G1 (LULU-119 follow-up, user ruling): the old "empty sale price blocks
+  // the whole calculation" behavior is retired -- an unfilled sale price is
+  // simply treated as a 0 NESO sale (no proceeds for that drop), not an error.
+  it("treats an unfilled sale amount as 0 NESO instead of blocking the calculation", () => {
     const result = calculateSettlement(clearInput({ saleNesoByDropId: { coin1: "100" } }));
-    expect(result.ok).toBe(false);
-    expect(result.errors).toContainEqual(expect.objectContaining({ code: "invalid_integer", dropId: "equip1" }));
+    expect(result.ok).toBe(true);
+    // coin1 still contributes its normal proceeds; equip1 (left blank)
+    // contributes 0 -- member b's equipment drop therefore has no proceeds.
+    expect(result.categoryTotals.coinSaleNeso).toBe("95");
+    expect(result.categoryTotals.equipmentSaleNeso).toBe("0");
+    const memberB = result.members.find((member) => member.memberId === "b");
+    expect(memberB.equipmentSaleNeso).toBe("0");
+    expect(memberB.equipmentDrops).toEqual([expect.objectContaining({ name: "Gear", quantity: "1", salePriceNeso: "0", saleNeso: "0" })]);
+  });
+
+  it("also treats a whitespace-only or entirely missing saleNesoByDropId entry as 0 (not an error)", () => {
+    const whitespaceOnly = calculateSettlement(clearInput({ saleNesoByDropId: { coin1: "100", equip1: "   " } }));
+    expect(whitespaceOnly.ok).toBe(true);
+    expect(whitespaceOnly.categoryTotals.equipmentSaleNeso).toBe("0");
+
+    const entirelyMissing = calculateSettlement(clearInput({ saleNesoByDropId: {} }));
+    expect(entirelyMissing.ok).toBe(true);
+    expect(entirelyMissing.categoryTotals.coinSaleNeso).toBe("0");
+    expect(entirelyMissing.categoryTotals.equipmentSaleNeso).toBe("0");
+  });
+
+  it("still rejects a genuinely malformed (non-blank) sale amount -- only a blank field gets the free pass", () => {
+    for (const malformed of ["abc", "-5", "1.5", "1".repeat(31)]) {
+      const result = calculateSettlement(clearInput({ saleNesoByDropId: { coin1: "100", equip1: malformed } }));
+      expect(result.ok).toBe(false);
+      expect(result.errors).toContainEqual(expect.objectContaining({ dropId: "equip1" }));
+    }
+  });
+
+  it("lets the distribution calculation run to completion with every sale price left blank", () => {
+    const result = calculateSettlement(clearInput({ saleNesoByDropId: {} }));
+    expect(result.ok).toBe(true);
+    expect(result.categoryTotals.coinSaleNeso).toBe("0");
+    expect(result.categoryTotals.equipmentSaleNeso).toBe("0");
   });
 
   it("converts Power Crystal via division (1 NESO = [rate] PC) and rounds half up instead of erroring on a remainder", () => {

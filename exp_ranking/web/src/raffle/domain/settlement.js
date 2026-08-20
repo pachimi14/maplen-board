@@ -13,7 +13,15 @@ function problem(code, field = "", memberId = "", dropId = "") {
 }
 
 function parseInteger(value, field, errors, { memberId = "", dropId = "", required = true } = {}) {
-  if ((value === "" || value == null) && !required) return 0n;
+  // G1 (LULU-119 follow-up, user ruling): a blank/whitespace-only/missing
+  // value is treated as 0 for non-required fields (currently only sale
+  // price) instead of blocking the calculation with invalid_integer. Any
+  // other malformed input (non-digits, negative, overflow) still errors --
+  // only "left empty" gets the free pass.
+  if (!required) {
+    const isBlank = value == null || (typeof value === "string" && value.trim() === "");
+    if (isBlank) return 0n;
+  }
   const text = String(value ?? "");
   if (!INTEGER_PATTERN.test(text)) {
     errors.push(problem("invalid_integer", field, memberId, dropId));
@@ -70,6 +78,10 @@ function salePriceToProceeds(salePriceNeso) {
 
 export function calculateSaleProceedsNeso(value) {
   const text = String(value ?? "");
+  // G1: blank/whitespace-only mirrors parseInteger's non-required "0"
+  // fallback, so the live sale-proceeds preview (RaffleCalculatorRoot.jsx)
+  // never shows "?" for a field the calculation will actually treat as 0.
+  if (text.trim() === "") return "0";
   if (!INTEGER_PATTERN.test(text)) return null;
   const normalized = text.replace(/^0+(?=\d)/, "");
   if (normalized.length > MAX_INPUT_DIGITS) return null;
@@ -164,9 +176,15 @@ export function calculateSettlement(input) {
       const selected = drop.category === "COIN" ? include.coin : drop.category === "FT_ITEM" ? include.ftItem : include.equipment;
       if (!selected) continue;
       const quantity = parseInteger(drop.quantity, "dropQuantity", errors, { memberId, dropId: drop.dropId });
+      // G1 (LULU-119 follow-up, user ruling): an unfilled sale price is
+      // treated as 0 NESO (not a blocking invalid_integer error) -- the old
+      // "empty = can't calculate / 0 = explicitly worthless" distinction is
+      // retired. A genuinely malformed value (letters, negative, overflow)
+      // still errors.
       const salePriceNeso = parseInteger(input?.saleNesoByDropId?.[drop.dropId], "saleNeso", errors, {
         memberId,
         dropId: drop.dropId,
+        required: false,
       });
       // FT Item is a marketplace-sellable item just like coin/equipment: same
       // 5% sale-proceeds deduction applies (LULU-090 rule).

@@ -86,6 +86,7 @@
     "item_ascendantNeso": "Ascendant NESO",
     "saleAmount": "ราคาขาย (ก่อนหักค่าธรรมเนียม 5%, NESO)",
     "saleProceeds": "ยอดรับหลังหักค่าธรรมเนียม 5%",
+    "saleAmountBlankIsZero": "ราคาขายที่ไม่ได้กรอกจะถูกคำนวณเป็น 0",
     "calculateDistribution": "คำนวณการแบ่ง",
     "noPartyClears": "ปาร์ตี้ครบชุดนี้ไม่มีเคลียร์ Lucid หรือ Will",
     "partyCountConfirmationTitle": "ยืนยันจำนวนสมาชิก",

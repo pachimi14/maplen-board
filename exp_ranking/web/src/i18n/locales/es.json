@@ -86,6 +86,7 @@
     "item_ascendantNeso": "Ascendant NESO",
     "saleAmount": "Precio de venta (antes de la comisión del 5 %, NESO)",
     "saleProceeds": "Importe recibido tras la comisión del 5 %",
+    "saleAmountBlankIsZero": "Un precio de venta sin completar se calcula como 0.",
     "calculateDistribution": "Calcular reparto",
     "noPartyClears": "Este grupo completo no derrotó a Lucid ni a Will.",
     "partyCountConfirmationTitle": "Confirmar tamaño del grupo",
