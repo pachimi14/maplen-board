@@ -1,11 +1,11 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { normalizeJobPayload } from "./contract.js";
+import { RAFFLE_CLASSIFICATION_VERSION, normalizeJobPayload } from "./contract.js";
 
 function payload(overrides = {}) {
   return {
     schemaVersion: 3,
-    classificationVersion: 1,
+    classificationVersion: RAFFLE_CLASSIFICATION_VERSION,
     status: "complete",
     progress: { completedCharacters: 2, totalCharacters: 2, stage: "complete", elapsedMs: 10 },
     raffleResults: [{ resultId: "result-other-1", memberId: "member-1", raffledAt: "2026-07-30T00:00:00Z", layerName: "Other Layer", bossCode: null, bossName: "Other Boss", outcome: "WIN", rewards: [{ rewardName: "Other Reward", classification: "OTHER", quantity: "1", won: true }] }],

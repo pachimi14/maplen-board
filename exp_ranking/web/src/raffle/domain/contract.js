@@ -1,5 +1,5 @@
 export const RAFFLE_SCHEMA_VERSION = 3;
-export const RAFFLE_CLASSIFICATION_VERSION = 1;
+export const RAFFLE_CLASSIFICATION_VERSION = 2;
 export const RAFFLE_BOSSES = Object.freeze(["LUCID", "WILL"]);
 export const RAFFLE_JOB_STATUSES = Object.freeze(["queued", "resolving", "fetching", "normalizing", "complete", "partial", "error", "cancelled"]);
 const RESULT_OUTCOMES = new Set(["WIN", "LOSE", "UNKNOWN"]);

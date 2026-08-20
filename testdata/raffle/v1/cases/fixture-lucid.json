@@ -8,7 +8,7 @@
   },
   "expectedJob": {
     "schemaVersion": 3,
-    "classificationVersion": 1,
+    "classificationVersion": 2,
     "status": "complete",
     "progress": { "completedCharacters": 1, "totalCharacters": 1, "stage": "complete", "elapsedMs": 10 },
     "raffleResults": [

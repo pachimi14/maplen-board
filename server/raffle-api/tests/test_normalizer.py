@@ -69,7 +69,7 @@ def test_live_normalization_displays_all_wins_and_builds_only_complete_lucid_cle
     ]
     metadata = {
         4310218: {"itemName": "Phantasma Coin", "tier1": "Exchange Currency", "imageUrl": "https://api-static.msu.io/itemimages/icon/4310218.png"},
-        1001000: {"itemName": "Arcane Test Hat", "tier0": "Equipment", "imageUrl": "https://api-static.msu.io/itemimages/icon/1001000.png"},
+        1001000: {"itemName": "Arcane Test Hat", "tier0": "Item", "tier1": "Armor", "imageUrl": "https://api-static.msu.io/itemimages/icon/1001000.png"},
         2832960: {"itemName": "1M Power Crystal Coupon"},
         999: {"itemName": "Other Reward", "tier0": "Etc"},
     }
