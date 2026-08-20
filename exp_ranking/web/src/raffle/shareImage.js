@@ -27,15 +27,20 @@
 // same way components/ShareImageButton.jsx's canvas/DOM glue isn't.
 //
 // C4: the member section is a real table (member / active category columns
-// / gross / settlement -- no raffle-history or assigned-share columns),
-// mirroring SettlementResult.jsx's member breakdown table via the shared
-// settlementCategoryColumns/settlementMemberCategoryCell helpers so the two
-// tables can never disagree about which columns are shown or a member's
-// cell value.
-// C5: the transfer section is also a column-aligned table -- the amount
-// column's right edge sits at the same fixed x on every row (independent of
-// name length), so amounts read as a straight vertical column instead of
-// drifting per row; the wallet column stays at the box's right edge.
+// / gross / settlement / next carryover, LULU-119 follow-up round 2 -- no
+// raffle-history or assigned-share columns), mirroring SettlementResult.jsx's
+// member breakdown table via the shared settlementCategoryColumns/
+// settlementMemberCategoryCell helpers so the two tables can never disagree
+// about which columns are shown or a member's cell value. Previous carryover
+// stays hidden (share-image-only choice; the on-screen table still shows it).
+// C5: the transfer section is also a column-aligned table -- all 3 columns
+// are packed left-to-right at their own real measured content width
+// (LULU-119 follow-up round 2: not stretched to fill the box), with the
+// amount column's right edge sitting at the same fixed x on every row
+// (independent of name length) so amounts read as a straight vertical
+// column instead of drifting per row; the wallet column follows at a fixed
+// gap after amount, and any leftover box width to the right is intentional
+// whitespace.
 
 import {
   describeMemberSettlement,
@@ -71,17 +76,17 @@ const FONT_FAMILY = "sans-serif";
 const MONOSPACE_FONT_FAMILY = "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
 
 // Member table comfortable-minimum column widths (C4): member name / gross /
-// settlement pill / carryover / category columns never shrink below these
-// (R2/LULU-119: they also grow past these when ctx.measureText says the
-// actual header/value text needs more room, so nothing is ever clipped or
-// overlaps its neighbor -- see measureMemberTableLayout()).
+// settlement pill / next-carryover / category columns never shrink below
+// these (R2/LULU-119: they also grow past these when ctx.measureText says
+// the actual header/value text needs more room, so nothing is ever clipped
+// or overlaps its neighbor -- see measureMemberTableLayout()).
 const MEMBER_NAME_COL_WIDTH = 170;
 const MEMBER_GROSS_COL_WIDTH = 120;
 const MEMBER_SETTLE_COL_WIDTH = 190;
 const MEMBER_MIN_CATEGORY_COL_WIDTH = 110;
-// F3/LULU-119: previous/next carryover columns (only added when
-// carryoverEnabled) sit right after member name / right after settlement,
-// matching the on-screen member table's column order.
+// LULU-119 follow-up round 2: next carryover is back as the member table's
+// rightmost column (previous carryover stays hidden). Only added when
+// carryoverEnabled, matching the on-screen member table's column order.
 const MEMBER_CARRYOVER_COL_WIDTH = 110;
 // R2/LULU-119: rounded settlement pill needs extra breathing room beyond its
 // text width + CELL_PADDING*2 (it isn't a plain right-aligned number cell).
@@ -116,6 +121,25 @@ const PILL_COLOR = {
   settled: { bg: "#f1f5f9", text: "#475569" },
 };
 
+// LULU-119 follow-up (share-image-only column reduction, user report: 10
+// columns made the image too wide/hard to read at 1529px). "Equipment drop"
+// and "Will FT Item" are merged into a single share-image-only "Other Sales"
+// column, shown when either is included: the combined value is the exact
+// sum of both categories' already-computed sale proceeds (BigInt addition,
+// no new rounding/calculation), with no quantity/icon/two-line breakdown --
+// just the total NESO. This does NOT touch settlementCategoryColumns() or
+// settlementMemberCategoryCell() in uiText.js (both still return the
+// separate "equipment"/"ftItem" keys those functions have always used), so
+// SettlementResult.jsx -- which builds its own category list independently
+// and never calls settlementCategoryColumns() -- is completely unaffected;
+// only this share-image assembly step re-shapes the columns.
+const OTHER_SALES_KEY = "otherSales";
+
+function otherSalesCell(member) {
+  const amount = BigInt(member.equipmentSaleNeso || "0") + BigInt(member.ftItemSaleNeso || "0");
+  return { key: OTHER_SALES_KEY, primary: amount === 0n ? "0" : neso(amount.toString()), secondary: null, zero: amount === 0n };
+}
+
 /**
  * Assembles the plain-data drawing model for the settlement share image.
  * Every value is taken directly from `calculation` (the same object
@@ -146,30 +170,59 @@ export function buildSettlementShareModel(calculation, memberMap, include, power
     });
   }
 
+  // G3/LULU-119 follow-up round 3 (user explicit instruction): a column
+  // that is all-zero across every member is dropped from the image
+  // entirely -- each rule below is independent of the others.
+  //   - coin: hidden when every member's coinSaleNeso is 0 (quantity
+  //     display included -- the whole column goes, not just the amount).
+  //   - otherSales: hidden when every member's combined equipment+FT Item
+  //     sale proceeds are 0.
+  //   - carryover (both previous AND next together): hidden when
+  //     carryoverEnabled is false (unchanged prior behavior) OR when every
+  //     member's previousCarryover AND nextCarryover are both 0.
+  const showCoinColumn = calculation.members.some((member) => member.coinSaleNeso !== "0");
+  const hasOtherSales = Boolean(include?.equipment || include?.ftItem);
+  const showOtherSalesColumn = hasOtherSales && calculation.members.some((member) =>
+    BigInt(member.equipmentSaleNeso || "0") + BigInt(member.ftItemSaleNeso || "0") !== 0n);
+  const showCarryoverColumns = calculation.carryoverEnabled === true
+    && calculation.members.some((member) => member.previousCarryover !== "0" || member.nextCarryover !== "0");
+
   // C4: same active-category-column set as the on-screen member table
   // (settlementCategoryColumns), with the Power Crystal "non-transferable"
-  // sub-note carried alongside its column header.
-  const memberCategoryColumns = settlementCategoryColumns(include, t).map((column) => ({
-    ...column,
-    note: column.key === "powerCrystal" ? t("raffle.powerCrystalNonTransferable") : null,
-  }));
+  // sub-note carried alongside its column header -- except "equipment"/
+  // "ftItem" are collapsed into one "Other Sales" column (see
+  // otherSalesCell() above) when either is included, and "coin"/"otherSales"
+  // are dropped entirely when all-zero (G3, see showCoinColumn/
+  // showOtherSalesColumn above). This does NOT change SettlementResult.jsx
+  // (untouched, still shows every category regardless of zero values).
+  const memberCategoryColumns = settlementCategoryColumns(include, t)
+    .filter((column) => column.key !== "equipment" && column.key !== "ftItem")
+    .filter((column) => column.key !== "coin" || showCoinColumn)
+    .map((column) => ({ ...column, note: column.key === "powerCrystal" ? t("raffle.powerCrystalNonTransferable") : null }));
+  if (showOtherSalesColumn) {
+    memberCategoryColumns.push({ key: OTHER_SALES_KEY, label: t("raffle.otherSales"), note: null });
+  }
 
+  // G2/LULU-119 follow-up round 3 (user adjustment): previous carryover is
+  // back too, as the 2nd member-table column (right after the member name);
+  // next carryover stays the rightmost column (round 2). Both use the same
+  // value/sign as the on-screen carryover badge, via the shared signedNeso
+  // helper, so the two can never disagree. Column *visibility* is gated by
+  // showCarryoverColumns (G3, above) rather than calculation.carryoverEnabled
+  // directly, but the row *value* is still populated whenever carryover is
+  // enabled at all (independent of whether the column ends up drawn).
   const memberRows = calculation.members.map((member) => {
     const settlement = describeMemberSettlement(member, { t, carryoverEnabled: calculation.carryoverEnabled });
     return {
       memberId: member.memberId,
       name: memberDisplayName(memberMap, member.memberId),
-      categoryCells: memberCategoryColumns.map((column) => ({
-        key: column.key,
-        ...settlementMemberCategoryCell(member, column.key, { powerCrystalNesoRate }),
-      })),
+      categoryCells: memberCategoryColumns.map((column) => column.key === OTHER_SALES_KEY
+        ? otherSalesCell(member)
+        : { key: column.key, ...settlementMemberCategoryCell(member, column.key, { powerCrystalNesoRate }) }),
       gross: neso(member.gross),
       settlementKind: settlement.kind,
       settlementLabel: settlement.label,
       settlementAmount: settlement.amount != null ? neso(settlement.amount) : null,
-      // F3/LULU-119: same value/sign as the on-screen member table's carryover
-      // badges (both call the shared signedNeso helper on the same
-      // calculation row field -- never recomputed independently).
       previousCarryover: calculation.carryoverEnabled ? signedNeso(member.previousCarryover) : null,
       nextCarryover: calculation.carryoverEnabled ? signedNeso(member.nextCarryover) : null,
     };
@@ -192,9 +245,10 @@ export function buildSettlementShareModel(calculation, memberMap, include, power
     memberColumnLabel: t("raffle.member"),
     grossColumnLabel: t("raffle.grossWon"),
     settlementColumnLabel: t("raffle.settlement"),
-    // F3/LULU-119: carryover columns are only added to the table layout when
-    // the party has carryover enabled, matching the on-screen member table.
-    carryoverEnabled: calculation.carryoverEnabled === true,
+    // G3: the previous/next-carryover columns are only added to the member
+    // table layout when showCarryoverColumns is true (carryoverEnabled AND
+    // not all-zero) -- see measureMemberTableLayout()/buildMemberTableColumns().
+    showCarryoverColumns,
     previousCarryoverColumnLabel: t("raffle.previousCarryover"),
     nextCarryoverColumnLabel: t("raffle.nextCarryover"),
     memberCategoryColumns,
@@ -265,10 +319,19 @@ function requiredWidth(measure, entries, padding) {
 /**
  * Measures every member-table column's *required* width from its header
  * label (+ optional note) and every row's actual cell text (R2/LULU-119:
- * replaces the old fixed/even-split widths, which could overlap once
- * carryover + many category columns were active at once). Comfortable
- * minimums (MEMBER_NAME_COL_WIDTH etc.) are still applied as a floor so
- * ordinary short values keep today's familiar column proportions.
+ * replaces the old fixed/even-split widths, which could overlap once many
+ * category columns were active at once). Comfortable minimums
+ * (MEMBER_NAME_COL_WIDTH etc.) are still applied as a floor so ordinary
+ * short values keep today's familiar column proportions.
+ *
+ * LULU-119 follow-up: previous carryover is dropped from the share image
+ * entirely; next carryover is back as the member table's own rightmost
+ * column (round 2 -- an earlier iteration moved it into a standalone block
+ * below the transfer table, which the user asked to retire again). Together
+ * with collapsing equipment/ftItem into one "Other Sales" column, this keeps
+ * the common configuration (member / bossNeso / powerCrystal / ascendantNeso
+ * / coin / otherSales / gross / settlement[, next carryover] = 8-9 columns)
+ * at or near the default 1200px.
  *
  * If the required total still exceeds SHARE_IMAGE_MAX_WIDTH, the category
  * cells' *secondary* (sub) line is progressively shrunk (font-size only,
@@ -301,7 +364,10 @@ function measureMemberTableLayout(ctx, model) {
       ], CELL_PADDING * 2 + SETTLEMENT_PILL_EXTRA_WIDTH),
     );
 
-    const carryoverWidth = model.carryoverEnabled
+    // G2/G3: previous + next carryover share one measured width (both
+    // columns are only added when showCarryoverColumns is true -- see
+    // buildSettlementShareModel()).
+    const carryoverWidth = model.showCarryoverColumns
       ? Math.max(
           MEMBER_CARRYOVER_COL_WIDTH,
           requiredWidth(measure, [
@@ -327,8 +393,9 @@ function measureMemberTableLayout(ctx, model) {
       return Math.max(MEMBER_MIN_CATEGORY_COL_WIDTH, primary, secondary);
     });
 
-    const carryoverTotal = model.carryoverEnabled ? carryoverWidth * 2 : 0;
     const categoryTotal = categoryWidths.reduce((sum, width) => sum + width, 0);
+    // Two carryover columns (previous + next) when shown.
+    const carryoverTotal = model.showCarryoverColumns ? carryoverWidth * 2 : 0;
     const requiredTotal = nameWidth + carryoverTotal + categoryTotal + grossWidth + settlementWidth;
 
     return { nameWidth, grossWidth, settlementWidth, carryoverWidth, categoryWidths, requiredTotal };
@@ -345,8 +412,8 @@ function measureMemberTableLayout(ctx, model) {
   const contentWidth = Math.max(defaultContentWidth, widths.requiredTotal);
   // When the measured content needs less than the default box width, spread
   // the leftover evenly across category columns so an ordinary settlement
-  // (no carryover, <=5 categories) keeps filling the box exactly as before
-  // (no visual regression for the common case).
+  // (<=5 categories) keeps filling the box exactly as before (no visual
+  // regression for the common case).
   const categoryCount = widths.categoryWidths.length;
   const extraPerCategory = categoryCount ? (contentWidth - widths.requiredTotal) / categoryCount : 0;
   const categoryWidths = widths.categoryWidths.map((width) => width + extraPerCategory);
@@ -356,19 +423,22 @@ function measureMemberTableLayout(ctx, model) {
 
 /**
  * Left-to-right column layout for the member table (C4): member name (fixed)
- * / previous carryover (F3, only when carryoverEnabled) / one column per
- * active category / gross / settlement / next carryover (F3, only when
- * carryoverEnabled). Order matches the on-screen member table
- * (SettlementResult.jsx). Every width comes from `memberLayout`
- * (measureMemberTableLayout()) -- real measured requirements, never a fixed
- * even split -- so columns can never overlap (R2/LULU-119).
+ * / previous carryover (G2/LULU-119 follow-up round 3: 2nd column, right
+ * after the name) / one column per active category / gross / settlement /
+ * next carryover (rightmost). Both carryover columns only appear when
+ * `model.showCarryoverColumns` is true (G3: carryoverEnabled AND not
+ * all-zero across every member -- see buildSettlementShareModel()). Order
+ * matches the on-screen member table (SettlementResult.jsx). Every width
+ * comes from `memberLayout` (measureMemberTableLayout()) -- real measured
+ * requirements, never a fixed even split -- so columns can never overlap
+ * (R2/LULU-119).
  */
 function buildMemberTableColumns(model, contentX, memberLayout) {
   const columns = [];
   let x = contentX;
   columns.push({ key: "member", label: model.memberColumnLabel, note: null, x, width: memberLayout.nameWidth, align: "left" });
   x += memberLayout.nameWidth;
-  if (model.carryoverEnabled) {
+  if (model.showCarryoverColumns) {
     columns.push({ key: "previousCarryover", label: model.previousCarryoverColumnLabel, note: null, x, width: memberLayout.carryoverWidth, align: "right" });
     x += memberLayout.carryoverWidth;
   }
@@ -381,29 +451,53 @@ function buildMemberTableColumns(model, contentX, memberLayout) {
   x += memberLayout.grossWidth;
   columns.push({ key: "settlement", label: model.settlementColumnLabel, note: null, x, width: memberLayout.settlementWidth, align: "right" });
   x += memberLayout.settlementWidth;
-  if (model.carryoverEnabled) {
+  if (model.showCarryoverColumns) {
     columns.push({ key: "nextCarryover", label: model.nextCarryoverColumnLabel, note: null, x, width: memberLayout.carryoverWidth, align: "right" });
   }
   return columns;
 }
 
+// LULU-119 follow-up round 2 (user adjustment B): the transfer table's 3
+// columns are packed from the left at their real measured content width
+// (ctx.measureText, same mechanism as the member table -- see
+// measureMemberTableLayout()) instead of stretching to fill the full box
+// width. The amount column still right-aligns its own text within its own
+// (now content-tight) width, so digits still line up vertically across
+// rows -- packing only changes where the column *starts*, not the
+// right-alignment rule. Right-side whitespace in the box is intentional.
+const TRANSFER_COLUMN_GAP = 28;
+
 /**
  * Left-to-right column layout for the transfer table (C5): names / amount /
- * wallet, each a fixed fraction of contentWidth. Because every row shares
- * this exact same column layout, the amount column's right edge sits at the
- * same x on every row regardless of how long a row's names are -- the fix
- * for amounts drifting out of vertical alignment under the old packed-text
- * layout.
+ * wallet, each sized to its own real content (header label + every row's
+ * text) plus CELL_PADDING, packed left-to-right with a fixed gap between
+ * amount and wallet (TRANSFER_COLUMN_GAP, LULU-119 follow-up round 2). The
+ * amount column's right edge still sits at the same fixed x on every row
+ * (independent of name length), so amounts read as a straight vertical
+ * column instead of drifting per row.
  */
-function computeTransferTableColumns(model, contentX, contentWidth) {
-  const namesWidth = Math.round(contentWidth * 0.46);
-  const amountWidth = Math.round(contentWidth * 0.22);
-  const walletWidth = contentWidth - namesWidth - amountWidth;
+function computeTransferTableColumns(ctx, model, contentX) {
+  const measure = textMeasurer(ctx);
+  const headerFont = categoryPrimaryFont();
+
+  const namesWidth = requiredWidth(measure, [
+    { text: model.transferNamesLabel, font: headerFont },
+    ...model.transferRows.map((row) => ({ text: row.from + " \u2192 " + row.to, font: `14px ${FONT_FAMILY}` })),
+  ], CELL_PADDING * 2);
+  const amountWidth = requiredWidth(measure, [
+    { text: model.transferAmountLabel, font: headerFont },
+    ...model.transferRows.map((row) => ({ text: row.amount, font: `bold 14px ${FONT_FAMILY}` })),
+  ], CELL_PADDING * 2);
+  const walletWidth = requiredWidth(measure, [
+    { text: model.transferWalletLabel, font: headerFont },
+    ...model.transferRows.map((row) => ({ text: row.wallet, font: `12px ${MONOSPACE_FONT_FAMILY}` })),
+  ], CELL_PADDING * 2);
+
   let x = contentX;
   const names = { key: "names", label: model.transferNamesLabel, x, width: namesWidth, align: "left" };
-  x += namesWidth;
+  x += namesWidth + TRANSFER_COLUMN_GAP;
   const amount = { key: "amount", label: model.transferAmountLabel, x, width: amountWidth, align: "right" };
-  x += amountWidth;
+  x += amountWidth + TRANSFER_COLUMN_GAP;
   const wallet = { key: "wallet", label: model.transferWalletLabel, x, width: walletWidth, align: "right" };
   return { names, amount, wallet };
 }
@@ -471,7 +565,7 @@ function layoutSections(model, ctx) {
   const transferHeadingY = transferBoxY + BOX_PADDING + 14;
   const transferTableTop = transferHeadingY + 18;
   const transferRowsTop = transferTableTop + TRANSFER_HEADER_HEIGHT;
-  const transferColumns = computeTransferTableColumns(model, contentX, contentWidth);
+  const transferColumns = computeTransferTableColumns(ctx, model, contentX);
   const transferRowCount = Math.max(model.transferRows.length, 1);
   const transferRows = model.transferRows.length
     ? model.transferRows.map((transfer, index) => ({

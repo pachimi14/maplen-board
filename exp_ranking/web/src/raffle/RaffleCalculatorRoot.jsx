@@ -306,6 +306,14 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
   // possible drops would just be noise.
   const hasFtItemDrop = activeClear?.boss === "WILL"
     && activeClear.members.some((member) => member.drops.some((drop) => drop.category === "FT_ITEM"));
+  // G1/LULU-119 follow-up: sale-price inputs for every currently-included
+  // sellable drop (coin/equipment/FT Item) -- computed once so the fail-
+  // visible "blank = 0" note (below) and the input list itself never
+  // disagree about which drops actually have an input rendered.
+  const saleableDrops = activeClear && activeSetting
+    ? activeClear.members.flatMap((member) => member.drops.map((drop) => ({ member, drop })))
+      .filter(({ drop }) => drop.category === "COIN" ? activeSetting.include.coin : drop.category === "FT_ITEM" ? activeSetting.include.ftItem : activeSetting.include.equipment)
+    : [];
   const activeClearBossLabel = activeClear
     ? [...new Set(activeClear.sourceClears.map((clear) => formatPartyClearTitle(clear)))].join(", ")
     : "";
@@ -405,7 +413,8 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
                       {hasFtItemDrop ? <label key="ftItem" className="flex items-center gap-2 rounded-lg border border-slate-200 p-2 text-sm dark:border-slate-700"><input type="checkbox" checked={activeSetting.include.ftItem} onChange={(event) => updateBossSetting(activeClear.boss, (setting) => ({ ...setting, include: { ...setting.include, ftItem: event.target.checked } }))} />{t("raffle.item_ftItem")}</label> : null}
                     </div>
                     {activeSetting.include.powerCrystal ? <label className="raffle-label max-w-xl">{t("raffle.powerCrystalRate")}<div className="raffle-rate-inline mt-1"><span>{t("raffle.powerCrystalRatePrefix")}</span><input className="raffle-input raffle-rate-input" inputMode="decimal" value={activeSetting.powerCrystalNesoRate} onChange={(event) => updateBossSetting(activeClear.boss, (setting) => ({ ...setting, powerCrystalNesoRate: event.target.value }))} /><span>{t("raffle.powerCrystalRateSuffix")}</span></div><span className="mt-1 block text-xs font-normal text-slate-500 dark:text-slate-400">{t("raffle.powerCrystalRateHelp")}</span></label> : null}
-                    {activeClear.members.flatMap((member) => member.drops.map((drop) => ({ member, drop }))).filter(({ drop }) => drop.category === "COIN" ? activeSetting.include.coin : drop.category === "FT_ITEM" ? activeSetting.include.ftItem : activeSetting.include.equipment).map(({ member, drop }) => {
+                    {saleableDrops.length ? <p className="raffle-hint-text">{t("raffle.saleAmountBlankIsZero")}</p> : null}
+                    {saleableDrops.map(({ member, drop }) => {
                       const salePrice = activeSetting.saleNesoByDropId[drop.dropId] || "";
                       const saleProceeds = calculateSaleProceedsNeso(salePrice);
                       return <label key={drop.dropId} className="raffle-label">{(jobResult.memberMap[member.memberId]?.displayName || member.memberId) + " — " + drop.name + " × " + drop.quantity}
