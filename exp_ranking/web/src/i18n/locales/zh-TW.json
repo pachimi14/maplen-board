@@ -158,6 +158,7 @@
     "errorWalletUnavailable": "無法取得 {{name}} 的錢包資訊。",
     "errorMetadataUnavailable": "部分道具資訊無法取得，無法分類的獎勵不會列入分配。",
     "errorAmbiguousPartyCluster": "同一首領與難度找到多筆討伐候選紀錄，請手動選擇要用於分配的項目。",
+    "errorAscendantNotFound": "無法辨識 {{boss}} 的 Ascendant Tier（{{tier}}）。Power Crystal 與 Ascendant NESO 將視為 0。",
     "warningFixtureMode": "正在顯示測試資料（開發用）。",
     "errorUnknownCode": "發生未預期的錯誤，請稍後再試一次。({{code}})",
     "errorFieldFor": "{{subject}} 的{{field}}",

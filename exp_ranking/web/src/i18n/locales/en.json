@@ -158,6 +158,7 @@
     "errorWalletUnavailable": "Could not load {{name}}'s wallet information.",
     "errorMetadataUnavailable": "Some item information could not be loaded. Rewards that could not be classified are excluded from the split.",
     "errorAmbiguousPartyCluster": "Multiple clear candidates were found for the same boss and difficulty. Choose which one to use for the split.",
+    "errorAscendantNotFound": "Could not identify {{boss}}'s Ascendant Tier ({{tier}}). Power Crystal and Ascendant NESO are treated as 0.",
     "warningFixtureMode": "Showing test data (development mode).",
     "errorUnknownCode": "An unexpected error occurred. Please try again later. ({{code}})",
     "errorFieldFor": "{{field}} for {{subject}}",

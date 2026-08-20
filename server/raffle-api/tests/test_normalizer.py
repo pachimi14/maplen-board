@@ -400,7 +400,14 @@ def test_ambiguous_party_count_cluster_is_excluded_without_affecting_other_candi
     assert [clear["partyCount"] for clear in result["clears"]] == [5]
     assert result["clears"][0]["clearId"] == "clear-will-hard-p5"
     assert result["clears"][0]["historyMemberIds"] == ["m1", "m2", "m5"]
-    assert result["warnings"] == [{"code": "ambiguous_party_cluster", "boss": "WILL", "bossDifficulty": "HARD", "partyCount": 6}]
+    # No Ascendant-tier history is fed into this fixture, so the resolved partyCount=5 clear
+    # also raises `ascendant_not_found` (fail-visible instead of a silent 0 -- see
+    # docs/IMPL_PLAN_RAFFLE_ASCENDANT_MATCH.md S2) alongside the unrelated partyCount=6
+    # ambiguity this test exists to cover.
+    assert result["warnings"] == [
+        {"code": "ascendant_not_found", "boss": "WILL", "bossDifficulty": "HARD", "expectedTier": "Eternal Ascendant"},
+        {"code": "ambiguous_party_cluster", "boss": "WILL", "bossDifficulty": "HARD", "partyCount": 6},
+    ]
 
 
 def test_will_clear_surfaces_ft_item_drop_for_sealed_mirror_world_nodestone() -> None:

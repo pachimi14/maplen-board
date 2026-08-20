@@ -374,15 +374,22 @@ def normalize_live_history(request: CreateJobRequest, character_histories: dict[
                         warnings.append({"code": "ambiguous_party_cluster", "boss": boss_code, "bossDifficulty": difficulty, "partyCount": official_party_count})
                     members = []
                     history_member_ids = []
+                    missing_ascendant_tier = None
                     for character in request.characters:
                         match = cluster.get(character.memberId)
                         if match is not None:
                             history, _party_count = match
-                            ascendant, _missing_tier = _ascendant_for_boss(exact_histories.get(character.memberId, []), layers_by_id, history)
+                            ascendant, missing_tier = _ascendant_for_boss(exact_histories.get(character.memberId, []), layers_by_id, history)
+                            missing_ascendant_tier = missing_ascendant_tier or missing_tier
                             members.append(_member_settlement(character.memberId, boss_code, history, ascendant, item_metadata, difficulty.lower()))
                             history_member_ids.append(character.memberId)
                         else:
                             members.append(_empty_member_settlement(character.memberId))
+                    if missing_ascendant_tier:
+                        # Fail-visible instead of a silent 0 (LULU-119 principle): tell the
+                        # caller Power Crystal/Ascendant NESO could not be resolved for this
+                        # clear rather than only surfacing zeroed amounts.
+                        warnings.append({"code": "ascendant_not_found", "boss": boss_code, "bossDifficulty": difficulty, "expectedTier": missing_ascendant_tier})
                     clears.append({
                         "clearId": f"clear-{boss_code.lower()}-{difficulty.lower()}-p{official_party_count}",
                         "boss": boss_code,
