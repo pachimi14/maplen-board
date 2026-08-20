@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "../i18n/I18nContext.jsx";
 import { parseNavigatorCharacterUrl } from "./domain/assetInput.js";
+import { searchRankingCharacters } from "./domain/rankingSearch.js";
 import { currentRaffleRoundUtc } from "./domain/raffleRound.js";
 import { combineSelectedPartyClears, formatPartyBossName, formatPartyClearTitle, groupPartyClearCandidates, requiresDistributionConfirmation, selectPartyClearCandidates } from "./domain/partyClears.js";
 import { sortPartyMembers } from "./domain/partyOrder.js";
@@ -44,7 +45,7 @@ function formatNesoPreview(value, locale) {
 }
 
 
-export default function RaffleCalculatorRoot() {
+export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLoading = false, rankingLoadError = "" } = {}) {
   const { t, language } = useTranslation();
   const initial = useMemo(initialModel, []);
   const [model, setModel] = useState(initial.state);
@@ -71,6 +72,12 @@ export default function RaffleCalculatorRoot() {
 
   const activeParty = model.parties.find((party) => party.id === model.activePartyId) || model.parties[0] || null;
   const sortedActiveMembers = activeParty ? sortPartyMembers(activeParty.members) : [];
+  // S1: ranking-first predictive candidates -- recomputed locally from the
+  // already-fetched ranking board as the user types (zero network calls).
+  const rankingCandidates = useMemo(
+    () => searchRankingCharacters(rankingCharacters, characterQuery, { limit: 10 }),
+    [rankingCharacters, characterQuery],
+  );
   const targetRound = currentRaffleRoundUtc();
   const targetRoundLocalText = formatRaffleRoundLocal(targetRound, { locale: language });
   const targetRoundUtcText = formatRaffleRoundUtc(targetRound);
@@ -300,6 +307,7 @@ export default function RaffleCalculatorRoot() {
             {activeParty ? <>
               <label className="raffle-label mt-4">{t("raffle.partyName")}<input className="raffle-input mt-1" maxLength={80} value={activeParty.name} onChange={(event) => updateParty((party) => ({ ...party, name: event.target.value }))} /></label>
               <label className="raffle-label mt-4">{t("raffle.characterName")}<div className="mt-1 grid gap-2 sm:grid-cols-[1fr_auto]"><input className="raffle-input" value={characterQuery} onChange={(event) => setCharacterQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") searchCharacter(); }} placeholder={t("raffle.characterNamePlaceholder")} /><button type="button" className="raffle-button-secondary" disabled={searching} onClick={searchCharacter}>{searching ? t("raffle.searching") : t("raffle.search")}</button></div></label>
+              {characterQuery.trim() ? rankingCandidates.length ? <div className="mt-3 space-y-2">{rankingCandidates.map((candidate) => <article key={candidate.assetKey} className="flex items-center justify-between gap-3 rounded-lg border border-emerald-300 bg-emerald-50 p-3 dark:border-emerald-800 dark:bg-emerald-950/30"><div className="flex min-w-0 items-center gap-3">{candidate.imageUrl ? <img className="h-12 w-12 rounded-lg object-cover" src={candidate.imageUrl} alt="" /> : null}<div className="min-w-0"><div className="flex items-center gap-2"><p className="truncate font-semibold">{candidate.displayName}</p><span className="shrink-0 rounded-full border border-emerald-400 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:border-emerald-600 dark:text-emerald-300">{t("raffle.rankingCandidateBadge")}</span></div><p className="truncate text-xs text-slate-500">{candidate.level != null ? "Lv." + candidate.level : ""}{candidate.jobName ? " · " + candidate.jobName : ""}{candidate.worldId ? " · " + candidate.worldId : ""}</p></div></div><button type="button" className="raffle-button-primary shrink-0" onClick={() => addSearchResult(candidate)}>{t("raffle.addToParty")}</button></article>)}</div> : rankingLoading ? <p className="mt-3 text-sm text-slate-500">{t("raffle.rankingCandidatesLoading")}</p> : rankingLoadError ? <p className="mt-3 text-sm text-slate-500">{t("raffle.rankingCandidatesUnavailable")}</p> : null : null}
               {characterResults.length ? <div className="mt-3 space-y-2">{characterResults.map((character) => <article key={character.assetKey} className="flex items-center justify-between gap-3 rounded-lg border border-emerald-300 bg-emerald-50 p-3 dark:border-emerald-800 dark:bg-emerald-950/30"><div className="flex min-w-0 items-center gap-3">{character.imageUrl ? <img className="h-12 w-12 rounded-lg object-cover" src={character.imageUrl} alt="" /> : null}<div className="min-w-0"><p className="truncate font-semibold">{character.displayName}</p><p className="truncate text-xs text-slate-500">{character.level != null ? "Lv." + character.level : ""}{character.jobName ? " · " + character.jobName : ""}</p></div></div><button type="button" className="raffle-button-primary shrink-0" onClick={() => addSearchResult(character)}>{t("raffle.addToParty")}</button></article>)}</div> : searchCompleted ? <p className="mt-3 text-sm text-slate-500">{t("raffle.noCharacterFound")}</p> : null}
               <div className="mt-4 border-t border-slate-200 pt-4 dark:border-slate-700"><label className="raffle-label">{t("raffle.navigatorUrl")}<div className="mt-1 grid gap-2 sm:grid-cols-[1fr_auto]"><input className="raffle-input" value={navigatorUrl} onChange={(event) => setNavigatorUrl(event.target.value)} placeholder="https://msu.io/navigator/character/CHAR..." /><button type="button" className="raffle-button-secondary" disabled={resolving} onClick={addNavigatorMember}>{resolving ? t("raffle.loading") : t("raffle.add")}</button></div></label></div>
               <ul className="raffle-party-members mt-4">{sortedActiveMembers.map((member) => <li key={member.assetKey} className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 p-3 dark:border-slate-700"><div className="flex min-w-0 items-center gap-3">{member.imageUrl ? <img className="h-10 w-10 rounded-lg object-cover" src={member.imageUrl} alt="" /> : null}<div className="min-w-0"><p className="truncate font-semibold">{member.displayName}</p><p className="truncate text-xs text-slate-500">{member.level != null ? "Lv." + member.level : ""}{member.jobName ? " · " + member.jobName : ""}</p></div></div><button type="button" className="raffle-button-remove" onClick={() => removeMember(member.assetKey)}>{t("raffle.remove")}</button></li>)}</ul>

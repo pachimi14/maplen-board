@@ -175,7 +175,10 @@
     "powerCrystalRateHelp": "Khi quy đổi Power Crystal sang NESO, hệ thống sẽ chia cho tỷ lệ bạn đã đặt.",
     "tabRafflesSub": "Kết quả trúng thưởng",
     "tabClearsSub": "Tính phân chia",
-    "breakdownHeading": "Chi tiết"
+    "breakdownHeading": "Chi tiết",
+    "rankingCandidateBadge": "Bảng xếp hạng",
+    "rankingCandidatesLoading": "Đang tải danh sách gợi ý từ bảng xếp hạng…",
+    "rankingCandidatesUnavailable": "Không thể hiển thị gợi ý từ bảng xếp hạng lúc này. Bạn vẫn có thể tìm kiếm bằng nút API ở trên."
   },
   "period": {
     "daily": "Ngày",

@@ -175,7 +175,10 @@
     "powerCrystalRateHelp": "將Power Crystal換算為NESO時，會以您設定的匯率相除計算。",
     "tabRafflesSub": "中獎結果",
     "tabClearsSub": "分配計算",
-    "breakdownHeading": "明細"
+    "breakdownHeading": "明細",
+    "rankingCandidateBadge": "排名",
+    "rankingCandidatesLoading": "排名候選名單載入中…",
+    "rankingCandidatesUnavailable": "目前無法顯示排名候選名單。你仍可使用上方的 API 搜尋按鈕。"
   },
   "period": {
     "daily": "日",

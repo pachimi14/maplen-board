@@ -175,7 +175,10 @@
     "powerCrystalRateHelp": "When converting Power Crystal to NESO, we divide by the rate you set.",
     "tabRafflesSub": "Winning results",
     "tabClearsSub": "Settlement calculator",
-    "breakdownHeading": "Breakdown"
+    "breakdownHeading": "Breakdown",
+    "rankingCandidateBadge": "Ranking",
+    "rankingCandidatesLoading": "Loading ranking candidates…",
+    "rankingCandidatesUnavailable": "Ranking candidates are unavailable. You can still search via the API button above."
   },
   "period": {
     "daily": "Daily",

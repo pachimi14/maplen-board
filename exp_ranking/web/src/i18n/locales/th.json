@@ -175,7 +175,10 @@
     "powerCrystalRateHelp": "เมื่อแปลง Power Crystal เป็น NESO ระบบจะหารด้วยอัตราที่คุณตั้งไว้",
     "tabRafflesSub": "ผลที่ชนะ",
     "tabClearsSub": "คำนวณการแบ่ง",
-    "breakdownHeading": "รายละเอียด"
+    "breakdownHeading": "รายละเอียด",
+    "rankingCandidateBadge": "อันดับ",
+    "rankingCandidatesLoading": "กำลังโหลดผู้สมัครจากอันดับ…",
+    "rankingCandidatesUnavailable": "ไม่สามารถแสดงผู้สมัครจากอันดับได้ในขณะนี้ คุณยังสามารถค้นหาผ่านปุ่ม API ด้านบนได้"
   },
   "period": {
     "daily": "รายวัน",

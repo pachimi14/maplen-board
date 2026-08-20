@@ -175,7 +175,10 @@
     "powerCrystalRateHelp": "Power CrystalをNESO換算する際は、設定したレートで割って計算します。",
     "tabRafflesSub": "当選結果",
     "tabClearsSub": "分配計算",
-    "breakdownHeading": "内訳"
+    "breakdownHeading": "内訳",
+    "rankingCandidateBadge": "ランキング",
+    "rankingCandidatesLoading": "ランキング候補を読み込み中です…",
+    "rankingCandidatesUnavailable": "ランキング候補は利用できません。上の検索ボタンでAPI検索をご利用いただけます。"
   },
   "period": {
     "daily": "日間",
