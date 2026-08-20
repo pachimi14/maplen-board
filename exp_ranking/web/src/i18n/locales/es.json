@@ -158,6 +158,7 @@
     "errorWalletUnavailable": "No se pudo cargar la información de la billetera de {{name}}.",
     "errorMetadataUnavailable": "No se pudo cargar la información de algunos objetos. Las recompensas sin clasificar quedan fuera del reparto.",
     "errorAmbiguousPartyCluster": "Se encontraron varias derrotas candidatas para el mismo jefe y dificultad. Elige cuál usar para el reparto.",
+    "errorAscendantNotFound": "No se pudo identificar el Ascendant Tier de {{boss}} ({{tier}}). Power Crystal y Ascendant NESO se consideran 0.",
     "warningFixtureMode": "Mostrando datos de prueba (modo de desarrollo).",
     "errorUnknownCode": "Ocurrió un error inesperado. Inténtalo de nuevo más tarde. ({{code}})",
     "errorFieldFor": "{{field}} de {{subject}}",

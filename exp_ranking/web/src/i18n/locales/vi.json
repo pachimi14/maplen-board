@@ -158,6 +158,7 @@
     "errorWalletUnavailable": "Không thể tải thông tin ví của {{name}}.",
     "errorMetadataUnavailable": "Không thể tải một số thông tin vật phẩm. Phần thưởng không phân loại được sẽ không tính vào phân chia.",
     "errorAmbiguousPartyCluster": "Tìm thấy nhiều lượt hạ boss ứng viên cho cùng boss và độ khó. Hãy chọn thủ công mục dùng để phân chia.",
+    "errorAscendantNotFound": "Không thể xác định Ascendant Tier của {{boss}} ({{tier}}). Power Crystal và Ascendant NESO được tính là 0.",
     "warningFixtureMode": "Đang hiển thị dữ liệu thử nghiệm (chế độ phát triển).",
     "errorUnknownCode": "Đã xảy ra lỗi không mong muốn. Vui lòng thử lại sau. ({{code}})",
     "errorFieldFor": "{{field}} của {{subject}}",

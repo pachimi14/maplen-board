@@ -135,6 +135,55 @@ def test_normal_will_uses_glorious_ascendant_without_clear_information() -> None
     assert member["ascendantNeso"] == "8000000"
     assert member["powerCrystalAmount"] == "6000000"
 
+def test_hard_will_resolves_power_crystal_and_ascendant_neso_via_renamed_eternal_layer() -> None:
+    # Regression for docs/IMPL_PLAN_RAFFLE_ASCENDANT_MATCH.md: the official API renamed the
+    # single "Eternal Ascendant" layer to "Eternal Ascendant Hard Will" / "Eternal Ascendant
+    # Chaos Guardian" (split per boss), which broke exact-match resolution and silently zeroed
+    # Power Crystal / Ascendant NESO for every Hard Will clear. Both variants are present here
+    # to also prove the Hard Will clear selects its own variant, not the Chaos Guardian one.
+    request = request_for("m1")
+    histories = {
+        "m1": [
+            {
+                "raffledAt": request.raffledAt,
+                "layerId": 205044,
+                "clearInformations": [{"clearedAt": "2026-08-20T14:00:00Z", "partyCount": 1}],
+                "prizes": [{"itemId": 1, "winCount": {"value": "3000000"}}],
+            },
+            {
+                "raffledAt": request.raffledAt,
+                "layerId": 900101,
+                "clearInformations": [],
+                "prizes": [
+                    {"itemId": 1, "winCount": {"value": "3000000"}},
+                    {"itemId": 2832960, "winCount": {"value": "6"}},
+                ],
+            },
+            {
+                "raffledAt": request.raffledAt,
+                "layerId": 900102,
+                "clearInformations": [],
+                "prizes": [{"itemId": 1, "winCount": {"value": "999000000"}}],
+            },
+        ]
+    }
+    layers = [
+        {"layerId": 205044, "boss": {"bossName": "Will", "difficulty": "DIFFICULTY_HARD", "raffleLayerName": "Hard Will"}},
+        {"layerId": 900101, "contents": {"groupName": "Ascendant Tier Raffle", "layerName": "Eternal Ascendant Hard Will"}},
+        {"layerId": 900102, "contents": {"groupName": "Ascendant Tier Raffle", "layerName": "Eternal Ascendant Chaos Guardian"}},
+    ]
+    metadata = {2832960: {"itemName": "1M Power Crystal Coupon"}}
+
+    result = normalize_live_history(request, histories, layers, metadata)
+
+    assert len(result["clears"]) == 1
+    assert result["clears"][0]["ascendantTier"] == "Eternal Ascendant"
+    member = result["clears"][0]["members"][0]
+    assert member["ascendantNeso"] == "3000000"
+    assert member["powerCrystalAmount"] == "6000000"
+    assert not [warning for warning in result["warnings"] if warning["code"] == "ascendant_not_found"]
+
+
 def test_six_person_roster_accepts_four_history_members_within_one_hour() -> None:
     member_ids = tuple(f"m{index}" for index in range(1, 7))
     request = request_for(*member_ids)
@@ -351,7 +400,14 @@ def test_ambiguous_party_count_cluster_is_excluded_without_affecting_other_candi
     assert [clear["partyCount"] for clear in result["clears"]] == [5]
     assert result["clears"][0]["clearId"] == "clear-will-hard-p5"
     assert result["clears"][0]["historyMemberIds"] == ["m1", "m2", "m5"]
-    assert result["warnings"] == [{"code": "ambiguous_party_cluster", "boss": "WILL", "bossDifficulty": "HARD", "partyCount": 6}]
+    # No Ascendant-tier history is fed into this fixture, so the resolved partyCount=5 clear
+    # also raises `ascendant_not_found` (fail-visible instead of a silent 0 -- see
+    # docs/IMPL_PLAN_RAFFLE_ASCENDANT_MATCH.md S2) alongside the unrelated partyCount=6
+    # ambiguity this test exists to cover.
+    assert result["warnings"] == [
+        {"code": "ascendant_not_found", "boss": "WILL", "bossDifficulty": "HARD", "expectedTier": "Eternal Ascendant"},
+        {"code": "ambiguous_party_cluster", "boss": "WILL", "bossDifficulty": "HARD", "partyCount": 6},
+    ]
 
 
 def test_will_clear_surfaces_ft_item_drop_for_sealed_mirror_world_nodestone() -> None:

@@ -158,6 +158,7 @@
     "errorWalletUnavailable": "{{name}} のウォレット情報を取得できませんでした。",
     "errorMetadataUnavailable": "一部のアイテム情報を取得できませんでした。分類できない報酬は分配に含まれません。",
     "errorAmbiguousPartyCluster": "同じボス・難易度で複数の討伐候補が見つかりました。分配対象を手動で選択してください。",
+    "errorAscendantNotFound": "{{boss}} の Ascendant Tier（{{tier}}）を特定できませんでした。Power Crystal と Ascendant NESO は 0 として扱われています。",
     "warningFixtureMode": "テストデータを表示しています（開発用）。",
     "errorUnknownCode": "予期しないエラーが発生しました。時間をおいて再試行してください。({{code}})",
     "errorFieldFor": "{{subject}} の{{field}}",

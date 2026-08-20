@@ -90,7 +90,7 @@ describe("describeProgressStage", () => {
 
 describe("describeRaffleCode", () => {
   it("never renders the raw code for known codes", () => {
-    for (const code of ["rateLimited", "client_rate_limited", "networkError", "aborted", "invalidResponse", "metadata_timeout", "ambiguous_party_cluster", "fixture_mode"]) {
+    for (const code of ["rateLimited", "client_rate_limited", "networkError", "aborted", "invalidResponse", "metadata_timeout", "ambiguous_party_cluster", "fixture_mode", "ascendant_not_found"]) {
       const text = describeRaffleCode(code, { t });
       expect(text).not.toBe(code);
       expect(text).not.toContain(code);
@@ -124,6 +124,25 @@ describe("describeRaffleCode", () => {
     const text = describeRaffleCode("some_new_code_never_seen", { t });
     expect(text).toContain("(some_new_code_never_seen)");
     expect(text.length).toBeGreaterThan("(some_new_code_never_seen)".length);
+  });
+
+  it("describes ascendant_not_found in human language with the boss and expected tier (LULU: Ascendant layer rename)", () => {
+    const text = describeRaffleEntry(
+      { code: "ascendant_not_found", boss: "WILL", bossDifficulty: "HARD", expectedTier: "Eternal Ascendant" },
+      { t },
+    );
+    expect(text).not.toBe("ascendant_not_found");
+    expect(text).not.toContain("ascendant_not_found");
+    expect(text).toContain("Will");
+    expect(text).toContain("Eternal Ascendant");
+  });
+
+  it("never renders the raw ascendant_not_found code across all 6 locales", () => {
+    for (const messages of [ja, en]) {
+      const text = describeRaffleCode("ascendant_not_found", { t: makeT(messages), boss: "LUCID", expectedTier: "Divine Ascendant" });
+      expect(text).not.toBe("ascendant_not_found");
+      expect(text).toContain("Divine Ascendant");
+    }
   });
 });
 

@@ -3,6 +3,8 @@
 // progress stages, API error codes, settlement validation errors, and
 // round timestamps) into human-readable, localized text.
 
+import { formatPartyBossName } from "./domain/partyClears.js";
+
 const STAGE_MESSAGE_KEYS = Object.freeze({
   queued: "raffle.progressStageQueued",
   normalizing: "raffle.progressStageNormalizing",
@@ -50,12 +52,15 @@ const CODE_MESSAGE_KEYS = Object.freeze({
 });
 
 /** Turns an API/job result code into a human-readable, localized message. */
-export function describeRaffleCode(code, { t, memberId = "", memberMap = {} } = {}) {
+export function describeRaffleCode(code, { t, memberId = "", memberMap = {}, boss = "", expectedTier = "" } = {}) {
   if (code === "history_unavailable") {
     return t("raffle.errorHistoryUnavailable", { name: resolveMemberName(memberMap, memberId) });
   }
   if (code === "wallet_not_available") {
     return t("raffle.errorWalletUnavailable", { name: resolveMemberName(memberMap, memberId) });
+  }
+  if (code === "ascendant_not_found") {
+    return t("raffle.errorAscendantNotFound", { boss: formatPartyBossName(boss) || boss, tier: expectedTier });
   }
   const key = CODE_MESSAGE_KEYS[code];
   if (key) return t(key);
@@ -64,7 +69,7 @@ export function describeRaffleCode(code, { t, memberId = "", memberMap = {} } = 
 
 /** Convenience wrapper for a warning/error entry shaped like { code, memberId }. */
 export function describeRaffleEntry(entry, { t, memberMap = {} } = {}) {
-  return describeRaffleCode(entry?.code, { t, memberId: entry?.memberId, memberMap });
+  return describeRaffleCode(entry?.code, { t, memberId: entry?.memberId, memberMap, boss: entry?.boss, expectedTier: entry?.expectedTier });
 }
 
 const SETTLEMENT_FIELD_LABEL_KEYS = Object.freeze({

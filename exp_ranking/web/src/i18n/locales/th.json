@@ -158,6 +158,7 @@
     "errorWalletUnavailable": "โหลดข้อมูลกระเป๋าเงินของ {{name}} ไม่สำเร็จ",
     "errorMetadataUnavailable": "โหลดข้อมูลไอเทมบางส่วนไม่สำเร็จ รางวัลที่จัดหมวดหมู่ไม่ได้จะไม่ถูกรวมในการแบ่ง",
     "errorAmbiguousPartyCluster": "พบผลการปราบบอสที่ระดับความยากเดียวกันหลายรายการ โปรดเลือกรายการที่จะใช้แบ่งด้วยตนเอง",
+    "errorAscendantNotFound": "ไม่สามารถระบุ Ascendant Tier ของ {{boss}} ({{tier}}) ได้ Power Crystal และ Ascendant NESO จะถูกนับเป็น 0",
     "warningFixtureMode": "กำลังแสดงข้อมูลทดสอบ (โหมดพัฒนา)",
     "errorUnknownCode": "เกิดข้อผิดพลาดที่ไม่คาดคิด โปรดลองใหม่ภายหลัง ({{code}})",
     "errorFieldFor": "{{field}}ของ {{subject}}",
