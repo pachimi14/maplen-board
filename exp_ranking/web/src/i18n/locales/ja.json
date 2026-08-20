@@ -37,7 +37,6 @@
     "noParty": "パーティを作成してください。",
     "add": "追加",
     "remove": "削除",
-    "worldMismatch": "同じワールドのキャラクターだけを追加できます。",
     "settings": "ボス・価格設定",
     "raffledAt": "ラッフル日時（UTC）",
     "powerCrystalRate": "Power Crystal レート",

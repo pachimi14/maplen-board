@@ -68,4 +68,24 @@ describe("raffle storage", () => {
       carryoverByAssetKey: { CHARfixture001: "-25", CHARfixture002: "25" },
     });
   });
+
+  // S3'/LULU-116 (replaces the withdrawn S3 world-mismatch guard, IMPL_PLAN
+  // §3 criterion 4): worldId is display-only and is never compared across
+  // members, so a party mixing a ranking-origin world name ("Ain") and an
+  // API-origin numeric world id ("2") must save/load cleanly -- neither
+  // member is rejected or altered, and there is no error.
+  it("keeps a party mixing a ranking-origin world name and an API-origin numeric world id without any world-match error", () => {
+    const backend = memoryBackend();
+    const party = createParty("p1", "Mixed World Party");
+    party.members.push({ assetKey: "CHARfixture001", displayName: "RankingChar", worldId: "Ain", level: 250, jobName: "Shadower", imageUrl: "" });
+    party.members.push({ assetKey: "CHARfixture002", displayName: "ApiChar", worldId: "2", level: 226, jobName: "Bishop", imageUrl: "" });
+    const saved = saveRaffleState({ ...createEmptyRaffleState(), activePartyId: "p1", parties: [party] }, backend);
+    expect(saved.ok).toBe(true);
+    expect(saved.state.parties[0].members).toHaveLength(2);
+    expect(saved.state.parties[0].members.map((member) => member.worldId)).toEqual(["Ain", "2"]);
+
+    const loaded = loadRaffleState(backend);
+    expect(loaded.ok).toBe(true);
+    expect(loaded.state.parties[0].members.map((member) => member.worldId)).toEqual(["Ain", "2"]);
+  });
 });
