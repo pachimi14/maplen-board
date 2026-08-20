@@ -37,7 +37,6 @@
     "noParty": "สร้างปาร์ตี้เพื่อเริ่มต้น",
     "add": "เพิ่ม",
     "remove": "ลบ",
-    "worldMismatch": "สมาชิกปาร์ตี้ต้องอยู่ในโลกเดียวกัน",
     "settings": "บอสและราคา",
     "raffledAt": "เวลาราฟเฟิล (UTC)",
     "powerCrystalRate": "อัตรา Power Crystal",
@@ -175,7 +174,12 @@
     "powerCrystalRateHelp": "เมื่อแปลง Power Crystal เป็น NESO ระบบจะหารด้วยอัตราที่คุณตั้งไว้",
     "tabRafflesSub": "ผลที่ชนะ",
     "tabClearsSub": "คำนวณการแบ่ง",
-    "breakdownHeading": "รายละเอียด"
+    "breakdownHeading": "รายละเอียด",
+    "rankingCandidateBadge": "อันดับ",
+    "rankingCandidatesLoading": "กำลังโหลดผู้สมัครจากอันดับ…",
+    "rankingCandidatesUnavailable": "ไม่สามารถแสดงผู้สมัครจากอันดับได้ในขณะนี้ คุณยังสามารถค้นหาผ่านปุ่ม API ด้านบนได้",
+    "apiCandidateBadge": "API",
+    "apiUnavailableAnnouncement": "เชื่อมต่อ API อย่างเป็นทางการไม่ได้ ตัวละครที่มีเลเวล 225 ขึ้นไปในอันดับสามารถเพิ่มได้จากผู้สมัครด้านบน ส่วนตัวละครต่ำกว่าเลเวล 225 ให้เพิ่มอีกครั้งเมื่อ API กลับมาใช้งานได้"
   },
   "period": {
     "daily": "รายวัน",

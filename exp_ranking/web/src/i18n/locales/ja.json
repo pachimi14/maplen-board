@@ -37,7 +37,6 @@
     "noParty": "パーティを作成してください。",
     "add": "追加",
     "remove": "削除",
-    "worldMismatch": "同じワールドのキャラクターだけを追加できます。",
     "settings": "ボス・価格設定",
     "raffledAt": "ラッフル日時（UTC）",
     "powerCrystalRate": "Power Crystal レート",
@@ -175,7 +174,12 @@
     "powerCrystalRateHelp": "Power CrystalをNESO換算する際は、設定したレートで割って計算します。",
     "tabRafflesSub": "当選結果",
     "tabClearsSub": "分配計算",
-    "breakdownHeading": "内訳"
+    "breakdownHeading": "内訳",
+    "rankingCandidateBadge": "ランキング",
+    "rankingCandidatesLoading": "ランキング候補を読み込み中です…",
+    "rankingCandidatesUnavailable": "ランキング候補は利用できません。上の検索ボタンでAPI検索をご利用いただけます。",
+    "apiCandidateBadge": "API",
+    "apiUnavailableAnnouncement": "公式APIに接続できません。Lv225以上のランキング掲載キャラは上の候補から追加できます。Lv225未満のキャラはAPI復旧後に追加してください。"
   },
   "period": {
     "daily": "日間",

@@ -32,6 +32,14 @@ export default function App() {
 
 function AppShell() {
   const { t, loading, characters, loadError, meta, scheduledUpdateLabel, route } = useBoard();
+  // S1 (IMPL_PLAN_RAFFLE_RANKING_SEARCH.md §0): the ranking board is already
+  // fetched here on every route by BoardProvider, so raffle's ranking-first
+  // search reuses it via props instead of calling useBoard() itself inside
+  // src/raffle/** (keeps the raffle domain decoupled/importable in tests
+  // without a BoardProvider, per the plan's stop condition §5).
+  const rankingCharacters = characters;
+  const rankingLoading = loading;
+  const rankingLoadError = loadError;
   const dashboardStore = useDashboardStore();
   const [rankingTheme, updateRankingTheme] = useSiteTheme(RANKING_THEME_STORAGE_KEY);
   // Raffle's own independent theme: the first time this key is read (no
@@ -79,7 +87,7 @@ function AppShell() {
     return (
       <div className="site-theme ranking-root min-h-screen bg-slate-50 dark:bg-slate-950">
         <SiteHeader active="raffle" variant={raffleSiteHeaderVariant} theme={raffleTheme} onThemeChange={updateRaffleTheme} />
-        <RaffleCalculatorRoot />
+        <RaffleCalculatorRoot rankingCharacters={rankingCharacters} rankingLoading={rankingLoading} rankingLoadError={rankingLoadError} />
       </div>
     );
   }
