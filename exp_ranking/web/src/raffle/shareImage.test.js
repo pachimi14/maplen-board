@@ -378,6 +378,90 @@ describe("drawSettlementShareImage (smoke test)", () => {
   });
 });
 
+// LULU-119 follow-up round 2 (user adjustment B): the transfer table's 3
+// columns are packed left-to-right at their own real measured content width
+// instead of stretching to fill the box (which used to leave the amount
+// column pushed toward the middle and the wallet column pinned at the box's
+// far right edge regardless of how short the actual content was). The
+// amount column keeps right-aligning its own text within its own (now
+// content-tight) column, so digits still line up vertically across rows.
+describe("transfer table column packing (LULU-119 follow-up round 2, user adjustment B)", () => {
+  it("packs the 3 transfer columns at their real content width, leaving whitespace on the right instead of stretching to the box's right edge", () => {
+    const calculation = compositeCalculation();
+    const model = buildSettlementShareModel(calculation, memberMap, include, "1.2", t, { memberWallets: { b: "0x1111111111111111111111111111111111aaaa", c: "0x1111111111111111111111111111111111aaaa" } });
+    expect(model.transferRows.length).toBeGreaterThan(0);
+    const { ctx, fillTextCalls } = makeMeasuringMockCtx();
+
+    const size = drawSettlementShareImage(ctx, model);
+
+    const walletCalls = fillTextCalls.filter((call) => model.transferRows.some((row) => row.wallet === call.text));
+    expect(walletCalls.length).toBeGreaterThan(0);
+    // align="right" -> call.x IS the drawn text's right edge.
+    const rightmostWalletEdge = Math.max(...walletCalls.map((call) => call.x));
+    // With short synthetic content (short display names, a fixed-length hex
+    // wallet), the packed table ends well before the canvas's right edge --
+    // under the old stretch-to-fill layout the wallet column's right edge
+    // sat right at the box's right edge regardless of content length.
+    expect(size.width - rightmostWalletEdge).toBeGreaterThan(300);
+  });
+
+  it("still right-aligns the amount column at a single fixed x across every row (digits stay vertically aligned) after packing", () => {
+    const calculation = compositeCalculation();
+    const model = buildSettlementShareModel(calculation, memberMap, include, "1.2", t);
+    expect(model.transferRows.length).toBeGreaterThan(1);
+    const { ctx, fillTextCalls } = makeMeasuringMockCtx();
+
+    drawSettlementShareImage(ctx, model);
+
+    const amountXs = new Set(
+      fillTextCalls.filter((call) => model.transferRows.some((row) => row.amount === call.text)).map((call) => call.x),
+    );
+    expect(amountXs.size).toBe(1);
+  });
+
+  it("keeps a modest, non-overlapping, non-zero gap between the amount and wallet columns", () => {
+    const calculation = compositeCalculation();
+    const model = buildSettlementShareModel(calculation, memberMap, include, "1.2", t, {
+      memberWallets: { b: "0x1111111111111111111111111111111111aaaa", c: "0x1111111111111111111111111111111111aaaa" },
+    });
+    expect(model.transferRows.length).toBeGreaterThan(0);
+    const { ctx, fillTextCalls } = makeMeasuringMockCtx();
+
+    drawSettlementShareImage(ctx, model);
+
+    for (const row of model.transferRows) {
+      const amountCall = fillTextCalls.find((call) => call.text === row.amount);
+      const walletCall = fillTextCalls.find((call) => call.text === row.wallet);
+      expect(amountCall).toBeTruthy();
+      expect(walletCall).toBeTruthy();
+      const amountRightEdge = amountCall.x; // align="right" -> x is the right edge.
+      const walletLeftEdge = walletCall.x - walletCall.width; // align="right" -> x-width is the left edge.
+      // Positive, modest gap (spec: "24-32px" example) -- not touching/
+      // overlapping (already covered by assertNoOverlapWithinAnyRow
+      // elsewhere), and not an unreasonably large empty stretch either.
+      expect(walletLeftEdge - amountRightEdge).toBeGreaterThanOrEqual(15);
+      expect(walletLeftEdge - amountRightEdge).toBeLessThanOrEqual(120);
+    }
+  });
+
+  it("draws the column headers (payer/receiver, amount, wallet) at the same x positions as their row data", () => {
+    const calculation = compositeCalculation();
+    const model = buildSettlementShareModel(calculation, memberMap, include, "1.2", t);
+    const { ctx, fillTextCalls } = makeMeasuringMockCtx();
+
+    drawSettlementShareImage(ctx, model);
+
+    const amountHeaderCall = fillTextCalls.find((call) => call.text === model.transferAmountLabel);
+    const walletHeaderCall = fillTextCalls.find((call) => call.text === model.transferWalletLabel);
+    expect(amountHeaderCall).toBeTruthy();
+    expect(walletHeaderCall).toBeTruthy();
+    const amountDataXs = new Set(fillTextCalls.filter((call) => model.transferRows.some((row) => row.amount === call.text)).map((call) => call.x));
+    const walletDataXs = new Set(fillTextCalls.filter((call) => model.transferRows.some((row) => row.wallet === call.text)).map((call) => call.x));
+    expect(amountDataXs.has(amountHeaderCall.x)).toBe(true);
+    expect(walletDataXs.has(walletHeaderCall.x)).toBe(true);
+  });
+});
+
 // LULU-119 follow-up (user report: 10 member-table columns made the shared
 // image 1529px wide and hard to read). "Equipment drop" and "Will FT Item"
 // are collapsed into one share-image-only "Other Sales" column (sale
@@ -460,14 +544,15 @@ describe("buildSettlementShareModel Other Sales column (LULU-119 follow-up)", ()
   });
 });
 
-// LULU-119 follow-up: previous carryover is dropped from the share image
-// entirely (member table no longer has any carryover columns); next
-// carryover moves into its own block below the transfer table, listing only
-// members whose next carryover is non-zero, with the exact same value/sign
-// as the on-screen carryover badge (SettlementResult.jsx) via the shared
-// signedNeso helper -- never recomputed independently, so the two can never
-// disagree.
-describe("buildSettlementShareModel next-carryover block (LULU-119 follow-up)", () => {
+// LULU-119 follow-up round 2 (user adjustment A): the standalone
+// next-carryover block is retired again -- next carryover is back as the
+// member table's rightmost column, shown for every member (including "0"
+// for members with nothing carried, since it's a table row now, not a
+// filtered list). Previous carryover stays hidden (not restored). Same
+// value/sign as the on-screen carryover badge (SettlementResult.jsx) via the
+// shared signedNeso helper -- never recomputed independently, so the two can
+// never disagree.
+describe("buildSettlementShareModel next-carryover column (LULU-119 follow-up round 2)", () => {
   function carryoverCalculation(previousCarryoverByMemberId) {
     const result = calculateSettlement({
       boss: "LUCID",
@@ -488,65 +573,63 @@ describe("buildSettlementShareModel next-carryover block (LULU-119 follow-up)", 
     return result;
   }
 
-  it("has no carryover columns in the member table at all", () => {
+  it("does not add a previousCarryover column/field anywhere (stays hidden)", () => {
     const calculation = carryoverCalculation({ a: "-50", b: "50" });
     const model = buildSettlementShareModel(calculation, memberMap, { bossNeso: true }, "1", t);
     expect(model.memberCategoryColumns.map((column) => column.key)).not.toContain("previousCarryover");
-    expect(model.memberCategoryColumns.map((column) => column.key)).not.toContain("nextCarryover");
     for (const row of model.memberRows) {
       expect(row).not.toHaveProperty("previousCarryover");
-      expect(row).not.toHaveProperty("nextCarryover");
     }
   });
 
-  it("lists only members with a non-zero next carryover, with the same value/sign as the shared signedNeso helper", () => {
+  it("marks carryoverEnabled and gives every member row a nextCarryover value, with the same value/sign as the shared signedNeso helper", () => {
     const calculation = carryoverCalculation({ a: "-50", b: "50" });
     const model = buildSettlementShareModel(calculation, memberMap, { bossNeso: true }, "1", t);
-    const nonZeroMembers = calculation.members.filter((member) => member.nextCarryover !== "0");
-    expect(model.carryoverRows).toHaveLength(nonZeroMembers.length);
-    expect(model.carryoverRows.length).toBeGreaterThan(0);
-    for (const member of nonZeroMembers) {
-      const row = model.carryoverRows.find((entry) => entry.memberId === member.memberId);
-      expect(row.amount).toBe(signedNeso(member.nextCarryover));
+    expect(model.carryoverEnabled).toBe(true);
+    expect(model.nextCarryoverColumnLabel).toBe(t("raffle.nextCarryover"));
+    expect(model.memberRows).toHaveLength(calculation.members.length);
+    for (const member of calculation.members) {
+      const row = model.memberRows.find((entry) => entry.memberId === member.memberId);
+      expect(row.nextCarryover).toBe(signedNeso(member.nextCarryover));
     }
   });
 
-  it("excludes members whose next carryover settled to exactly 0", () => {
-    // Balanced two-member party with equal previous carryovers cancels out to
-    // next carryover 0 for both -- neither should appear as a row.
+  it("shows a member row with nextCarryover \"0 NESO\" (not omitted) when their next carryover settled to exactly 0", () => {
+    // Balanced two-member party with equal previous carryovers cancels out
+    // to next carryover 0 for both -- both must still appear as table rows.
     const calculation = carryoverCalculation({ a: "0", b: "0" });
     const model = buildSettlementShareModel(calculation, memberMap, { bossNeso: true }, "1", t);
     for (const member of calculation.members) expect(member.nextCarryover).toBe("0");
-    expect(model.carryoverRows).toEqual([]);
+    expect(model.memberRows).toHaveLength(2);
+    for (const row of model.memberRows) expect(row.nextCarryover).toBe(signedNeso("0"));
   });
 
-  it("is empty when carryover is not enabled", () => {
+  it("has carryoverEnabled false and null nextCarryover on every row when carryover is not enabled", () => {
     const calculation = compositeCalculation();
     const model = buildSettlementShareModel(calculation, memberMap, include, "1.2", t);
-    expect(model.carryoverRows).toEqual([]);
+    expect(model.carryoverEnabled).toBe(false);
+    for (const row of model.memberRows) expect(row.nextCarryover).toBeNull();
   });
 
-  it("draws the next-carryover block only when there is at least one non-zero row, with member/amount aligned like the transfer block", () => {
-    const withRows = carryoverCalculation({ a: "-50", b: "50" });
-    const modelWithRows = buildSettlementShareModel(withRows, memberMap, { bossNeso: true }, "1", t);
-    const withRowsCtx = { fillStyle: "", strokeStyle: "", lineWidth: 0, font: "", textAlign: "left", fillRect: () => {}, strokeRect: () => {}, fillText: () => {} };
+  it("draws a nextCarryover column (header + every member's value, including 0) only when carryoverEnabled, at a single fixed x per row set", () => {
+    const withCarryover = carryoverCalculation({ a: "-50", b: "50" });
+    const modelWithCarryover = buildSettlementShareModel(withCarryover, memberMap, { bossNeso: true }, "1", t);
     const fillTextCalls = [];
-    withRowsCtx.fillText = (text, x, y) => fillTextCalls.push({ text, x, y });
+    const ctx = { fillStyle: "", strokeStyle: "", lineWidth: 0, font: "", textAlign: "left", fillRect: () => {}, strokeRect: () => {}, fillText: (text, x, y) => fillTextCalls.push({ text, x, y }) };
 
-    expect(() => drawSettlementShareImage(withRowsCtx, modelWithRows)).not.toThrow();
-    expect(fillTextCalls.some((call) => call.text === modelWithRows.carryoverSectionTitle)).toBe(true);
-    const amountXs = new Set(
-      fillTextCalls.filter((call) => modelWithRows.carryoverRows.some((row) => row.amount === call.text)).map((call) => call.x),
+    expect(() => drawSettlementShareImage(ctx, modelWithCarryover)).not.toThrow();
+    expect(fillTextCalls.some((call) => call.text === modelWithCarryover.nextCarryoverColumnLabel)).toBe(true);
+    const carryoverXs = new Set(
+      fillTextCalls.filter((call) => modelWithCarryover.memberRows.some((row) => row.nextCarryover === call.text)).map((call) => call.x),
     );
-    expect(amountXs.size).toBe(1);
+    expect(carryoverXs.size).toBe(1);
 
-    const withoutRows = carryoverCalculation({ a: "0", b: "0" });
-    const modelWithoutRows = buildSettlementShareModel(withoutRows, memberMap, { bossNeso: true }, "1", t);
-    const noRowsCtx = { fillStyle: "", strokeStyle: "", lineWidth: 0, font: "", textAlign: "left", fillRect: () => {}, strokeRect: () => {}, fillText: () => {} };
-    const noRowsFillTextCalls = [];
-    noRowsCtx.fillText = (text, x, y) => noRowsFillTextCalls.push({ text, x, y });
-    drawSettlementShareImage(noRowsCtx, modelWithoutRows);
-    expect(noRowsFillTextCalls.some((call) => call.text === modelWithoutRows.carryoverSectionTitle)).toBe(false);
+    const withoutCarryover = compositeCalculation();
+    const modelWithoutCarryover = buildSettlementShareModel(withoutCarryover, memberMap, include, "1.2", t);
+    const noCarryoverFillTextCalls = [];
+    const noCarryoverCtx = { fillStyle: "", strokeStyle: "", lineWidth: 0, font: "", textAlign: "left", fillRect: () => {}, strokeRect: () => {}, fillText: (text, x, y) => noCarryoverFillTextCalls.push({ text, x, y }) };
+    drawSettlementShareImage(noCarryoverCtx, modelWithoutCarryover);
+    expect(noCarryoverFillTextCalls.some((call) => call.text === modelWithoutCarryover.nextCarryoverColumnLabel)).toBe(false);
   });
 });
 
@@ -758,27 +841,27 @@ describe("member table column widths never overlap (R2/LULU-119, updated for the
     expect(size.width).toBe(SHARE_IMAGE_WIDTH);
   });
 
-  it("③ maximal configuration (all categories incl. FT Item + carryover enabled, 6 members) draws with no overlapping cells and no longer needs to grow past the default 1200px canvas (acceptance criterion)", () => {
+  it("\u2462 maximal configuration (all categories incl. FT Item + carryover enabled -> 9 member-table columns, 6 members) draws with no overlapping cells", () => {
     const calculation = maxCalculation();
     const include6 = { bossNeso: true, powerCrystal: true, ascendantNeso: true, coin: true, equipment: true, ftItem: true };
     const model = buildSettlementShareModel(calculation, maxMemberMap, include6, "1.1", t);
     // otherSales collapses equipment+ftItem: 5 category columns, not 6.
     expect(model.memberCategoryColumns.map((column) => column.key)).toEqual(["bossNeso", "powerCrystal", "ascendantNeso", "coin", "otherSales"]);
-    // The next-carryover block is exercised too (member "b", Power-Crystal-
-    // only, has a non-zero next carryover in this fixture), covering its
-    // overlap-safety as well.
-    expect(model.carryoverRows.length).toBeGreaterThan(0);
+    // LULU-119 follow-up round 2: next carryover is back as the member
+    // table's rightmost (9th) column -- member "b" (Power-Crystal-only) has
+    // a non-zero next carryover in this fixture, covering its overlap-safety.
+    expect(model.carryoverEnabled).toBe(true);
+    expect(model.memberRows.some((row) => row.nextCarryover !== signedNeso("0"))).toBe(true);
     const { ctx, fillTextCalls } = makeMeasuringMockCtx();
 
     const size = drawSettlementShareImage(ctx, model);
 
     assertNoOverlapWithinAnyRow(fillTextCalls);
-    // Collapsing equipment/ftItem into one column and moving both carryover
-    // columns out of the member table means even this maximal configuration
-    // now fits the default 1200px canvas without growing (LULU-119
-    // follow-up acceptance criterion) -- unlike the pre-follow-up 10-column
-    // layout, which needed ~1701px.
-    expect(size.width).toBe(SHARE_IMAGE_WIDTH);
+    // With carryover restored as a 9th member-table column, this realistic
+    // maximal configuration grows past the default 1200px (the user
+    // explicitly accepted automatic growth for this case) -- see the
+    // "reports the actual canvas width" test below for the pinned number.
+    expect(size.width).toBeGreaterThanOrEqual(SHARE_IMAGE_WIDTH);
     // Every primary settlement figure is still drawn in full (no
     // truncation/rounding of money).
     for (const row of model.memberRows) {
@@ -789,7 +872,7 @@ describe("member table column widths never overlap (R2/LULU-119, updated for the
     }
   });
 
-  it("reports the actual canvas width used for the maximal configuration (for code-review verification): exactly 1200px, no expansion needed", () => {
+  it("reports the actual canvas width used for the maximal configuration (for code-review verification)", () => {
     const calculation = maxCalculation();
     const include6 = { bossNeso: true, powerCrystal: true, ascendantNeso: true, coin: true, equipment: true, ftItem: true };
     const model = buildSettlementShareModel(calculation, maxMemberMap, include6, "1.1", t);
@@ -797,7 +880,12 @@ describe("member table column widths never overlap (R2/LULU-119, updated for the
 
     const size = drawSettlementShareImage(ctx, model);
 
-    expect(size.width).toBe(SHARE_IMAGE_WIDTH);
+    // Pinned measured value (LULU-119 follow-up round 2): 9 member-table
+    // columns (member/bossNeso/powerCrystal/ascendantNeso/coin/otherSales/
+    // gross/settlement/nextCarryover) need more than the default 1200px;
+    // still comfortably within the SHARE_IMAGE_MAX_WIDTH guideline.
+    expect(size.width).toBe(1288);
+    expect(size.width).toBeGreaterThan(SHARE_IMAGE_WIDTH);
     expect(size.width).toBeLessThanOrEqual(SHARE_IMAGE_MAX_WIDTH);
   });
 
