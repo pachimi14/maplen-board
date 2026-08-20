@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import ja from "../i18n/locales/ja.json";
 import { calculateSettlement } from "./domain/settlement.js";
-import { neso, settlementCategoryColumns, settlementMemberCategoryCell } from "./uiText.js";
+import { neso, settlementCategoryColumns, settlementMemberCategoryCell, signedNeso } from "./uiText.js";
 import {
   buildSettlementShareModel,
   drawSettlementShareImage,
@@ -310,6 +310,89 @@ describe("drawSettlementShareImage (smoke test)", () => {
     const ctx = makeMockCtx();
 
     expect(() => drawSettlementShareImage(ctx, model)).not.toThrow();
+  });
+});
+
+// F3/LULU-119: when the party has carryover enabled, the share image's
+// member table gains "previous carryover"/"next carryover" columns with the
+// exact same values (via the shared signedNeso helper) as the on-screen
+// member table's carryover badges (SettlementResult.jsx) -- never
+// recomputed independently, so the two can never disagree.
+describe("buildSettlementShareModel carryover columns (F3/LULU-119)", () => {
+  function carryoverCalculation() {
+    const result = calculateSettlement({
+      boss: "LUCID",
+      complete: true,
+      historyMemberIds: ["a"],
+      partyOrder: ["a", "b"],
+      include: { coin: false, equipment: false, bossNeso: true, powerCrystal: false, ascendantNeso: false },
+      powerCrystalNesoRate: "1",
+      saleNesoByDropId: {},
+      carryoverEnabled: true,
+      previousCarryoverByMemberId: { a: "-50", b: "50" },
+      members: [
+        { memberId: "a", bossNeso: "50", powerCrystalAmount: "0", ascendantNeso: "0", drops: [] },
+        { memberId: "b", bossNeso: "0", powerCrystalAmount: "0", ascendantNeso: "0", drops: [] },
+      ],
+    });
+    expect(result.ok).toBe(true);
+    return result;
+  }
+
+  it("marks carryoverEnabled and adds the column labels when the calculation has carryover enabled", () => {
+    const calculation = carryoverCalculation();
+    const model = buildSettlementShareModel(calculation, memberMap, { bossNeso: true }, "1", t);
+    expect(model.carryoverEnabled).toBe(true);
+    expect(model.previousCarryoverColumnLabel).toBe(t("raffle.previousCarryover"));
+    expect(model.nextCarryoverColumnLabel).toBe(t("raffle.nextCarryover"));
+  });
+
+  it("gives every member row the same previous/next carryover value as the calculation (same value, same sign as the on-screen table)", () => {
+    const calculation = carryoverCalculation();
+    const model = buildSettlementShareModel(calculation, memberMap, { bossNeso: true }, "1", t);
+    for (const member of calculation.members) {
+      const row = model.memberRows.find((entry) => entry.memberId === member.memberId);
+      expect(row.previousCarryover).toBe(signedNeso(member.previousCarryover));
+      expect(row.nextCarryover).toBe(signedNeso(member.nextCarryover));
+    }
+  });
+
+  it("omits carryover fields (null) when the calculation does not have carryover enabled", () => {
+    const calculation = compositeCalculation();
+    const model = buildSettlementShareModel(calculation, memberMap, include, "1.2", t);
+    expect(model.carryoverEnabled).toBe(false);
+    for (const row of model.memberRows) {
+      expect(row.previousCarryover).toBeNull();
+      expect(row.nextCarryover).toBeNull();
+    }
+  });
+
+  it("draws the carryover column headers without throwing and keeps every row's carryover text aligned at a single fixed x per column", () => {
+    const calculation = carryoverCalculation();
+    const model = buildSettlementShareModel(calculation, memberMap, { bossNeso: true }, "1", t);
+    const fillTextCalls = [];
+    const ctx = {
+      fillStyle: "",
+      strokeStyle: "",
+      lineWidth: 0,
+      font: "",
+      textAlign: "left",
+      fillRect: () => {},
+      strokeRect: () => {},
+      fillText: (text, x, y) => fillTextCalls.push({ text, x, y }),
+    };
+
+    expect(() => drawSettlementShareImage(ctx, model)).not.toThrow();
+    expect(fillTextCalls.some((call) => call.text === model.previousCarryoverColumnLabel)).toBe(true);
+    expect(fillTextCalls.some((call) => call.text === model.nextCarryoverColumnLabel)).toBe(true);
+    const previousXs = new Set(
+      fillTextCalls.filter((call) => model.memberRows.some((row) => row.previousCarryover === call.text)).map((call) => call.x),
+    );
+    expect(previousXs.size).toBe(1);
+    const nextXs = new Set(
+      fillTextCalls.filter((call) => model.memberRows.some((row) => row.nextCarryover === call.text)).map((call) => call.x),
+    );
+    expect(nextXs.size).toBe(1);
   });
 });
 

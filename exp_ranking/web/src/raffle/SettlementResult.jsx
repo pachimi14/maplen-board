@@ -9,18 +9,10 @@ import {
   pcPortionAmount,
   resolveMemberWallet,
   settlementMemberCategoryCell,
+  signedNeso,
 } from "./uiText.js";
 import { buildSettlementShareModel, renderSettlementShareImageBlob, settlementShareFileName } from "./shareImage.js";
 import { copyPngBlobToClipboard, copyTextToClipboard, downloadBlob } from "../shareImageIO.js";
-
-function signedNeso(value) {
-  try {
-    const amount = BigInt(value);
-    return (amount > 0n ? "+" : "") + amount.toLocaleString("en-US") + " NESO";
-  } catch {
-    return String(value ?? "") + " NESO";
-  }
-}
 
 function EquipmentIcons({ drops }) {
   if (!drops?.length) return <span className="raffle-empty-value">—</span>;

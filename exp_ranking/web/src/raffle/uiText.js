@@ -193,6 +193,23 @@ export function neso(value) {
   return formatNeso(value) + " NESO";
 }
 
+/**
+ * Formats a signed decimal-string carryover amount with an explicit "+" for
+ * positive values (negative already carries its own "-" from toLocaleString),
+ * e.g. "+1,234 NESO" / "-1,234 NESO" / "0 NESO". Shared by the on-screen
+ * carryover badges (SettlementResult.jsx) and the share-image member table
+ * (shareImage.js, F3/LULU-119) so both always show the exact same value and
+ * sign for a member's previous/next carryover.
+ */
+export function signedNeso(value) {
+  try {
+    const amount = BigInt(value);
+    return (amount > 0n ? "+" : "") + amount.toLocaleString("en-US") + " NESO";
+  } catch {
+    return String(value ?? "") + " NESO";
+  }
+}
+
 const CATEGORY_COLUMN_DEFS = Object.freeze([
   { key: "bossNeso", includeKey: "bossNeso", labelKey: "raffle.item_bossNeso" },
   { key: "powerCrystal", includeKey: "powerCrystal", labelKey: "raffle.item_powerCrystal" },
