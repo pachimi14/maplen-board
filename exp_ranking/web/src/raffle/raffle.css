@@ -305,6 +305,11 @@
   color: #1d4ed8;
 }
 
+.raffle-reward-kind-ft_item {
+  background: #fef3c7;
+  color: #92400e;
+}
+
 .raffle-reward-quantity {
   justify-self: end;
   color: #047857;
@@ -547,6 +552,11 @@ html[data-theme-depth="deep"] .raffle-reward-kind-power_crystal {
 html[data-theme-depth="deep"] .raffle-reward-kind-equipment {
   background: #17375d;
   color: #93c5fd;
+}
+
+html[data-theme-depth="deep"] .raffle-reward-kind-ft_item {
+  background: #4a3410;
+  color: #fbbf24;
 }
 
 html[data-theme-depth="deep"] .raffle-reward-quantity {

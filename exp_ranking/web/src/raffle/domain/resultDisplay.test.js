@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bossMonogram, formatAscendantTierTitle, formatRaffleTimestamp, formatRewardQuantity, groupRaffleResultsForDisplay, groupWonRewards, isAscendantRaffleResult, powerCrystalFaceValue, sortAscendantResultsByTier, splitLayerLabel, summarizeRaffleResults } from "./resultDisplay.js";
+import { bossMonogram, formatAscendantTierTitle, formatRaffleTimestamp, formatRewardQuantity, groupRaffleResultsForDisplay, groupWonRewards, isAscendantRaffleResult, powerCrystalFaceValue, rewardClassificationLabel, sortAscendantResultsByTier, splitLayerLabel, summarizeRaffleResults } from "./resultDisplay.js";
 
 describe("raffle result display", () => {
   it("groups all ascendant raffle wins into one display group", () => {
@@ -92,5 +92,27 @@ describe("raffle result display", () => {
     expect(bossMonogram("Crimson Queen")).toBe("CQ");
     expect(formatRaffleTimestamp("2026-07-30T00:00:00Z")).toBe("2026/07/30 00:00 UTC");
     expect(formatRewardQuantity("9007199254740993123")).toBe("9,007,199,254,740,993,123");
+  });
+});
+
+// R1/LULU-119 code review: FT_ITEM must resolve to a human label, and any
+// classification the server can send (known or not) must never render as its
+// raw technical string (LULU-084).
+describe("rewardClassificationLabel (LULU-084: never show a raw classification code)", () => {
+  it("labels every known classification, including FT_ITEM", () => {
+    expect(rewardClassificationLabel("NESO")).toBe("NESO");
+    expect(rewardClassificationLabel("POWER_CRYSTAL")).toBe("Power Crystal");
+    expect(rewardClassificationLabel("COIN")).toBe("Coin");
+    expect(rewardClassificationLabel("EQUIPMENT")).toBe("Equipment");
+    expect(rewardClassificationLabel("FT_ITEM")).toBe("FT Item");
+    expect(rewardClassificationLabel("ASCENDANT_NESO")).toBe("Ascendant NESO");
+    expect(rewardClassificationLabel("OTHER")).toBe("Other");
+    expect(rewardClassificationLabel("UNKNOWN")).toBe("Unknown");
+  });
+
+  it("falls back to the Unknown label instead of the raw code for any unrecognized classification", () => {
+    expect(rewardClassificationLabel("SOME_FUTURE_CLASSIFICATION")).toBe("Unknown");
+    expect(rewardClassificationLabel("")).toBe("Unknown");
+    expect(rewardClassificationLabel(undefined)).toBe("Unknown");
   });
 });

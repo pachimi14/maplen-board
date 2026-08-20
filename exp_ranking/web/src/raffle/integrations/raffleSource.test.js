@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { RAFFLE_CLASSIFICATION_VERSION } from "../domain/contract.js";
 import { createRaffleSource } from "./raffleSource.js";
 
 function response(status, body) {
@@ -15,7 +16,7 @@ function response(status, body) {
 function job(status) {
   return {
     schemaVersion: 3,
-    classificationVersion: 1,
+    classificationVersion: RAFFLE_CLASSIFICATION_VERSION,
     status,
     progress: {
       completedCharacters: status === "complete" ? 1 : 0,

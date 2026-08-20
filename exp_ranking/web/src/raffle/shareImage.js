@@ -4,11 +4,19 @@
 //    canvas/DOM -- every number/string comes straight from `calculation`,
 //    the same source SettlementResult.jsx renders, so the image and the
 //    screen can never show different numbers).
-//  - layoutSections(): pure arithmetic (no ctx) that turns the model into
-//    absolute box/row/text/column positions plus the total canvas height.
-//    Both measureSettlementShareImageHeight() and drawSettlementShareImage()
+//  - layoutSections(): arithmetic that turns the model into absolute
+//    box/row/text/column positions plus the total canvas height. Both
+//    measureSettlementShareImageHeight() and drawSettlementShareImage()
 //    delegate to this single function so the measured height and the
-//    drawn content can never drift apart from each other.
+//    drawn content can never drift apart from each other. Member-table
+//    column widths (R2/LULU-119) are measured via ctx.measureText (real
+//    text metrics, not a fixed even split) so a header/value can never
+//    overlap its neighbor regardless of how many columns are active
+//    (carryover + up to 6 categories); when ctx has no measureText (a
+//    minimal test mock, or measureSettlementShareImageHeight()'s
+//    ctx-less call -- height never depends on column widths) a
+//    character-count heuristic is used instead so layout stays
+//    self-consistent without ever throwing.
 //  - drawSettlementShareImage(): takes a 2D rendering context and issues
 //    only context methods (no document/canvas creation), so it can be
 //    smoke-tested with a plain mock context under vitest's "node"
@@ -36,11 +44,18 @@ import {
   resolveMemberWallet,
   settlementCategoryColumns,
   settlementMemberCategoryCell,
+  signedNeso,
 } from "./uiText.js";
 
 const SHARE_IMAGE_TITLE = "Raffle Settlement";
 const SHARE_IMAGE_FOOTER = "lulumi-tools.com";
 export const SHARE_IMAGE_WIDTH = 1200;
+// R2/LULU-119: soft target cap for how wide the canvas is allowed to grow to
+// fit every column (carryover + up to 6 categories can require more than the
+// default 1200px). This is a guideline, not a hard wall -- primary settlement
+// figures are never truncated/rounded to stay under it (see
+// measureMemberTableLayout()'s last-resort secondary-font shrink below).
+export const SHARE_IMAGE_MAX_WIDTH = 1800;
 
 const PADDING = 40;
 const BOX_PADDING = 20;
@@ -55,13 +70,31 @@ const PILL_HEIGHT = 30;
 const FONT_FAMILY = "sans-serif";
 const MONOSPACE_FONT_FAMILY = "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
 
-// Member table fixed column widths (C4): member name / gross / settlement
-// pill columns are fixed; the remaining width is split evenly across
-// whichever category columns are currently included (1-5 of them).
+// Member table comfortable-minimum column widths (C4): member name / gross /
+// settlement pill / carryover / category columns never shrink below these
+// (R2/LULU-119: they also grow past these when ctx.measureText says the
+// actual header/value text needs more room, so nothing is ever clipped or
+// overlaps its neighbor -- see measureMemberTableLayout()).
 const MEMBER_NAME_COL_WIDTH = 170;
 const MEMBER_GROSS_COL_WIDTH = 120;
 const MEMBER_SETTLE_COL_WIDTH = 190;
 const MEMBER_MIN_CATEGORY_COL_WIDTH = 110;
+// F3/LULU-119: previous/next carryover columns (only added when
+// carryoverEnabled) sit right after member name / right after settlement,
+// matching the on-screen member table's column order.
+const MEMBER_CARRYOVER_COL_WIDTH = 110;
+// R2/LULU-119: rounded settlement pill needs extra breathing room beyond its
+// text width + CELL_PADDING*2 (it isn't a plain right-aligned number cell).
+const SETTLEMENT_PILL_EXTRA_WIDTH = 40;
+// R2/LULU-119: the category cell's secondary (sub) line -- e.g. Power
+// Crystal's converted-NESO line, coin/FT Item's sale-proceeds line -- is the
+// *only* text ever shrunk to fit, and only as a last resort when even the
+// SHARE_IMAGE_MAX_WIDTH guideline can't fit every column comfortably. The
+// primary number is always drawn at MEMBER_CATEGORY_PRIMARY_FONT_SIZE, in
+// full, never truncated/rounded.
+const MEMBER_CATEGORY_PRIMARY_FONT_SIZE = 12;
+const MEMBER_CATEGORY_SECONDARY_FONT_SIZE_DEFAULT = 10;
+const MEMBER_CATEGORY_SECONDARY_FONT_SIZE_MIN = 8;
 
 const COLOR = {
   background: "#ffffff",
@@ -134,6 +167,11 @@ export function buildSettlementShareModel(calculation, memberMap, include, power
       settlementKind: settlement.kind,
       settlementLabel: settlement.label,
       settlementAmount: settlement.amount != null ? neso(settlement.amount) : null,
+      // F3/LULU-119: same value/sign as the on-screen member table's carryover
+      // badges (both call the shared signedNeso helper on the same
+      // calculation row field -- never recomputed independently).
+      previousCarryover: calculation.carryoverEnabled ? signedNeso(member.previousCarryover) : null,
+      nextCarryover: calculation.carryoverEnabled ? signedNeso(member.nextCarryover) : null,
     };
   });
 
@@ -154,6 +192,11 @@ export function buildSettlementShareModel(calculation, memberMap, include, power
     memberColumnLabel: t("raffle.member"),
     grossColumnLabel: t("raffle.grossWon"),
     settlementColumnLabel: t("raffle.settlement"),
+    // F3/LULU-119: carryover columns are only added to the table layout when
+    // the party has carryover enabled, matching the on-screen member table.
+    carryoverEnabled: calculation.carryoverEnabled === true,
+    previousCarryoverColumnLabel: t("raffle.previousCarryover"),
+    nextCarryoverColumnLabel: t("raffle.nextCarryover"),
     memberCategoryColumns,
     memberRows,
     transferSectionTitle: t("raffle.actualTransfers"),
@@ -170,25 +213,177 @@ function pillColorFor(kind) {
   return PILL_COLOR[kind] || PILL_COLOR.settled;
 }
 
-/** Left-to-right column layout for the member table (C4): member name (fixed) / one column per active category (evenly split) / gross (fixed) / settlement (fixed). */
-function computeMemberTableColumns(model, contentX, contentWidth) {
-  const categoryCount = model.memberCategoryColumns.length;
-  const fixedWidth = MEMBER_NAME_COL_WIDTH + MEMBER_GROSS_COL_WIDTH + MEMBER_SETTLE_COL_WIDTH;
-  const categoryWidth = categoryCount
-    ? Math.max(MEMBER_MIN_CATEGORY_COL_WIDTH, (contentWidth - fixedWidth) / categoryCount)
-    : 0;
+/** F3/LULU-119: colors a carryover cell like the on-screen carryover badge -- receive (starts with "+") green, pay (starts with "-") rose, zero muted. */
+function carryoverColor(text) {
+  if (typeof text !== "string") return COLOR.muted;
+  if (text.startsWith("+")) return PILL_COLOR.receives.text;
+  if (text.startsWith("-")) return PILL_COLOR.pays.text;
+  return COLOR.muted;
+}
 
+/**
+ * Returns a `(text, font) => width` measurer. With a real 2D context
+ * (`ctx.measureText` present), this is exact browser text metrics. Without
+ * one (a minimal test mock, or measureSettlementShareImageHeight()'s
+ * ctx-less call -- see layoutSections()), a character-count heuristic keeps
+ * the layout self-consistent (never throws, never divides by content it
+ * can't measure) without needing a real canvas.
+ */
+function textMeasurer(ctx) {
+  if (ctx && typeof ctx.measureText === "function") {
+    return (text, font) => {
+      ctx.font = font;
+      return ctx.measureText(String(text)).width;
+    };
+  }
+  return (text, font) => {
+    const sizeMatch = /(\d+)px/.exec(font || "");
+    const size = sizeMatch ? Number(sizeMatch[1]) : 12;
+    return String(text).length * size * 0.6;
+  };
+}
+
+function categoryPrimaryFont(bold = true) {
+  return `${bold ? "bold " : ""}${MEMBER_CATEGORY_PRIMARY_FONT_SIZE}px ${FONT_FAMILY}`;
+}
+
+function categorySecondaryFont(secondaryFontSize) {
+  return `${secondaryFontSize}px ${FONT_FAMILY}`;
+}
+
+/** Widest of `{ text, font }` entries (measured), plus padding; entries with an empty/nullish text are skipped. */
+function requiredWidth(measure, entries, padding) {
+  let max = 0;
+  for (const { text, font } of entries) {
+    if (!text) continue;
+    const width = measure(text, font);
+    if (width > max) max = width;
+  }
+  return max + padding;
+}
+
+/**
+ * Measures every member-table column's *required* width from its header
+ * label (+ optional note) and every row's actual cell text (R2/LULU-119:
+ * replaces the old fixed/even-split widths, which could overlap once
+ * carryover + many category columns were active at once). Comfortable
+ * minimums (MEMBER_NAME_COL_WIDTH etc.) are still applied as a floor so
+ * ordinary short values keep today's familiar column proportions.
+ *
+ * If the required total still exceeds SHARE_IMAGE_MAX_WIDTH, the category
+ * cells' *secondary* (sub) line is progressively shrunk (font-size only,
+ * down to MEMBER_CATEGORY_SECONDARY_FONT_SIZE_MIN) as a last resort -- the
+ * primary number is never touched, so settlement amounts are always shown in
+ * full (no truncation/rounding of money). If that still isn't enough, the
+ * canvas is simply allowed to grow past the guideline rather than clip or
+ * round any figure.
+ */
+function measureMemberTableLayout(ctx, model) {
+  const measure = textMeasurer(ctx);
+  const maxContentWidth = SHARE_IMAGE_MAX_WIDTH - PADDING * 2;
+
+  function computeAt(secondaryFontSize) {
+    const nameWidth = MEMBER_NAME_COL_WIDTH;
+
+    const grossWidth = Math.max(
+      MEMBER_GROSS_COL_WIDTH,
+      requiredWidth(measure, [
+        { text: model.grossColumnLabel, font: categoryPrimaryFont() },
+        ...model.memberRows.map((row) => ({ text: row.gross, font: `bold 13px ${FONT_FAMILY}` })),
+      ], CELL_PADDING * 2),
+    );
+
+    const settlementWidth = Math.max(
+      MEMBER_SETTLE_COL_WIDTH,
+      requiredWidth(measure, [
+        { text: model.settlementColumnLabel, font: categoryPrimaryFont() },
+        ...model.memberRows.map((row) => ({ text: row.settlementAmount ? row.settlementLabel + " " + row.settlementAmount : row.settlementLabel, font: categoryPrimaryFont() })),
+      ], CELL_PADDING * 2 + SETTLEMENT_PILL_EXTRA_WIDTH),
+    );
+
+    const carryoverWidth = model.carryoverEnabled
+      ? Math.max(
+          MEMBER_CARRYOVER_COL_WIDTH,
+          requiredWidth(measure, [
+            { text: model.previousCarryoverColumnLabel, font: categoryPrimaryFont() },
+            { text: model.nextCarryoverColumnLabel, font: categoryPrimaryFont() },
+            ...model.memberRows.flatMap((row) => [
+              { text: row.previousCarryover, font: categoryPrimaryFont() },
+              { text: row.nextCarryover, font: categoryPrimaryFont() },
+            ]),
+          ], CELL_PADDING * 2),
+        )
+      : 0;
+
+    const categoryWidths = model.memberCategoryColumns.map((column) => {
+      const primary = requiredWidth(measure, [
+        { text: column.label, font: categoryPrimaryFont() },
+        ...model.memberRows.map((row) => ({ text: row.categoryCells.find((cell) => cell.key === column.key)?.primary, font: categoryPrimaryFont() })),
+      ], CELL_PADDING * 2);
+      const secondary = requiredWidth(measure, [
+        { text: column.note, font: categorySecondaryFont(secondaryFontSize) },
+        ...model.memberRows.map((row) => ({ text: row.categoryCells.find((cell) => cell.key === column.key)?.secondary, font: categorySecondaryFont(secondaryFontSize) })),
+      ], CELL_PADDING * 2);
+      return Math.max(MEMBER_MIN_CATEGORY_COL_WIDTH, primary, secondary);
+    });
+
+    const carryoverTotal = model.carryoverEnabled ? carryoverWidth * 2 : 0;
+    const categoryTotal = categoryWidths.reduce((sum, width) => sum + width, 0);
+    const requiredTotal = nameWidth + carryoverTotal + categoryTotal + grossWidth + settlementWidth;
+
+    return { nameWidth, grossWidth, settlementWidth, carryoverWidth, categoryWidths, requiredTotal };
+  }
+
+  let secondaryFontSize = MEMBER_CATEGORY_SECONDARY_FONT_SIZE_DEFAULT;
+  let widths = computeAt(secondaryFontSize);
+  while (widths.requiredTotal > maxContentWidth && secondaryFontSize > MEMBER_CATEGORY_SECONDARY_FONT_SIZE_MIN) {
+    secondaryFontSize -= 1;
+    widths = computeAt(secondaryFontSize);
+  }
+
+  const defaultContentWidth = SHARE_IMAGE_WIDTH - PADDING * 2;
+  const contentWidth = Math.max(defaultContentWidth, widths.requiredTotal);
+  // When the measured content needs less than the default box width, spread
+  // the leftover evenly across category columns so an ordinary settlement
+  // (no carryover, <=5 categories) keeps filling the box exactly as before
+  // (no visual regression for the common case).
+  const categoryCount = widths.categoryWidths.length;
+  const extraPerCategory = categoryCount ? (contentWidth - widths.requiredTotal) / categoryCount : 0;
+  const categoryWidths = widths.categoryWidths.map((width) => width + extraPerCategory);
+
+  return { ...widths, categoryWidths, contentWidth, secondaryFontSize };
+}
+
+/**
+ * Left-to-right column layout for the member table (C4): member name (fixed)
+ * / previous carryover (F3, only when carryoverEnabled) / one column per
+ * active category / gross / settlement / next carryover (F3, only when
+ * carryoverEnabled). Order matches the on-screen member table
+ * (SettlementResult.jsx). Every width comes from `memberLayout`
+ * (measureMemberTableLayout()) -- real measured requirements, never a fixed
+ * even split -- so columns can never overlap (R2/LULU-119).
+ */
+function buildMemberTableColumns(model, contentX, memberLayout) {
   const columns = [];
   let x = contentX;
-  columns.push({ key: "member", label: model.memberColumnLabel, note: null, x, width: MEMBER_NAME_COL_WIDTH, align: "left" });
-  x += MEMBER_NAME_COL_WIDTH;
-  for (const column of model.memberCategoryColumns) {
-    columns.push({ key: column.key, label: column.label, note: column.note, x, width: categoryWidth, align: "right" });
-    x += categoryWidth;
+  columns.push({ key: "member", label: model.memberColumnLabel, note: null, x, width: memberLayout.nameWidth, align: "left" });
+  x += memberLayout.nameWidth;
+  if (model.carryoverEnabled) {
+    columns.push({ key: "previousCarryover", label: model.previousCarryoverColumnLabel, note: null, x, width: memberLayout.carryoverWidth, align: "right" });
+    x += memberLayout.carryoverWidth;
   }
-  columns.push({ key: "gross", label: model.grossColumnLabel, note: null, x, width: MEMBER_GROSS_COL_WIDTH, align: "right" });
-  x += MEMBER_GROSS_COL_WIDTH;
-  columns.push({ key: "settlement", label: model.settlementColumnLabel, note: null, x, width: MEMBER_SETTLE_COL_WIDTH, align: "right" });
+  model.memberCategoryColumns.forEach((column, index) => {
+    const width = memberLayout.categoryWidths[index];
+    columns.push({ key: column.key, label: column.label, note: column.note, x, width, align: "right" });
+    x += width;
+  });
+  columns.push({ key: "gross", label: model.grossColumnLabel, note: null, x, width: memberLayout.grossWidth, align: "right" });
+  x += memberLayout.grossWidth;
+  columns.push({ key: "settlement", label: model.settlementColumnLabel, note: null, x, width: memberLayout.settlementWidth, align: "right" });
+  x += memberLayout.settlementWidth;
+  if (model.carryoverEnabled) {
+    columns.push({ key: "nextCarryover", label: model.nextCarryoverColumnLabel, note: null, x, width: memberLayout.carryoverWidth, align: "right" });
+  }
   return columns;
 }
 
@@ -214,16 +409,23 @@ function computeTransferTableColumns(model, contentX, contentWidth) {
 }
 
 /**
- * Pure arithmetic layout pass: turns `model` into absolute box/row/column/
- * text positions plus the total canvas height. No ctx is touched here (aside
- * from column widths, which are fixed allocations, not text-measured), so
- * measureSettlementShareImageHeight() (called before the <canvas> exists,
- * to size it) and drawSettlementShareImage() both derive from this exact
- * same computation and can never disagree about heights.
+ * Layout pass: turns `model` into absolute box/row/column/text positions
+ * plus the total canvas width/height. `ctx` is used only to measure the
+ * member table's column widths (R2/LULU-119: real text metrics instead of a
+ * fixed even split, so columns can never overlap); every other position is
+ * pure arithmetic from fixed row-height/box-padding constants and therefore
+ * independent of `ctx`/column widths -- the total canvas *height* is
+ * identical whether or not a real `ctx` is supplied. This is what lets
+ * measureSettlementShareImageHeight() (called before the <canvas> exists, to
+ * size it, with no `ctx` available yet) and drawSettlementShareImage() (with
+ * a real `ctx`) share this exact same function and never disagree about
+ * height.
  */
-function layoutSections(model, width = SHARE_IMAGE_WIDTH) {
+function layoutSections(model, ctx) {
+  const memberLayout = measureMemberTableLayout(ctx, model);
   const contentX = PADDING;
-  const contentWidth = width - PADDING * 2;
+  const contentWidth = memberLayout.contentWidth;
+  const width = Math.round(contentWidth + PADDING * 2);
   let y = PADDING + 8;
 
   const title = { text: model.title, y };
@@ -254,7 +456,7 @@ function layoutSections(model, width = SHARE_IMAGE_WIDTH) {
   const memberHeadingY = memberBoxY + BOX_PADDING + 14;
   const memberTableTop = memberHeadingY + 18;
   const memberRowsTop = memberTableTop + MEMBER_HEADER_HEIGHT;
-  const memberColumns = computeMemberTableColumns(model, contentX, contentWidth);
+  const memberColumns = buildMemberTableColumns(model, contentX, memberLayout);
   const memberRows = model.memberRows.map((member, index) => ({
     member,
     index,
@@ -290,6 +492,7 @@ function layoutSections(model, width = SHARE_IMAGE_WIDTH) {
     totalHeight,
     contentX,
     contentWidth,
+    secondaryFontSize: memberLayout.secondaryFontSize,
     title,
     boss,
     round,
@@ -315,7 +518,13 @@ function layoutSections(model, width = SHARE_IMAGE_WIDTH) {
   };
 }
 
-/** Computes the total canvas height needed to draw `model` (rows are bounded: <=6 members, <=n-1 transfers). */
+/**
+ * Computes the total canvas height needed to draw `model` (rows are bounded:
+ * <=6 members, <=n-1 transfers). Called with no `ctx` -- height never
+ * depends on the (ctx-measured) column widths, only on fixed row-height/box-
+ * padding constants and row counts, so this always agrees with
+ * drawSettlementShareImage()'s real-ctx layout (see layoutSections()).
+ */
 export function measureSettlementShareImageHeight(model) {
   return layoutSections(model).totalHeight;
 }
@@ -385,8 +594,15 @@ function columnTextX(column) {
   return column.align === "left" ? column.x + CELL_PADDING : column.x + column.width - CELL_PADDING;
 }
 
-/** Draws a table header band spanning `columns`, with each column's label (and optional sub-note, e.g. Power Crystal's "non-transferable") right/left-aligned per column. */
-function drawTableHeader(ctx, columns, y, height) {
+/**
+ * Draws a table header band spanning `columns`, with each column's label
+ * (and optional sub-note, e.g. Power Crystal's "non-transferable")
+ * right/left-aligned per column. `noteFontSize` (R2/LULU-119) draws the note
+ * at the same possibly-shrunk size used to measure the member table's
+ * category columns (measureMemberTableLayout()), so the header note can
+ * never be wider than what was actually measured/allotted for it.
+ */
+function drawTableHeader(ctx, columns, y, height, noteFontSize = MEMBER_CATEGORY_SECONDARY_FONT_SIZE_DEFAULT) {
   const first = columns[0];
   const last = columns[columns.length - 1];
   ctx.fillStyle = COLOR.tableHeaderBg;
@@ -395,7 +611,7 @@ function drawTableHeader(ctx, columns, y, height) {
     const textX = columnTextX(column);
     drawText(ctx, { text: column.label, x: textX, y: y + 17, font: `bold 12px ${FONT_FAMILY}`, color: COLOR.tableHeaderText, align: column.align });
     if (column.note) {
-      drawText(ctx, { text: column.note, x: textX, y: y + 31, font: `10px ${FONT_FAMILY}`, color: COLOR.tableHeaderText, align: column.align });
+      drawText(ctx, { text: column.note, x: textX, y: y + 31, font: `${noteFontSize}px ${FONT_FAMILY}`, color: COLOR.tableHeaderText, align: column.align });
     }
   }
 }
@@ -408,7 +624,7 @@ function drawTableHeader(ctx, columns, y, height) {
  * `zero` values render dimmed, matching the on-screen table's zero-value
  * dimming rule.
  */
-function drawMemberTableRow(ctx, columns, row) {
+function drawMemberTableRow(ctx, columns, row, secondaryFontSize = MEMBER_CATEGORY_SECONDARY_FONT_SIZE_DEFAULT) {
   const { member, index, y } = row;
   const first = columns[0];
   const last = columns[columns.length - 1];
@@ -429,6 +645,11 @@ function drawMemberTableRow(ctx, columns, row) {
     }
     if (column.key === "gross") {
       drawText(ctx, { text: member.gross, x: textX, y: primaryY, font: `bold 13px ${FONT_FAMILY}`, color: COLOR.heading, align: column.align });
+      continue;
+    }
+    if (column.key === "previousCarryover" || column.key === "nextCarryover") {
+      const text = member[column.key];
+      drawText(ctx, { text, x: textX, y: primaryY, font: `bold 12px ${FONT_FAMILY}`, color: carryoverColor(text), align: column.align });
       continue;
     }
     if (column.key === "settlement") {
@@ -454,12 +675,12 @@ function drawMemberTableRow(ctx, columns, row) {
       text: cell.primary,
       x: textX,
       y: primaryY,
-      font: cell.zero ? `12px ${FONT_FAMILY}` : `bold 12px ${FONT_FAMILY}`,
+      font: categoryPrimaryFont(!cell.zero),
       color: cell.zero ? COLOR.muted : COLOR.heading,
       align: column.align,
     });
     if (cell.secondary) {
-      drawText(ctx, { text: cell.secondary, x: textX, y: secondaryY, font: `10px ${FONT_FAMILY}`, color: COLOR.muted, align: column.align });
+      drawText(ctx, { text: cell.secondary, x: textX, y: secondaryY, font: categorySecondaryFont(secondaryFontSize), color: COLOR.muted, align: column.align });
     }
   }
 }
@@ -504,11 +725,16 @@ function drawTransferTableRow(ctx, columns, row) {
 
 /**
  * Draws `model` onto `ctx` (a CanvasRenderingContext2D, real or a smoke-test
- * mock exposing the same method names). Returns the canvas size used.
+ * mock exposing the same method names). Returns the canvas size used. The
+ * canvas width is derived from the actual content (R2/LULU-119: measured via
+ * `ctx.measureText`, growing past SHARE_IMAGE_WIDTH up to the
+ * SHARE_IMAGE_MAX_WIDTH guideline -- and beyond it only if unavoidable --
+ * instead of a caller-supplied fixed width) so it is always wide enough for
+ * every member-table column.
  */
-export function drawSettlementShareImage(ctx, model, { width = SHARE_IMAGE_WIDTH } = {}) {
-  const layout = layoutSections(model, width);
-  const { contentX, contentWidth } = layout;
+export function drawSettlementShareImage(ctx, model) {
+  const layout = layoutSections(model, ctx);
+  const { contentX, contentWidth, width } = layout;
 
   ctx.fillStyle = COLOR.background;
   ctx.fillRect(0, 0, width, layout.totalHeight);
@@ -545,9 +771,9 @@ export function drawSettlementShareImage(ctx, model, { width = SHARE_IMAGE_WIDTH
     font: `bold 16px ${FONT_FAMILY}`,
     color: COLOR.heading,
   });
-  drawTableHeader(ctx, layout.memberBox.columns, layout.memberBox.headerY, MEMBER_HEADER_HEIGHT);
+  drawTableHeader(ctx, layout.memberBox.columns, layout.memberBox.headerY, MEMBER_HEADER_HEIGHT, layout.secondaryFontSize);
   for (const row of layout.memberBox.rows) {
-    drawMemberTableRow(ctx, layout.memberBox.columns, row);
+    drawMemberTableRow(ctx, layout.memberBox.columns, row, layout.secondaryFontSize);
   }
 
   // Box 3: transfer table (C5).
@@ -593,18 +819,24 @@ export function settlementShareFileName(date = new Date()) {
  * canvas 2D context, unavailable under vitest's jsdom-less "node"
  * environment without adding a new npm dependency); drawSettlementShareImage
  * above carries the tested drawing logic.
+ *
+ * The canvas is sized from a real-ctx layout pass *before* drawing
+ * (R2/LULU-119: the final width depends on `ctx.measureText`, which doesn't
+ * require the canvas to already have its final dimensions -- text metrics
+ * only depend on the font, not the canvas size). Resizing `canvas.width`/
+ * `height` afterward resets context state per the Canvas spec, but every
+ * draw call here always sets its own font/fillStyle first, so that's safe.
  */
-export function renderSettlementShareImageBlob(model, options = {}) {
-  const width = options.width || SHARE_IMAGE_WIDTH;
-  const height = measureSettlementShareImageHeight(model);
+export function renderSettlementShareImageBlob(model) {
   const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
   const ctx = canvas.getContext("2d");
   if (!ctx) {
     return Promise.reject(new Error("2d canvas context is not available"));
   }
-  drawSettlementShareImage(ctx, model, { width });
+  const layout = layoutSections(model, ctx);
+  canvas.width = layout.width;
+  canvas.height = layout.totalHeight;
+  drawSettlementShareImage(ctx, model);
   return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => {
       if (blob) resolve(blob);

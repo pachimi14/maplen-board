@@ -9,9 +9,10 @@ from contracts import CreateJobRequest
 
 
 SCHEMA_VERSION = 3
-CLASSIFICATION_VERSION = 1
+CLASSIFICATION_VERSION = 2
 TARGET_BOSSES = {"Lucid": "LUCID", "Will": "WILL"}
 TARGET_COINS = {"LUCID": "Phantasma Coin", "WILL": "Arachno Coin"}
+FT_ITEM_NAME = "Sealed Mirror World Nodestone"
 ASCENDANT_TIER_BY_BOSS = {
     ("LUCID", "DIFFICULTY_EASY"): "Dawning Ascendant 2",
     ("LUCID", "DIFFICULTY_NORMAL"): "Mystic Ascendant",
@@ -120,7 +121,9 @@ def _classification(item_id: int, metadata: dict | None) -> tuple[str, str]:
         return "COIN", name
     if POWER_CRYSTAL_PATTERN.fullmatch(name):
         return "POWER_CRYSTAL", name
-    if _text((metadata or {}).get("tier0")) == "Equipment":
+    if name == FT_ITEM_NAME:
+        return "FT_ITEM", name
+    if _text((metadata or {}).get("tier0")) == "Item":
         return "EQUIPMENT", name
     return "OTHER", name
 
@@ -248,6 +251,7 @@ def _member_settlement(member_id: str, boss_code: str, history: dict, ascendant:
     coin_quantity = 0
     coin_image_url = ""
     equipment_index = 0
+    ft_item_index = 0
     for prize in _prizes(history):
         quantity = _quantity(prize)
         if quantity <= 0:
@@ -260,6 +264,11 @@ def _member_settlement(member_id: str, boss_code: str, history: dict, ascendant:
         elif classification == "EQUIPMENT":
             equipment_index += 1
             drops.append({"dropId": f"{drop_prefix}-equipment-{equipment_index}", "category": "EQUIPMENT", "name": name, "quantity": str(quantity), "imageUrl": _item_icon_url(item_metadata.get(item_id))})
+        elif classification == "FT_ITEM" and boss_code == "WILL":
+            # Only surfaced for Will clears (Lucid never rolls this item); the affiliate is
+            # asked for a resale price like coin/equipment so it can be settled the same way.
+            ft_item_index += 1
+            drops.append({"dropId": f"{drop_prefix}-ftitem-{ft_item_index}", "category": "FT_ITEM", "name": name, "quantity": str(quantity), "imageUrl": _item_icon_url(item_metadata.get(item_id))})
     if coin_quantity:
         drops.insert(0, {"dropId": f"{drop_prefix}-coin", "category": "COIN", "name": coin_name, "quantity": str(coin_quantity), "imageUrl": coin_image_url})
     power_crystal = 0

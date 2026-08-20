@@ -9,18 +9,10 @@ import {
   pcPortionAmount,
   resolveMemberWallet,
   settlementMemberCategoryCell,
+  signedNeso,
 } from "./uiText.js";
 import { buildSettlementShareModel, renderSettlementShareImageBlob, settlementShareFileName } from "./shareImage.js";
 import { copyPngBlobToClipboard, copyTextToClipboard, downloadBlob } from "../shareImageIO.js";
-
-function signedNeso(value) {
-  try {
-    const amount = BigInt(value);
-    return (amount > 0n ? "+" : "") + amount.toLocaleString("en-US") + " NESO";
-  } catch {
-    return String(value ?? "") + " NESO";
-  }
-}
 
 function EquipmentIcons({ drops }) {
   if (!drops?.length) return <span className="raffle-empty-value">—</span>;
@@ -45,12 +37,14 @@ export default function SettlementResult({ calculation, include, memberMap, memb
     include.ascendantNeso ? { key: "ascendantNeso", label: t("raffle.item_ascendantNeso"), total: calculation.categoryTotals.ascendantNeso } : null,
     include.coin ? { key: "coin", label: t("raffle.item_coin"), total: calculation.categoryTotals.coinSaleNeso } : null,
     include.equipment ? { key: "equipment", label: t("raffle.item_equipment"), total: calculation.categoryTotals.equipmentSaleNeso } : null,
+    include.ftItem ? { key: "ftItem", label: t("raffle.item_ftItem"), total: calculation.categoryTotals.ftItemSaleNeso } : null,
   ].filter(Boolean);
 
   function categoryQuantity(category) {
     if (category.key === "powerCrystal") return <><strong>{formatNeso(calculation.categoryTotals.powerCrystalAmount)} PC ÷ {powerCrystalNesoRate}</strong><small>{t("raffle.powerCrystalNonTransferable")}</small></>;
     if (category.key === "coin") return <strong>× {formatNeso(calculation.categoryTotals.coinQuantity)}</strong>;
     if (category.key === "equipment") return <EquipmentIcons drops={calculation.equipmentDrops} />;
+    if (category.key === "ftItem") return <strong>× {formatNeso(calculation.categoryTotals.ftItemQuantity)}</strong>;
     return <span className="raffle-empty-value">—</span>;
   }
 

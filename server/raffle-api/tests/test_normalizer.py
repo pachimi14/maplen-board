@@ -69,7 +69,7 @@ def test_live_normalization_displays_all_wins_and_builds_only_complete_lucid_cle
     ]
     metadata = {
         4310218: {"itemName": "Phantasma Coin", "tier1": "Exchange Currency", "imageUrl": "https://api-static.msu.io/itemimages/icon/4310218.png"},
-        1001000: {"itemName": "Arcane Test Hat", "tier0": "Equipment", "imageUrl": "https://api-static.msu.io/itemimages/icon/1001000.png"},
+        1001000: {"itemName": "Arcane Test Hat", "tier0": "Item", "tier1": "Armor", "imageUrl": "https://api-static.msu.io/itemimages/icon/1001000.png"},
         2832960: {"itemName": "1M Power Crystal Coupon"},
         999: {"itemName": "Other Reward", "tier0": "Etc"},
     }
@@ -352,6 +352,61 @@ def test_ambiguous_party_count_cluster_is_excluded_without_affecting_other_candi
     assert result["clears"][0]["clearId"] == "clear-will-hard-p5"
     assert result["clears"][0]["historyMemberIds"] == ["m1", "m2", "m5"]
     assert result["warnings"] == [{"code": "ambiguous_party_cluster", "boss": "WILL", "bossDifficulty": "HARD", "partyCount": 6}]
+
+
+def test_will_clear_surfaces_ft_item_drop_for_sealed_mirror_world_nodestone() -> None:
+    request = request_for("m1")
+    histories = {
+        "m1": [{
+            "raffledAt": request.raffledAt,
+            "layerId": 205044,
+            "clearInformations": [{"clearedAt": "2026-07-23T14:00:00Z", "partyCount": 1}],
+            "prizes": [{"itemId": 2358010, "winCount": {"value": "1"}}],
+        }]
+    }
+    layers = [{"layerId": 205044, "boss": {"bossName": "Will", "difficulty": "DIFFICULTY_HARD", "raffleLayerName": "Hard Will"}}]
+    metadata = {2358010: {"itemName": "Sealed Mirror World Nodestone", "tier0": "Consumable", "tier1": "Voucher"}}
+
+    result = normalize_live_history(request, histories, layers, metadata)
+
+    member = result["clears"][0]["members"][0]
+    assert member["drops"] == [{"dropId": "will-hard-m1-ftitem-1", "category": "FT_ITEM", "name": "Sealed Mirror World Nodestone", "quantity": "1", "imageUrl": ""}]
+
+
+def test_generic_sealed_nodestone_never_surfaces_as_a_drop() -> None:
+    request = request_for("m1")
+    histories = {
+        "m1": [{
+            "raffledAt": request.raffledAt,
+            "layerId": 205044,
+            "clearInformations": [{"clearedAt": "2026-07-23T14:00:00Z", "partyCount": 1}],
+            "prizes": [{"itemId": 2358005, "winCount": {"value": "1"}}],
+        }]
+    }
+    layers = [{"layerId": 205044, "boss": {"bossName": "Will", "difficulty": "DIFFICULTY_HARD", "raffleLayerName": "Hard Will"}}]
+    metadata = {2358005: {"itemName": "Sealed Nodestone", "tier0": "Consumable", "tier1": "Voucher"}}
+
+    result = normalize_live_history(request, histories, layers, metadata)
+
+    assert result["clears"][0]["members"][0]["drops"] == []
+
+
+def test_lucid_clear_never_surfaces_ft_item_drop_even_if_metadata_matches() -> None:
+    request = request_for("m1")
+    histories = {
+        "m1": [{
+            "raffledAt": request.raffledAt,
+            "layerId": 205041,
+            "clearInformations": [{"clearedAt": "2026-07-23T14:00:00Z", "partyCount": 1}],
+            "prizes": [{"itemId": 2358010, "winCount": {"value": "1"}}],
+        }]
+    }
+    layers = [{"layerId": 205041, "boss": {"bossName": "Lucid", "difficulty": "DIFFICULTY_HARD", "raffleLayerName": "Hard Lucid"}}]
+    metadata = {2358010: {"itemName": "Sealed Mirror World Nodestone", "tier0": "Consumable", "tier1": "Voucher"}}
+
+    result = normalize_live_history(request, histories, layers, metadata)
+
+    assert result["clears"][0]["members"][0]["drops"] == []
 
 
 def test_shared_contract_fixture_matches_fixture_normalizer() -> None:

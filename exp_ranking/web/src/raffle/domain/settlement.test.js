@@ -187,6 +187,44 @@ describe("calculateSettlement", () => {
     expect(result.members.map((member) => member.nextCarryover)).toEqual(["-25", "25"]);
   });
 
+  // F2/LULU-119: Will FT Item (Sealed Mirror World Nodestone) is a third,
+  // independently-toggled drop category alongside coin/equipment, settled the
+  // same way (5% marketplace sale fee, per-drop sale price input).
+  it("settles FT_ITEM drops with the same 5% sale deduction as coin/equipment when included", () => {
+    const result = calculateSettlement(clearInput({
+      boss: "WILL",
+      include: { coin: true, equipment: true, ftItem: true, bossNeso: true, powerCrystal: true, ascendantNeso: true },
+      saleNesoByDropId: { coin1: "100", equip1: "300", ft1: "1000" },
+      members: [
+        { memberId: "a", bossNeso: "600", powerCrystalAmount: "100", ascendantNeso: "50", drops: [{ dropId: "coin1", category: "COIN", name: "Coin", quantity: "10" }, { dropId: "ft1", category: "FT_ITEM", name: "Sealed Mirror World Nodestone", quantity: "1" }] },
+        { memberId: "b", bossNeso: "0", powerCrystalAmount: "0", ascendantNeso: "0", drops: [{ dropId: "equip1", category: "EQUIPMENT", name: "Gear", quantity: "1", imageUrl: "https://api-static.msu.io/itemimages/icon/1000001.png" }] },
+      ],
+    }));
+    expect(result.ok).toBe(true);
+    expect(result.categoryTotals.ftItemQuantity).toBe("1");
+    expect(result.categoryTotals.ftItemSaleNeso).toBe("950");
+    expect(result.members[0]).toMatchObject({ ftItemQuantity: "1", ftItemSaleNeso: "950" });
+    expect(result.members[1]).toMatchObject({ ftItemQuantity: "0", ftItemSaleNeso: "0" });
+    // FT Item sale proceeds are transferable (same as coin/equipment).
+    expect(BigInt(result.members[0].transferableNeso)).toBeGreaterThanOrEqual(950n);
+  });
+
+  it("excludes FT_ITEM drops from totals when unchecked, without requiring a sale value", () => {
+    const result = calculateSettlement(clearInput({
+      boss: "WILL",
+      include: { coin: false, equipment: false, ftItem: false, bossNeso: true, powerCrystal: false, ascendantNeso: false },
+      saleNesoByDropId: {},
+      members: [
+        { memberId: "a", bossNeso: "600", powerCrystalAmount: "0", ascendantNeso: "0", drops: [{ dropId: "ft1", category: "FT_ITEM", name: "Sealed Mirror World Nodestone", quantity: "1" }] },
+        { memberId: "b", bossNeso: "0", powerCrystalAmount: "0", ascendantNeso: "0", drops: [] },
+      ],
+    }));
+    expect(result.ok).toBe(true);
+    expect(result.categoryTotals.ftItemQuantity).toBe("0");
+    expect(result.categoryTotals.ftItemSaleNeso).toBe("0");
+    expect(result.total).toBe("600");
+  });
+
   it("requires previous carryovers to balance to zero", () => {
     const result = calculateSettlement(clearInput({
       carryoverEnabled: true,

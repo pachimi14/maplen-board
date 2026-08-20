@@ -124,7 +124,7 @@ export function powerCrystalFaceValue(rewardName) {
 export function summarizeRaffleResults(results) {
   const rewards = (Array.isArray(results) ? results : []).flatMap((result) => Array.isArray(result?.rewards) ? result.rewards : []);
   const items = groupWonRewards(rewards).sort((left, right) => {
-    const priority = { NESO: 0, ASCENDANT_NESO: 0, POWER_CRYSTAL: 1, COIN: 2, EQUIPMENT: 3, OTHER: 4, UNKNOWN: 5 };
+    const priority = { NESO: 0, ASCENDANT_NESO: 0, POWER_CRYSTAL: 1, COIN: 2, EQUIPMENT: 3, FT_ITEM: 4, OTHER: 5, UNKNOWN: 6 };
     const priorityDifference = (priority[left.classification] ?? 9) - (priority[right.classification] ?? 9);
     if (priorityDifference) return priorityDifference;
     if (left.classification === "POWER_CRYSTAL" && right.classification === "POWER_CRYSTAL") {
@@ -145,4 +145,25 @@ export function summarizeRaffleResults(results) {
 
 export function formatRewardQuantity(value) {
   try { return BigInt(value).toLocaleString("en-US"); } catch { return String(value || "0"); }
+}
+
+// LULU-084: never show a raw technical classification string to the user.
+// Every reward classification the server can currently send must resolve to
+// a human label here; anything not in this table (a future/unexpected
+// server value) falls back to the same label UNKNOWN itself uses -- the raw
+// code is never rendered (R1, LULU-119 code review: FT_ITEM was missing
+// here and leaked as the literal string "FT_ITEM" in the badge).
+const CLASSIFICATION_LABELS = Object.freeze({
+  NESO: "NESO",
+  POWER_CRYSTAL: "Power Crystal",
+  COIN: "Coin",
+  EQUIPMENT: "Equipment",
+  FT_ITEM: "FT Item",
+  ASCENDANT_NESO: "Ascendant NESO",
+  OTHER: "Other",
+  UNKNOWN: "Unknown",
+});
+
+export function rewardClassificationLabel(classification) {
+  return CLASSIFICATION_LABELS[classification] || CLASSIFICATION_LABELS.UNKNOWN;
 }

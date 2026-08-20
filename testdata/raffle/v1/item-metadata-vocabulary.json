@@ -1,0 +1,1418 @@
+[
+ {
+  "itemId": 1001145,
+  "itemName": "Maple Momentree Crown B",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1001156,
+  "itemName": "Mystic Ruby Crown",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1003112,
+  "itemName": "Chaos Zakum Helmet",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1003172,
+  "itemName": "Lionheart Battle Helm",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1003175,
+  "itemName": "Raven Horn Chaser Hat",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1003622,
+  "itemName": "Black Bean Hat",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1003719,
+  "itemName": "Chaos Pierre Hat",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1003720,
+  "itemName": "Chaos Von Bon Helmet",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1003722,
+  "itemName": "Chaos Vellum's Helm",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1003763,
+  "itemName": "Black Wing Master's Hat",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1003797,
+  "itemName": "Royal Warrior Helm",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1003798,
+  "itemName": "Royal Dunwitch Hat",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1003799,
+  "itemName": "Royal Ranger Beret",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1003800,
+  "itemName": "Royal Assassin Hood",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1003801,
+  "itemName": "Royal Wanderer Hat",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1003906,
+  "itemName": "Triumphant Zakum Hat",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1004216,
+  "itemName": "Necromancer Sentinel Hat",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1004422,
+  "itemName": "AbsoLab Knight Helm",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1004425,
+  "itemName": "AbsoLab Bandit Cap",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1004637,
+  "itemName": "Enraged Zakum Helmet",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1004808,
+  "itemName": "Arcane Umbra Knight Hat",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1005159,
+  "itemName": "Catty Magnus",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1005412,
+  "itemName": "Baby Bear Fedora",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1005554,
+  "itemName": "Twinkling Heart",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1005564,
+  "itemName": "Wave Dance",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1005866,
+  "itemName": "Guardian Angel Crown",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1006030,
+  "itemName": "Heartbeat Little Devil",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1006070,
+  "itemName": "Pink Sand Sun Visor",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1006071,
+  "itemName": "Sky Sand Sun Visor",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1006107,
+  "itemName": "I'm An Ice Pack",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1006907,
+  "itemName": "Nightfall Shroud Hat",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1007036,
+  "itemName": "Nightmare Rose Hat",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1007295,
+  "itemName": "Crimson Spider Mark",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1012009,
+  "itemName": "Kiss Mark",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1012632,
+  "itemName": "Berserked",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1012725,
+  "itemName": "Mad Mage Makeup",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1012748,
+  "itemName": "Blushing Toothy Smirk",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1012773,
+  "itemName": "I'm A Band-aid",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1022232,
+  "itemName": "Black Bean Mark",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1022277,
+  "itemName": "Papulatus Mark",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1022330,
+  "itemName": "Basic Mask",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1022340,
+  "itemName": "Super Charming",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1042255,
+  "itemName": "Eagle Eye Dunwitch Robe",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1042256,
+  "itemName": "Eagle Eye Ranger Cowl",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1050554,
+  "itemName": "Dreamy Wanderer",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1050556,
+  "itemName": "Aquamarine Heaving Sea",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1050646,
+  "itemName": "Heartbeat Pound",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1051411,
+  "itemName": "Lady Rosalia",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1051602,
+  "itemName": "Night Stroll Outfit B",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1051624,
+  "itemName": "Dreamy Traveler",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1051719,
+  "itemName": "Heartbeat Pitter-Pat",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1052180,
+  "itemName": "Denim Overalls",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1052526,
+  "itemName": "Chaos Pink Bean Suit",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1052527,
+  "itemName": "Black Bean Suit",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1052788,
+  "itemName": "Necromancer Skipper Suit",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1052882,
+  "itemName": "AbsoLab Knight Suit",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1052888,
+  "itemName": "AbsoLab Archer Suit",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1052889,
+  "itemName": "AbsoLab Bandit Suit",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1052975,
+  "itemName": "Preppy Suspenders",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1053064,
+  "itemName": "Arcane Umbra Mage Suit",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1053890,
+  "itemName": "Light Pink Sandy Beach",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1053913,
+  "itemName": "I'm Recovering",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1054551,
+  "itemName": "Core of the Abyss Outfit",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1054552,
+  "itemName": "Nightfall Shroud Outfit",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1054650,
+  "itemName": "Guardian Angel Suit",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1062165,
+  "itemName": "Trixter Warrior Pants",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1062166,
+  "itemName": "Trixter Dunwitch Pants",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1062167,
+  "itemName": "Trixter Ranger Pants",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1062168,
+  "itemName": "Trixter Assassin Pants",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1072328,
+  "itemName": "Mercury Lightning",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1072858,
+  "itemName": "Odile Ballet Slippers",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1073033,
+  "itemName": "AbsoLab Archer Shoes",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1073034,
+  "itemName": "AbsoLab Bandit Shoes",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1073035,
+  "itemName": "AbsoLab Pirate Shoes",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1073159,
+  "itemName": "Arcane Umbra Mage Shoes",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1073162,
+  "itemName": "Arcane Umbra Pirate Shoes",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1073362,
+  "itemName": "Stompers",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1073450,
+  "itemName": "Lightstep Sandals",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1073455,
+  "itemName": "Memory Strand",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1073656,
+  "itemName": "Pound Sneakers",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1073657,
+  "itemName": "Pitter-Pat Sneakers",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1073677,
+  "itemName": "Sandy Beach Shoes",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1073698,
+  "itemName": "This Cast",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1074231,
+  "itemName": "Core of the Abyss Shoes",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1074313,
+  "itemName": "Guardian Angel Shoes",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1074324,
+  "itemName": "Nightmare Steps",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1074429,
+  "itemName": "Dark Alchemist Shoes",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1082224,
+  "itemName": "Tania Gloves",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1082295,
+  "itemName": "Lionheart Battle Bracers",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1082594,
+  "itemName": "Necromancer Magician Gloves",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1082613,
+  "itemName": "Royal Von Leon Warrior Hands",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1082637,
+  "itemName": "AbsoLab Mage Gloves",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1082638,
+  "itemName": "AbsoLab Archer Gloves",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1082639,
+  "itemName": "AbsoLab Bandit Gloves",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1082640,
+  "itemName": "AbsoLab Pirate Gloves",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1082696,
+  "itemName": "Arcane Umbra Mage Gloves",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1082750,
+  "itemName": "Mad Mage Gloves",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1102279,
+  "itemName": "Shark Tooth Skipper Cape",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1102775,
+  "itemName": "AbsoLab Knight Cape",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1102796,
+  "itemName": "AbsoLab Bandit Cape",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1102797,
+  "itemName": "AbsoLab Pirate Cape",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1102871,
+  "itemName": "Enraged Zakum Cape",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1102941,
+  "itemName": "Arcane Umbra Mage Cape",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1103219,
+  "itemName": "Guardian Wings",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1103470,
+  "itemName": "Heartbeat Devil Tail",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1103492,
+  "itemName": "Sand Ribbon Tail",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1103523,
+  "itemName": "Beating Vital",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1103914,
+  "itemName": "Core of the Abyss Cape",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1103915,
+  "itemName": "Nightfall Shroud Cape",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1103991,
+  "itemName": "Nightmare Butterfly Wings",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1113313,
+  "itemName": "Guardian Angel Ring",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1115063,
+  "itemName": "Baby Chick Chat Ring",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1115152,
+  "itemName": "Baby Chick Label Ring",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1122274,
+  "itemName": "Ifia's Necklace",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1132296,
+  "itemName": "Enraged Zakum Belt",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1152110,
+  "itemName": "Dragon Tail Mage Shoulder",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1152112,
+  "itemName": "Raven Horn Chaser Shoulder",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1152178,
+  "itemName": "AbsoLab Thief Shoulder",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1152196,
+  "itemName": "Arcane Umbra Knight Shoulder",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1152197,
+  "itemName": "Arcane Umbra Mage Shoulder",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1152199,
+  "itemName": "Arcane Umbra Thief Shoulder",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1162041,
+  "itemName": "Monkey Charm",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1182087,
+  "itemName": "Crystal Ventus Badge",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1182193,
+  "itemName": "Badge of Mano",
+  "tier0": "Item",
+  "tier1": "Armor"
+ },
+ {
+  "itemId": 1342082,
+  "itemName": "Fafnir Rapid Edge",
+  "tier0": "Item",
+  "tier1": "Weapon"
+ },
+ {
+  "itemId": 1352202,
+  "itemName": "Virtues Medallion",
+  "tier0": "Item",
+  "tier1": "Weapon"
+ },
+ {
+  "itemId": 1352292,
+  "itemName": "Death Sender Charm",
+  "tier0": "Item",
+  "tier1": "Weapon"
+ },
+ {
+  "itemId": 1372228,
+  "itemName": "Arcane Umbra Wand",
+  "tier0": "Item",
+  "tier1": "Weapon"
+ },
+ {
+  "itemId": 1382208,
+  "itemName": "Fafnir Mana Crown",
+  "tier0": "Item",
+  "tier1": "Weapon"
+ },
+ {
+  "itemId": 1422066,
+  "itemName": "Lionheart Blast Maul",
+  "tier0": "Item",
+  "tier1": "Weapon"
+ },
+ {
+  "itemId": 1472261,
+  "itemName": "AbsoLab Revenge Guard",
+  "tier0": "Item",
+  "tier1": "Weapon"
+ },
+ {
+  "itemId": 1492179,
+  "itemName": "Fafnir Zeliska",
+  "tier0": "Item",
+  "tier1": "Weapon"
+ },
+ {
+  "itemId": 1522018,
+  "itemName": "Falcon Wing Dual Bowguns",
+  "tier0": "Item",
+  "tier1": "Weapon"
+ },
+ {
+  "itemId": 1532018,
+  "itemName": "Shark Tooth Supernova",
+  "tier0": "Item",
+  "tier1": "Weapon"
+ },
+ {
+  "itemId": 1592011,
+  "itemName": "Necro Ancient Bow",
+  "tier0": "Item",
+  "tier1": "Weapon"
+ },
+ {
+  "itemId": 1592015,
+  "itemName": "Falcon Wing Ancient Bow",
+  "tier0": "Item",
+  "tier1": "Weapon"
+ },
+ {
+  "itemId": 1702581,
+  "itemName": "Sweetie Bros",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1702757,
+  "itemName": "Cygnus's Guard",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1702951,
+  "itemName": "Baby Bear Night Stroll",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1703014,
+  "itemName": "Coral Song",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1703224,
+  "itemName": "Heartbeat Home Run",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1703245,
+  "itemName": "Sandy Beach Toy",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1703274,
+  "itemName": "I'm Blue Recovery Medicine",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1703275,
+  "itemName": "I'm Pink Recovery Medicine",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1703482,
+  "itemName": "Blade Rifle",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1703720,
+  "itemName": "Nightfall Shroud Weapon",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1703828,
+  "itemName": "Nightmare Cage Lantern",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1790100,
+  "itemName": "Slime Monster Face",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1790195,
+  "itemName": "Fearful Glance",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1790261,
+  "itemName": "Round Eye Face A",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1790283,
+  "itemName": "Round Eye Face B",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1790305,
+  "itemName": "Fierce Face A",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1790334,
+  "itemName": "Pumpkin Star Face",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1790335,
+  "itemName": "Puppy Eyes Face B",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1790351,
+  "itemName": "Twinkle Face",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1790358,
+  "itemName": "Pale 'Say What' Face",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1790371,
+  "itemName": "Plainfield Face",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1790376,
+  "itemName": "Calm Sweet Face",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1790404,
+  "itemName": "What Face",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1790406,
+  "itemName": "Kitty Cat",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1790407,
+  "itemName": "Clear Day Face A",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1790409,
+  "itemName": "Fu-fu Face",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1790410,
+  "itemName": "Drowsy Face",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1790412,
+  "itemName": "Just One Bite Face",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1790413,
+  "itemName": "Sapphire Face",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1790414,
+  "itemName": "Powder Face",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1791131,
+  "itemName": "Angelica",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1791173,
+  "itemName": "Gaga Hair",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1791175,
+  "itemName": "Ponytail-to-the-Side",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1791372,
+  "itemName": "Cannoneer Hair",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1791407,
+  "itemName": "Well-Conditioned Shag",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1791413,
+  "itemName": "Fluffy Bob Hair",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1791757,
+  "itemName": "Executor Hair",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1791901,
+  "itemName": "Mousse Foam Hair",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1802556,
+  "itemName": "Luminous's Halo",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1802606,
+  "itemName": "Red Sports Cap",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1802768,
+  "itemName": "Dalsoo's Scarf",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1802967,
+  "itemName": "Blue Crab Flower",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1803139,
+  "itemName": "Gold Glitter",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1803140,
+  "itemName": "Silver Glitter",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1803141,
+  "itemName": "Bronze Glitter",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1803155,
+  "itemName": "Cute Tiny Clover",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1803156,
+  "itemName": "Cute Tiny Bell",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1803157,
+  "itemName": "Cute Tiny Ribbon",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1803158,
+  "itemName": "Aurora UFO",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1803159,
+  "itemName": "Blue Planet",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1803160,
+  "itemName": "Gem Star",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1803183,
+  "itemName": "Teddy Dream Bubbles",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1803184,
+  "itemName": "Squirrel Dream Bubbles",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 1803185,
+  "itemName": "Raccoon Dream Bubbles",
+  "tier0": "Item",
+  "tier1": "Decoration"
+ },
+ {
+  "itemId": 2358005,
+  "itemName": "Sealed Nodestone",
+  "tier0": "Consumable",
+  "tier1": "Voucher"
+ },
+ {
+  "itemId": 2358010,
+  "itemName": "Sealed Mirror World Nodestone",
+  "tier0": "Consumable",
+  "tier1": "Voucher"
+ },
+ {
+  "itemId": 2832958,
+  "itemName": "10K Power Crystal Coupon",
+  "tier0": "Consumable",
+  "tier1": "ETC"
+ },
+ {
+  "itemId": 2832959,
+  "itemName": "100K Power Crystal Coupon",
+  "tier0": "Consumable",
+  "tier1": "ETC"
+ },
+ {
+  "itemId": 2832960,
+  "itemName": "1M Power Crystal Coupon",
+  "tier0": "Consumable",
+  "tier1": "ETC"
+ },
+ {
+  "itemId": 2832961,
+  "itemName": "10M Power Crystal Coupon",
+  "tier0": "Consumable",
+  "tier1": "ETC"
+ },
+ {
+  "itemId": 3010404,
+  "itemName": "Hilla's Style Maker",
+  "tier0": "Item",
+  "tier1": "Set-up"
+ },
+ {
+  "itemId": 3010455,
+  "itemName": "Lord Zakum Throne",
+  "tier0": "Item",
+  "tier1": "Set-up"
+ },
+ {
+  "itemId": 3010513,
+  "itemName": "Happy Pierre Chair",
+  "tier0": "Item",
+  "tier1": "Set-up"
+ },
+ {
+  "itemId": 3016206,
+  "itemName": "Papulatus Clock Chair",
+  "tier0": "Item",
+  "tier1": "Set-up"
+ },
+ {
+  "itemId": 3018788,
+  "itemName": "Cygnus Garden Chair",
+  "tier0": "Item",
+  "tier1": "Set-up"
+ },
+ {
+  "itemId": 3018790,
+  "itemName": "Ludibrium Chair",
+  "tier0": "Item",
+  "tier1": "Set-up"
+ },
+ {
+  "itemId": 3135156,
+  "itemName": "Monster Park Damage Skin",
+  "tier0": "Item",
+  "tier1": "Set-up"
+ },
+ {
+  "itemId": 3140071,
+  "itemName": "Dolphin Mount",
+  "tier0": "Item",
+  "tier1": "Set-up"
+ },
+ {
+  "itemId": 3140217,
+  "itemName": "Pink Bean Scooter Mount",
+  "tier0": "Item",
+  "tier1": "Set-up"
+ },
+ {
+  "itemId": 3140283,
+  "itemName": "Inferno Wolf Mount",
+  "tier0": "Item",
+  "tier1": "Set-up"
+ },
+ {
+  "itemId": 3140333,
+  "itemName": "Confession Teddy Mount",
+  "tier0": "Item",
+  "tier1": "Set-up"
+ },
+ {
+  "itemId": 3140337,
+  "itemName": "St. Bernard Mount",
+  "tier0": "Item",
+  "tier1": "Set-up"
+ },
+ {
+  "itemId": 3140344,
+  "itemName": "Paper Airplane Mount",
+  "tier0": "Item",
+  "tier1": "Set-up"
+ },
+ {
+  "itemId": 3140356,
+  "itemName": "Meerkat Pack Mount",
+  "tier0": "Item",
+  "tier1": "Set-up"
+ },
+ {
+  "itemId": 4310156,
+  "itemName": "AbsoLab Coin",
+  "tier0": "Consumable",
+  "tier1": "Exchange Currency"
+ },
+ {
+  "itemId": 4310199,
+  "itemName": "Stigma Coin",
+  "tier0": "Consumable",
+  "tier1": "Exchange Currency"
+ },
+ {
+  "itemId": 4310218,
+  "itemName": "Phantasma Coin",
+  "tier0": "Consumable",
+  "tier1": "Exchange Currency"
+ },
+ {
+  "itemId": 4310249,
+  "itemName": "Arachno Coin",
+  "tier0": "Consumable",
+  "tier1": "Exchange Currency"
+ },
+ {
+  "itemId": 4310396,
+  "itemName": "Purified Chaos Yggdrasil Energy",
+  "tier0": "Consumable",
+  "tier1": "Exchange Currency"
+ },
+ {
+  "itemId": 4310397,
+  "itemName": "Fragment of Kaiserium",
+  "tier0": "Consumable",
+  "tier1": "Exchange Currency"
+ },
+ {
+  "itemId": 4310401,
+  "itemName": "Green Florin",
+  "tier0": "Consumable",
+  "tier1": "Exchange Currency"
+ },
+ {
+  "itemId": 4310402,
+  "itemName": "Blue Florin",
+  "tier0": "Consumable",
+  "tier1": "Exchange Currency"
+ },
+ {
+  "itemId": 4310403,
+  "itemName": "Red Florin",
+  "tier0": "Consumable",
+  "tier1": "Exchange Currency"
+ },
+ {
+  "itemId": 4310404,
+  "itemName": "Gold Florin",
+  "tier0": "Consumable",
+  "tier1": "Exchange Currency"
+ },
+ {
+  "itemId": 5000490,
+  "itemName": "Lil Luminous",
+  "tier0": "Item",
+  "tier1": "Utility"
+ },
+ {
+  "itemId": 5000743,
+  "itemName": "Carp Man",
+  "tier0": "Item",
+  "tier1": "Utility"
+ },
+ {
+  "itemId": 5000927,
+  "itemName": "Shocky-mingo",
+  "tier0": "Item",
+  "tier1": "Utility"
+ },
+ {
+  "itemId": 5002190,
+  "itemName": "Balloon Dog",
+  "tier0": "Item",
+  "tier1": "Utility"
+ },
+ {
+  "itemId": 5002559,
+  "itemName": "Apple Crab",
+  "tier0": "Item",
+  "tier1": "Utility"
+ },
+ {
+  "itemId": 5002809,
+  "itemName": "Gold Coin",
+  "tier0": "Item",
+  "tier1": "Utility"
+ },
+ {
+  "itemId": 5002810,
+  "itemName": "Silver Coin",
+  "tier0": "Item",
+  "tier1": "Utility"
+ },
+ {
+  "itemId": 5002811,
+  "itemName": "Bronze Coin",
+  "tier0": "Item",
+  "tier1": "Utility"
+ },
+ {
+  "itemId": 5002839,
+  "itemName": "Pocket Panda",
+  "tier0": "Item",
+  "tier1": "Utility"
+ },
+ {
+  "itemId": 5002840,
+  "itemName": "Itty Kitty",
+  "tier0": "Item",
+  "tier1": "Utility"
+ },
+ {
+  "itemId": 5002842,
+  "itemName": "Jeri",
+  "tier0": "Item",
+  "tier1": "Utility"
+ },
+ {
+  "itemId": 5002843,
+  "itemName": "Jana",
+  "tier0": "Item",
+  "tier1": "Utility"
+ },
+ {
+  "itemId": 5002844,
+  "itemName": "Jaki",
+  "tier0": "Item",
+  "tier1": "Utility"
+ },
+ {
+  "itemId": 5002874,
+  "itemName": "Zzz Teddy",
+  "tier0": "Item",
+  "tier1": "Utility"
+ },
+ {
+  "itemId": 5002875,
+  "itemName": "Zzz Squirrel",
+  "tier0": "Item",
+  "tier1": "Utility"
+ },
+ {
+  "itemId": 5002876,
+  "itemName": "Zzz Raccoon",
+  "tier0": "Item",
+  "tier1": "Utility"
+ }
+]
