@@ -354,6 +354,61 @@ def test_ambiguous_party_count_cluster_is_excluded_without_affecting_other_candi
     assert result["warnings"] == [{"code": "ambiguous_party_cluster", "boss": "WILL", "bossDifficulty": "HARD", "partyCount": 6}]
 
 
+def test_will_clear_surfaces_ft_item_drop_for_sealed_mirror_world_nodestone() -> None:
+    request = request_for("m1")
+    histories = {
+        "m1": [{
+            "raffledAt": request.raffledAt,
+            "layerId": 205044,
+            "clearInformations": [{"clearedAt": "2026-07-23T14:00:00Z", "partyCount": 1}],
+            "prizes": [{"itemId": 2358010, "winCount": {"value": "1"}}],
+        }]
+    }
+    layers = [{"layerId": 205044, "boss": {"bossName": "Will", "difficulty": "DIFFICULTY_HARD", "raffleLayerName": "Hard Will"}}]
+    metadata = {2358010: {"itemName": "Sealed Mirror World Nodestone", "tier0": "Consumable", "tier1": "Voucher"}}
+
+    result = normalize_live_history(request, histories, layers, metadata)
+
+    member = result["clears"][0]["members"][0]
+    assert member["drops"] == [{"dropId": "will-hard-m1-ftitem-1", "category": "FT_ITEM", "name": "Sealed Mirror World Nodestone", "quantity": "1", "imageUrl": ""}]
+
+
+def test_generic_sealed_nodestone_never_surfaces_as_a_drop() -> None:
+    request = request_for("m1")
+    histories = {
+        "m1": [{
+            "raffledAt": request.raffledAt,
+            "layerId": 205044,
+            "clearInformations": [{"clearedAt": "2026-07-23T14:00:00Z", "partyCount": 1}],
+            "prizes": [{"itemId": 2358005, "winCount": {"value": "1"}}],
+        }]
+    }
+    layers = [{"layerId": 205044, "boss": {"bossName": "Will", "difficulty": "DIFFICULTY_HARD", "raffleLayerName": "Hard Will"}}]
+    metadata = {2358005: {"itemName": "Sealed Nodestone", "tier0": "Consumable", "tier1": "Voucher"}}
+
+    result = normalize_live_history(request, histories, layers, metadata)
+
+    assert result["clears"][0]["members"][0]["drops"] == []
+
+
+def test_lucid_clear_never_surfaces_ft_item_drop_even_if_metadata_matches() -> None:
+    request = request_for("m1")
+    histories = {
+        "m1": [{
+            "raffledAt": request.raffledAt,
+            "layerId": 205041,
+            "clearInformations": [{"clearedAt": "2026-07-23T14:00:00Z", "partyCount": 1}],
+            "prizes": [{"itemId": 2358010, "winCount": {"value": "1"}}],
+        }]
+    }
+    layers = [{"layerId": 205041, "boss": {"bossName": "Lucid", "difficulty": "DIFFICULTY_HARD", "raffleLayerName": "Hard Lucid"}}]
+    metadata = {2358010: {"itemName": "Sealed Mirror World Nodestone", "tier0": "Consumable", "tier1": "Voucher"}}
+
+    result = normalize_live_history(request, histories, layers, metadata)
+
+    assert result["clears"][0]["members"][0]["drops"] == []
+
+
 def test_shared_contract_fixture_matches_fixture_normalizer() -> None:
     root = Path(__file__).resolve().parents[3]
     fixture = json.loads((root / "testdata" / "raffle" / "v1" / "cases" / "fixture-lucid.json").read_text(encoding="utf-8"))

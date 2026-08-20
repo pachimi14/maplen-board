@@ -199,6 +199,7 @@ const CATEGORY_COLUMN_DEFS = Object.freeze([
   { key: "ascendantNeso", includeKey: "ascendantNeso", labelKey: "raffle.item_ascendantNeso" },
   { key: "coin", includeKey: "coin", labelKey: "raffle.item_coin" },
   { key: "equipment", includeKey: "equipment", labelKey: "raffle.item_equipment" },
+  { key: "ftItem", includeKey: "ftItem", labelKey: "raffle.item_ftItem" },
 ]);
 
 /**
@@ -241,6 +242,10 @@ export function settlementMemberCategoryCell(member, key, { powerCrystalNesoRate
   if (key === "equipment") {
     if (!member.equipmentDrops?.length) return { primary: "—", secondary: null, zero: true };
     return { primary: neso(member.equipmentSaleNeso), secondary: null, zero: false };
+  }
+  if (key === "ftItem") {
+    if (member.ftItemQuantity === "0") return { primary: "0", secondary: null, zero: true };
+    return { primary: "× " + formatNeso(member.ftItemQuantity), secondary: neso(member.ftItemSaleNeso), zero: false };
   }
   if (member[key] === "0") return { primary: "0", secondary: null, zero: true };
   return { primary: neso(member[key]), secondary: null, zero: false };

@@ -275,6 +275,16 @@ describe("settlementCategoryColumns", () => {
     expect(columns.map((column) => column.key)).toEqual(["bossNeso", "ascendantNeso", "coin", "equipment"]);
   });
 
+  // F2/LULU-119: the Will FT Item column is the same shared-column mechanism
+  // as coin/equipment (only shown when include.ftItem is true), so the C4
+  // share-image member table can never disagree with the on-screen table.
+  it("includes the Will FT Item column, in order, when included", () => {
+    const include = { coin: true, ftItem: true, equipment: true };
+    const columns = settlementCategoryColumns(include, t);
+    expect(columns.map((column) => column.key)).toEqual(["coin", "equipment", "ftItem"]);
+    expect(columns.find((column) => column.key === "ftItem")).toEqual({ key: "ftItem", label: t("raffle.item_ftItem") });
+  });
+
   it("returns an empty array when nothing is included", () => {
     expect(settlementCategoryColumns({}, t)).toEqual([]);
     expect(settlementCategoryColumns(undefined, t)).toEqual([]);
@@ -327,6 +337,15 @@ describe("settlementMemberCategoryCell", () => {
       zero: false,
     });
     expect(settlementMemberCategoryCell({ equipmentDrops: [] }, "equipment")).toEqual({ primary: "—", secondary: null, zero: true });
+  });
+
+  it("shows FT Item quantity + sale proceeds like coin, dimmed at zero", () => {
+    expect(settlementMemberCategoryCell({ ftItemQuantity: "1", ftItemSaleNeso: "950" }, "ftItem")).toEqual({
+      primary: "× 1",
+      secondary: "950 NESO",
+      zero: false,
+    });
+    expect(settlementMemberCategoryCell({ ftItemQuantity: "0" }, "ftItem")).toEqual({ primary: "0", secondary: null, zero: true });
   });
 });
 

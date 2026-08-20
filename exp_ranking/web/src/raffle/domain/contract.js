@@ -3,8 +3,8 @@ export const RAFFLE_CLASSIFICATION_VERSION = 2;
 export const RAFFLE_BOSSES = Object.freeze(["LUCID", "WILL"]);
 export const RAFFLE_JOB_STATUSES = Object.freeze(["queued", "resolving", "fetching", "normalizing", "complete", "partial", "error", "cancelled"]);
 const RESULT_OUTCOMES = new Set(["WIN", "LOSE", "UNKNOWN"]);
-const REWARD_CLASSIFICATIONS = new Set(["NESO", "POWER_CRYSTAL", "COIN", "EQUIPMENT", "ASCENDANT_NESO", "OTHER", "UNKNOWN"]);
-const DROP_CATEGORIES = new Set(["COIN", "EQUIPMENT"]);
+const REWARD_CLASSIFICATIONS = new Set(["NESO", "POWER_CRYSTAL", "COIN", "EQUIPMENT", "FT_ITEM", "ASCENDANT_NESO", "OTHER", "UNKNOWN"]);
+const DROP_CATEGORIES = new Set(["COIN", "EQUIPMENT", "FT_ITEM"]);
 const ASCENDANT_TIER_BY_CLEAR = Object.freeze({
   "LUCID:EASY": "Dawning Ascendant 2",
   "LUCID:NORMAL": "Mystic Ascendant",

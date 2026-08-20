@@ -1,5 +1,5 @@
 const BOSSES = new Set(["LUCID", "WILL"]);
-const DROP_CATEGORIES = new Set(["COIN", "EQUIPMENT"]);
+const DROP_CATEGORIES = new Set(["COIN", "EQUIPMENT", "FT_ITEM"]);
 const INTEGER_PATTERN = /^\d+$/;
 const SIGNED_INTEGER_PATTERN = /^[+-]?\d+$/;
 const RATE_PATTERN = /^(\d+)(?:\.(\d{1,18}))?$/;
@@ -152,6 +152,8 @@ export function calculateSettlement(input) {
     let coinSaleNeso = 0n;
     let equipmentQuantity = 0n;
     let equipmentSaleNeso = 0n;
+    let ftItemQuantity = 0n;
+    let ftItemSaleNeso = 0n;
     const equipmentDrops = [];
     for (const drop of Array.isArray(member.drops) ? member.drops : []) {
       if (!drop?.dropId || seenDrops.has(drop.dropId) || !DROP_CATEGORIES.has(drop.category)) {
@@ -159,17 +161,22 @@ export function calculateSettlement(input) {
         continue;
       }
       seenDrops.add(drop.dropId);
-      const selected = drop.category === "COIN" ? include.coin : include.equipment;
+      const selected = drop.category === "COIN" ? include.coin : drop.category === "FT_ITEM" ? include.ftItem : include.equipment;
       if (!selected) continue;
       const quantity = parseInteger(drop.quantity, "dropQuantity", errors, { memberId, dropId: drop.dropId });
       const salePriceNeso = parseInteger(input?.saleNesoByDropId?.[drop.dropId], "saleNeso", errors, {
         memberId,
         dropId: drop.dropId,
       });
+      // FT Item is a marketplace-sellable item just like coin/equipment: same
+      // 5% sale-proceeds deduction applies (LULU-090 rule).
       const saleNeso = salePriceToProceeds(salePriceNeso);
       if (drop.category === "COIN") {
         coinQuantity += quantity;
         coinSaleNeso += saleNeso;
+      } else if (drop.category === "FT_ITEM") {
+        ftItemQuantity += quantity;
+        ftItemSaleNeso += saleNeso;
       } else {
         equipmentQuantity += quantity;
         equipmentSaleNeso += saleNeso;
@@ -186,7 +193,7 @@ export function calculateSettlement(input) {
     const previousCarryover = carryoverEnabled
       ? parseSignedInteger(input?.previousCarryoverByMemberId?.[memberId] ?? "0", "previousCarryover", errors, memberId)
       : 0n;
-    const transferableNeso = bossNeso + ascendantNeso + coinSaleNeso + equipmentSaleNeso;
+    const transferableNeso = bossNeso + ascendantNeso + coinSaleNeso + equipmentSaleNeso + ftItemSaleNeso;
     return {
       memberId,
       hasHistory: historyMemberIds.has(memberId),
@@ -199,6 +206,8 @@ export function calculateSettlement(input) {
       equipmentQuantity,
       equipmentSaleNeso,
       equipmentDrops,
+      ftItemQuantity,
+      ftItemSaleNeso,
       previousCarryover,
       transferableNeso,
       gross: transferableNeso + powerCrystalNeso,
@@ -252,6 +261,8 @@ export function calculateSettlement(input) {
     equipmentQuantity: stringifyChecked(row.equipmentQuantity, outputErrors, "equipmentQuantity", row.memberId),
     equipmentSaleNeso: stringifyChecked(row.equipmentSaleNeso, outputErrors, "equipmentSaleNeso", row.memberId),
     equipmentDrops: row.equipmentDrops,
+    ftItemQuantity: stringifyChecked(row.ftItemQuantity, outputErrors, "ftItemQuantity", row.memberId),
+    ftItemSaleNeso: stringifyChecked(row.ftItemSaleNeso, outputErrors, "ftItemSaleNeso", row.memberId),
     transferableNeso: stringifyChecked(row.transferableNeso, outputErrors, "transferableNeso", row.memberId),
     previousCarryover: stringifyChecked(row.previousCarryover, outputErrors, "previousCarryover", row.memberId),
     gross: stringifyChecked(row.gross, outputErrors, "gross", row.memberId),
@@ -275,6 +286,8 @@ export function calculateSettlement(input) {
     coinSaleNeso: stringifyChecked(sumBy(rows, "coinSaleNeso"), outputErrors, "categoryCoinSaleNeso"),
     equipmentQuantity: stringifyChecked(sumBy(rows, "equipmentQuantity"), outputErrors, "categoryEquipmentQuantity"),
     equipmentSaleNeso: stringifyChecked(sumBy(rows, "equipmentSaleNeso"), outputErrors, "categoryEquipmentSaleNeso"),
+    ftItemQuantity: stringifyChecked(sumBy(rows, "ftItemQuantity"), outputErrors, "categoryFtItemQuantity"),
+    ftItemSaleNeso: stringifyChecked(sumBy(rows, "ftItemSaleNeso"), outputErrors, "categoryFtItemSaleNeso"),
     transferableNeso: stringifyChecked(sumBy(rows, "transferableNeso"), outputErrors, "categoryTransferableNeso"),
   };
   const equipmentDrops = finalized.flatMap((row) => row.equipmentDrops.map((drop) => ({ ...drop, memberId: row.memberId })));

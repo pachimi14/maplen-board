@@ -25,7 +25,7 @@ function initialModel() {
 
 function initialBossSetting() {
   return {
-    include: { coin: true, equipment: true, bossNeso: true, powerCrystal: true, ascendantNeso: true },
+    include: { coin: true, equipment: true, ftItem: true, bossNeso: true, powerCrystal: true, ascendantNeso: true },
     powerCrystalNesoRate: "1.1",
     saleNesoByDropId: {},
     calculated: null,
@@ -300,6 +300,12 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
   const dropNameByDropId = activeClear
     ? Object.fromEntries(activeClear.members.flatMap((member) => member.drops.map((drop) => [drop.dropId, drop.name])))
     : {};
+  // F2/LULU-119: the Will FT Item checkbox (Sealed Mirror World Nodestone) only
+  // shows up when a Will clear is active and at least one member actually won
+  // it this week -- Lucid never rolls this item and an empty checkbox with no
+  // possible drops would just be noise.
+  const hasFtItemDrop = activeClear?.boss === "WILL"
+    && activeClear.members.some((member) => member.drops.some((drop) => drop.category === "FT_ITEM"));
   const activeClearBossLabel = activeClear
     ? [...new Set(activeClear.sourceClears.map((clear) => formatPartyClearTitle(clear)))].join(", ")
     : "";
@@ -394,9 +400,12 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
                         <span><strong className="block">{formatPartyClearTitle(clear)}</strong><span className="text-xs text-slate-600 dark:text-slate-300">{t("raffle.participantCounts", { partyCount: clear.partyCount, historyCount: clear.historyMemberIds.length, distributionCount: clear.members.length })}</span><span className="mt-1 block text-sm font-semibold">{t("raffle.confirmDistributionRoster", { distributionCount: clear.members.length })}</span></span>
                       </label>)}</div>
                     </fieldset> : null}
-                    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">{ITEM_KEYS.map((key) => <label key={key} className="flex items-center gap-2 rounded-lg border border-slate-200 p-2 text-sm dark:border-slate-700"><input type="checkbox" checked={activeSetting.include[key]} onChange={(event) => updateBossSetting(activeClear.boss, (setting) => ({ ...setting, include: { ...setting.include, [key]: event.target.checked } }))} />{t("raffle.item_" + key)}</label>)}</div>
+                    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+                      {ITEM_KEYS.map((key) => <label key={key} className="flex items-center gap-2 rounded-lg border border-slate-200 p-2 text-sm dark:border-slate-700"><input type="checkbox" checked={activeSetting.include[key]} onChange={(event) => updateBossSetting(activeClear.boss, (setting) => ({ ...setting, include: { ...setting.include, [key]: event.target.checked } }))} />{t("raffle.item_" + key)}</label>)}
+                      {hasFtItemDrop ? <label key="ftItem" className="flex items-center gap-2 rounded-lg border border-slate-200 p-2 text-sm dark:border-slate-700"><input type="checkbox" checked={activeSetting.include.ftItem} onChange={(event) => updateBossSetting(activeClear.boss, (setting) => ({ ...setting, include: { ...setting.include, ftItem: event.target.checked } }))} />{t("raffle.item_ftItem")}</label> : null}
+                    </div>
                     {activeSetting.include.powerCrystal ? <label className="raffle-label max-w-xl">{t("raffle.powerCrystalRate")}<div className="raffle-rate-inline mt-1"><span>{t("raffle.powerCrystalRatePrefix")}</span><input className="raffle-input raffle-rate-input" inputMode="decimal" value={activeSetting.powerCrystalNesoRate} onChange={(event) => updateBossSetting(activeClear.boss, (setting) => ({ ...setting, powerCrystalNesoRate: event.target.value }))} /><span>{t("raffle.powerCrystalRateSuffix")}</span></div><span className="mt-1 block text-xs font-normal text-slate-500 dark:text-slate-400">{t("raffle.powerCrystalRateHelp")}</span></label> : null}
-                    {activeClear.members.flatMap((member) => member.drops.map((drop) => ({ member, drop }))).filter(({ drop }) => drop.category === "COIN" ? activeSetting.include.coin : activeSetting.include.equipment).map(({ member, drop }) => {
+                    {activeClear.members.flatMap((member) => member.drops.map((drop) => ({ member, drop }))).filter(({ drop }) => drop.category === "COIN" ? activeSetting.include.coin : drop.category === "FT_ITEM" ? activeSetting.include.ftItem : activeSetting.include.equipment).map(({ member, drop }) => {
                       const salePrice = activeSetting.saleNesoByDropId[drop.dropId] || "";
                       const saleProceeds = calculateSaleProceedsNeso(salePrice);
                       return <label key={drop.dropId} className="raffle-label">{(jobResult.memberMap[member.memberId]?.displayName || member.memberId) + " — " + drop.name + " × " + drop.quantity}

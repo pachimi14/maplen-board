@@ -36,6 +36,17 @@ describe("normalizeJobPayload", () => {
     official.clears[0].members[1].drops[0].imageUrl = "https://tracking.example/item.png";
     expect(normalizeJobPayload(official).code).toBe("invalidDrop");
   });
+  // F1/F2 (LULU-119): FT_ITEM is a valid reward classification and drop
+  // category (Will's Sealed Mirror World Nodestone), alongside COIN/EQUIPMENT.
+  it("accepts FT_ITEM as a reward classification and drop category", () => {
+    const value = payload();
+    value.raffleResults[0].rewards[0].classification = "FT_ITEM";
+    value.clears[0].members[1].drops[0] = { dropId: "ft1", category: "FT_ITEM", name: "Sealed Mirror World Nodestone", quantity: "1" };
+    const result = normalizeJobPayload(value);
+    expect(result.ok).toBe(true);
+    expect(result.data.clears[0].members[1].drops[0].category).toBe("FT_ITEM");
+  });
+
   it("keeps official clear, history, and saved distribution counts independent", () => {
     const partial = payload();
     partial.clears[0].historyMemberIds = ["member-1"];
