@@ -178,7 +178,9 @@
     "breakdownHeading": "Breakdown",
     "rankingCandidateBadge": "Ranking",
     "rankingCandidatesLoading": "Loading ranking candidates…",
-    "rankingCandidatesUnavailable": "Ranking candidates are unavailable. You can still search via the API button above."
+    "rankingCandidatesUnavailable": "Ranking candidates are unavailable. You can still search via the API button above.",
+    "apiCandidateBadge": "API",
+    "apiUnavailableAnnouncement": "Could not connect to the official API. Characters ranked Lv.225+ can still be added from the candidates above. Characters below Lv.225 can be added once the API is back."
   },
   "period": {
     "daily": "Daily",

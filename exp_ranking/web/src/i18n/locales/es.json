@@ -178,7 +178,9 @@
     "breakdownHeading": "Desglose",
     "rankingCandidateBadge": "Ranking",
     "rankingCandidatesLoading": "Cargando candidatos del ranking…",
-    "rankingCandidatesUnavailable": "Los candidatos del ranking no están disponibles. Aún puedes buscar con el botón de la API de arriba."
+    "rankingCandidatesUnavailable": "Los candidatos del ranking no están disponibles. Aún puedes buscar con el botón de la API de arriba.",
+    "apiCandidateBadge": "API",
+    "apiUnavailableAnnouncement": "No se pudo conectar con la API oficial. Los personajes de Nv.225+ que aparecen en el ranking se pueden añadir desde los candidatos de arriba. Los personajes por debajo de Nv.225 podrán añadirse cuando la API vuelva a estar disponible."
   },
   "period": {
     "daily": "Diario",

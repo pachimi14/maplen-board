@@ -178,7 +178,9 @@
     "breakdownHeading": "内訳",
     "rankingCandidateBadge": "ランキング",
     "rankingCandidatesLoading": "ランキング候補を読み込み中です…",
-    "rankingCandidatesUnavailable": "ランキング候補は利用できません。上の検索ボタンでAPI検索をご利用いただけます。"
+    "rankingCandidatesUnavailable": "ランキング候補は利用できません。上の検索ボタンでAPI検索をご利用いただけます。",
+    "apiCandidateBadge": "API",
+    "apiUnavailableAnnouncement": "公式APIに接続できません。Lv225以上のランキング掲載キャラは上の候補から追加できます。Lv225未満のキャラはAPI復旧後に追加してください。"
   },
   "period": {
     "daily": "日間",

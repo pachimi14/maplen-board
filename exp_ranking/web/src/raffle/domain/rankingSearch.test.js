@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { mergeSearchCandidates, searchRankingCharacters } from "./rankingSearch.js";
+import { createRaffleSource } from "../integrations/raffleSource.js";
 
 // Synthesizes a ranking payload the same shape/scale as the real
 // data/v2/rankings.json (8,428 CHAR-format rows, IMPL_PLAN §0), so the
@@ -134,5 +135,60 @@ describe("mergeSearchCandidates", () => {
   it("handles non-array/empty input gracefully", () => {
     expect(mergeSearchCandidates(null, null)).toEqual([]);
     expect(mergeSearchCandidates(undefined, undefined)).toEqual([]);
+  });
+});
+
+// S2 (IMPL_PLAN §3 criteria 2/3): the ranking-first candidate path is a
+// pure, synchronous computation over already-fetched board data. It never
+// calls fetch, and it keeps working exactly the same whether the official
+// raffle API (raffleSource) is healthy or completely down -- these two
+// tests pin that structural guarantee directly, rather than trusting it by
+// inspection, using the same fetchImpl-spy technique as
+// integrations/raffleSource.test.js.
+describe("S2: ranking-candidate flow never touches the network and is independent of official-API failures", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("never calls fetch while building ranking candidates (criterion 2: fetch calls == 0)", () => {
+    const fetchSpy = vi.fn(() => {
+      throw new Error("searchRankingCharacters must never call fetch");
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const characters = [
+      { rank: 1, name: "Lumi", job: "Bishop", level: 240, worldId: "Ain", imageUrl: "", characterAssetKey: "CHARfixtureexactlumi" },
+    ];
+    const candidates = searchRankingCharacters(characters, "Lumi", { limit: 10 });
+
+    expect(candidates).toHaveLength(1);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("keeps producing addable ranking candidates after the official-API search has failed (criterion 3-②)", async () => {
+    let apiFetchCalls = 0;
+    const source = createRaffleSource({
+      baseUrl: "https://example.test",
+      fetchImpl: async () => {
+        apiFetchCalls += 1;
+        throw new Error("network down");
+      },
+    });
+
+    const apiResult = await source.searchCharacters("Someone");
+    expect(apiResult.ok).toBe(false);
+    expect(apiFetchCalls).toBe(1);
+
+    // The ranking path is unaffected by (and does not add to) the API
+    // failure above: it still returns candidates, and it does so without
+    // any further fetch call.
+    const characters = [
+      { rank: 1, name: "Lumi", job: "Bishop", level: 240, worldId: "Ain", imageUrl: "", characterAssetKey: "CHARfixtureexactlumi" },
+    ];
+    const rankingCandidates = searchRankingCharacters(characters, "Lumi", { limit: 10 });
+    expect(rankingCandidates).toEqual([
+      { assetKey: "CHARfixtureexactlumi", displayName: "Lumi", level: 240, jobName: "Bishop", worldId: "Ain", imageUrl: "", source: "ranking" },
+    ]);
+    expect(apiFetchCalls).toBe(1); // unchanged: the ranking path added zero network calls
   });
 });

@@ -178,7 +178,9 @@
     "breakdownHeading": "明細",
     "rankingCandidateBadge": "排名",
     "rankingCandidatesLoading": "排名候選名單載入中…",
-    "rankingCandidatesUnavailable": "目前無法顯示排名候選名單。你仍可使用上方的 API 搜尋按鈕。"
+    "rankingCandidatesUnavailable": "目前無法顯示排名候選名單。你仍可使用上方的 API 搜尋按鈕。",
+    "apiCandidateBadge": "API",
+    "apiUnavailableAnnouncement": "無法連線到官方 API。等級 225 以上、已列入排名的角色仍可從上方候選名單新增；等級 225 以下的角色請待 API 恢復後再新增。"
   },
   "period": {
     "daily": "日",
