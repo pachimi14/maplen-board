@@ -1,21 +1,11 @@
 import { useTranslation } from "../i18n/I18nContext.jsx";
-import { bossMonogram, formatAscendantTierTitle, formatRaffleTimestamp, formatRewardQuantity, groupRaffleResultsForDisplay, groupWonRewards, sortAscendantResultsByTier, splitLayerLabel, summarizeRaffleResults } from "./domain/resultDisplay.js";
-
-const CLASSIFICATION_LABELS = Object.freeze({
-  NESO: "NESO",
-  POWER_CRYSTAL: "Power Crystal",
-  COIN: "Coin",
-  EQUIPMENT: "Equipment",
-  ASCENDANT_NESO: "Ascendant NESO",
-  OTHER: "Other",
-  UNKNOWN: "Unknown",
-});
+import { bossMonogram, formatAscendantTierTitle, formatRaffleTimestamp, formatRewardQuantity, groupRaffleResultsForDisplay, groupWonRewards, rewardClassificationLabel, sortAscendantResultsByTier, splitLayerLabel, summarizeRaffleResults } from "./domain/resultDisplay.js";
 
 function RewardIcon({ reward }) {
   if (reward.iconUrl) {
     return <img className="raffle-reward-icon-image" src={reward.iconUrl} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" />;
   }
-  const fallback = reward.classification === "POWER_CRYSTAL" ? "PC" : reward.classification === "NESO" ? "N" : reward.classification === "COIN" ? "C" : reward.classification === "EQUIPMENT" ? "EQ" : "•";
+  const fallback = reward.classification === "POWER_CRYSTAL" ? "PC" : reward.classification === "NESO" ? "N" : reward.classification === "COIN" ? "C" : reward.classification === "EQUIPMENT" ? "EQ" : reward.classification === "FT_ITEM" ? "FT" : "•";
   return <span className="raffle-reward-icon-fallback" aria-hidden="true">{fallback}</span>;
 }
 
@@ -28,7 +18,7 @@ function RewardGrid({ result }) {
           <span className="raffle-reward-icon"><RewardIcon reward={reward} /></span>
           <span className="raffle-reward-copy">
             <span className="raffle-reward-name">{reward.rewardName}</span>
-            <span className={`raffle-reward-kind raffle-reward-kind-${reward.classification.toLocaleLowerCase()}`}>{CLASSIFICATION_LABELS[reward.classification] || reward.classification}</span>
+            <span className={`raffle-reward-kind raffle-reward-kind-${reward.classification.toLocaleLowerCase()}`}>{rewardClassificationLabel(reward.classification)}</span>
           </span>
           <strong className="raffle-reward-quantity"><span aria-hidden="true">×</span> {formatRewardQuantity(reward.quantity)}</strong>
         </li>
