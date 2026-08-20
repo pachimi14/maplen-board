@@ -530,9 +530,14 @@ describe("buildSettlementShareModel Other Sales column (LULU-119 follow-up)", ()
   });
 
   it("omits the otherSales column entirely when neither equipment nor ftItem is included", () => {
+    // otherSalesCalculation() has no COIN drops, so coin would also be
+    // hidden by G3's all-zero rule (tested separately below) -- this test
+    // stays focused on the otherSales omission itself.
     const include = { coin: true, equipment: false, ftItem: false, bossNeso: false, powerCrystal: false, ascendantNeso: false };
     const model = buildSettlementShareModel(otherSalesCalculation(include), memberMap, include, "1", t);
-    expect(model.memberCategoryColumns.map((column) => column.key)).toEqual(["coin"]);
+    expect(model.memberCategoryColumns.map((column) => column.key)).not.toContain("otherSales");
+    expect(model.memberCategoryColumns.map((column) => column.key)).not.toContain("equipment");
+    expect(model.memberCategoryColumns.map((column) => column.key)).not.toContain("ftItem");
   });
 
   it("shows a dimmed 0 (not the coin/equipment quantity style) for a member with no other-sales drops", () => {
@@ -544,15 +549,17 @@ describe("buildSettlementShareModel Other Sales column (LULU-119 follow-up)", ()
   });
 });
 
-// LULU-119 follow-up round 2 (user adjustment A): the standalone
-// next-carryover block is retired again -- next carryover is back as the
-// member table's rightmost column, shown for every member (including "0"
-// for members with nothing carried, since it's a table row now, not a
-// filtered list). Previous carryover stays hidden (not restored). Same
-// value/sign as the on-screen carryover badge (SettlementResult.jsx) via the
-// shared signedNeso helper -- never recomputed independently, so the two can
-// never disagree.
-describe("buildSettlementShareModel next-carryover column (LULU-119 follow-up round 2)", () => {
+// LULU-119 follow-up round 3 (user adjustments G2/G3): previous carryover
+// is restored as the member table's 2nd column (right after the member
+// name); next carryover stays the rightmost column (round 2). Every member
+// gets a row value for both (including "0 NESO" for a settled member --
+// it's a table row, not a filtered list), with the same value/sign as the
+// on-screen carryover badge (SettlementResult.jsx) via the shared
+// signedNeso helper. Column *visibility* is additionally gated by G3's
+// all-zero rule: both carryover columns are hidden together when every
+// member's previousCarryover AND nextCarryover are 0 (or carryoverEnabled
+// is false, unchanged prior behavior).
+describe("buildSettlementShareModel previous/next-carryover columns (LULU-119 follow-up round 3)", () => {
   function carryoverCalculation(previousCarryoverByMemberId) {
     const result = calculateSettlement({
       boss: "LUCID",
@@ -573,63 +580,265 @@ describe("buildSettlementShareModel next-carryover column (LULU-119 follow-up ro
     return result;
   }
 
-  it("does not add a previousCarryover column/field anywhere (stays hidden)", () => {
+  it("gives every member row both previousCarryover and nextCarryover values, with the same value/sign as the shared signedNeso helper", () => {
     const calculation = carryoverCalculation({ a: "-50", b: "50" });
     const model = buildSettlementShareModel(calculation, memberMap, { bossNeso: true }, "1", t);
-    expect(model.memberCategoryColumns.map((column) => column.key)).not.toContain("previousCarryover");
-    for (const row of model.memberRows) {
-      expect(row).not.toHaveProperty("previousCarryover");
-    }
-  });
-
-  it("marks carryoverEnabled and gives every member row a nextCarryover value, with the same value/sign as the shared signedNeso helper", () => {
-    const calculation = carryoverCalculation({ a: "-50", b: "50" });
-    const model = buildSettlementShareModel(calculation, memberMap, { bossNeso: true }, "1", t);
-    expect(model.carryoverEnabled).toBe(true);
+    expect(model.showCarryoverColumns).toBe(true);
+    expect(model.previousCarryoverColumnLabel).toBe(t("raffle.previousCarryover"));
     expect(model.nextCarryoverColumnLabel).toBe(t("raffle.nextCarryover"));
     expect(model.memberRows).toHaveLength(calculation.members.length);
     for (const member of calculation.members) {
       const row = model.memberRows.find((entry) => entry.memberId === member.memberId);
+      expect(row.previousCarryover).toBe(signedNeso(member.previousCarryover));
       expect(row.nextCarryover).toBe(signedNeso(member.nextCarryover));
     }
   });
 
-  it("shows a member row with nextCarryover \"0 NESO\" (not omitted) when their next carryover settled to exactly 0", () => {
-    // Balanced two-member party with equal previous carryovers cancels out
-    // to next carryover 0 for both -- both must still appear as table rows.
-    const calculation = carryoverCalculation({ a: "0", b: "0" });
-    const model = buildSettlementShareModel(calculation, memberMap, { bossNeso: true }, "1", t);
-    for (const member of calculation.members) expect(member.nextCarryover).toBe("0");
-    expect(model.memberRows).toHaveLength(2);
-    for (const row of model.memberRows) expect(row.nextCarryover).toBe(signedNeso("0"));
-  });
-
-  it("has carryoverEnabled false and null nextCarryover on every row when carryover is not enabled", () => {
+  it("shows showCarryoverColumns=false and null previous/nextCarryover on every row when carryover is not enabled", () => {
     const calculation = compositeCalculation();
     const model = buildSettlementShareModel(calculation, memberMap, include, "1.2", t);
-    expect(model.carryoverEnabled).toBe(false);
-    for (const row of model.memberRows) expect(row.nextCarryover).toBeNull();
+    expect(model.showCarryoverColumns).toBe(false);
+    for (const row of model.memberRows) {
+      expect(row.previousCarryover).toBeNull();
+      expect(row.nextCarryover).toBeNull();
+    }
   });
 
-  it("draws a nextCarryover column (header + every member's value, including 0) only when carryoverEnabled, at a single fixed x per row set", () => {
+  // G3 (user explicit instruction): both carryover columns are hidden
+  // together -- not independently -- when every member's previousCarryover
+  // AND nextCarryover are both 0, even though carryoverEnabled is true.
+  it("hides both carryover columns when carryoverEnabled is true but every member's previous AND next carryover are 0", () => {
+    // Balanced two-member party with 0 previous carryovers cancels out to
+    // next carryover 0 for both too.
+    const calculation = carryoverCalculation({ a: "0", b: "0" });
+    for (const member of calculation.members) {
+      expect(member.previousCarryover).toBe("0");
+      expect(member.nextCarryover).toBe("0");
+    }
+    const model = buildSettlementShareModel(calculation, memberMap, { bossNeso: true }, "1", t);
+    expect(model.showCarryoverColumns).toBe(false);
+    // Row values are still populated (just not drawn as columns).
+    for (const row of model.memberRows) {
+      expect(row.previousCarryover).toBe(signedNeso("0"));
+      expect(row.nextCarryover).toBe(signedNeso("0"));
+    }
+  });
+
+  it("keeps showCarryoverColumns=true when only one of previous/next carryover has a non-zero member", () => {
+    // previousCarryover is unbalanced (non-zero) even though this round's
+    // settlement might bring nextCarryover back to 0 for everyone, or vice
+    // versa -- either non-zero field is enough to keep both columns shown.
+    const calculation = carryoverCalculation({ a: "-50", b: "50" });
+    const anyPreviousNonZero = calculation.members.some((member) => member.previousCarryover !== "0");
+    const anyNextNonZero = calculation.members.some((member) => member.nextCarryover !== "0");
+    expect(anyPreviousNonZero || anyNextNonZero).toBe(true);
+    const model = buildSettlementShareModel(calculation, memberMap, { bossNeso: true }, "1", t);
+    expect(model.showCarryoverColumns).toBe(true);
+  });
+
+  it("draws both carryover columns (header + every member's value, including 0) only when showCarryoverColumns is true, each at a single fixed x per row set", () => {
     const withCarryover = carryoverCalculation({ a: "-50", b: "50" });
     const modelWithCarryover = buildSettlementShareModel(withCarryover, memberMap, { bossNeso: true }, "1", t);
     const fillTextCalls = [];
     const ctx = { fillStyle: "", strokeStyle: "", lineWidth: 0, font: "", textAlign: "left", fillRect: () => {}, strokeRect: () => {}, fillText: (text, x, y) => fillTextCalls.push({ text, x, y }) };
 
     expect(() => drawSettlementShareImage(ctx, modelWithCarryover)).not.toThrow();
+    expect(fillTextCalls.some((call) => call.text === modelWithCarryover.previousCarryoverColumnLabel)).toBe(true);
     expect(fillTextCalls.some((call) => call.text === modelWithCarryover.nextCarryoverColumnLabel)).toBe(true);
-    const carryoverXs = new Set(
+    const previousXs = new Set(
+      fillTextCalls.filter((call) => modelWithCarryover.memberRows.some((row) => row.previousCarryover === call.text)).map((call) => call.x),
+    );
+    expect(previousXs.size).toBe(1);
+    const nextXs = new Set(
       fillTextCalls.filter((call) => modelWithCarryover.memberRows.some((row) => row.nextCarryover === call.text)).map((call) => call.x),
     );
-    expect(carryoverXs.size).toBe(1);
+    expect(nextXs.size).toBe(1);
 
     const withoutCarryover = compositeCalculation();
     const modelWithoutCarryover = buildSettlementShareModel(withoutCarryover, memberMap, include, "1.2", t);
     const noCarryoverFillTextCalls = [];
     const noCarryoverCtx = { fillStyle: "", strokeStyle: "", lineWidth: 0, font: "", textAlign: "left", fillRect: () => {}, strokeRect: () => {}, fillText: (text, x, y) => noCarryoverFillTextCalls.push({ text, x, y }) };
     drawSettlementShareImage(noCarryoverCtx, modelWithoutCarryover);
+    expect(noCarryoverFillTextCalls.some((call) => call.text === modelWithoutCarryover.previousCarryoverColumnLabel)).toBe(false);
     expect(noCarryoverFillTextCalls.some((call) => call.text === modelWithoutCarryover.nextCarryoverColumnLabel)).toBe(false);
+  });
+
+  it("orders member-table columns as member / previousCarryover / categories / gross / settlement / nextCarryover (G2 column order)", () => {
+    const calculation = carryoverCalculation({ a: "-50", b: "50" });
+    const model = buildSettlementShareModel(calculation, memberMap, { bossNeso: true }, "1", t);
+    const { ctx, fillTextCalls } = makeMeasuringMockCtx();
+
+    drawSettlementShareImage(ctx, model);
+
+    const expectedLabelsInOrder = [
+      model.memberColumnLabel,
+      model.previousCarryoverColumnLabel,
+      ...model.memberCategoryColumns.map((column) => column.label),
+      model.grossColumnLabel,
+      model.settlementColumnLabel,
+      model.nextCarryoverColumnLabel,
+    ];
+    const labelXs = expectedLabelsInOrder.map((label) => {
+      const call = fillTextCalls.find((entry) => entry.text === label);
+      expect(call).toBeTruthy();
+      return call.x;
+    });
+    for (let index = 1; index < labelXs.length; index += 1) {
+      expect(labelXs[index]).toBeGreaterThan(labelXs[index - 1]);
+    }
+  });
+});
+
+// G3/LULU-119 follow-up round 3 (user explicit instruction): coin and
+// otherSales columns are each independently hidden from the *image* when
+// every member's relevant sale-proceeds field is 0 -- SettlementResult.jsx
+// (the browser screen) is completely unaffected and keeps showing every
+// included category regardless of zero values (verified by its zero diff).
+describe("buildSettlementShareModel all-zero column hiding (G3, LULU-119 follow-up round 3)", () => {
+  function coinCalculation(saleNesoByDropId) {
+    const result = calculateSettlement({
+      boss: "LUCID",
+      complete: true,
+      historyMemberIds: ["a"],
+      partyOrder: ["a", "b"],
+      include: { coin: true, equipment: false, ftItem: false, bossNeso: true, powerCrystal: false, ascendantNeso: false },
+      powerCrystalNesoRate: "1",
+      saleNesoByDropId,
+      members: [
+        { memberId: "a", bossNeso: "50", powerCrystalAmount: "0", ascendantNeso: "0", drops: [{ dropId: "coin1", category: "COIN", name: "Coin", quantity: "10" }] },
+        { memberId: "b", bossNeso: "0", powerCrystalAmount: "0", ascendantNeso: "0", drops: [] },
+      ],
+    });
+    expect(result.ok).toBe(true);
+    return result;
+  }
+
+  it("hides the coin column entirely (quantity display included) when every member's coinSaleNeso is 0, even though coin quantity is non-zero", () => {
+    // G1 follow-up interaction: an unfilled sale price now computes as 0
+    // (not an error) -- this is exactly the case where coinSaleNeso ends up
+    // 0 despite winning 10 coins, so the column disappears from the image.
+    const calculation = coinCalculation({});
+    expect(calculation.categoryTotals.coinQuantity).toBe("10");
+    expect(calculation.categoryTotals.coinSaleNeso).toBe("0");
+    const include = { coin: true, equipment: false, ftItem: false, bossNeso: true, powerCrystal: false, ascendantNeso: false };
+    const model = buildSettlementShareModel(calculation, memberMap, include, "1", t);
+    expect(model.memberCategoryColumns.map((column) => column.key)).not.toContain("coin");
+  });
+
+  it("shows the coin column when at least one member has non-zero coinSaleNeso", () => {
+    const calculation = coinCalculation({ coin1: "100" });
+    expect(calculation.categoryTotals.coinSaleNeso).not.toBe("0");
+    const include = { coin: true, equipment: false, ftItem: false, bossNeso: true, powerCrystal: false, ascendantNeso: false };
+    const model = buildSettlementShareModel(calculation, memberMap, include, "1", t);
+    expect(model.memberCategoryColumns.map((column) => column.key)).toContain("coin");
+  });
+
+  function otherSalesCalculation(saleNesoByDropId) {
+    const result = calculateSettlement({
+      boss: "WILL",
+      complete: true,
+      historyMemberIds: ["a"],
+      partyOrder: ["a", "b"],
+      include: { coin: false, equipment: true, ftItem: true, bossNeso: true, powerCrystal: false, ascendantNeso: false },
+      powerCrystalNesoRate: "1",
+      saleNesoByDropId,
+      members: [
+        {
+          memberId: "a",
+          bossNeso: "50",
+          powerCrystalAmount: "0",
+          ascendantNeso: "0",
+          drops: [
+            { dropId: "equip1", category: "EQUIPMENT", name: "Gear", quantity: "1" },
+            { dropId: "ft1", category: "FT_ITEM", name: "Sealed Mirror World Nodestone", quantity: "1" },
+          ],
+        },
+        { memberId: "b", bossNeso: "0", powerCrystalAmount: "0", ascendantNeso: "0", drops: [] },
+      ],
+    });
+    expect(result.ok).toBe(true);
+    return result;
+  }
+
+  it("hides the otherSales column when every member's combined equipment+FT Item proceeds are 0", () => {
+    const calculation = otherSalesCalculation({});
+    expect(calculation.categoryTotals.equipmentSaleNeso).toBe("0");
+    expect(calculation.categoryTotals.ftItemSaleNeso).toBe("0");
+    const include = { coin: false, equipment: true, ftItem: true, bossNeso: true, powerCrystal: false, ascendantNeso: false };
+    const model = buildSettlementShareModel(calculation, memberMap, include, "1", t);
+    expect(model.memberCategoryColumns.map((column) => column.key)).not.toContain("otherSales");
+  });
+
+  it("shows the otherSales column when at least one member has non-zero combined proceeds", () => {
+    const calculation = otherSalesCalculation({ equip1: "1000" });
+    const include = { coin: false, equipment: true, ftItem: true, bossNeso: true, powerCrystal: false, ascendantNeso: false };
+    const model = buildSettlementShareModel(calculation, memberMap, include, "1", t);
+    expect(model.memberCategoryColumns.map((column) => column.key)).toContain("otherSales");
+  });
+
+  it("keeps bossNeso/powerCrystal/ascendantNeso columns visible even when all-zero (G3 only names coin/otherSales/carryover)", () => {
+    const calculation = coinCalculation({});
+    const include = { coin: true, equipment: false, ftItem: false, bossNeso: true, powerCrystal: true, ascendantNeso: true };
+    const model = buildSettlementShareModel(calculation, memberMap, include, "1", t);
+    expect(model.memberCategoryColumns.map((column) => column.key)).toEqual(expect.arrayContaining(["bossNeso", "powerCrystal", "ascendantNeso"]));
+  });
+
+  it("does not draw any coin/otherSales fillText content when both columns are hidden -- and the canvas shrinks accordingly", () => {
+    const calculation = coinCalculation({});
+    const include = { coin: true, equipment: false, ftItem: false, bossNeso: true, powerCrystal: false, ascendantNeso: false };
+    const model = buildSettlementShareModel(calculation, memberMap, include, "1", t);
+    expect(model.memberCategoryColumns.map((column) => column.key)).toEqual(["bossNeso"]);
+    const { ctx, fillTextCalls } = makeMeasuringMockCtx();
+
+    const size = drawSettlementShareImage(ctx, model);
+
+    assertNoOverlapWithinAnyRow(fillTextCalls);
+    expect(fillTextCalls.some((call) => call.text === t("raffle.item_coin"))).toBe(false);
+    expect(size.width).toBe(SHARE_IMAGE_WIDTH);
+  });
+
+  // Minimal configuration for the report requested alongside the maximal
+  // one: all 6 categories + carryover included/enabled, but coin/otherSales/
+  // carryover all end up 0 for every one of the 6 members (no drops won, no
+  // previous carryover imbalance) -- all 3 G3 rules fire simultaneously,
+  // leaving only member/bossNeso/powerCrystal/ascendantNeso/gross/settlement
+  // (6 columns) in the image.
+  it("shrinks to a 6-column member table (bossNeso/powerCrystal/ascendantNeso survive; coin/otherSales/carryover all hidden) when everything nets to 0 for all 6 members, and reports the measured width", () => {
+    const memberIds = ["a", "b", "c", "d", "e", "f"];
+    const zeroMemberMap = Object.fromEntries(memberIds.map((memberId, index) => [memberId, { displayName: `Member${index + 1}` }]));
+    const calculation = calculateSettlement({
+      boss: "WILL",
+      complete: true,
+      historyMemberIds: memberIds,
+      partyOrder: memberIds,
+      include: { bossNeso: true, powerCrystal: true, ascendantNeso: true, coin: true, equipment: true, ftItem: true },
+      powerCrystalNesoRate: "1.1",
+      carryoverEnabled: true,
+      previousCarryoverByMemberId: Object.fromEntries(memberIds.map((memberId) => [memberId, "0"])),
+      saleNesoByDropId: {},
+      members: memberIds.map((memberId) => ({ memberId, bossNeso: "0", powerCrystalAmount: "0", ascendantNeso: "0", drops: [] })),
+    });
+    expect(calculation.ok).toBe(true);
+    expect(calculation.categoryTotals.coinSaleNeso).toBe("0");
+    expect(calculation.categoryTotals.equipmentSaleNeso).toBe("0");
+    expect(calculation.categoryTotals.ftItemSaleNeso).toBe("0");
+    for (const member of calculation.members) {
+      expect(member.previousCarryover).toBe("0");
+      expect(member.nextCarryover).toBe("0");
+    }
+    const include6 = { bossNeso: true, powerCrystal: true, ascendantNeso: true, coin: true, equipment: true, ftItem: true };
+    const model = buildSettlementShareModel(calculation, zeroMemberMap, include6, "1.1", t);
+    expect(model.memberCategoryColumns.map((column) => column.key)).toEqual(["bossNeso", "powerCrystal", "ascendantNeso"]);
+    expect(model.showCarryoverColumns).toBe(false);
+    const { ctx, fillTextCalls } = makeMeasuringMockCtx();
+
+    const size = drawSettlementShareImage(ctx, model);
+
+    assertNoOverlapWithinAnyRow(fillTextCalls);
+    // Pinned measured value (LULU-119 follow-up round 3): 6 member-table
+    // columns (member/bossNeso/powerCrystal/ascendantNeso/gross/settlement)
+    // comfortably fit within the default 1200px canvas.
+    expect(size.width).toBe(SHARE_IMAGE_WIDTH);
   });
 });
 
@@ -841,26 +1050,28 @@ describe("member table column widths never overlap (R2/LULU-119, updated for the
     expect(size.width).toBe(SHARE_IMAGE_WIDTH);
   });
 
-  it("\u2462 maximal configuration (all categories incl. FT Item + carryover enabled -> 9 member-table columns, 6 members) draws with no overlapping cells", () => {
+  it("\u2462 maximal configuration (all categories incl. FT Item + both carryover columns -> 10 member-table columns, 6 members) draws with no overlapping cells", () => {
     const calculation = maxCalculation();
     const include6 = { bossNeso: true, powerCrystal: true, ascendantNeso: true, coin: true, equipment: true, ftItem: true };
     const model = buildSettlementShareModel(calculation, maxMemberMap, include6, "1.1", t);
     // otherSales collapses equipment+ftItem: 5 category columns, not 6.
     expect(model.memberCategoryColumns.map((column) => column.key)).toEqual(["bossNeso", "powerCrystal", "ascendantNeso", "coin", "otherSales"]);
-    // LULU-119 follow-up round 2: next carryover is back as the member
-    // table's rightmost (9th) column -- member "b" (Power-Crystal-only) has
-    // a non-zero next carryover in this fixture, covering its overlap-safety.
-    expect(model.carryoverEnabled).toBe(true);
+    // LULU-119 follow-up round 3: previous carryover (2nd column) + next
+    // carryover (rightmost column) are both shown -- member "b"
+    // (Power-Crystal-only) has a non-zero next carryover in this fixture, so
+    // G3's all-zero hide rule does not apply, covering both columns'
+    // overlap-safety even though every member's previousCarryover is 0 here.
+    expect(model.showCarryoverColumns).toBe(true);
     expect(model.memberRows.some((row) => row.nextCarryover !== signedNeso("0"))).toBe(true);
     const { ctx, fillTextCalls } = makeMeasuringMockCtx();
 
     const size = drawSettlementShareImage(ctx, model);
 
     assertNoOverlapWithinAnyRow(fillTextCalls);
-    // With carryover restored as a 9th member-table column, this realistic
-    // maximal configuration grows past the default 1200px (the user
-    // explicitly accepted automatic growth for this case) -- see the
-    // "reports the actual canvas width" test below for the pinned number.
+    // With both carryover columns restored (10 member-table columns total),
+    // this realistic maximal configuration grows past the default 1200px
+    // (the user explicitly accepted automatic growth for this case) -- see
+    // the "reports the actual canvas width" test below for the pinned number.
     expect(size.width).toBeGreaterThanOrEqual(SHARE_IMAGE_WIDTH);
     // Every primary settlement figure is still drawn in full (no
     // truncation/rounding of money).
@@ -880,11 +1091,12 @@ describe("member table column widths never overlap (R2/LULU-119, updated for the
 
     const size = drawSettlementShareImage(ctx, model);
 
-    // Pinned measured value (LULU-119 follow-up round 2): 9 member-table
-    // columns (member/bossNeso/powerCrystal/ascendantNeso/coin/otherSales/
-    // gross/settlement/nextCarryover) need more than the default 1200px;
-    // still comfortably within the SHARE_IMAGE_MAX_WIDTH guideline.
-    expect(size.width).toBe(1288);
+    // Pinned measured value (LULU-119 follow-up round 3): 10 member-table
+    // columns (member/previousCarryover/bossNeso/powerCrystal/ascendantNeso/
+    // coin/otherSales/gross/settlement/nextCarryover) need more than the
+    // default 1200px; still comfortably within the SHARE_IMAGE_MAX_WIDTH
+    // guideline.
+    expect(size.width).toBe(1420);
     expect(size.width).toBeGreaterThan(SHARE_IMAGE_WIDTH);
     expect(size.width).toBeLessThanOrEqual(SHARE_IMAGE_MAX_WIDTH);
   });

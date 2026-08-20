@@ -170,26 +170,47 @@ export function buildSettlementShareModel(calculation, memberMap, include, power
     });
   }
 
+  // G3/LULU-119 follow-up round 3 (user explicit instruction): a column
+  // that is all-zero across every member is dropped from the image
+  // entirely -- each rule below is independent of the others.
+  //   - coin: hidden when every member's coinSaleNeso is 0 (quantity
+  //     display included -- the whole column goes, not just the amount).
+  //   - otherSales: hidden when every member's combined equipment+FT Item
+  //     sale proceeds are 0.
+  //   - carryover (both previous AND next together): hidden when
+  //     carryoverEnabled is false (unchanged prior behavior) OR when every
+  //     member's previousCarryover AND nextCarryover are both 0.
+  const showCoinColumn = calculation.members.some((member) => member.coinSaleNeso !== "0");
+  const hasOtherSales = Boolean(include?.equipment || include?.ftItem);
+  const showOtherSalesColumn = hasOtherSales && calculation.members.some((member) =>
+    BigInt(member.equipmentSaleNeso || "0") + BigInt(member.ftItemSaleNeso || "0") !== 0n);
+  const showCarryoverColumns = calculation.carryoverEnabled === true
+    && calculation.members.some((member) => member.previousCarryover !== "0" || member.nextCarryover !== "0");
+
   // C4: same active-category-column set as the on-screen member table
   // (settlementCategoryColumns), with the Power Crystal "non-transferable"
   // sub-note carried alongside its column header -- except "equipment"/
   // "ftItem" are collapsed into one "Other Sales" column (see
-  // otherSalesCell() above) when either is included.
-  const hasOtherSales = Boolean(include?.equipment || include?.ftItem);
+  // otherSalesCell() above) when either is included, and "coin"/"otherSales"
+  // are dropped entirely when all-zero (G3, see showCoinColumn/
+  // showOtherSalesColumn above). This does NOT change SettlementResult.jsx
+  // (untouched, still shows every category regardless of zero values).
   const memberCategoryColumns = settlementCategoryColumns(include, t)
     .filter((column) => column.key !== "equipment" && column.key !== "ftItem")
+    .filter((column) => column.key !== "coin" || showCoinColumn)
     .map((column) => ({ ...column, note: column.key === "powerCrystal" ? t("raffle.powerCrystalNonTransferable") : null }));
-  if (hasOtherSales) {
+  if (showOtherSalesColumn) {
     memberCategoryColumns.push({ key: OTHER_SALES_KEY, label: t("raffle.otherSales"), note: null });
   }
 
-  // LULU-119 follow-up round 2 (user adjustment A): the standalone
-  // next-carryover block below the transfer table is retired again --
-  // next carryover is back as the member table's rightmost column instead,
-  // shown for every member (including "0" for members with nothing carried,
-  // since it's a table row now, not a filtered list). Previous carryover
-  // stays hidden (not restored). Same value/sign as the on-screen carryover
-  // badge, via the shared signedNeso helper, so the two can never disagree.
+  // G2/LULU-119 follow-up round 3 (user adjustment): previous carryover is
+  // back too, as the 2nd member-table column (right after the member name);
+  // next carryover stays the rightmost column (round 2). Both use the same
+  // value/sign as the on-screen carryover badge, via the shared signedNeso
+  // helper, so the two can never disagree. Column *visibility* is gated by
+  // showCarryoverColumns (G3, above) rather than calculation.carryoverEnabled
+  // directly, but the row *value* is still populated whenever carryover is
+  // enabled at all (independent of whether the column ends up drawn).
   const memberRows = calculation.members.map((member) => {
     const settlement = describeMemberSettlement(member, { t, carryoverEnabled: calculation.carryoverEnabled });
     return {
@@ -202,6 +223,7 @@ export function buildSettlementShareModel(calculation, memberMap, include, power
       settlementKind: settlement.kind,
       settlementLabel: settlement.label,
       settlementAmount: settlement.amount != null ? neso(settlement.amount) : null,
+      previousCarryover: calculation.carryoverEnabled ? signedNeso(member.previousCarryover) : null,
       nextCarryover: calculation.carryoverEnabled ? signedNeso(member.nextCarryover) : null,
     };
   });
@@ -223,10 +245,11 @@ export function buildSettlementShareModel(calculation, memberMap, include, power
     memberColumnLabel: t("raffle.member"),
     grossColumnLabel: t("raffle.grossWon"),
     settlementColumnLabel: t("raffle.settlement"),
-    // LULU-119 follow-up round 2: the next-carryover column is only added to
-    // the member table layout when the party has carryover enabled,
-    // matching the on-screen member table's gating rule.
-    carryoverEnabled: calculation.carryoverEnabled === true,
+    // G3: the previous/next-carryover columns are only added to the member
+    // table layout when showCarryoverColumns is true (carryoverEnabled AND
+    // not all-zero) -- see measureMemberTableLayout()/buildMemberTableColumns().
+    showCarryoverColumns,
+    previousCarryoverColumnLabel: t("raffle.previousCarryover"),
     nextCarryoverColumnLabel: t("raffle.nextCarryover"),
     memberCategoryColumns,
     memberRows,
@@ -341,12 +364,19 @@ function measureMemberTableLayout(ctx, model) {
       ], CELL_PADDING * 2 + SETTLEMENT_PILL_EXTRA_WIDTH),
     );
 
-    const carryoverWidth = model.carryoverEnabled
+    // G2/G3: previous + next carryover share one measured width (both
+    // columns are only added when showCarryoverColumns is true -- see
+    // buildSettlementShareModel()).
+    const carryoverWidth = model.showCarryoverColumns
       ? Math.max(
           MEMBER_CARRYOVER_COL_WIDTH,
           requiredWidth(measure, [
+            { text: model.previousCarryoverColumnLabel, font: categoryPrimaryFont() },
             { text: model.nextCarryoverColumnLabel, font: categoryPrimaryFont() },
-            ...model.memberRows.map((row) => ({ text: row.nextCarryover, font: categoryPrimaryFont() })),
+            ...model.memberRows.flatMap((row) => [
+              { text: row.previousCarryover, font: categoryPrimaryFont() },
+              { text: row.nextCarryover, font: categoryPrimaryFont() },
+            ]),
           ], CELL_PADDING * 2),
         )
       : 0;
@@ -364,7 +394,9 @@ function measureMemberTableLayout(ctx, model) {
     });
 
     const categoryTotal = categoryWidths.reduce((sum, width) => sum + width, 0);
-    const requiredTotal = nameWidth + categoryTotal + grossWidth + settlementWidth + carryoverWidth;
+    // Two carryover columns (previous + next) when shown.
+    const carryoverTotal = model.showCarryoverColumns ? carryoverWidth * 2 : 0;
+    const requiredTotal = nameWidth + carryoverTotal + categoryTotal + grossWidth + settlementWidth;
 
     return { nameWidth, grossWidth, settlementWidth, carryoverWidth, categoryWidths, requiredTotal };
   }
@@ -391,18 +423,25 @@ function measureMemberTableLayout(ctx, model) {
 
 /**
  * Left-to-right column layout for the member table (C4): member name (fixed)
- * / one column per active category / gross / settlement / next carryover
- * (LULU-119 follow-up round 2: back as the rightmost column, only when
- * carryoverEnabled -- previous carryover stays hidden). Order matches the
- * on-screen member table (SettlementResult.jsx). Every width comes from
- * `memberLayout` (measureMemberTableLayout()) -- real measured requirements,
- * never a fixed even split -- so columns can never overlap (R2/LULU-119).
+ * / previous carryover (G2/LULU-119 follow-up round 3: 2nd column, right
+ * after the name) / one column per active category / gross / settlement /
+ * next carryover (rightmost). Both carryover columns only appear when
+ * `model.showCarryoverColumns` is true (G3: carryoverEnabled AND not
+ * all-zero across every member -- see buildSettlementShareModel()). Order
+ * matches the on-screen member table (SettlementResult.jsx). Every width
+ * comes from `memberLayout` (measureMemberTableLayout()) -- real measured
+ * requirements, never a fixed even split -- so columns can never overlap
+ * (R2/LULU-119).
  */
 function buildMemberTableColumns(model, contentX, memberLayout) {
   const columns = [];
   let x = contentX;
   columns.push({ key: "member", label: model.memberColumnLabel, note: null, x, width: memberLayout.nameWidth, align: "left" });
   x += memberLayout.nameWidth;
+  if (model.showCarryoverColumns) {
+    columns.push({ key: "previousCarryover", label: model.previousCarryoverColumnLabel, note: null, x, width: memberLayout.carryoverWidth, align: "right" });
+    x += memberLayout.carryoverWidth;
+  }
   model.memberCategoryColumns.forEach((column, index) => {
     const width = memberLayout.categoryWidths[index];
     columns.push({ key: column.key, label: column.label, note: column.note, x, width, align: "right" });
@@ -412,7 +451,7 @@ function buildMemberTableColumns(model, contentX, memberLayout) {
   x += memberLayout.grossWidth;
   columns.push({ key: "settlement", label: model.settlementColumnLabel, note: null, x, width: memberLayout.settlementWidth, align: "right" });
   x += memberLayout.settlementWidth;
-  if (model.carryoverEnabled) {
+  if (model.showCarryoverColumns) {
     columns.push({ key: "nextCarryover", label: model.nextCarryoverColumnLabel, note: null, x, width: memberLayout.carryoverWidth, align: "right" });
   }
   return columns;
@@ -702,8 +741,9 @@ function drawMemberTableRow(ctx, columns, row, secondaryFontSize = MEMBER_CATEGO
       drawText(ctx, { text: member.gross, x: textX, y: primaryY, font: `bold 13px ${FONT_FAMILY}`, color: COLOR.heading, align: column.align });
       continue;
     }
-    if (column.key === "nextCarryover") {
-      drawText(ctx, { text: member.nextCarryover, x: textX, y: primaryY, font: `bold 12px ${FONT_FAMILY}`, color: carryoverColor(member.nextCarryover), align: column.align });
+    if (column.key === "previousCarryover" || column.key === "nextCarryover") {
+      const text = member[column.key];
+      drawText(ctx, { text, x: textX, y: primaryY, font: `bold 12px ${FONT_FAMILY}`, color: carryoverColor(text), align: column.align });
       continue;
     }
     if (column.key === "settlement") {
