@@ -22,7 +22,6 @@ import {
 // IMPL_PLAN_SH14 §2) combine with this row order to put Thu 00:00 UTC at
 // the top-left cell.
 const WEEKDAY_ORDER = [4, 5, 6, 0, 1, 2, 3];
-const LOW_N_THRESHOLD = 5; // plan §3-3: "n が少ないセルは視覚的に弱める（例 n<5）"
 
 /**
  * design/plan §3: 7 (UTC weekday) x 6 (4h slot) grid of the *median*
@@ -73,6 +72,13 @@ const LOW_N_THRESHOLD = 5; // plan §3-3: "n が少ないセルは視覚的に�
  * the top-left cell "Thu 00:00 UTC" meaning "the bucket ending at Thu
  * 00:00 UTC" (i.e. the `水 20:00–木 00:00` bucket) rather than "the bucket
  * starting at Thu 00:00 UTC".
+ *
+ * IMPL_PLAN_SH35 §1 (2026-08-21, user decision): removes the old `n < 5`
+ * dimming (`LOW_N_THRESHOLD`/`.sfh-heatmap-cell-weak`) -- SH-29's period-tab
+ * linkage above made most cells dim under a short period, which was more
+ * confusing than the low-n warning it was meant to convey. The median
+ * color-coding (`ratio`/`background` below) is untouched, still the only
+ * thing that varies a cell's shade.
  */
 export default function WeekdayHeatmap({ series }) {
   const { t, language } = useTranslation();
@@ -137,7 +143,6 @@ export default function WeekdayHeatmap({ series }) {
                 {columns.map((column) => {
                   const cell = cellByKey.get(`${weekdayIndex}-${column.bucketSlot}`);
                   const hasData = cell?.median != null;
-                  const isLowN = hasData && cell.n < LOW_N_THRESHOLD;
                   const isLowest = hasData && extremes.lowest && cell.weekdayIndex === extremes.lowest.weekdayIndex && cell.bucketSlot === extremes.lowest.bucketSlot;
                   const isHighest = hasData && extremes.highest && cell.weekdayIndex === extremes.highest.weekdayIndex && cell.bucketSlot === extremes.highest.bucketSlot;
                   // plan §3-3: "セルは中央値で色分け（安い＝冷色／高い＝暖色
@@ -158,7 +163,6 @@ export default function WeekdayHeatmap({ series }) {
                       key={column.bucketSlot}
                       className={[
                         "sfh-heatmap-cell",
-                        isLowN ? "sfh-heatmap-cell-weak" : "",
                         isLowest ? "sfh-heatmap-cell-lowest" : "",
                         isHighest ? "sfh-heatmap-cell-highest" : "",
                       ]

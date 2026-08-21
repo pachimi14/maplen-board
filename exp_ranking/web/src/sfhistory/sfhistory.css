@@ -249,7 +249,14 @@ html:not([data-theme-depth="deep"]) .sfh-conditions-list {
 /* IMPL_PLAN_SH11 §3-3: the weekday x time-of-day heatmap. Cell background
    is computed inline (per-cell `color-mix(var(--theme-focus), ...)`
    proportional to that cell's median within the grid's min/max -- these
-   rules are just the fixed grid chrome/typography around that. */
+   rules are just the fixed grid chrome/typography around that.
+
+   IMPL_PLAN_SH35 §1 (2026-08-21, user decision): the old `n < 5` dimming
+   rule (`.sfh-heatmap-cell-weak { opacity: 0.55 }`) that used to live in
+   this section is removed -- SH-29's period-tab linkage above made most
+   cells dim under a short period, more confusing than the low-n warning it
+   was meant to convey. The median color-coding this comment describes
+   above is untouched. */
 
 .sfh-heatmap-grid {
   display: grid;
@@ -326,13 +333,6 @@ html:not([data-theme-depth="deep"]) .sfh-heatmap-cell {
   font-size: 0.62rem;
   opacity: 0.75;
   line-height: 1.2;
-}
-
-/* plan §3-3: "n が少ないセルは視覚的に弱める（例 n<5）" -- dimmed, not
-   hidden: the number is still there, just visually de-emphasized so it is
-   not over-trusted. */
-.sfh-heatmap-cell-weak {
-  opacity: 0.55;
 }
 
 /* plan §3-3 / IMPL_PLAN_SH12 §2/(b): "最安セル・最高セルを視覚的に示す".
