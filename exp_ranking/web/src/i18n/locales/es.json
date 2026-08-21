@@ -614,6 +614,7 @@
       "tooltipDeltaFromAverage": "vs media del período {{delta}}",
       "tooltipBucketRange": "Barra {{start}}–{{end}}",
       "tooltipBucketRangeOpen": "Barra {{start}}–{{end}} (aún no cerrada)",
+      "filledBandLegend": "La zona sombreada marca los puntos que usaron un valor de marcador de posición en formación de precio.",
       "provisionalLegend": "El tramo discontinuo es un valor provisional del bloque de 4 horas actual, que todavía no se ha cerrado.",
       "loadError": "No se pudo cargar el historial de precios. Vuelve a intentarlo más tarde.",
       "empty": "No hay datos para mostrar"

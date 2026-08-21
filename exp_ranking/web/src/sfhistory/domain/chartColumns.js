@@ -62,3 +62,65 @@ export function withChartColumns(rows) {
     };
   });
 }
+
+/**
+ * IMPL_PLAN_SH38 §1: the x-range (in terms of `withChartColumns`'s own
+ * `displayDate` column) to shade with the "this span includes a point
+ * `domain/priceGapFill.js#fillLeadingPriceGaps` filled" background band --
+ * a THIRD, separate channel from the dashed "still-open bucket" line above
+ * (plan §0: "同じ線種に2つ目の意味を載せない" -- this never touches
+ * `isOpenPoint`/`withChartColumns`'s own confirmed/bridge split).
+ *
+ * `filledBands` is `domain/viewModel.js#buildScreenModel`'s own
+ * `[{ upgrade, untilDate }]` (already scoped to the star levels the
+ * currently selected range needs) -- this function only READS it, never
+ * recomputes what was filled (`priceGapFill.js`'s own fill logic is
+ * untouched by this plan).
+ *
+ * Every entry's fill always starts from the very FIRST point of the full
+ * (unsliced) series -- `fillLeadingPriceGaps` only ever fills a band's
+ * LEADING null run, anchored at index 0, never a mid-series gap. That is
+ * exactly why the union across every filled band is never fragmented: it
+ * is always precisely "every point strictly before `max(untilDate)`" --
+ * true by construction (each band's own filled run is `[0, firstRealIndex)`,
+ * so the union of any set of such runs is `[0, max(firstRealIndex))`),
+ * never something this function has to search for or that could land on a
+ * different result for a different item (plan §4-2's stop condition).
+ *
+ * `rows` is `withChartColumns`'s own chronologically-ascending output (or
+ * anything sharing its `{ date, displayDate }` shape) -- membership is
+ * decided from `row.date` (the same bucket-start `priceGapFill.js`'s
+ * `untilDate` values are keyed off), never `displayDate` (which may be
+ * shifted +4h per `bucketDisplayDate`'s own rule) -- `displayDate` is only
+ * read for the RETURNED `x1`/`x2`, because `ReferenceArea` needs an actual
+ * value present in the x-axis's own category domain (the same dataKey the
+ * `<XAxis>` uses), not an arbitrary date string.
+ *
+ * Returns `null` when there is nothing to shade: no filled band in view, or
+ * the fill entirely precedes the currently displayed period slice (every
+ * point onscreen is already real, plan (c): "埋めが無ければ帯を出さない").
+ */
+export function filledBandRange(rows, filledBands) {
+  if (!Array.isArray(rows) || rows.length === 0) return null;
+  if (!Array.isArray(filledBands) || filledBands.length === 0) return null;
+
+  const untilTimes = filledBands
+    .map((band) => (typeof band?.untilDate === "string" ? Date.parse(band.untilDate) : NaN))
+    .filter((time) => Number.isFinite(time));
+  if (!untilTimes.length) return null;
+  const bandEnd = Math.max(...untilTimes);
+
+  let lastFilledIndex = -1;
+  for (let i = 0; i < rows.length; i++) {
+    const time = Date.parse(rows[i]?.date);
+    if (!Number.isFinite(time)) continue;
+    if (time < bandEnd) {
+      lastFilledIndex = i;
+      continue;
+    }
+    break; // rows are chronologically ascending -- every later row is >= bandEnd too
+  }
+  if (lastFilledIndex === -1) return null;
+
+  return { x1: rows[0].displayDate, x2: rows[lastFilledIndex].displayDate };
+}

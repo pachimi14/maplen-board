@@ -294,7 +294,18 @@ export default function SfHistoryRoot() {
               ) : pricesState.status !== "ready" ? (
                 <p className="py-8 text-center text-sm text-slate-500">{t("sfhistory.loading")}</p>
               ) : (
-                <SfHistoryChart series={periodSeries} average={stats.average} />
+                // IMPL_PLAN_SH38 §1/§2: `filledBands` -- already scoped to
+                // the currently selected star range by `buildScreenModel`
+                // above (unchanged, same value `filledBandNotes` already
+                // reads) -- is now ALSO passed straight through to the
+                // chart so it can shade the matching x-range
+                // (`domain/chartColumns.js#filledBandRange`). This is the
+                // one line SfHistoryRoot.jsx needed to add for the plan's
+                // (a)/(b)/(e) acceptance criteria: no other logic in this
+                // file changes -- `filledBands` was already computed here
+                // (used by `filledBandNotes` two lines above) and was
+                // simply never threaded down to the chart before this.
+                <SfHistoryChart series={periodSeries} average={stats.average} filledBands={filledBands} />
               )}
             </div>
 

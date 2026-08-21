@@ -614,6 +614,7 @@
       "tooltipDeltaFromAverage": "期間平均との差 {{delta}}",
       "tooltipBucketRange": "{{start}}–{{end}} の足",
       "tooltipBucketRangeOpen": "{{start}}–{{end}} の足（未終了）",
+      "filledBandLegend": "網掛けの区間は、価格形成中のプレースホルダー値を使った点を示します。",
       "provisionalLegend": "破線の区間は、まだ終了していない直近の4時間足の暫定値です。",
       "loadError": "価格履歴を取得できませんでした。時間をおいて再読み込みしてください。",
       "empty": "表示できるデータがありません"
