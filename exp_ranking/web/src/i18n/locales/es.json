@@ -618,6 +618,11 @@
       "loadError": "No se pudo cargar el historial de precios. Vuelve a intentarlo más tarde.",
       "empty": "No hay datos para mostrar"
     },
+    "formingBands": {
+      "range": "☆{{start}}–{{end}}",
+      "rangeSingle": "☆{{star}}",
+      "note": "Aún en formación: {{ranges}}"
+    },
     "heatmap": {
       "title": "Día de la semana x Franja horaria",
       "axisNote": "Filas: día de la semana (UTC). Columnas: hora local ({{zone}}; UTC debajo de cada columna)",

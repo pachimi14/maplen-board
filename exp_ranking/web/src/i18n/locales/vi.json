@@ -618,6 +618,11 @@
       "loadError": "Không thể tải lịch sử giá. Vui lòng tải lại sau.",
       "empty": "Không có dữ liệu để hiển thị"
     },
+    "formingBands": {
+      "range": "☆{{start}}–{{end}}",
+      "rangeSingle": "☆{{star}}",
+      "note": "Vẫn đang hình thành giá: {{ranges}}"
+    },
     "heatmap": {
       "title": "Thứ trong tuần x Khung giờ",
       "axisNote": "Hàng: thứ trong tuần (UTC). Cột: giờ địa phương ({{zone}}; UTC hiển thị bên dưới mỗi cột)",

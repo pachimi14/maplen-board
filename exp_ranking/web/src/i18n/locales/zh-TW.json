@@ -618,6 +618,11 @@
       "loadError": "無法取得價格歷史資料，請稍後再重新整理。",
       "empty": "沒有可顯示的資料"
     },
+    "formingBands": {
+      "range": "☆{{start}}–{{end}}",
+      "rangeSingle": "☆{{star}}",
+      "note": "尚在價格形成中：{{ranges}}"
+    },
     "heatmap": {
       "title": "星期 × 時段",
       "axisNote": "列（星期）為 UTC，欄（時段）為當地時間（{{zone}}；每欄下方併列 UTC）",

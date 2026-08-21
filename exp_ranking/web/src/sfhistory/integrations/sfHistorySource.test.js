@@ -164,6 +164,35 @@ describe("normalizePricesPayload", () => {
     expect(result.points[1].asOf).toBe("2026-08-05T01:40:00Z");
     expect(result.points[0]).not.toHaveProperty("asOf"); // confirmed point never had one to begin with
   });
+
+  it("IMPL_PLAN_SH36 §3/§4: defaults formingBands to [] when the server omits it", () => {
+    const result = normalizePricesPayload(pricesPayload, 1003720);
+    expect(result.formingBands).toEqual([]);
+  });
+
+  it("IMPL_PLAN_SH36 §4: passes through well-formed formingBands entries", () => {
+    const payloadWithFormingBands = {
+      ...pricesPayload,
+      formingBands: [
+        { startStar: 1, endStar: 10 },
+        { startStar: 20, endStar: 22 },
+      ],
+    };
+    const result = normalizePricesPayload(payloadWithFormingBands, 1003720);
+    expect(result.formingBands).toEqual([
+      { startStar: 1, endStar: 10 },
+      { startStar: 20, endStar: 22 },
+    ]);
+  });
+
+  it("IMPL_PLAN_SH36 §4: drops a malformed formingBands entry rather than guessing", () => {
+    const payloadWithMalformedFormingBands = {
+      ...pricesPayload,
+      formingBands: [{ startStar: 1, endStar: 10 }, { startStar: "x", endStar: 5 }, null],
+    };
+    const result = normalizePricesPayload(payloadWithMalformedFormingBands, 1003720);
+    expect(result.formingBands).toEqual([{ startStar: 1, endStar: 10 }]);
+  });
 });
 
 describe("normalizeLatestPayload", () => {

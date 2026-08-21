@@ -618,6 +618,11 @@
       "loadError": "価格履歴を取得できませんでした。時間をおいて再読み込みしてください。",
       "empty": "表示できるデータがありません"
     },
+    "formingBands": {
+      "range": "☆{{start}}〜{{end}}",
+      "rangeSingle": "☆{{star}}",
+      "note": "{{ranges}} は価格形成中です"
+    },
     "heatmap": {
       "title": "曜日 × 時間帯",
       "axisNote": "行=UTCの曜日。列=ローカル時刻（{{zone}}。UTCは列見出しの下に併記）",
