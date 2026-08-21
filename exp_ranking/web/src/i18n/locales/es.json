@@ -627,7 +627,9 @@
       "noData": "Sin datos",
       "lowestBadge": "Más bajo",
       "highestBadge": "Más alto",
-      "disclaimer": "Solo muestra la mediana; no es una recomendación para mejorar en un día o franja horaria concretos."
+      "disclaimer": "Solo muestra la mediana; no es una recomendación para mejorar en un día o franja horaria concretos.",
+      "currentCellLabel": "actual",
+      "currentCellLegend": "Celda con borde = día/franja horaria actual (al cargar la página; no se actualiza automáticamente)"
     }
   },
   "sfhistoryDiscovery": {

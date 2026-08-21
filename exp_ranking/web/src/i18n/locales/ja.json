@@ -627,7 +627,9 @@
       "noData": "データなし",
       "lowestBadge": "最安",
       "highestBadge": "最高",
-      "disclaimer": "中央値を示すものであり、特定の曜日・時間帯での強化を推奨するものではありません。"
+      "disclaimer": "中央値を示すものであり、特定の曜日・時間帯での強化を推奨するものではありません。",
+      "currentCellLabel": "現在",
+      "currentCellLegend": "枠線＝現在の曜日・時間帯（表示時点。自動更新はしません）"
     }
   },
   "sfhistoryDiscovery": {

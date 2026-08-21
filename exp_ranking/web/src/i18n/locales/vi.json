@@ -627,7 +627,9 @@
       "noData": "Không có dữ liệu",
       "lowestBadge": "Thấp nhất",
       "highestBadge": "Cao nhất",
-      "disclaimer": "Chỉ hiển thị giá trị trung vị, không khuyến nghị nâng cấp vào một thứ hoặc khung giờ cụ thể."
+      "disclaimer": "Chỉ hiển thị giá trị trung vị, không khuyến nghị nâng cấp vào một thứ hoặc khung giờ cụ thể.",
+      "currentCellLabel": "hiện tại",
+      "currentCellLegend": "Ô có viền = thứ/khung giờ hiện tại (tại thời điểm tải trang, không tự cập nhật)"
     }
   },
   "sfhistoryDiscovery": {

@@ -627,7 +627,9 @@
       "noData": "No data",
       "lowestBadge": "Lowest",
       "highestBadge": "Highest",
-      "disclaimer": "Shows the median only -- not a recommendation to enhance on any particular weekday or time."
+      "disclaimer": "Shows the median only -- not a recommendation to enhance on any particular weekday or time.",
+      "currentCellLabel": "current",
+      "currentCellLegend": "Outlined cell = current weekday/time slot (as of page load; not auto-refreshed)"
     }
   },
   "sfhistoryDiscovery": {

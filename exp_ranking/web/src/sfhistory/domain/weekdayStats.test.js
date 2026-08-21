@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildWeekdayHeatmap, extremeHeatmapCells, heatmapSampleRange, totalHeatmapCount } from "./weekdayStats.js";
+import { buildWeekdayHeatmap, currentHeatmapCell, extremeHeatmapCells, heatmapSampleRange, totalHeatmapCount } from "./weekdayStats.js";
 
 // IMPL_PLAN_SH14 §2 (2026-08-05, user decision): reverts IMPL_PLAN_SH11 §2's
 // local-timezone grouping back to a fixed UTC basis. `buildWeekdayHeatmap`
@@ -220,6 +220,65 @@ describe("heatmapSampleRange (plan §4-1: '1セルあたり約N点' disclosure)"
       const cells = Array.from({ length: 42 }, (_, i) => ({ n: Math.floor(total / 42) + (i < total % 42 ? 1 : 0) }));
       expect(heatmapSampleRange(cells)).toEqual(expected);
     }
+  });
+});
+
+// IMPL_PLAN_SH35 §2-1: "現在のセルは (現在UTCの曜日, floor(現在UTC時 / 4))"
+// -- a direct read of `now`'s own UTC weekday/hour, keyed exactly like
+// `buildWeekdayHeatmap`'s cells (`weekdayIndex` = `getUTCDay()`, `bucketSlot`
+// = 4h-slot index 0..5). This does NOT touch `buildWeekdayHeatmap`'s
+// bucket-END keying above (plan §2-1 "★セルの割り当て規則を1ビットも変えな
+// い") -- `currentHeatmapCell` never calls it and never reads `series`.
+describe("currentHeatmapCell (IMPL_PLAN_SH35 §2-1: '(現在UTCの曜日, floor(現在UTC時 / 4))')", () => {
+  it("mid-slot instant: Sunday 17:30 UTC -> weekdayIndex=0 (Sun), bucketSlot=4 (floor(17/4))", () => {
+    // 2026-03-08 is a Sunday (UTC) -- same anchor date the grouping tests
+    // above use.
+    expect(currentHeatmapCell(new Date("2026-03-08T17:30:00Z"))).toEqual({ weekdayIndex: 0, bucketSlot: 4 });
+  });
+
+  it("exact 4h-slot boundary: Sunday 16:00:00.000 UTC -> bucketSlot=4 (the slot that just started)", () => {
+    expect(currentHeatmapCell(new Date("2026-03-08T16:00:00Z"))).toEqual({ weekdayIndex: 0, bucketSlot: 4 });
+  });
+
+  it("just before midnight: Sunday 23:59:00 UTC -> weekdayIndex=0 (still Sun), bucketSlot=5 (floor(23/4))", () => {
+    expect(currentHeatmapCell(new Date("2026-03-08T23:59:00Z"))).toEqual({ weekdayIndex: 0, bucketSlot: 5 });
+  });
+
+  it("just before midnight, 1 second from rollover: Sunday 23:59:59 UTC -> still weekdayIndex=0, bucketSlot=5", () => {
+    expect(currentHeatmapCell(new Date("2026-03-08T23:59:59Z"))).toEqual({ weekdayIndex: 0, bucketSlot: 5 });
+  });
+
+  it("exactly at midnight: Monday 00:00:00 UTC -> weekdayIndex flips to 1 (Mon), bucketSlot resets to 0", () => {
+    // 2026-03-09 is the Monday immediately following the 2026-03-08 Sunday
+    // anchor above -- the Sun->Mon weekday-rollover boundary plan §4/(f)
+    // explicitly calls out.
+    expect(currentHeatmapCell(new Date("2026-03-09T00:00:00Z"))).toEqual({ weekdayIndex: 1, bucketSlot: 0 });
+  });
+
+  it("1 second after midnight: Monday 00:00:01 UTC -> still weekdayIndex=1, bucketSlot=0", () => {
+    expect(currentHeatmapCell(new Date("2026-03-09T00:00:01Z"))).toEqual({ weekdayIndex: 1, bucketSlot: 0 });
+  });
+
+  it("also covers the other weekday rollover in the grid's own display order (Sat 23:59 -> Sun 00:00, IMPL_PLAN_SH14 §4's row order starts Thu, wraps through Sat->Sun)", () => {
+    // 2026-03-07 is a Saturday (UTC), the day before the 2026-03-08 Sunday
+    // anchor above.
+    expect(currentHeatmapCell(new Date("2026-03-07T23:59:00Z"))).toEqual({ weekdayIndex: 6, bucketSlot: 5 });
+    expect(currentHeatmapCell(new Date("2026-03-08T00:00:00Z"))).toEqual({ weekdayIndex: 0, bucketSlot: 0 });
+  });
+
+  it("defaults to the real current instant when called with no argument (shape check only -- not asserting a specific cell, since that depends on when the test runs)", () => {
+    const result = currentHeatmapCell();
+    expect(result.weekdayIndex).toBeGreaterThanOrEqual(0);
+    expect(result.weekdayIndex).toBeLessThanOrEqual(6);
+    expect(result.bucketSlot).toBeGreaterThanOrEqual(0);
+    expect(result.bucketSlot).toBeLessThanOrEqual(5);
+  });
+
+  it("matches one of buildWeekdayHeatmap's own 42 (weekdayIndex, bucketSlot) keys, so a caller comparing against `cells` never misses (key-shape parity, no new format introduced)", () => {
+    const { cells } = buildWeekdayHeatmap([]);
+    const keys = new Set(cells.map((cell) => `${cell.weekdayIndex}-${cell.bucketSlot}`));
+    const current = currentHeatmapCell(new Date("2026-03-08T17:30:00Z"));
+    expect(keys.has(`${current.weekdayIndex}-${current.bucketSlot}`)).toBe(true);
   });
 });
 

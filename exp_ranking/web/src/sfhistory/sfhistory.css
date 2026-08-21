@@ -249,14 +249,7 @@ html:not([data-theme-depth="deep"]) .sfh-conditions-list {
 /* IMPL_PLAN_SH11 §3-3: the weekday x time-of-day heatmap. Cell background
    is computed inline (per-cell `color-mix(var(--theme-focus), ...)`
    proportional to that cell's median within the grid's min/max -- these
-   rules are just the fixed grid chrome/typography around that.
-
-   IMPL_PLAN_SH35 §1 (2026-08-21, user decision): the old `n < 5` dimming
-   rule (`.sfh-heatmap-cell-weak { opacity: 0.55 }`) that used to live in
-   this section is removed -- SH-29's period-tab linkage above made most
-   cells dim under a short period, more confusing than the low-n warning it
-   was meant to convey. The median color-coding this comment describes
-   above is untouched. */
+   rules are just the fixed grid chrome/typography around that. */
 
 .sfh-heatmap-grid {
   display: grid;
@@ -362,4 +355,31 @@ html:not([data-theme-depth="deep"]) .sfh-heatmap-cell {
 
 .sfh-heatmap-cell-badge-high {
   color: var(--sfh-color-costlier);
+}
+
+/* IMPL_PLAN_SH35 §2-2: "枠線（リング）で示す。背景色は変えない" -- an
+   `outline`, deliberately not another `box-shadow`, so it never collides
+   with `.sfh-heatmap-cell-lowest`/`-highest` above (those already use an
+   inset `box-shadow` for their own ring; a cell can be both the current
+   cell AND the lowest/highest cell at once -- plan (h) -- and both rings
+   must stay visible). `outline-offset: -2px` keeps the ring inside the
+   cell's own box instead of bleeding into the grid gap. Color reuses the
+   same theme accent variable the median color-coding above already uses
+   (plan §2-2: "色は既存のテーマ変数を使う" -- no new fixed color). */
+.sfh-heatmap-cell-current {
+  outline: 2px solid var(--theme-focus);
+  outline-offset: -2px;
+}
+
+/* IMPL_PLAN_SH35 §2-2: legend swatch next to `sfhistory.heatmap.currentCellLegend`
+   -- reuses the identical ring style above so what the legend shows matches
+   what's actually drawn on the grid. */
+.sfh-heatmap-legend-current-swatch {
+  display: inline-block;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 0.2rem;
+  outline: 2px solid var(--theme-focus);
+  outline-offset: -2px;
+  background: var(--theme-card-bg);
 }
