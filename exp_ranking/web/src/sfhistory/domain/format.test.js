@@ -13,6 +13,7 @@ import {
   formatTimeZoneLabel,
   formatTooltipDate,
   formatTooltipDateLocal,
+  groupFilledBands,
   localTimeZone,
   weekdayShortLabel,
 } from "./format.js";
@@ -413,5 +414,60 @@ describe("formatFormingBandRanges", () => {
       return "x";
     });
     expect(calls).toEqual([[22, 22]]);
+  });
+});
+
+// IMPL_PLAN_SH37 §3/§4/§7(g): groups `fillLeadingPriceGaps`'s per-band
+// `{ upgrade, untilDate }` list into star-range groups for the note.
+describe("groupFilledBands (IMPL_PLAN_SH37 §3/§4)", () => {
+  it("converts 0-based upgrade -> 1-based ☆ label (discovery.py's own itemUpgrade+1 convention)", () => {
+    expect(groupFilledBands([{ upgrade: 0, untilDate: "d1" }])).toEqual([
+      { startStar: 1, endStar: 1, untilDate: "d1" },
+    ]);
+  });
+
+  it("merges contiguous stars that share the exact same untilDate into one range", () => {
+    const result = groupFilledBands([
+      { upgrade: 10, untilDate: "d1" }, // ☆11
+      { upgrade: 12, untilDate: "d1" }, // ☆13
+      { upgrade: 13, untilDate: "d1" }, // ☆14
+      { upgrade: 14, untilDate: "d1" }, // ☆15
+    ]);
+    // ☆11 is isolated (☆12 was never filled -- no adjacency across it);
+    // ☆13/14/15 are contiguous and share the same date -> one range.
+    expect(result).toEqual([
+      { startStar: 11, endStar: 11, untilDate: "d1" },
+      { startStar: 13, endStar: 15, untilDate: "d1" },
+    ]);
+  });
+
+  it("★never merges contiguous stars that finished forming at DIFFERENT times (plan §7(g) worked table: ☆11-18 vs ☆19)", () => {
+    const result = groupFilledBands([
+      { upgrade: 17, untilDate: "2026-08-18T04:00:00Z" }, // ☆18
+      { upgrade: 18, untilDate: "2026-08-20T00:00:00Z" }, // ☆19 -- later
+    ]);
+    expect(result).toEqual([
+      { startStar: 18, endStar: 18, untilDate: "2026-08-18T04:00:00Z" },
+      { startStar: 19, endStar: 19, untilDate: "2026-08-20T00:00:00Z" },
+    ]);
+  });
+
+  it("returns [] for empty/missing input (plan §7(h): no filled interval -> no note)", () => {
+    expect(groupFilledBands([])).toEqual([]);
+    expect(groupFilledBands(null)).toEqual([]);
+    expect(groupFilledBands(undefined)).toEqual([]);
+  });
+
+  it("drops a malformed entry rather than guessing", () => {
+    const result = groupFilledBands([{ upgrade: 0, untilDate: "d1" }, { upgrade: "x", untilDate: "d1" }, { upgrade: 1 }, null]);
+    expect(result).toEqual([{ startStar: 1, endStar: 1, untilDate: "d1" }]);
+  });
+
+  it("sorts groups by star even if the input is unsorted", () => {
+    const result = groupFilledBands([
+      { upgrade: 5, untilDate: "d1" },
+      { upgrade: 0, untilDate: "d2" },
+    ]);
+    expect(result.map((g) => g.startStar)).toEqual([1, 6]);
   });
 });

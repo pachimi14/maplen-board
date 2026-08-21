@@ -623,6 +623,11 @@
       "rangeSingle": "☆{{star}}",
       "note": "ยังอยู่ระหว่างกำหนดราคา: {{ranges}}"
     },
+    "filledBands": {
+      "range": "☆{{start}}–{{end}}",
+      "rangeSingle": "☆{{star}}",
+      "note": "{{range}} ยังอยู่ระหว่างกำหนดราคาจนถึง {{until}}"
+    },
     "heatmap": {
       "title": "วันในสัปดาห์ x ช่วงเวลา",
       "axisNote": "แถว: วันในสัปดาห์ (UTC) คอลัมน์: เวลาท้องถิ่น ({{zone}}; แสดง UTC ไว้ใต้แต่ละคอลัมน์)",

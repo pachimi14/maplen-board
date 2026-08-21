@@ -623,6 +623,11 @@
       "rangeSingle": "☆{{star}}",
       "note": "Aún en formación: {{ranges}}"
     },
+    "filledBands": {
+      "range": "☆{{start}}–{{end}}",
+      "rangeSingle": "☆{{star}}",
+      "note": "{{range}}: aún en formación de precio hasta {{until}}"
+    },
     "heatmap": {
       "title": "Día de la semana x Franja horaria",
       "axisNote": "Filas: día de la semana (UTC). Columnas: hora local ({{zone}}; UTC debajo de cada columna)",

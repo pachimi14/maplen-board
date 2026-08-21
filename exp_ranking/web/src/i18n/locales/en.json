@@ -623,6 +623,11 @@
       "rangeSingle": "☆{{star}}",
       "note": "Still forming: {{ranges}}"
     },
+    "filledBands": {
+      "range": "☆{{start}}–{{end}}",
+      "rangeSingle": "☆{{star}}",
+      "note": "{{range}} was still price-forming until {{until}}"
+    },
     "heatmap": {
       "title": "Weekday x Time of Day",
       "axisNote": "Rows: UTC weekday. Columns: your local time ({{zone}}; UTC shown below each column)",

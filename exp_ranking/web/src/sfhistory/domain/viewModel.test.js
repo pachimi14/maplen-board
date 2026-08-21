@@ -10,7 +10,7 @@
 // @testing-library/react (explicitly not to be added, per the review).
 import { describe, expect, it } from "vitest";
 import { buildScreenModel, isRangeReady } from "./viewModel.js";
-import { defaultPresetForMaxStar } from "./series.js";
+import { buildExpectedSeries, defaultPresetForMaxStar } from "./series.js";
 
 const READY_PRICES_POINTS = [{ date: "2026-01-01T00:00:00Z", prices: Array.from({ length: 22 }, (_, i) => 1000 + i * 10) }];
 const READY_LATEST_PRICES = Array.from({ length: 22 }, (_, i) => 1000 + i * 10);
@@ -163,3 +163,103 @@ describe("buildScreenModel: must never throw, regardless of how unconfirmed/malf
     ).not.toThrow();
   });
 });
+
+// IMPL_PLAN_SH37 §3/§7(a)(e)(f)(h): `buildScreenModel` now also fills a
+// band's leading null run before computing `fullSeries`, and exposes
+// `filledBands` (scoped to the CURRENTLY selected span).
+describe("buildScreenModel: IMPL_PLAN_SH37 leading-gap fill + filledBands", () => {
+  it("(a) fills a leading gap so a span that previously had a null Expected at the earliest point now computes one", () => {
+    const missingLeadingStar = [
+      { date: "d0", prices: [null, ...Array.from({ length: 21 }, (_, i) => 1000 + i * 10)] },
+      { date: "d1", prices: Array.from({ length: 22 }, (_, i) => 1000 + i * 10) },
+    ];
+    const range = { startStar: 0, targetStar: 17 };
+    const before = buildExpectedSeries(missingLeadingStar, 0, 17);
+    expect(before[0].expected).toBeNull(); // proves the span WOULD be null without SH-37's fill
+
+    const model = buildScreenModel({
+      range,
+      period: "150D",
+      pricesState: { status: "ready", points: missingLeadingStar },
+      latestState: { status: "idle", prices: null },
+    });
+    expect(model.fullSeries[0].expected).not.toBeNull();
+  });
+
+  it("(e) ★byte-for-byte unchanged for a fully-populated item (every band has history from the start)", () => {
+    const range = { startStar: 0, targetStar: 17 };
+    const withoutFill = buildExpectedSeries(READY_PRICES_POINTS, 0, 17);
+    const model = buildScreenModel({
+      range,
+      period: "150D",
+      pricesState: { status: "ready", points: READY_PRICES_POINTS },
+      latestState: { status: "idle", prices: null },
+    });
+    expect(model.fullSeries).toEqual(withoutFill);
+    expect(model.filledBands).toEqual([]);
+  });
+
+  it("(h) filledBands is [] when nothing was filled for the currently selected span", () => {
+    const range = { startStar: 0, targetStar: 17 };
+    const model = buildScreenModel({
+      range,
+      period: "150D",
+      pricesState: { status: "ready", points: READY_PRICES_POINTS },
+      latestState: { status: "idle", prices: null },
+    });
+    expect(model.filledBands).toEqual([]);
+  });
+
+  it("(h) filledBands only reports bands the CURRENTLY selected span actually requires -- a gap outside the span is not reported", () => {
+    // Star index 18 (☆19) has a leading gap; a 0->17 span (needs stars
+    // 0..16 only) never touches it, so it must not appear here even
+    // though the SAME points array has an unrelated leading gap at ☆19.
+    const points = [
+      { date: "d0", prices: flatPricesWithGapAt(18) },
+      { date: "d1", prices: flatPrices() },
+    ];
+    const modelNarrow = buildScreenModel({
+      range: { startStar: 0, targetStar: 17 },
+      period: "150D",
+      pricesState: { status: "ready", points },
+      latestState: { status: "idle", prices: null },
+    });
+    expect(modelNarrow.filledBands).toEqual([]);
+
+    const modelWide = buildScreenModel({
+      range: { startStar: 0, targetStar: 22 },
+      period: "150D",
+      pricesState: { status: "ready", points },
+      latestState: { status: "idle", prices: null },
+    });
+    expect(modelWide.filledBands.map((b) => b.upgrade)).toEqual([18]);
+  });
+
+  it("(f) coexists with an already-filled band (simulating SH-36's server-side forming-price fill, which never leaves a null slot behind) -- SH-37's own fill is then simply a no-op for that band", () => {
+    // Every slot already non-null (as SH-36's server-side fill would leave
+    // a currently-forming band) -- SH-37 must not alter it, and must not
+    // report it as filled.
+    const points = [
+      { date: "d0", prices: flatPrices() },
+      { date: "d1", prices: flatPrices(1100) },
+    ];
+    const model = buildScreenModel({
+      range: { startStar: 0, targetStar: 22 },
+      period: "150D",
+      pricesState: { status: "ready", points },
+      latestState: { status: "idle", prices: null },
+    });
+    expect(model.filledBands).toEqual([]);
+    expect(model.fullSeries).toEqual(buildExpectedSeries(points, 0, 22));
+  });
+});
+
+function flatPrices(base = 1000) {
+  return Array.from({ length: 22 }, (_, i) => base + i * 100);
+}
+
+function flatPricesWithGapAt(index) {
+  const prices = flatPrices();
+  prices[index] = null;
+  return prices;
+}

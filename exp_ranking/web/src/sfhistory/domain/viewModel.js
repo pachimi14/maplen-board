@@ -13,6 +13,8 @@
 // the exact code path production uses, without needing a DOM or
 // @testing-library/react (design/plan: no new npm dependency).
 import { buildExpectedSeries, computeCurrentExpected, computeStats, currentPercentile, sliceByPeriod } from "./series.js";
+import { fillLeadingPriceGaps } from "./priceGapFill.js";
+import { requiredPriceStars } from "../starforce.js";
 
 /**
  * `range` is only "ready" to feed into a starforce.js-backed function once
@@ -39,9 +41,19 @@ export function isRangeReady(range) {
  */
 export function buildScreenModel({ range, period, pricesState, latestState }) {
   const rangeReady = isRangeReady(range);
+  const pricesReady = pricesState?.status === "ready";
 
-  const fullSeries = rangeReady && pricesState?.status === "ready"
-    ? buildExpectedSeries(pricesState.points, range.startStar, range.targetStar)
+  // IMPL_PLAN_SH37 §3: `pricesState.points` is run through
+  // `fillLeadingPriceGaps` (domain/priceGapFill.js) BEFORE
+  // `buildExpectedSeries` sees it -- a band's leading null run only, never
+  // a mid-series gap (see that module's own header). Byte-for-byte no-op
+  // whenever no band has a leading gap (plan §7(e)).
+  const { points: filledPoints, filledBands: allFilledBands } = pricesReady
+    ? fillLeadingPriceGaps(pricesState.points)
+    : { points: [], filledBands: [] };
+
+  const fullSeries = rangeReady && pricesReady
+    ? buildExpectedSeries(filledPoints, range.startStar, range.targetStar)
     : [];
 
   const periodSeries = sliceByPeriod(fullSeries, period);
@@ -53,5 +65,15 @@ export function buildScreenModel({ range, period, pricesState, latestState }) {
 
   const percentile = currentPercentile(periodSeries, currentExpected);
 
-  return { fullSeries, periodSeries, stats, currentExpected, percentile };
+  // IMPL_PLAN_SH37 §7(h): only the bands the CURRENTLY selected span
+  // actually needs (`requiredPriceStars`, the exact set
+  // `buildExpectedSeries`'s own missing-data gating uses) -- never every
+  // band the item has ever had a leading gap in. This is what makes "no
+  // filled interval in view -> no note" true per selected range, not just
+  // per item (e.g. a 0->17 view never mentions a ☆19-only gap).
+  const filledBands = rangeReady
+    ? allFilledBands.filter((band) => requiredPriceStars(range.startStar, range.targetStar).includes(band.upgrade))
+    : [];
+
+  return { fullSeries, periodSeries, stats, currentExpected, percentile, filledBands };
 }

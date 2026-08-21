@@ -623,6 +623,11 @@
       "rangeSingle": "☆{{star}}",
       "note": "尚在價格形成中：{{ranges}}"
     },
+    "filledBands": {
+      "range": "☆{{start}}–{{end}}",
+      "rangeSingle": "☆{{star}}",
+      "note": "{{range}} 直到 {{until}} 前仍在價格形成中"
+    },
     "heatmap": {
       "title": "星期 × 時段",
       "axisNote": "列（星期）為 UTC，欄（時段）為當地時間（{{zone}}；每欄下方併列 UTC）",
