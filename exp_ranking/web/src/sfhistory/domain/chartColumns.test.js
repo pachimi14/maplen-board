@@ -80,8 +80,8 @@ describe("withChartColumns (IMPL_PLAN_SH19 §1/§4: closed, not provisional, dri
 // plain "d0".."d4" `date`/`displayDate` strings (in ascending order) rather
 // than real ISO timestamps for `displayDate` -- `filledBandRange` never
 // re-derives `displayDate`, it only reads it back off each row, so a bare
-// placeholder string is enough to prove the returned `x1`/`x2` are the
-// exact `displayDate` values of the right rows.
+// stand-in string is enough to prove the returned `x1`/`x2` are the exact
+// `displayDate` values of the right rows.
 function row(date) {
   return { date, displayDate: `display-${date}` };
 }

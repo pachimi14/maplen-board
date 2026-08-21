@@ -614,7 +614,7 @@
       "tooltipDeltaFromAverage": "與期間平均相差 {{delta}}",
       "tooltipBucketRange": "{{start}}–{{end}} 的 4 小時 K 線",
       "tooltipBucketRangeOpen": "{{start}}–{{end}} 的 4 小時 K 線（尚未結束）",
-      "filledBandLegend": "網底區段標示使用了價格形成中預留值的資料點。",
+      "filledBandLegend": "網底區段標示價格仍在形成中的資料點。",
       "provisionalLegend": "虛線區段是目前尚未結束的 4 小時 K 線暫定值。",
       "loadError": "無法取得價格歷史資料，請稍後再重新整理。",
       "empty": "沒有可顯示的資料"

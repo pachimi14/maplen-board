@@ -409,23 +409,34 @@ html:not([data-theme-depth="deep"]) .sfh-heatmap-cell {
   background: var(--theme-card-bg);
 }
 
-/* IMPL_PLAN_SH38 §1-2: the "price-forming placeholder" background band on
-   the chart (SfHistoryChart.jsx's `<ReferenceArea className="sfh-filled-band">`
-   -- see that component's own comment for why it renders first/beneath
-   everything else). Same fixed, depth-branched (never theme-color-branched)
-   pattern `--sfh-color-current-ring` above already established (SH-37 §5):
-   the chart's own line/dot/axis colors stay a fixed cyan across all 4
-   themes (this file's SfHistoryChart.jsx header comment, IMPL_PLAN_SH9 §4),
-   so a band that followed `--theme-focus` would clash with -- or on some
-   themes nearly vanish into -- that fixed cyan instead of reading as a
-   neutral "this region is different" cue regardless of which theme is
-   active. A translucent near-white overlay on `deep`'s dark card
-   background; a translucent near-black overlay on light/standard's light
-   card background -- low enough opacity that the cyan line/dots/grid stay
-   fully readable on top of it (plan (d)), but distinct enough from the
-   plain card background to read as a band across all 4 themes x 3 depths
-   (plan (e); the shade itself never depends on which of the 4 accent
-   colors is selected, only on depth). */
+/* IMPL_PLAN_SH38 §1-2 (revised 2026-08-21, 統括 correction -- see below):
+   the still-price-forming background band on the chart (SfHistoryChart.jsx's
+   `<ReferenceArea className="sfh-filled-band">` -- see that component's own
+   comment for why it renders first/beneath everything else). This shades a
+   span that includes a point `priceGapFill.js` filled while that star
+   level's price was still forming.
+   ★ That filled-in number is a REAL, current enhancement cost (an
+   early-adopter bonus-time price during dynamic pricing's ramp-up window),
+   never a fake/incomplete stand-in -- IMPL_PLAN_SH36 §0 H2 already settled
+   this (measured: Hat's own ☆1 = 133.59 NESO, ☆10 = 1,335.87 NESO while
+   still forming, not stuck at any lower bound). An earlier draft of this
+   comment (and the legend text it backs, `sfhistory.chart.filledBandLegend`)
+   mischaracterized this value as not a real price -- the opposite of
+   SH-36's own settled fact. Do not reintroduce that framing here.
+   Same fixed, depth-branched (never theme-color-branched) pattern
+   `--sfh-color-current-ring` above already established (SH-37 §5): the
+   chart's own line/dot/axis colors stay a fixed cyan across all 4 themes
+   (this file's SfHistoryChart.jsx header comment, IMPL_PLAN_SH9 §4), so a
+   band that followed `--theme-focus` would clash with -- or on some themes
+   nearly vanish into -- that fixed cyan instead of reading as a neutral
+   "this region is different" cue regardless of which theme is active. A
+   translucent near-white overlay on `deep`'s dark card background; a
+   translucent near-black overlay on light/standard's light card background
+   -- low enough opacity that the cyan line/dots/grid stay fully readable on
+   top of it (plan (d); 統括 measured contrast 11.62 on a real render), but
+   distinct enough from the plain card background to read as a band across
+   all 4 themes x 3 depths (plan (e); the shade itself never depends on
+   which of the 4 accent colors is selected, only on depth). */
 .sfh-root {
   --sfh-color-filled-band: rgba(255, 255, 255, 0.13);
 }

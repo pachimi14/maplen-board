@@ -614,7 +614,7 @@
       "tooltipDeltaFromAverage": "so với trung bình kỳ {{delta}}",
       "tooltipBucketRange": "Nến {{start}}–{{end}}",
       "tooltipBucketRangeOpen": "Nến {{start}}–{{end}} (chưa kết thúc)",
-      "filledBandLegend": "Vùng tô nền đánh dấu các điểm đã dùng giá trị giữ chỗ trong khi hình thành giá.",
+      "filledBandLegend": "Vùng tô nền đánh dấu các điểm thuộc khoảng giá vẫn đang hình thành.",
       "provisionalLegend": "Đoạn nét đứt là giá trị tạm thời của nến 4 giờ hiện tại, khoảng này chưa kết thúc.",
       "loadError": "Không thể tải lịch sử giá. Vui lòng tải lại sau.",
       "empty": "Không có dữ liệu để hiển thị"
