@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-08-05T16:29:39.788056+00:00",
+  "generatedAt": "2026-08-21T10:04:21.985502+00:00",
   "sourceRepo": "maplenEnhancebot",
-  "sourceCommit": "a9f534b4d1292fd580780a22344198f46027ae38",
+  "sourceCommit": "e34591bdf17554d4ababbd49efd4bed0aea309f1",
   "excluded": [
     {
       "itemId": 1113282,
@@ -1234,6 +1234,108 @@
         {
           "itemId": 1132308,
           "itemName": "Dreamy Belt"
+        }
+      ]
+    },
+    {
+      "itemId": 1004811,
+      "itemName": "Arcane Umbra Thief Hat",
+      "aliasItemIds": [
+        1004808,
+        1004809,
+        1004810,
+        1004811,
+        1004812
+      ],
+      "maxStar": 22,
+      "aliases": [
+        {
+          "itemId": 1004808,
+          "itemName": "Arcane Umbra Knight Hat"
+        },
+        {
+          "itemId": 1004809,
+          "itemName": "Arcane Umbra Mage Hat"
+        },
+        {
+          "itemId": 1004810,
+          "itemName": "Arcane Umbra Archer Hat"
+        },
+        {
+          "itemId": 1004811,
+          "itemName": "Arcane Umbra Thief Hat"
+        },
+        {
+          "itemId": 1004812,
+          "itemName": "Arcane Umbra Pirate Hat"
+        }
+      ]
+    },
+    {
+      "itemId": 1053064,
+      "itemName": "Arcane Umbra Mage Suit",
+      "aliasItemIds": [
+        1053063,
+        1053064,
+        1053065,
+        1053066,
+        1053067
+      ],
+      "maxStar": 22,
+      "aliases": [
+        {
+          "itemId": 1053063,
+          "itemName": "Arcane Umbra Knight Suit"
+        },
+        {
+          "itemId": 1053064,
+          "itemName": "Arcane Umbra Mage Suit"
+        },
+        {
+          "itemId": 1053065,
+          "itemName": "Arcane Umbra Archer Suit"
+        },
+        {
+          "itemId": 1053066,
+          "itemName": "Arcane Umbra Thief Suit"
+        },
+        {
+          "itemId": 1053067,
+          "itemName": "Arcane Umbra Pirate Suit"
+        }
+      ]
+    },
+    {
+      "itemId": 1152199,
+      "itemName": "Arcane Umbra Thief Shoulder",
+      "aliasItemIds": [
+        1152196,
+        1152197,
+        1152198,
+        1152199,
+        1152200
+      ],
+      "maxStar": 22,
+      "aliases": [
+        {
+          "itemId": 1152196,
+          "itemName": "Arcane Umbra Knight Shoulder"
+        },
+        {
+          "itemId": 1152197,
+          "itemName": "Arcane Umbra Mage Shoulder"
+        },
+        {
+          "itemId": 1152198,
+          "itemName": "Arcane Umbra Archer Shoulder"
+        },
+        {
+          "itemId": 1152199,
+          "itemName": "Arcane Umbra Thief Shoulder"
+        },
+        {
+          "itemId": 1152200,
+          "itemName": "Arcane Umbra Pirate Shoulder"
         }
       ]
     }
