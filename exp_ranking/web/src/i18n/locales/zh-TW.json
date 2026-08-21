@@ -618,6 +618,11 @@
       "loadError": "無法取得價格歷史資料，請稍後再重新整理。",
       "empty": "沒有可顯示的資料"
     },
+    "formingBands": {
+      "range": "☆{{start}}–{{end}}",
+      "rangeSingle": "☆{{star}}",
+      "note": "尚在價格形成中：{{ranges}}"
+    },
     "heatmap": {
       "title": "星期 × 時段",
       "axisNote": "列（星期）為 UTC，欄（時段）為當地時間（{{zone}}；每欄下方併列 UTC）",
@@ -627,7 +632,9 @@
       "noData": "無資料",
       "lowestBadge": "最低",
       "highestBadge": "最高",
-      "disclaimer": "僅顯示中位數，並非建議在特定星期或時段進行強化。"
+      "disclaimer": "僅顯示中位數，並非建議在特定星期或時段進行強化。",
+      "currentCellLabel": "目前",
+      "currentCellLegend": "有外框的格子＝目前的星期／時段（載入頁面時，不會自動更新）"
     }
   },
   "sfhistoryDiscovery": {

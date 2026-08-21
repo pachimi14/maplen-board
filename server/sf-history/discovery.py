@@ -268,6 +268,68 @@ def steps_consistent(member_steps: dict[int, list[str | None]]) -> bool:
     return all(candidate == first for candidate in lists[1:])
 
 
+# --- IMPL_PLAN_SH36 §3: unformed-band (still price-forming) handling -------
+# `bands` below is always `db.latest_discovery_bands_for_item`'s own shape
+# (item_upgrade -> {"price", "step", ...}) -- these two functions are pure
+# (no I/O), so they are directly unit-testable, and are the ONE place that
+# decides "is this band forming" for both `app.py`'s `/sf-history/prices`
+# fill and (indirectly, via `db.max_star_by_item`) maxStar. Judgment is
+# always by `step` (plan §3/§6(e): "判定は step で。価格のしきい値で判定し
+# ない") -- a band whose current price happens to read as a degenerate
+# placeholder (e.g. `0.000001`, observed for bands beyond an item's real
+# reachable cap) is still treated exactly the same as any other DISCOVERY
+# band: neither function here inspects `price` to decide anything, only to
+# read it out once `step` has already answered "is this forming". Not
+# limited to any specific item (plan §6(e): "将来どの装備でも同じ経路で動く
+# こと") -- both take a plain `bands` dict, never an itemId.
+
+
+def forming_band_current_prices(
+    bands: dict[int, dict[str, Any]], *, upgrade_count: int
+) -> dict[int, float]:
+    """Every band (within ``[0, upgrade_count)``) whose CURRENT step is
+    DISCOVERY, mapped to its own CURRENT (real, upstream-reported) price --
+    IMPL_PLAN_SH36 §3: "履歴のある帯は実履歴、履歴の無い帯は現在価格を全期間
+    の定数として使う" starts here (the "現在価格" side). A band absent from
+    ``bands`` (never polled) is simply absent from the result -- never
+    guessed at.
+    """
+    return {
+        upgrade: band["price"]
+        for upgrade, band in bands.items()
+        if (
+            0 <= upgrade < upgrade_count
+            and band.get("step") == DISCOVERY_STEP
+            and band.get("price") is not None
+        )
+    }
+
+
+def forming_star_ranges(
+    bands: dict[int, dict[str, Any]], *, upgrade_count: int
+) -> list[tuple[int, int]]:
+    """Contiguous ☆ (1-based, ``itemUpgrade + 1``) ranges currently in a
+    DISCOVERY (price-forming) period, restricted to ``itemUpgrade <
+    upgrade_count`` -- IMPL_PLAN_SH36 §4: the ``formingBands`` note's own
+    data source (e.g. ``[(1, 10), (20, 22)]`` for "☆1〜10 / ☆20〜22").
+    Returns ``[]`` when nothing is forming within range (plan §4/§6(h): "形成
+    中の帯が無ければ出ない" is a frontend concern this empty list enables).
+    """
+    forming_upgrades = sorted(
+        upgrade
+        for upgrade, band in bands.items()
+        if 0 <= upgrade < upgrade_count and band.get("step") == DISCOVERY_STEP
+    )
+    ranges: list[tuple[int, int]] = []
+    for upgrade in forming_upgrades:
+        star = upgrade + 1
+        if ranges and ranges[-1][1] == star - 1:
+            ranges[-1] = (ranges[-1][0], star)
+        else:
+            ranges.append((star, star))
+    return ranges
+
+
 def find_transition(rows: list[tuple[str, str]]) -> tuple[str, str] | None:
     """Given one band's `(price_at, step)` rows (ANY order), find the DISCOVERY
     -> CHANGE flip: the LAST `price_at` (chronologically) that was still

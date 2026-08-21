@@ -233,16 +233,21 @@ def equipment(request: Request) -> JSONResponse:
     payload = load_items()
     conn = db.connect(_db_path())
     try:
-        max_upgrade_by_item = db.max_upgrade_by_item(conn)
+        # IMPL_PLAN_SH36: `db.max_star_by_item` unions the hourly-history
+        # derivation with the DISCOVERY-presence derivation (`db.
+        # discovery_max_upgrade_by_item`) -- for the pre-SH-36 31 items
+        # (never a `sf_discovery_price_history` row) this is byte-identical
+        # to the old `max_upgrade_by_item(conn).get(id) + 1` computation
+        # (plan §6(g)/(b)).
+        max_star_by_item = db.max_star_by_item(conn)
     finally:
         conn.close()
 
     items = []
     for item in payload["items"]:
         item_id = int(item["itemId"])
-        max_upgrade = max_upgrade_by_item.get(item_id)
         # design §7.1: maxStar is *derived from the data*, never hardcoded.
-        max_star = (max_upgrade + 1) if max_upgrade is not None else None
+        max_star = max_star_by_item.get(item_id)
         items.append(
             {
                 "itemId": item_id,
@@ -280,6 +285,26 @@ def prices(request: Request, itemId: str | None = None) -> JSONResponse:
     try:
         rows = db.four_h_rows_for_item(conn, item_id)
         price_version = db.latest_generated_at_for_item(conn, item_id)
+
+        # IMPL_PLAN_SH36 §3/§4: an item that is (or was) a DISCOVERY-
+        # monitored representative may have bands with no real
+        # `sf_price_history_hourly`/`_4h` row at all yet (still
+        # price-forming -- design H5). `forming_prices` (upgrade -> current
+        # price, step-judged, never a price threshold -- plan §6(e)) and
+        # `forming_ranges` (☆ ranges, for the `formingBands` note) are both
+        # computed here, inside this route's one `conn`, and applied further
+        # below AFTER every point (confirmed + provisional) has been built.
+        # `db.get_discovery_monitored_group` returns `None` for every one of
+        # the pre-SH-36 31 items -- both stay at their empty defaults and
+        # every line below this comment is then a strict no-op for them
+        # (plan §6(g): existing equipment's calculation does not move).
+        forming_prices: dict[int, float] = {}
+        forming_ranges: list[tuple[int, int]] = []
+        discovery_group = db.get_discovery_monitored_group(conn, item_id)
+        if discovery_group is not None:
+            discovery_bands, _discovery_observed_at = db.latest_discovery_bands_for_item(conn, item_id)
+            forming_prices = discovery.forming_band_current_prices(discovery_bands, upgrade_count=UPGRADE_COUNT)
+            forming_ranges = discovery.forming_star_ranges(discovery_bands, upgrade_count=UPGRADE_COUNT)
 
         cutoff = _format_iso_utc(datetime.now(timezone.utc) - timedelta(days=DISPLAY_WINDOW_DAYS))
         by_date: dict[str, list[float | None]] = {}
@@ -490,6 +515,32 @@ def prices(request: Request, itemId: str | None = None) -> JSONResponse:
     # point last (if any) -- so the last entry is always the most recent one.
     provisional_date = provisional_points[-1]["date"] if provisional_points else None
 
+    # IMPL_PLAN_SH36 §3: "履歴のある帯は実履歴、履歴の無い帯は現在価格を全期間
+    # の定数として使う" -- applied here, AFTER every point (confirmed +
+    # provisional) already exists, as the very last mutation before the
+    # response is built. Only ever touches a slot that is still `None` (a
+    # band with a real historical value at this exact point keeps that real
+    # value -- this never overwrites confirmed history, plan §3-1: "過去の
+    # 足について正直であること" is satisfied by filling only what would
+    # otherwise be a gap, not by replacing anything real). `forming_prices`
+    # is `{}` for every item that is not a DISCOVERY-monitored representative
+    # (plan §6(g): a strict no-op for the pre-SH-36 31 items).
+    if forming_prices:
+        for point in points:
+            point_prices = point["prices"]
+            for upgrade, forming_price in forming_prices.items():
+                if point_prices[upgrade] is None:
+                    point_prices[upgrade] = round(forming_price, 2)
+
+    # IMPL_PLAN_SH36 §4: `formingBands` -- which ☆ ranges are currently
+    # price-forming (empty list when none, plan §6(h): "形成中の帯が無ければ
+    # 出ない" is a frontend concern this empty list enables; never omitted --
+    # a stable, always-present field, same discipline as `cubes` on
+    # `/sf-history/discovery/prices`).
+    forming_bands_payload = [
+        {"startStar": start_star, "endStar": end_star} for start_star, end_star in forming_ranges
+    ]
+
     return _json(
         {
             "itemId": item_id,
@@ -501,6 +552,7 @@ def prices(request: Request, itemId: str | None = None) -> JSONResponse:
             "priceVersion": price_version,
             "upgradeCount": UPGRADE_COUNT,
             "points": points,
+            "formingBands": forming_bands_payload,
         },
         request,
     )

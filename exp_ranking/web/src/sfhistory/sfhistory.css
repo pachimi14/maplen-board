@@ -328,13 +328,6 @@ html:not([data-theme-depth="deep"]) .sfh-heatmap-cell {
   line-height: 1.2;
 }
 
-/* plan §3-3: "n が少ないセルは視覚的に弱める（例 n<5）" -- dimmed, not
-   hidden: the number is still there, just visually de-emphasized so it is
-   not over-trusted. */
-.sfh-heatmap-cell-weak {
-  opacity: 0.55;
-}
-
 /* plan §3-3 / IMPL_PLAN_SH12 §2/(b): "最安セル・最高セルを視覚的に示す".
    Same fixed, non-theme semantic colors as `.sfh-delta-up`/`.sfh-delta-down`
    above (not a re-declared literal -- one pair of variables, reused
@@ -362,4 +355,31 @@ html:not([data-theme-depth="deep"]) .sfh-heatmap-cell {
 
 .sfh-heatmap-cell-badge-high {
   color: var(--sfh-color-costlier);
+}
+
+/* IMPL_PLAN_SH35 §2-2: "枠線（リング）で示す。背景色は変えない" -- an
+   `outline`, deliberately not another `box-shadow`, so it never collides
+   with `.sfh-heatmap-cell-lowest`/`-highest` above (those already use an
+   inset `box-shadow` for their own ring; a cell can be both the current
+   cell AND the lowest/highest cell at once -- plan (h) -- and both rings
+   must stay visible). `outline-offset: -2px` keeps the ring inside the
+   cell's own box instead of bleeding into the grid gap. Color reuses the
+   same theme accent variable the median color-coding above already uses
+   (plan §2-2: "色は既存のテーマ変数を使う" -- no new fixed color). */
+.sfh-heatmap-cell-current {
+  outline: 2px solid var(--theme-focus);
+  outline-offset: -2px;
+}
+
+/* IMPL_PLAN_SH35 §2-2: legend swatch next to `sfhistory.heatmap.currentCellLegend`
+   -- reuses the identical ring style above so what the legend shows matches
+   what's actually drawn on the grid. */
+.sfh-heatmap-legend-current-swatch {
+  display: inline-block;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 0.2rem;
+  outline: 2px solid var(--theme-focus);
+  outline-offset: -2px;
+  background: var(--theme-card-bg);
 }

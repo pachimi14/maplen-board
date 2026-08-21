@@ -618,6 +618,11 @@
       "loadError": "No se pudo cargar el historial de precios. Vuelve a intentarlo más tarde.",
       "empty": "No hay datos para mostrar"
     },
+    "formingBands": {
+      "range": "☆{{start}}–{{end}}",
+      "rangeSingle": "☆{{star}}",
+      "note": "Aún en formación: {{ranges}}"
+    },
     "heatmap": {
       "title": "Día de la semana x Franja horaria",
       "axisNote": "Filas: día de la semana (UTC). Columnas: hora local ({{zone}}; UTC debajo de cada columna)",
@@ -627,7 +632,9 @@
       "noData": "Sin datos",
       "lowestBadge": "Más bajo",
       "highestBadge": "Más alto",
-      "disclaimer": "Solo muestra la mediana; no es una recomendación para mejorar en un día o franja horaria concretos."
+      "disclaimer": "Solo muestra la mediana; no es una recomendación para mejorar en un día o franja horaria concretos.",
+      "currentCellLabel": "actual",
+      "currentCellLegend": "Celda con borde = día/franja horaria actual (al cargar la página; no se actualiza automáticamente)"
     }
   },
   "sfhistoryDiscovery": {

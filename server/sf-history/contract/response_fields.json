@@ -2,7 +2,7 @@
   "$comment": "IMPL_PLAN_SH20 -- the single source of truth for server/sf-history/app.py's response field names. server/sf-history/tests/test_response_contract.py asserts the ACTUAL response key sets against this file (extra key returned -> fails; a listed key never returned -> fails). exp_ranking/web/src/sfhistory/integrations/contract.test.js asserts normalizePricesPayload/normalizeLatestPayload/normalizeEquipmentPayload keep every field listed here, UNLESS that field is also listed in contract.test.js's own INTENTIONALLY_DROPPED map (see that file -- the drop must be documented there, never silent). Do not duplicate this field list anywhere else; add a field here first, then make both sides pass.",
   "prices": {
     "$comment": "GET /sf-history/prices?itemId=. `root` is always fully present. `point` is every key that CAN appear on any individual point object -- no single point necessarily carries all of them (e.g. a confirmed point never carries `provisional`; only the in-progress point ever carries `closed: false`; `asOf` only appears on the in-progress point, and only when the upstream provided a `latestUpdatedAt`).",
-    "root": ["itemId", "interval", "labelIs", "startDate", "endDate", "provisionalDate", "priceVersion", "upgradeCount", "points"],
+    "root": ["itemId", "interval", "labelIs", "startDate", "endDate", "provisionalDate", "priceVersion", "upgradeCount", "points", "formingBands"],
     "point": ["date", "prices", "provisional", "closed", "asOf"]
   },
   "latest": {

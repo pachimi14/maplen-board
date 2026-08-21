@@ -6,6 +6,7 @@ import {
   formatClockTime,
   formatCompactNeso,
   formatExactNeso,
+  formatFormingBandRanges,
   formatLocalClockTime,
   formatSignedCompactNeso,
   formatTimestamp,
@@ -373,5 +374,44 @@ describe("formatLocalClockTime (plan §2/(b): heatmap column header, local readi
 
   it("never invents a time for an empty column (null/null), same as formatClockTime", () => {
     expect(formatLocalClockTime(null, null, { timeZone: "Asia/Tokyo" })).toBe("--:--");
+  });
+});
+
+// IMPL_PLAN_SH36 §4
+describe("formatFormingBandRanges", () => {
+  const formatRange = (start, end) => `☆${start}〜${end}`;
+
+  it("maps each range through formatRange, preserving order", () => {
+    const result = formatFormingBandRanges(
+      [
+        { startStar: 1, endStar: 10 },
+        { startStar: 20, endStar: 22 },
+      ],
+      formatRange,
+    );
+    expect(result).toEqual(["☆1〜10", "☆20〜22"]);
+  });
+
+  it("returns [] for an empty/missing input (plan §6(h): no note when nothing is forming)", () => {
+    expect(formatFormingBandRanges([], formatRange)).toEqual([]);
+    expect(formatFormingBandRanges(null, formatRange)).toEqual([]);
+    expect(formatFormingBandRanges(undefined, formatRange)).toEqual([]);
+  });
+
+  it("drops a malformed range entry rather than guessing", () => {
+    const result = formatFormingBandRanges(
+      [{ startStar: 1, endStar: 10 }, { startStar: "x", endStar: 5 }, {}, null],
+      formatRange,
+    );
+    expect(result).toEqual(["☆1〜10"]);
+  });
+
+  it("calls formatRange with the raw star numbers, letting the caller decide single-vs-range wording", () => {
+    const calls = [];
+    formatFormingBandRanges([{ startStar: 22, endStar: 22 }], (start, end) => {
+      calls.push([start, end]);
+      return "x";
+    });
+    expect(calls).toEqual([[22, 22]]);
   });
 });

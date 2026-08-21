@@ -138,6 +138,29 @@ export function heatmapSampleRange(cells) {
 }
 
 /**
+ * IMPL_PLAN_SH35 §2-1: which cell "now" falls in, keyed exactly the same way
+ * `buildWeekdayHeatmap`'s cells are (`weekdayIndex` = `Date#getUTCDay()`,
+ * `bucketSlot` = the fixed 4h UTC slot index 0..5) -- so the caller can just
+ * compare `(cell.weekdayIndex, cell.bucketSlot)` against this result with no
+ * translation. This does NOT touch the aggregation above (plan §2-1: "★セル
+ * の割り当て規則を1ビットも変えない") -- it only reads the *current* instant,
+ * never `series`, and is not memoized against anything but its own `now`
+ * argument (plan §2-3: computed at render time only, no timer-driven
+ * refresh -- a long-open tab's ring can go stale; that staleness is an
+ * accepted, documented trade-off, not a bug).
+ *
+ * `now` defaults to `new Date()` but takes an explicit argument so tests can
+ * pin boundary instants (weekday rollover, 23:59/00:00) without faking the
+ * system clock.
+ */
+export function currentHeatmapCell(now = new Date()) {
+  return {
+    weekdayIndex: now.getUTCDay(),
+    bucketSlot: Math.floor(now.getUTCHours() / HOURS_PER_BUCKET),
+  };
+}
+
+/**
  * The lowest/highest-median cell among cells that actually have data (plan
  * §3-3: "最安セル・最高セルを視覚的に示す"). Both `null` if no cell has any
  * data. Not a recommendation (§3-3/§11 forbids one) -- purely which cell to

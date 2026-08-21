@@ -6,6 +6,7 @@ import { setDashboardThemeColor, setDashboardThemeDepth } from "../taskManager/d
 import { sfHistorySource } from "./integrations/sfHistorySource.js";
 import { DEFAULT_PERIOD, defaultPresetForMaxStar, isValidStarRange, selectInitialItem } from "./domain/series.js";
 import { buildScreenModel, isRangeReady } from "./domain/viewModel.js";
+import { formatFormingBandRanges } from "./domain/format.js";
 import SfHistoryTabs from "./SfHistoryTabs.jsx";
 import EquipmentSelector from "./components/EquipmentSelector.jsx";
 import StarRangeSelector from "./components/StarRangeSelector.jsx";
@@ -61,7 +62,7 @@ export default function SfHistoryRoot() {
   const [range, setRange] = useState(null); // { startStar, targetStar }
   const [period, setPeriod] = useState(DEFAULT_PERIOD); // IMPL_PLAN_SH27 §1
 
-  const [pricesState, setPricesState] = useState({ status: "idle", points: [], priceVersion: null, endDate: null });
+  const [pricesState, setPricesState] = useState({ status: "idle", points: [], priceVersion: null, endDate: null, formingBands: [] });
   const [latestState, setLatestState] = useState({ status: "idle", prices: null, latestUpdatedAt: null });
 
   // Load the equipment list once. Picks an initial item + a maxStar-valid
@@ -125,10 +126,18 @@ export default function SfHistoryRoot() {
     sfHistorySource.loadPrices(selectedItemId).then((result) => {
       if (cancelled) return;
       if (!result.ok) {
-        setPricesState({ status: "error", points: [], priceVersion: null, endDate: null });
+        setPricesState({ status: "error", points: [], priceVersion: null, endDate: null, formingBands: [] });
         return;
       }
-      setPricesState({ status: "ready", points: result.points, priceVersion: result.priceVersion, endDate: result.endDate });
+      // IMPL_PLAN_SH36 §4: `formingBands` passes straight through --
+      // `[]` for every item that is not DISCOVERY-monitored (plan §6(g)).
+      setPricesState({
+        status: "ready",
+        points: result.points,
+        priceVersion: result.priceVersion,
+        endDate: result.endDate,
+        formingBands: result.formingBands,
+      });
     });
     return () => {
       cancelled = true;
@@ -170,6 +179,24 @@ export default function SfHistoryRoot() {
     [range, period, pricesState, latestState],
   );
 
+  // IMPL_PLAN_SH36 §4: which ☆ ranges (if any) are currently price-forming
+  // for the selected item -- `pricesState.formingBands` is `[]` for every
+  // item that is not DISCOVERY-monitored (plan §6(g)), which is exactly
+  // when `formingBandsNote` below is `null` and the note does not render
+  // (plan §6(h): "形成中の帯が無ければ出ない"). Structure only comes from
+  // `formatFormingBandRanges` (domain/format.js, i18n-free) -- the actual
+  // wording is picked here via `t()`, same "domain decides shape, component
+  // decides words" split `describeCurrentPercentile`/`SummaryCards` already
+  // use.
+  const formingBandsNote = useMemo(() => {
+    const ranges = formatFormingBandRanges(pricesState.formingBands, (startStar, endStar) =>
+      startStar === endStar
+        ? t("sfhistory.formingBands.rangeSingle", { star: startStar })
+        : t("sfhistory.formingBands.range", { start: startStar, end: endStar }),
+    );
+    return ranges.length ? t("sfhistory.formingBands.note", { ranges: ranges.join(" / ") }) : null;
+  }, [pricesState.formingBands, t]);
+
   return (
     <div className="site-theme sfh-root min-h-screen">
       <SiteHeader active="sfhistory" theme={theme} onThemeChange={handleThemeChange} />
@@ -208,6 +235,14 @@ export default function SfHistoryRoot() {
             </div>
 
             <PeriodTabs value={period} onChange={setPeriod} />
+
+            {/* IMPL_PLAN_SH36 §4: states ONLY which ☆ ranges are currently
+                price-forming -- no evaluation/warning/recommendation wording
+                (plan §1/§6(i)). Renders nothing at all when there is nothing
+                forming (`formingBandsNote` is `null`). */}
+            {formingBandsNote != null ? (
+              <p className="text-sm text-slate-400">{formingBandsNote}</p>
+            ) : null}
 
             <SummaryCards
               currentStatus={latestState.status}

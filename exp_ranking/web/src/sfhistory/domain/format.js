@@ -127,6 +127,26 @@ export function formatTimestamp(isoDate, options) {
 // function only needs the duration, not the per-day count.
 const BUCKET_HOURS = 4;
 
+/** IMPL_PLAN_SH36 §4: turns `/sf-history/prices`' `formingBands`
+ * (`[{startStar, endStar}]`, already grouped into contiguous ☆ ranges by the
+ * server -- `discovery.forming_star_ranges`) into the list of already-
+ * localized range strings the note renders (e.g. `["☆1〜10", "☆20〜22"]`).
+ * `formatRange(startStar, endStar)` is the ONE locale-specific piece
+ * (`sfhistory.formingBands.range` -- "{{start}}〜{{end}}" in ja, "{{start}}
+ * –{{end}}" elsewhere, same separator convention `sfhistoryDiscovery.
+ * prices.settledRange` already uses) -- this function only decides WHICH
+ * ranges exist and their order, never any wording itself (this file's
+ * existing i18n-free convention). `[]` in (no forming bands, or a
+ * malformed entry) -> `[]` out -- plan §6(h): "形成中の帯が無ければ出ない"
+ * is a caller concern this empty array enables (never guesses a range).
+ */
+export function formatFormingBandRanges(formingBands, formatRange) {
+  if (!Array.isArray(formingBands)) return [];
+  return formingBands
+    .filter((range) => Number.isInteger(range?.startStar) && Number.isInteger(range?.endStar))
+    .map((range) => formatRange(range.startStar, range.endStar));
+}
+
 /** IMPL_PLAN_SH17 §4-2: `{ start, end }` HH:MM clock-range for a
  * bucket-start ISO date -- the bucket's own start and (start + 4h) end,
  * both read on a UTC wall clock. Returned as separate parts (not a single

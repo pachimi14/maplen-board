@@ -487,3 +487,84 @@ def test_list_visible_still_never_shows_a_poll_target_to_component_b(tmp_path: P
     assert db.list_active_discovery_monitored_groups(conn) == []
     assert len(db.list_visible_discovery_monitored_groups(conn, since_iso="2026-08-01T00:00:00Z")) == 1
     conn.close()
+
+
+# --- discovery_max_upgrade_by_item / max_star_by_item -- IMPL_PLAN_SH36 -----
+
+
+def _seed_bands(conn, item_id: int, bands: dict[int, str], *, price_at: str = "2026-08-21T09:30:00Z") -> None:
+    """Seed one `sf_discovery_price_history` row per (upgrade, step) pair --
+    the shape `db.upsert_discovery_price_points` expects, one call per
+    upgrade (its own `points` argument is one BAND's point list, not several
+    bands at once)."""
+    for upgrade, step in bands.items():
+        db.upsert_discovery_price_points(
+            conn, item_id, upgrade,
+            [{"priceAt": price_at, "endAt": None, "price": 1.0, "step": step}],
+            "2026-08-21T09:30:05Z",
+        )
+
+
+def test_discovery_max_upgrade_by_item_returns_empty_dict_when_table_missing(tmp_path: Path) -> None:
+    import sqlite3
+
+    conn = sqlite3.connect(str(tmp_path / "x.sqlite"))  # schema never applied
+    assert db.discovery_max_upgrade_by_item(conn) == {}
+    conn.close()
+
+
+def test_discovery_max_upgrade_by_item_ignores_bands_at_or_beyond_judge_range(tmp_path: Path) -> None:
+    """IMPL_PLAN_SH36 §0/§3: only itemUpgrade < discovery.JUDGE_UPGRADE_COUNT
+    (22) ever counts toward maxStar -- ☆23-25 (upgrade 22..24) are the
+    DISCOVERY-page-only display extension."""
+    conn = db.connect(tmp_path / "x.sqlite")
+    db.apply_schema(conn)
+    _seed_bands(conn, 1004811, {9: "STEP_TYPE_DISCOVERY", 21: "STEP_TYPE_DISCOVERY", 22: "STEP_TYPE_DISCOVERY", 24: "STEP_TYPE_DISCOVERY"})
+    assert db.discovery_max_upgrade_by_item(conn) == {1004811: 21}
+    conn.close()
+
+
+def test_max_star_by_item_unions_hourly_and_discovery_sources(tmp_path: Path) -> None:
+    """Hat-shaped fixture: hourly history only covers upgrade 0..18 (☆1-19,
+    the "formed" bands) but DISCOVERY has ALSO recorded up to upgrade 21
+    (☆22, still forming) -- maxStar must be 22, not 19 (IMPL_PLAN_SH36 §0's
+    whole premise: a non-contiguous formation gap must not under-report the
+    item's real cap)."""
+    conn = db.connect(tmp_path / "x.sqlite")
+    db.apply_schema(conn)
+    for upgrade in range(19):  # 0..18
+        db.upsert_hourly_rows(
+            conn, 1004811, upgrade,
+            [{"date": "2026-08-01T00:00:00Z", "endPrice": 1.0, "sumEnhanceCnt": 0}],
+            "2026-08-21T00:00:00Z",
+        )
+    _seed_bands(conn, 1004811, {i: "STEP_TYPE_DISCOVERY" for i in range(10)} | {21: "STEP_TYPE_DISCOVERY"})
+    # An item never touched by DISCOVERY at all -- must stay exactly the old
+    # hourly-only computation (plan §6(g)/(b)).
+    db.upsert_hourly_rows(
+        conn, 5000000, 21,
+        [{"date": "2026-08-01T00:00:00Z", "endPrice": 1.0, "sumEnhanceCnt": 0}],
+        "2026-08-21T00:00:00Z",
+    )
+
+    result = db.max_star_by_item(conn)
+    assert result[1004811] == 22  # 21 (discovery) > 18 (hourly) -> +1
+    assert result[5000000] == 22  # unaffected, hourly-only path
+    conn.close()
+
+
+def test_max_star_by_item_matches_max_upgrade_by_item_when_no_discovery_rows_exist(tmp_path: Path) -> None:
+    """IMPL_PLAN_SH36 §6(g): byte-identical to the pre-SH-36 computation for
+    every item with zero sf_discovery_price_history rows (every one of the
+    existing 31 items, today)."""
+    conn = db.connect(tmp_path / "x.sqlite")
+    db.apply_schema(conn)
+    db.upsert_hourly_rows(
+        conn, 1001, 19,
+        [{"date": "2026-08-01T00:00:00Z", "endPrice": 1.0, "sumEnhanceCnt": 0}],
+        "2026-08-21T00:00:00Z",
+    )
+    old = {item_id: upgrade + 1 for item_id, upgrade in db.max_upgrade_by_item(conn).items()}
+    new = db.max_star_by_item(conn)
+    assert new == old == {1001: 20}
+    conn.close()

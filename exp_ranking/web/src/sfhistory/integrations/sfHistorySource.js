@@ -14,6 +14,19 @@ function toFiniteOrNull(value) {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+/** IMPL_PLAN_SH36 §3/§4: `/sf-history/prices`'s `formingBands` -- which ☆
+ * ranges are currently price-forming (server-computed, `discovery.
+ * forming_star_ranges`'s own contiguous grouping -- this normalizer never
+ * re-groups anything, only validates shape). `[]`/malformed input -> `[]`
+ * (plan §6(h): no forming bands -> no note is a frontend concern this
+ * empty array enables; never invents a range for a malformed entry). */
+function normalizeFormingBands(rawFormingBands) {
+  if (!Array.isArray(rawFormingBands)) return [];
+  return rawFormingBands
+    .filter((range) => Number.isInteger(range?.startStar) && Number.isInteger(range?.endStar))
+    .map((range) => ({ startStar: range.startStar, endStar: range.endStar }));
+}
+
 /** IMPL_PLAN_SH9 §3-2: `aliases` (itemId + itemName) for one group. Falls
  * back to one synthetic entry naming the representative by its own id when
  * the server sent no `aliases` at all (a `sf_history_items.json` snapshot
@@ -98,6 +111,7 @@ export function normalizePricesPayload(payload, expectedItemId) {
       startDate: null,
       endDate: null,
       provisionalDate: null,
+      formingBands: [],
     };
   }
   const points = payload.points
@@ -127,6 +141,10 @@ export function normalizePricesPayload(payload, expectedItemId) {
     startDate: typeof payload.startDate === "string" ? payload.startDate : null,
     endDate: typeof payload.endDate === "string" ? payload.endDate : null,
     provisionalDate: typeof payload.provisionalDate === "string" ? payload.provisionalDate : null,
+    // IMPL_PLAN_SH36 §4: which ☆ ranges are currently price-forming --
+    // `[]` for every item that is not DISCOVERY-monitored (plan §6(g): a
+    // no-op pass-through for the pre-SH-36 31 items).
+    formingBands: normalizeFormingBands(payload.formingBands),
   };
 }
 

@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sqlite3
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -86,6 +87,54 @@ EXPECTED_ITEM_COUNT = 28 + len(ADDITIONAL_ITEM_IDS)  # SH-22: 28 priority + 2; S
 # original 28-item draft list, not inferred from level-band data. The
 # level-band evidence below is kept as corroborating context (it is true and
 # was independently observed), but it is not the reason for the exclusion.
+# IMPL_PLAN_SH36 §2-1 (2026-08-21, ユーザー指示): equipment that has no
+# resolvable entry in maplenEnhancebot's `catalog/main_equipment.json` at all
+# (a brand-new set, e.g. Arcane Umbra) cannot go through the priority/catalog
+# path above -- there is no `item_catalog` group to read a name or alias from.
+# `_active_discovery_groups` below reads this repo's OWN
+# `sf_discovery_monitored_groups` table instead (IMPL_PLAN_SH32's Component
+# A/B already resolve name + alias set for these via the dynamicpricing
+# enumeration API, `scripts/scan_discovery.py`'s `fetch_all_groups`/
+# `fetch_group_items` -- this script does not re-implement that enumeration,
+# it only reads what that pipeline already wrote). Plan §2-1: "既存の
+# discovery 側で固定済みの代表があるなら、それに合わせる" is satisfied by
+# construction -- this reads the exact same `representative_item_id` scan_
+# discovery.py fixed, never re-derives one.
+
+
+def _max_star_by_item(db_path: Path) -> dict[int, int]:
+    """``maxStar`` per item_id -- ``db.max_star_by_item``'s union of hourly-
+    history-derived and DISCOVERY-presence-derived signals (IMPL_PLAN_SH36
+    §0/§6(g)). ``{}`` if ``db_path`` does not exist (same graceful, never-
+    guessed degrade as ``_max_upgrade_by_item`` below)."""
+    if not db_path.exists():
+        return {}
+    conn = db.connect(db_path)
+    try:
+        return db.max_star_by_item(conn)
+    finally:
+        conn.close()
+
+
+def _active_discovery_groups(db_path: Path) -> list[dict[str, Any]]:
+    """Every currently-ACTIVE ``sf_discovery_monitored_groups`` row
+    (IMPL_PLAN_SH36 §2-1), or ``[]`` if ``db_path`` does not exist yet, or the
+    DISCOVERY tables have not been created there (a dev DB that predates
+    IMPL_PLAN_SH32) -- never a hard failure: a machine with no DISCOVERY data
+    at all simply appends nothing, and this script keeps producing the same
+    31-item list it always has (plan §6(g))."""
+    if not db_path.exists():
+        return []
+    conn = db.connect(db_path)
+    try:
+        try:
+            return db.list_active_discovery_monitored_groups(conn)
+        except sqlite3.OperationalError:
+            return []
+    finally:
+        conn.close()
+
+
 EXCLUDED_ITEM_IDS: dict[int, str] = {
     1113282: (
         "Noble Ifia's Ring -- one of the two items the user explicitly named for "
@@ -174,7 +223,13 @@ def build_item_list(
     catalog = item_catalog.load_catalog()
     representative_ids = priority_equipment.load_priority_representative_item_ids()
     item_to_representative = priority_equipment.build_priority_item_to_representative_map()
-    max_upgrade_by_item = _max_upgrade_by_item(db_path)
+    # IMPL_PLAN_SH36: `_max_star_by_item` (hourly-history UNION DISCOVERY-
+    # presence) replaces the old `_max_upgrade_by_item(db_path).get(id) + 1`
+    # inline computation below -- byte-identical for every item that has
+    # never had a `sf_discovery_price_history` row (plan §6(g)/(b)).
+    # `_max_upgrade_by_item` itself is untouched (still exercised directly by
+    # its own tests) -- this call site is the only thing that changed.
+    max_star_by_item = _max_star_by_item(db_path)
 
     representative_to_aliases: dict[int, set[int]] = {}
     for item_id, representative in item_to_representative.items():
@@ -234,10 +289,10 @@ def build_item_list(
             )
             continue
         alias_ids = sorted(representative_to_aliases.get(representative, {representative}))
-        max_upgrade = max_upgrade_by_item.get(representative)
-        # design §7.1: maxStar is derived from hourly data (MAX(item_upgrade)+1),
-        # never hardcoded. null when the backfill DB isn't available to derive it from.
-        max_star = (max_upgrade + 1) if max_upgrade is not None else None
+        # design §7.1: maxStar is derived from actual recorded data, never
+        # hardcoded. null when neither source (hourly history nor DISCOVERY
+        # presence -- IMPL_PLAN_SH36) has anything to derive it from.
+        max_star = max_star_by_item.get(representative)
         # IMPL_PLAN_SH9 §3-1: `aliases` deliberately includes the
         # representative itself (it is already one of `alias_ids`) -- the SF
         # History search box flattens this list into candidates, and having
@@ -267,6 +322,52 @@ def build_item_list(
             file=sys.stderr,
         )
 
+    # IMPL_PLAN_SH36 §2-1/§2-2: append any equipment this repo's OWN
+    # DISCOVERY subsystem is (or has been) actively monitoring but the
+    # catalog/priority path above never resolved (Arcane Umbra's 3 pieces,
+    # today -- but this loop is not limited to those 3 itemIds, plan §6(e)/
+    # (l): "将来どの装備でも同じ経路で動くこと"). Appended AFTER every
+    # catalog-derived + ADDITIONAL_ITEM_IDS entry, sorted by itemId, so the
+    # diff against everything above stays a pure append (same discipline as
+    # SH-22/SH-30's `ADDITIONAL_ITEM_IDS` tail). Never touches
+    # maplenEnhancebot -- every field comes straight from THIS repo's own
+    # `sf_discovery_monitored_groups` row (already resolved by
+    # `scripts/scan_discovery.py`'s dynamicpricing enumeration, IMPL_PLAN_
+    # SH32), so the representative here is BY CONSTRUCTION the same one the
+    # DISCOVERY pages use (plan §6(c): "discovery 側で固定済みの代表と一致").
+    existing_item_ids = {item["itemId"] for item in items} | set(EXCLUDED_ITEM_IDS)
+    existing_alias_ids = {alias_id for item in items for alias_id in item["aliasItemIds"]}
+    for group in sorted(_active_discovery_groups(db_path), key=lambda g: int(g["itemId"])):
+        representative = int(group["itemId"])
+        if representative in existing_item_ids or representative in existing_alias_ids:
+            continue  # already resolvable via the catalog path -- never double-added
+        alias_ids = sorted({int(a) for a in (group.get("aliasItemIds") or [representative])})
+        if existing_alias_ids & set(alias_ids):
+            # Defensive: an alias set overlapping an existing entry would be
+            # a genuine data inconsistency between the two sources -- skip
+            # rather than silently merge/duplicate (never guessed at).
+            continue
+        item_name = group.get("itemName") or str(representative)
+        aliases = [
+            {
+                "itemId": int(alias["itemId"]),
+                "itemName": alias.get("itemName") or str(alias["itemId"]),
+            }
+            for alias in (group.get("aliases") or [])
+            if isinstance(alias, dict) and "itemId" in alias
+        ] or [{"itemId": representative, "itemName": item_name}]
+        items.append(
+            {
+                "itemId": representative,
+                "itemName": item_name,
+                "aliasItemIds": alias_ids,
+                "maxStar": max_star_by_item.get(representative),
+                "aliases": aliases,
+            }
+        )
+        existing_item_ids.add(representative)
+        existing_alias_ids |= set(alias_ids)
+
     return {
         "generatedAt": datetime.now(timezone.utc).isoformat(),
         "sourceRepo": "maplenEnhancebot",
@@ -293,10 +394,18 @@ def main() -> int:
         f"sourceCommit: {payload['sourceCommit']}  -> {args.out}",
         file=sys.stderr,
     )
-    if item_count != EXPECTED_ITEM_COUNT:
+    # IMPL_PLAN_SH36 §2-1/§6(a): `EXPECTED_ITEM_COUNT` (31) is now a FLOOR,
+    # not an exact target -- the catalog/priority-derived base is always
+    # exactly 31, but this script may additionally append however many
+    # equipment groups this repo's DISCOVERY subsystem currently has ACTIVE
+    # (3, as of SH-36 -- but plan §6(e)/(l): "将来どの装備でも同じ経路で動く
+    # こと", so a future 4th DISCOVERY item must not trip this as a failure).
+    # Fewer than the floor is still exactly the SH-2 stop condition it always
+    # was (something upstream of the catalog path broke).
+    if item_count < EXPECTED_ITEM_COUNT:
         print(
-            f"WARNING: expected exactly {EXPECTED_ITEM_COUNT} items "
-            f"(IMPL_PLAN_SH2 §4/§6 accept criterion (a)), got {item_count}. "
+            f"WARNING: expected at least {EXPECTED_ITEM_COUNT} items "
+            f"(IMPL_PLAN_SH2 §4/§6 accept criterion (a) floor), got {item_count}. "
             "This is a stop condition -- do not proceed to backfill.",
             file=sys.stderr,
         )

@@ -1,6 +1,6 @@
 import { Fragment, useMemo } from "react";
 import { useTranslation } from "../../i18n/I18nContext.jsx";
-import { buildWeekdayHeatmap, extremeHeatmapCells, heatmapSampleRange, totalHeatmapCount } from "../domain/weekdayStats.js";
+import { buildWeekdayHeatmap, currentHeatmapCell, extremeHeatmapCells, heatmapSampleRange, totalHeatmapCount } from "../domain/weekdayStats.js";
 import {
   formatClockTime,
   formatCompactNeso,
@@ -22,7 +22,6 @@ import {
 // IMPL_PLAN_SH14 §2) combine with this row order to put Thu 00:00 UTC at
 // the top-left cell.
 const WEEKDAY_ORDER = [4, 5, 6, 0, 1, 2, 3];
-const LOW_N_THRESHOLD = 5; // plan §3-3: "n が少ないセルは視覚的に弱める（例 n<5）"
 
 /**
  * design/plan §3: 7 (UTC weekday) x 6 (4h slot) grid of the *median*
@@ -73,6 +72,18 @@ const LOW_N_THRESHOLD = 5; // plan §3-3: "n が少ないセルは視覚的に�
  * the top-left cell "Thu 00:00 UTC" meaning "the bucket ending at Thu
  * 00:00 UTC" (i.e. the `水 20:00–木 00:00` bucket) rather than "the bucket
  * starting at Thu 00:00 UTC".
+ *
+ * IMPL_PLAN_SH35 §1/§2 (2026-08-21, user decision): (A) removes the old
+ * `n < 5` dimming (`LOW_N_THRESHOLD`/`.sfh-heatmap-cell-weak`) -- SH-29's
+ * period-tab linkage above made most cells dim under a short period, which
+ * was more confusing than the low-n warning it was meant to convey; the
+ * median color-coding (`ratio`/`background` below) is untouched, still the
+ * only thing that varies a cell's shade. (B) adds a "this is now" ring
+ * (`.sfh-heatmap-cell-current`, an outline -- not a `background` change, so
+ * it never fights the median color-coding) on the cell `currentHeatmapCell()`
+ * (domain/weekdayStats.js) says the current UTC instant falls in -- computed
+ * fresh on every render, no timer (§2-3's accepted trade-off: a long-open
+ * tab's ring can go stale).
  */
 export default function WeekdayHeatmap({ series }) {
   const { t, language } = useTranslation();
@@ -102,6 +113,14 @@ export default function WeekdayHeatmap({ series }) {
     return { min: Math.min(...medians), max: Math.max(...medians) };
   }, [cells]);
 
+  // IMPL_PLAN_SH35 §2/§2-3: which cell "now" falls in, recomputed on every
+  // render -- not on a timer (plan §2-3's explicit割り切り: a long-open tab's
+  // ring can go stale; this is accepted, not hidden -- see the completion
+  // report's note on this). No `useMemo` here on purpose: the whole point is
+  // to read the current instant fresh each time this component renders
+  // (e.g. on a period-tab switch), not to freeze it at mount.
+  const current = currentHeatmapCell();
+
   return (
     <div className="sfh-summary-card">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
@@ -111,6 +130,15 @@ export default function WeekdayHeatmap({ series }) {
             out here), rows stay the UTC weekday `buildWeekdayHeatmap`
             actually grouped by. */}
         <span className="text-xs text-slate-500">{t("sfhistory.heatmap.axisNote", { zone: zoneLabel })}</span>
+      </div>
+      {/* IMPL_PLAN_SH35 §2-2: "凡例か注記で「これが現在」と分かるように
+          する。枠だけで意味が伝わる前提にしない" -- a static legend line,
+          always shown (not only when a cell happens to render), same
+          `sfh-heatmap-cell-current` ring style reused inline so the swatch
+          matches what's actually drawn on the grid. */}
+      <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
+        <span className="sfh-heatmap-legend-current-swatch" aria-hidden="true" />
+        <span>{t("sfhistory.heatmap.currentCellLegend")}</span>
       </div>
 
       {total === 0 ? (
@@ -137,9 +165,16 @@ export default function WeekdayHeatmap({ series }) {
                 {columns.map((column) => {
                   const cell = cellByKey.get(`${weekdayIndex}-${column.bucketSlot}`);
                   const hasData = cell?.median != null;
-                  const isLowN = hasData && cell.n < LOW_N_THRESHOLD;
                   const isLowest = hasData && extremes.lowest && cell.weekdayIndex === extremes.lowest.weekdayIndex && cell.bucketSlot === extremes.lowest.bucketSlot;
                   const isHighest = hasData && extremes.highest && cell.weekdayIndex === extremes.highest.weekdayIndex && cell.bucketSlot === extremes.highest.bucketSlot;
+                  // IMPL_PLAN_SH35 §2-1: "どのセルを指すかを計算するだけで、
+                  // 集計には触らない" -- compared directly against
+                  // `current` (weekdayIndex/bucketSlot), the exact same key
+                  // shape every cell already carries. Deliberately shown
+                  // even when `!hasData` (plan §2-1 "データが無いセル
+                  // （進行中の足など）でも印を付ける" -- "now" is not about
+                  // whether a bucket has confirmed data yet).
+                  const isCurrent = weekdayIndex === current.weekdayIndex && column.bucketSlot === current.bucketSlot;
                   // plan §3-3: "セルは中央値で色分け（安い＝冷色／高い＝暖色
                   // 等、テーマ変数を使う）" -- interpolated between the
                   // neutral card background (cheapest) and the active
@@ -150,22 +185,31 @@ export default function WeekdayHeatmap({ series }) {
                   const background = hasData
                     ? `color-mix(in srgb, var(--theme-focus) ${Math.round(8 + ratio * 62)}%, var(--theme-card-bg))`
                     : "var(--theme-card-bg)";
-                  const title = hasData
+                  // IMPL_PLAN_SH35 §2-2: "凡例か注記で「これが現在」と分かる
+                  // ようにする。枠だけで意味が伝わる前提にしない" +
+                  // "スクリーンリーダー向けに...テキストでも示す（aria-label
+                  // / title のいずれか）" -- the current-cell text is
+                  // appended to the same `title` every cell already has
+                  // (native tooltip = also read by most screen readers),
+                  // rather than adding a second, easy-to-miss attribute.
+                  const baseTitle = hasData
                     ? t("sfhistory.heatmap.cellTooltip", { value: formatExactNeso(cell.median) })
                     : t("sfhistory.heatmap.noData");
+                  const title = isCurrent ? `${baseTitle} (${t("sfhistory.heatmap.currentCellLabel")})` : baseTitle;
                   return (
                     <div
                       key={column.bucketSlot}
                       className={[
                         "sfh-heatmap-cell",
-                        isLowN ? "sfh-heatmap-cell-weak" : "",
                         isLowest ? "sfh-heatmap-cell-lowest" : "",
                         isHighest ? "sfh-heatmap-cell-highest" : "",
+                        isCurrent ? "sfh-heatmap-cell-current" : "",
                       ]
                         .filter(Boolean)
                         .join(" ")}
                       style={{ background }}
                       title={title}
+                      aria-label={title}
                     >
                       {hasData ? (
                         <>

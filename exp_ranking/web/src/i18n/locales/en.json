@@ -618,6 +618,11 @@
       "loadError": "Could not load the price history. Please reload later.",
       "empty": "No data to display"
     },
+    "formingBands": {
+      "range": "☆{{start}}–{{end}}",
+      "rangeSingle": "☆{{star}}",
+      "note": "Still forming: {{ranges}}"
+    },
     "heatmap": {
       "title": "Weekday x Time of Day",
       "axisNote": "Rows: UTC weekday. Columns: your local time ({{zone}}; UTC shown below each column)",
@@ -627,7 +632,9 @@
       "noData": "No data",
       "lowestBadge": "Lowest",
       "highestBadge": "Highest",
-      "disclaimer": "Shows the median only -- not a recommendation to enhance on any particular weekday or time."
+      "disclaimer": "Shows the median only -- not a recommendation to enhance on any particular weekday or time.",
+      "currentCellLabel": "current",
+      "currentCellLegend": "Outlined cell = current weekday/time slot (as of page load; not auto-refreshed)"
     }
   },
   "sfhistoryDiscovery": {

@@ -158,6 +158,35 @@ describe("computeCurrentExpected (design §6: same missing-data gating, single p
     const [single] = buildExpectedSeries([{ date: "d", prices }], 0, 17);
     expect(computeCurrentExpected(prices, 0, 17)).toBe(single.expected);
   });
+
+  // IMPL_PLAN_SH36 §0/§6(d): reproduces the acceptance-criterion scenario --
+  // Arcane Umbra Thief Hat (itemId 1004811), 0->22, fed the item's own
+  // current per-band price for EVERY star (☆1-10/☆20-22 forming, ☆11-19
+  // settled -- this is exactly what `computeCurrentExpected` already does,
+  // unmodified, once `/sf-history/latest` carries a real current price for
+  // every band regardless of DISCOVERY step -- design H2/fetch_latest.py's
+  // Open API upstream already reads `currentPrice.price` unconditionally on
+  // `step`). This fixture is a FROZEN snapshot (`GET /sf-history/discovery/
+  // prices?itemId=1004811`, api.lulumi-tools.com, captured 2026-08-
+  // 21T09:30:15Z) -- not a live call (DISCOVERY-period prices for ☆1-10/
+  // ☆20-22 drift meaningfully hour to hour, so a live re-fetch will not
+  // bit-match this or the architect's own independently-captured reference
+  // value; see the SH-36 completion report for that live comparison).
+  it("IMPL_PLAN_SH36 §6(d): Hat 0->22 using the frozen live-snapshot fixture", () => {
+    // `computeCurrentExpected` requires an array (mirrors `/sf-history/
+    // latest`'s own `prices[]` response shape) -- index = itemUpgrade.
+    const sfPrices = [
+      114.892432, 229.785131, 344.677717, 459.570351, 574.46295,
+      689.354941, 804.247441, 919.139943, 1034.032455, 1148.924952,
+      1201149.099335, 1627180.850776, 1799166.600104, 1791177.020387,
+      1775197.860955, 2963863.801319, 2963863.801319, 2963863.801319,
+      2963863.801319, 2.347413, 2.593298, 0.000001,
+    ];
+    const expected = computeCurrentExpected(sfPrices, 0, 22);
+    // Frozen regression value for THIS fixture (computed by this same,
+    // unmodified `computeCurrentExpected` -- not a hand re-derivation).
+    expect(expected).toBeCloseTo(1498147111.4045134, 4);
+  });
 });
 
 describe("percentile (design §11: Current Position)", () => {
