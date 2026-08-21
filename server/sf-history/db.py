@@ -810,3 +810,64 @@ def find_discovery_transitions_for_item(conn: sqlite3.Connection, item_id: int) 
         if transition is not None:
             transitions[item_upgrade] = transition
     return transitions
+
+
+# --- IMPL_PLAN_SH36: maxStar union (hourly history + DISCOVERY presence) ----
+
+
+def discovery_max_upgrade_by_item(conn: sqlite3.Connection) -> dict[int, int]:
+    """MAX(item_upgrade) with at least one recorded band, per representative
+    item_id, restricted to ``discovery.JUDGE_UPGRADE_COUNT`` (0..21 -- the
+    same range the main SF History chart/latest endpoints ever display;
+    IMPL_PLAN_SH36 §0/§3). ☆23-25 (itemUpgrade 22..24) are the
+    DISCOVERY-page-only display extension and are never counted toward this
+    system's own maxStar.
+
+    A second, additive source for ``maxStar`` alongside ``max_upgrade_by_item``
+    (hourly-history-derived) above -- for an item whose price history has
+    GAPS because some of its real bands are still in a DISCOVERY
+    (price-forming) period and have therefore never recorded a
+    ``sf_price_history_hourly`` row at all (that table only ever gains a row
+    once a band has a settled/CHANGE price -- IMPL_PLAN_SH36 §0 H5). Every
+    row this reads comes from ``sf_discovery_price_history``, already written
+    by the existing 5-minute poller (``scripts/poll_discovery.py``) -- this
+    adds no new upstream call (plan §6(l)). Returns ``{}`` if the table does
+    not exist yet (a dev DB that predates IMPL_PLAN_SH32), same "graceful,
+    never guessed" degrade as ``gen_item_list.py``'s own missing-DB handling.
+    """
+    import discovery  # local import: keeps db.py's top-level imports DB-only
+
+    try:
+        cur = conn.execute(
+            "SELECT item_id, MAX(item_upgrade) FROM sf_discovery_price_history "
+            "WHERE item_upgrade < ? GROUP BY item_id",
+            (discovery.JUDGE_UPGRADE_COUNT,),
+        )
+    except sqlite3.OperationalError:
+        return {}
+    return {row[0]: row[1] for row in cur.fetchall()}
+
+
+def max_star_by_item(conn: sqlite3.Connection) -> dict[int, int]:
+    """``maxStar`` per item_id -- the union of ``max_upgrade_by_item``
+    (hourly-history-derived) and ``discovery_max_upgrade_by_item`` (DISCOVERY-
+    presence-derived) above, whichever attests the HIGHER band for a given
+    item (design §7.1: never hardcoded, always derived from actually
+    recorded data; IMPL_PLAN_SH36: an item with a still-forming HIGH band
+    must not have its maxStar under-reported just because that band has no
+    hourly row yet).
+
+    For every item that has never had a ``sf_discovery_price_history`` row
+    (every one of the pre-SH-36 31 items -- a representative only gets rows
+    there once it becomes DISCOVERY-monitored, IMPL_PLAN_SH32), this is
+    byte-identical to the old ``max_upgrade_by_item(conn).get(id) + 1``
+    computation -- IMPL_PLAN_SH36 §6(g)/(b): existing equipment's maxStar
+    does not move by even one star.
+    """
+    hourly = max_upgrade_by_item(conn)
+    discovery_derived = discovery_max_upgrade_by_item(conn)
+    result: dict[int, int] = {}
+    for item_id in set(hourly) | set(discovery_derived):
+        max_upgrade = max(hourly.get(item_id, -1), discovery_derived.get(item_id, -1))
+        result[item_id] = max_upgrade + 1
+    return result
