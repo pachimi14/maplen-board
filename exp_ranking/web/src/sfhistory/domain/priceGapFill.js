@@ -8,14 +8,26 @@
 // left `null`, unchanged, so the chart still breaks there rather than
 // hiding a real gap.
 //
-// `LOWER_BOUND_PRICE` (1e-6 NESO) is the same degenerate placeholder value
-// upstream itself returns for a not-yet-priced band during price formation
-// (SH-34's own findings -- see discovery/domain/priceFormat.js's header:
-// "0.000001 から始まり上下しながら育つ") -- not an invented constant. Plan
-// §2-2: the true price during that window is at most a few thousand NESO
-// against a formed band's low-millions -- i.e. the gap this substitution
-// leaves is well under 0.05% of a typical multi-band Expected total (see
-// the plan's own worked Hat 0->22 table, and the completion report's
+// `LOWER_BOUND_PRICE` (1e-6 NESO) is a REAL price, not an invented one --
+// literally the price upstream itself assigns to a not-yet-priced band at
+// the very start of that band's price-formation window (the "bonus time"
+// starting price dynamic pricing gives the first buyers of a band -- SH-34's
+// own findings, see discovery/domain/priceFormat.js's header: "0.000001 か
+// ら始まり上下しながら育つ"). The price then climbs as the band forms -- a
+// real rise, never a fake-to-real transition (measured on Hat: ☆1 grew to
+// 133.59 NESO, ☆10 to 1,335.87 NESO by the time real per-4h-bucket data
+// begins). An earlier version of this comment (and the SH-38 legend text it
+// once backed) mischaracterized this value as fake/not-a-real-price -- do
+// not reintroduce that framing.
+//
+// Because this fill uses that one known STARTING real price for every null
+// in a band's leading run, a later null within that same still-untracked
+// window may in fact have already climbed above 1e-6 by the time it
+// happened -- this is exactly why the constant is named a LOWER bound: at
+// or below the true value at every point, never above it. Plan §2-2: that
+// gap is at most a few thousand NESO against a formed band's low-millions
+// -- well under 0.05% of a typical multi-band Expected total (see the
+// plan's own worked Hat 0->22 table, and the completion report's
 // production-data verification).
 //
 // This never touches an already non-null price -- whether a real

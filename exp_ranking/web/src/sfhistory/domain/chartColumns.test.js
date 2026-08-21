@@ -10,7 +10,7 @@
 // from), not just on `closed`/`provisional` flags surviving a pass-through
 // -- this is what would have caught the P0 before it shipped.
 import { describe, expect, it } from "vitest";
-import { isOpenPoint, withChartColumns } from "./chartColumns.js";
+import { filledBandRange, isOpenPoint, withChartColumns } from "./chartColumns.js";
 
 function point(date, expected, extra = {}) {
   return { date, expected, provisional: false, closed: true, ...extra };
@@ -72,5 +72,76 @@ describe("withChartColumns (IMPL_PLAN_SH19 §1/§4: closed, not provisional, dri
     const data = withChartColumns(series);
     expect(data[0].confirmed).toBe(5);
     expect(data[0].bridge).toBeNull();
+  });
+});
+
+// IMPL_PLAN_SH38 §1/§4-2: `filledBandRange` -- the x-range to shade for
+// "this span includes a `priceGapFill.js`-filled point". Rows below use
+// plain "d0".."d4" `date`/`displayDate` strings (in ascending order) rather
+// than real ISO timestamps for `displayDate` -- `filledBandRange` never
+// re-derives `displayDate`, it only reads it back off each row, so a bare
+// stand-in string is enough to prove the returned `x1`/`x2` are the exact
+// `displayDate` values of the right rows.
+function row(date) {
+  return { date, displayDate: `display-${date}` };
+}
+
+describe("filledBandRange (IMPL_PLAN_SH38 §1)", () => {
+  it("no filled bands at all -> null (plan (c): 埋めが無ければ帯を出さない)", () => {
+    const rows = [row("2026-08-17T00:00:00Z"), row("2026-08-18T00:00:00Z")];
+    expect(filledBandRange(rows, [])).toBeNull();
+    expect(filledBandRange(rows, undefined)).toBeNull();
+  });
+
+  it("empty rows -> null", () => {
+    expect(filledBandRange([], [{ upgrade: 12, untilDate: "2026-08-17T20:00:00Z" }])).toBeNull();
+  });
+
+  it("a single filled band: shades from the first row through the last row strictly before untilDate", () => {
+    const rows = [
+      row("2026-08-16T00:00:00Z"),
+      row("2026-08-16T04:00:00Z"),
+      row("2026-08-17T20:00:00Z"), // exactly untilDate -- the first REAL point, not filled
+      row("2026-08-18T00:00:00Z"),
+    ];
+    const range = filledBandRange(rows, [{ upgrade: 12, untilDate: "2026-08-17T20:00:00Z" }]);
+    expect(range).toEqual({ x1: rows[0].displayDate, x2: rows[1].displayDate });
+  });
+
+  it("multiple filled bands with different untilDate: the union is the MAX untilDate (plan §4-2: always contiguous, never fragmented)", () => {
+    const rows = [
+      row("2026-08-16T00:00:00Z"),
+      row("2026-08-17T20:00:00Z"), // ☆13's untilDate -- real for ☆13, still filled for ☆19
+      row("2026-08-20T00:00:00Z"), // ☆19's untilDate -- the first row real for every filled band
+      row("2026-08-20T04:00:00Z"),
+    ];
+    const filledBands = [
+      { upgrade: 12, untilDate: "2026-08-17T20:00:00Z" }, // ☆13
+      { upgrade: 18, untilDate: "2026-08-20T00:00:00Z" }, // ☆19
+    ];
+    const range = filledBandRange(rows, filledBands);
+    // union = every row strictly before max(untilDate) = 08-20T00:00 -> rows[0..1]
+    expect(range).toEqual({ x1: rows[0].displayDate, x2: rows[1].displayDate });
+  });
+
+  it("the fill entirely precedes the visible period slice -> null (every onscreen point is already real)", () => {
+    const rows = [row("2026-08-21T00:00:00Z"), row("2026-08-21T04:00:00Z")];
+    const range = filledBandRange(rows, [{ upgrade: 12, untilDate: "2026-08-17T20:00:00Z" }]);
+    expect(range).toBeNull();
+  });
+
+  it("the visible period slice starts mid-fill: x1 is still the slice's own first row, x2 the last filled row in view", () => {
+    // Full history's fill ends 08-20T00:00, but the visible (sliced) window
+    // itself only starts 08-19T00:00 -- every row shown is still before the
+    // band's end, so the whole visible window is shaded.
+    const rows = [row("2026-08-19T00:00:00Z"), row("2026-08-19T20:00:00Z")];
+    const range = filledBandRange(rows, [{ upgrade: 18, untilDate: "2026-08-20T00:00:00Z" }]);
+    expect(range).toEqual({ x1: rows[0].displayDate, x2: rows[1].displayDate });
+  });
+
+  it("a malformed/unparseable untilDate is ignored, not thrown", () => {
+    const rows = [row("2026-08-16T00:00:00Z")];
+    expect(filledBandRange(rows, [{ upgrade: 12, untilDate: "not-a-date" }])).toBeNull();
+    expect(filledBandRange(rows, [{ upgrade: 12 }])).toBeNull();
   });
 });

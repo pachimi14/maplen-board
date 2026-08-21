@@ -1,7 +1,7 @@
-import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { CartesianGrid, Line, LineChart, ReferenceArea, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useTranslation } from "../../i18n/I18nContext.jsx";
 import { withDeltas } from "../domain/series.js";
-import { isOpenPoint, withChartColumns } from "../domain/chartColumns.js";
+import { filledBandRange, isOpenPoint, withChartColumns } from "../domain/chartColumns.js";
 import {
   bucketDisplayDate,
   formatAxisDate,
@@ -54,6 +54,11 @@ import {
 // across theme switches, same rationale many finance dashboards use), not
 // an oversight. Only the surrounding chrome (backgrounds, borders, tabs,
 // summary text -- sfhistory.css) responds to the picker.
+//
+// IMPL_PLAN_SH38 §1-2: the `<ReferenceArea className="sfh-filled-band">`
+// band below (color: `--sfh-color-filled-band`, sfhistory.css) follows this
+// same "fixed, not theme-color-branched" rule, for the same reason -- see
+// that CSS variable's own comment.
 function ChartTooltipContent({ active, payload, average, t, language }) {
   if (!active || !payload?.length) return null;
   const point = payload[0]?.payload;
@@ -151,7 +156,18 @@ function ProvisionalDot({ cx, cy, payload }) {
   return <circle cx={cx} cy={cy} r={4} fill="none" stroke="#22d3ee" strokeWidth={2} />;
 }
 
-export default function SfHistoryChart({ series, average }) {
+// IMPL_PLAN_SH38 §0/§1: a band's leading-gap fill (SH-37,
+// `priceGapFill.js`, read via `filledBands` -- see `domain/chartColumns.js#
+// filledBandRange`'s own header for why the union is always one contiguous
+// range) gets a THIRD, separate channel -- a background `<ReferenceArea>`,
+// deliberately NOT the dashed line (§0: "同じ線種に2つ目の意味を載せない";
+// the dashed line stays exactly what SH-19 fixed it to mean: the one
+// still-open, not-yet-ended 4-hour bucket). The two can and do appear
+// together on the same chart (e.g. Hat 0->22: the filled band ends 8/20,
+// the dashed segment is the chart's own last point) -- they read as
+// distinct because they are on different visual channels (fill vs. stroke)
+// entirely, not different styles of the same channel.
+export default function SfHistoryChart({ series, average, filledBands }) {
   const { t, language } = useTranslation();
   const data = withChartColumns(withDeltas(series));
 
@@ -159,11 +175,36 @@ export default function SfHistoryChart({ series, average }) {
     return <div className="flex h-64 items-center justify-center text-sm text-slate-500">{t("sfhistory.chart.empty")}</div>;
   }
 
+  // `null` whenever there is nothing to shade in the currently visible
+  // period slice (no filled band in view at all, or the fill entirely
+  // precedes it) -- `filledBandRange`'s own header has the full contiguity
+  // rationale. Drives both the `<ReferenceArea>` below and the paired
+  // legend line (plan (g): "帯が無いときは網掛けの凡例を出さない").
+  const bandRange = filledBandRange(data, filledBands);
+
   return (
     <div>
       <div className="h-64 md:h-80">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 12, right: 16, left: 8, bottom: 4 }}>
+            {/* Rendered FIRST (before the grid/axes/lines below) so every
+                other layer -- grid, average reference line, the data lines
+                and their dots, the tooltip cursor -- draws on TOP of the
+                band, never the other way around (plan (d): "帯が線とデータ
+                点を隠していない"). No `y1`/`y2` -- omitting both makes
+                `ReferenceArea` span the axis's full vertical range, i.e. a
+                full-height vertical band, exactly like `ReferenceLine`
+                above already does for `average` on the y-axis. */}
+            {bandRange ? (
+              <ReferenceArea
+                className="sfh-filled-band"
+                x1={bandRange.x1}
+                x2={bandRange.x2}
+                stroke="none"
+                fillOpacity={1}
+                isFront={false}
+              />
+            ) : null}
             <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
             {/* IMPL_PLAN_SH18 §3: `displayDate` (withChartColumns), not the
                 raw `date` (bucket start) -- see that function's doc comment. */}
@@ -213,6 +254,15 @@ export default function SfHistoryChart({ series, average }) {
           </LineChart>
         </ResponsiveContainer>
       </div>
+      {/* IMPL_PLAN_SH38 §1-3: paired with the dashed-line legend below --
+          "網掛け＝価格形成中の帯を含む区間 / 破線＝まだ終了していない4時間
+          足". Gated on `bandRange` (not merely `filledBands.length`) so a
+          filled band that finished entirely BEFORE the currently visible
+          period slice never shows a legend line for a band that is not
+          actually drawn (plan (g)). This is a SEPARATE line from
+          `provisionalLegend` below -- the existing dashed-line legend text
+          is unchanged by this plan (plan (f)). */}
+      {bandRange ? <p className="mt-1 text-xs text-slate-500">{t("sfhistory.chart.filledBandLegend")}</p> : null}
       {/* IMPL_PLAN_SH19 §1/§4: gated on `closed === false` (isOpenPoint), not
           `provisional` -- the legend text itself ("...current, still-open
           4-hour bucket") only describes the one still-open point, not an

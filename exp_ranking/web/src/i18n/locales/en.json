@@ -614,6 +614,7 @@
       "tooltipDeltaFromAverage": "vs period average {{delta}}",
       "tooltipBucketRange": "{{start}}–{{end}} bar",
       "tooltipBucketRangeOpen": "{{start}}–{{end}} bar (not yet closed)",
+      "filledBandLegend": "The shaded region marks points from a span whose price was still forming.",
       "provisionalLegend": "The dashed segment is a provisional value for the current, still-open 4-hour bucket.",
       "loadError": "Could not load the price history. Please reload later.",
       "empty": "No data to display"
