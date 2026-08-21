@@ -147,6 +147,37 @@ export function formatFormingBandRanges(formingBands, formatRange) {
     .map((range) => formatRange(range.startStar, range.endStar));
 }
 
+/** IMPL_PLAN_SH37 §3/§4: groups `domain/priceGapFill.js#fillLeadingPriceGaps`'s
+ * per-band `{ upgrade, untilDate }` list into the star-range shape the note
+ * renders -- contiguous `upgrade` runs (`☆(upgrade+1)`, same 1-based
+ * convention `discovery.forming_star_ranges`/`formatFormingBandRanges`
+ * already use) that ALSO share the exact same `untilDate`, so two bands
+ * that both finished forming at different times are never merged into one
+ * misleading range (e.g. Hat's ☆11/13/14/15 finishing together but ☆19
+ * finishing two days later, plan §7(g)'s worked table). Malformed entries
+ * are dropped, never guessed at -- same discipline as
+ * `formatFormingBandRanges`. `[]` in -> `[]` out (plan §7(h): "埋めた区間が
+ * 無ければ注記が出ない" is the caller's concern this empty array enables).
+ */
+export function groupFilledBands(filledBands) {
+  if (!Array.isArray(filledBands)) return [];
+  const valid = filledBands.filter(
+    (band) => Number.isInteger(band?.upgrade) && typeof band?.untilDate === "string" && band.untilDate,
+  );
+  const sorted = [...valid].sort((a, b) => a.upgrade - b.upgrade);
+  const groups = [];
+  for (const band of sorted) {
+    const star = band.upgrade + 1;
+    const last = groups[groups.length - 1];
+    if (last && star === last.endStar + 1 && band.untilDate === last.untilDate) {
+      last.endStar = star;
+    } else {
+      groups.push({ startStar: star, endStar: star, untilDate: band.untilDate });
+    }
+  }
+  return groups;
+}
+
 /** IMPL_PLAN_SH17 §4-2: `{ start, end }` HH:MM clock-range for a
  * bucket-start ISO date -- the bucket's own start and (start + 4h) end,
  * both read on a UTC wall clock. Returned as separate parts (not a single

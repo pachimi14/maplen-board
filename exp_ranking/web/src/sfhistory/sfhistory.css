@@ -86,6 +86,20 @@ html:not([data-theme-depth="deep"]) .sfh-root :is([class*="text-slate-400"], [cl
 .sfh-root {
   --sfh-color-cheaper: #3b82f6; /* blue-500 相当: 安くなった/最安 (良い方向) */
   --sfh-color-costlier: #fb7185; /* rose-400 相当: 高くなった/最高 (悪い方向) */
+  /* IMPL_PLAN_SH37 §5: 「現在セル」の枠専用の固定色 (`--theme-focus` に追随
+     しない -- 追随すると、セル背景自体が `--theme-focus` を混ぜた色なので
+     ratio が高いセルほど枠が背景に沈む。実測: docs/reports/SH37_*.md -- 4
+     テーマ×3段階(light/standard/deep)×ratio 0.08〜0.70 の全 48 通りで
+     WCAG コントラスト比 5.13〜16.31、最低でも 3:1 ガイドラインの1.7倍以上。
+     既定(deep 前提)は明るい枠、`:not([data-theme-depth="deep"])` で暗い枠に
+     上書き -- 同じ分岐は直下の `.sfh-heatmap-cell` の文字色が既に使っている
+     パターン。cheaper/costlier(blue-500/rose-400)とも色相が異なるため、
+     同じセルが最安/最高と現在セルを兼ねても見分けがつく(plan §7(i)/(j))。*/
+  --sfh-color-current-ring: #f8fafc; /* slate-50: deep(暗背景)向け */
+}
+
+html:not([data-theme-depth="deep"]) .sfh-root {
+  --sfh-color-current-ring: #0f172a; /* slate-900: light/standard(明背景)向け */
 }
 
 .sfh-delta-up {
@@ -363,23 +377,34 @@ html:not([data-theme-depth="deep"]) .sfh-heatmap-cell {
    inset `box-shadow` for their own ring; a cell can be both the current
    cell AND the lowest/highest cell at once -- plan (h) -- and both rings
    must stay visible). `outline-offset: -2px` keeps the ring inside the
-   cell's own box instead of bleeding into the grid gap. Color reuses the
-   same theme accent variable the median color-coding above already uses
-   (plan §2-2: "色は既存のテーマ変数を使う" -- no new fixed color). */
+   cell's own box instead of bleeding into the grid gap.
+   IMPL_PLAN_SH37 §5 (2026-08-21, user report "現在セルの枠が見えない"):
+   reverses SH-35's "色は既存のテーマ変数を使う" -- following `--theme-focus`
+   was exactly the problem (this cell's own `background` above is a
+   `color-mix(... var(--theme-focus) ...)`, so the higher a cell's ratio,
+   the more its background converges on the same color as the ring around
+   it). Now a fixed, depth-branched color (`--sfh-color-current-ring`,
+   declared on `.sfh-root` above) -- never the theme accent -- and 3px
+   (was 2px) so it also reads distinctly from the 2px `-lowest`/`-highest`
+   rings by thickness, not just by being on a different CSS layer
+   (outline vs. inset box-shadow) and a different color family (fixed
+   near-black/near-white vs. `--sfh-color-cheaper`/`-costlier`'s
+   blue-500/rose-400). */
 .sfh-heatmap-cell-current {
-  outline: 2px solid var(--theme-focus);
+  outline: 3px solid var(--sfh-color-current-ring);
   outline-offset: -2px;
 }
 
 /* IMPL_PLAN_SH35 §2-2: legend swatch next to `sfhistory.heatmap.currentCellLegend`
    -- reuses the identical ring style above so what the legend shows matches
-   what's actually drawn on the grid. */
+   what's actually drawn on the grid. IMPL_PLAN_SH37 §5: kept in sync with
+   `.sfh-heatmap-cell-current` above (same variable, same 3px). */
 .sfh-heatmap-legend-current-swatch {
   display: inline-block;
   width: 0.75rem;
   height: 0.75rem;
   border-radius: 0.2rem;
-  outline: 2px solid var(--theme-focus);
+  outline: 3px solid var(--sfh-color-current-ring);
   outline-offset: -2px;
   background: var(--theme-card-bg);
 }

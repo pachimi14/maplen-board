@@ -6,7 +6,7 @@ import { setDashboardThemeColor, setDashboardThemeDepth } from "../taskManager/d
 import { sfHistorySource } from "./integrations/sfHistorySource.js";
 import { DEFAULT_PERIOD, defaultPresetForMaxStar, isValidStarRange, selectInitialItem } from "./domain/series.js";
 import { buildScreenModel, isRangeReady } from "./domain/viewModel.js";
-import { formatFormingBandRanges } from "./domain/format.js";
+import { formatFormingBandRanges, formatTooltipDate, groupFilledBands } from "./domain/format.js";
 import SfHistoryTabs from "./SfHistoryTabs.jsx";
 import EquipmentSelector from "./components/EquipmentSelector.jsx";
 import StarRangeSelector from "./components/StarRangeSelector.jsx";
@@ -24,7 +24,7 @@ import "./sfhistory.css";
  * for 900 points, ~30x under the 1s stop-condition budget).
  */
 export default function SfHistoryRoot() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
 
   // IMPL_PLAN_SH9 §4: reuses TaskManagerRoot's own theme storage
   // (`useDashboardStore` + `setDashboardThemeColor`/`setDashboardThemeDepth`
@@ -174,7 +174,7 @@ export default function SfHistoryRoot() {
   // IMPL_PLAN_SH29 §4: `fullSeries` is no longer read here -- WeekdayHeatmap
   // now takes `periodSeries` (see below) -- `buildScreenModel` still returns
   // it (viewModel.js untouched; other future call sites may still want it).
-  const { periodSeries, stats, currentExpected, percentile } = useMemo(
+  const { periodSeries, stats, currentExpected, percentile, filledBands } = useMemo(
     () => buildScreenModel({ range, period, pricesState, latestState }),
     [range, period, pricesState, latestState],
   );
@@ -196,6 +196,25 @@ export default function SfHistoryRoot() {
     );
     return ranges.length ? t("sfhistory.formingBands.note", { ranges: ranges.join(" / ") }) : null;
   }, [pricesState.formingBands, t]);
+
+  // IMPL_PLAN_SH37 §3/§4/§7(g)(h): a SEPARATE note from `formingBandsNote`
+  // above -- that one is about bands CURRENTLY forming (SH-36, unmodified);
+  // this one is about bands that finished forming BEFORE the currently
+  // selected span's own history began (`filledBands`, already scoped to
+  // the selected range by `buildScreenModel`). Rendered as its own list of
+  // sentences (never joined into `formingBandsNote`'s string, plan §4:
+  // "両方出る場合に混ざらない") -- one line per contiguous star-range +
+  // shared `untilDate` group, since two bands that finished forming at
+  // different times must not be flattened into one misleading date.
+  const filledBandNotes = useMemo(() => {
+    return groupFilledBands(filledBands).map((group) => {
+      const range =
+        group.startStar === group.endStar
+          ? t("sfhistory.filledBands.rangeSingle", { star: group.startStar })
+          : t("sfhistory.filledBands.range", { start: group.startStar, end: group.endStar });
+      return t("sfhistory.filledBands.note", { range, until: formatTooltipDate(group.untilDate, { locale: language }) });
+    });
+  }, [filledBands, t, language]);
 
   return (
     <div className="site-theme sfh-root min-h-screen">
@@ -242,6 +261,23 @@ export default function SfHistoryRoot() {
                 forming (`formingBandsNote` is `null`). */}
             {formingBandsNote != null ? (
               <p className="text-sm text-slate-400">{formingBandsNote}</p>
+            ) : null}
+
+            {/* IMPL_PLAN_SH37 §3/§4: states ONLY which ☆ ranges had a
+                leading gap filled and until when -- no evaluation/warning
+                wording (plan §4: "事実だけを書く"). Renders nothing when
+                nothing was filled for the currently selected span
+                (`filledBandNotes` is `[]`, plan §7(h)). A separate block
+                from `formingBandsNote` above (plan §4: "両方出る場合に混ざら
+                ない") -- one line per group. */}
+            {filledBandNotes.length ? (
+              <div className="space-y-0.5">
+                {filledBandNotes.map((note, index) => (
+                  <p key={index} className="text-sm text-slate-400">
+                    {note}
+                  </p>
+                ))}
+              </div>
             ) : null}
 
             <SummaryCards

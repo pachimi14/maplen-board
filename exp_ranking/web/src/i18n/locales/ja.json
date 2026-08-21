@@ -623,6 +623,11 @@
       "rangeSingle": "☆{{star}}",
       "note": "{{ranges}} は価格形成中です"
     },
+    "filledBands": {
+      "range": "☆{{start}}〜{{end}}",
+      "rangeSingle": "☆{{star}}",
+      "note": "{{range}} は {{until}} まで価格形成中でした"
+    },
     "heatmap": {
       "title": "曜日 × 時間帯",
       "axisNote": "行=UTCの曜日。列=ローカル時刻（{{zone}}。UTCは列見出しの下に併記）",
