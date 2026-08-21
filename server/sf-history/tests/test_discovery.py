@@ -345,3 +345,65 @@ def test_cube_display_name_falls_back_to_the_code_for_an_unknown_id() -> None:
 
 def test_cube_names_has_exactly_the_six_observed_cubes() -> None:
     assert set(discovery.CUBE_NAMES.keys()) == {2711000, 2730000, 5062009, 5062010, 5062500, 5062503}
+
+
+# --- IMPL_PLAN_SH36 §3/§4: forming_band_current_prices / forming_star_ranges
+
+# Hat-shaped fixture (IMPL_PLAN_SH36 §0): ☆1-10 (upgrade 0-9) and ☆20-22
+# (upgrade 19-21) forming, ☆11-19 (upgrade 10-18) already settled,
+# ☆23-25 (upgrade 22-24, out of the 22-band judge/display range this system
+# ever shows) at a degenerate placeholder price -- included here specifically
+# to prove price is never inspected to decide "is this forming" (plan §6(e)).
+_HAT_BANDS = {
+    **{i: {"price": 100.0 + i, "step": discovery.DISCOVERY_STEP} for i in range(10)},
+    **{i: {"price": 1_000_000.0 + i, "step": discovery.CHANGE_STEP} for i in range(10, 19)},
+    19: {"price": 2.34, "step": discovery.DISCOVERY_STEP},
+    20: {"price": 2.59, "step": discovery.DISCOVERY_STEP},
+    21: {"price": 0.000001, "step": discovery.DISCOVERY_STEP},
+    22: {"price": 0.000001, "step": discovery.DISCOVERY_STEP},
+    23: {"price": 0.000001, "step": discovery.DISCOVERY_STEP},
+    24: {"price": 0.000001, "step": discovery.DISCOVERY_STEP},
+}
+
+
+def test_forming_star_ranges_matches_the_hat_boundary_within_upgrade_count() -> None:
+    """plan §0's own stated boundary for this exact fixture: ☆1〜10 /
+    ☆20〜22 -- restricted to upgrade_count=22 (this system's own display
+    range), so ☆23-25's placeholder-priced DISCOVERY bands are excluded even
+    though they ARE `step`-forming (they are simply out of range, never
+    price-judged out)."""
+    assert discovery.forming_star_ranges(_HAT_BANDS, upgrade_count=22) == [(1, 10), (20, 22)]
+
+
+def test_forming_star_ranges_is_empty_for_a_fully_settled_item() -> None:
+    bands = {i: {"price": 1.0, "step": discovery.CHANGE_STEP} for i in range(22)}
+    assert discovery.forming_star_ranges(bands, upgrade_count=22) == []
+
+
+def test_forming_star_ranges_never_uses_price_to_judge() -> None:
+    """(e)/(f): a DISCOVERY band stuck at the degenerate 0.000001 placeholder
+    is still "forming" by step; a CHANGE band at the same tiny price is not."""
+    bands = {
+        0: {"price": 0.000001, "step": discovery.DISCOVERY_STEP},
+        1: {"price": 0.000001, "step": discovery.CHANGE_STEP},
+        2: {"price": 999_999.0, "step": discovery.CHANGE_STEP},
+    }
+    assert discovery.forming_star_ranges(bands, upgrade_count=22) == [(1, 1)]
+
+
+def test_forming_band_current_prices_matches_the_hat_fixture_within_upgrade_count() -> None:
+    prices = discovery.forming_band_current_prices(_HAT_BANDS, upgrade_count=22)
+    assert set(prices.keys()) == set(range(10)) | {19, 20, 21}
+    assert prices[0] == 100.0
+    assert prices[9] == 109.0
+    assert prices[21] == 0.000001  # (f): never hardcoded away -- passed through as the real current price
+
+
+def test_forming_band_current_prices_excludes_a_band_with_no_recorded_price() -> None:
+    bands = {0: {"price": None, "step": discovery.DISCOVERY_STEP}, 1: {"price": 5.0, "step": discovery.DISCOVERY_STEP}}
+    assert discovery.forming_band_current_prices(bands, upgrade_count=22) == {1: 5.0}
+
+
+def test_forming_band_current_prices_is_empty_for_a_fully_settled_item() -> None:
+    bands = {i: {"price": 1.0, "step": discovery.CHANGE_STEP} for i in range(22)}
+    assert discovery.forming_band_current_prices(bands, upgrade_count=22) == {}
