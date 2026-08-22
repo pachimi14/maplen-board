@@ -78,14 +78,22 @@ def run_update(
     *,
     db_path: Path,
     items_path: Path,
-    max_requests: int = fetcher_mod.DEFAULT_MAX_REQUESTS,
+    max_requests: int | None = None,
     now: datetime | None = None,
 ) -> dict[str, Any]:
+    """``max_requests=None`` (the default) derives the budget from THIS
+    run's actual combo count via ``fetcher_mod.derive_max_requests`` --
+    IMPL_PLAN_SH39 follow-up (統括, 2026-08-22 本番実測): a budget frozen at
+    a past item-count snapshot silently truncated every run once the
+    equipment list grew (accept criteria (m)/(n)). Pass an explicit int to
+    override (e.g. an operator-controlled ``--max-requests``)."""
     if now is None:
         now = datetime.now(timezone.utc)
 
     items = load_items(items_path)
     combos = iter_combinations(items)
+    if max_requests is None:
+        max_requests = fetcher_mod.derive_max_requests(len(combos))
 
     conn = db.connect(db_path)
     db.apply_schema(conn)
@@ -138,11 +146,15 @@ def run_update(
         "combos": len(combos),
         "fetchedOk": fetched_ok,
         "fetchedError": fetched_error,
+        # (o): explicit unprocessed count so a budget/429 stop is legible in
+        # the log line, not just inferable from combos - fetchedOk - fetchedError.
+        "combosUnprocessed": len(combos) - (fetched_ok + fetched_error),
         "hourlyRowsWritten": hourly_rows_written,
         "requestsMade": ftr.total_requests,
         "total429": ftr.total_429,
         "comboErrors": combo_errors,
         "stopReason": stop_reason,
+        "maxRequests": max_requests,
     }
 
 
@@ -178,7 +190,7 @@ def run_cube_update(
     *,
     db_path: Path,
     items_path: Path,
-    max_requests: int = fetcher_mod.DEFAULT_MAX_REQUESTS,
+    max_requests: int | None = None,
     now: datetime | None = None,
 ) -> dict[str, Any]:
     """CUBE counterpart of ``run_update`` -- same differential-fetch +
@@ -188,12 +200,19 @@ def run_cube_update(
     instance (its own request budget), never sharing SF's -- so nothing
     about the CUBE run can affect SF's already-completed budget accounting
     (plan §8 accept criterion (f)).
+
+    ``max_requests=None`` (the default) derives the CUBE budget from THIS
+    run's own combo count the same way ``run_update`` does (IMPL_PLAN_SH39
+    follow-up: "キューブ側...も同じ考え方に揃える") -- independently of SF's
+    budget, since the two ``Fetcher`` instances are already fully separate.
     """
     if now is None:
         now = datetime.now(timezone.utc)
 
     items = load_items(items_path)
     combos = iter_cube_combinations(items)
+    if max_requests is None:
+        max_requests = fetcher_mod.derive_max_requests(len(combos))
 
     conn = db.connect(db_path)
     db.apply_schema(conn)
@@ -248,11 +267,13 @@ def run_cube_update(
         "combos": len(combos),
         "fetchedOk": fetched_ok,
         "fetchedError": fetched_error,
+        "combosUnprocessed": len(combos) - (fetched_ok + fetched_error),
         "hourlyRowsWritten": hourly_rows_written,
         "requestsMade": ftr.total_requests,
         "total429": ftr.total_429,
         "comboErrors": combo_errors,
         "stopReason": stop_reason,
+        "maxRequests": max_requests,
     }
 
 
@@ -260,7 +281,7 @@ def run_all(
     *,
     db_path: Path,
     items_path: Path,
-    max_requests: int = fetcher_mod.DEFAULT_MAX_REQUESTS,
+    max_requests: int | None = None,
     now: datetime | None = None,
 ) -> dict[str, Any]:
     """SH-39 plan §6 (D): SF's differential update runs to completion FIRST,
@@ -292,11 +313,40 @@ def run_all(
     return {"sf": sf_result, "cube": cube_result, "cubeError": cube_error}
 
 
+def _exit_code(combined: dict[str, Any]) -> int:
+    """The CLI exit code for a ``run_all()`` result -- factored out of
+    ``main()`` so it is directly unit-testable without going through
+    ``sys.argv``/subprocess (accept criteria (o)/(p)).
+
+    0 = both steps completed cleanly. 2 = SF's own safety net fired (keeps
+    the pre-SH-39 meaning of this code). 3 = SF completed but CUBE's safety
+    net fired, or CUBE raised unexpectedly -- a DISTINCT code specifically
+    so a CUBE-only failure is never mistaken for an SF failure by whatever
+    reads this process's exit status.
+    """
+    result = combined["sf"]
+    if result["stopReason"] is not None:
+        return 2
+    cube_result = combined["cube"]
+    if cube_result is None or cube_result["stopReason"] is not None:
+        return 3
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--db", type=Path, default=DEFAULT_DB_PATH)
     parser.add_argument("--items", type=Path, default=DEFAULT_ITEMS_PATH)
-    parser.add_argument("--max-requests", type=int, default=fetcher_mod.DEFAULT_MAX_REQUESTS)
+    parser.add_argument(
+        "--max-requests",
+        type=int,
+        default=None,
+        help="Override the request budget for BOTH the SF and CUBE steps. "
+        "Default (omit this flag): each step derives its own budget from "
+        "its own actual combo count (fetcher.derive_max_requests) -- this "
+        "is what keeps the budget from going stale as the equipment list "
+        "grows (IMPL_PLAN_SH39 follow-up).",
+    )
     args = parser.parse_args()
 
     combined = run_all(db_path=args.db, items_path=args.items, max_requests=args.max_requests)
@@ -305,19 +355,29 @@ def main() -> int:
     # design §15: 1-3 log lines per run (journald picks this up under the timer unit).
     print(
         f"sf-history update: {result['fetchedOk']}/{result['combos']} combos ok, "
-        f"{result['hourlyRowsWritten']} hourly rows written, {result['requestsMade']} requests, "
-        f"{result['total429']} x429, stop={result['stopReason']}",
+        f"{result['hourlyRowsWritten']} hourly rows written, {result['requestsMade']} requests "
+        f"(budget={result['maxRequests']}), {result['total429']} x429, stop={result['stopReason']}",
         file=sys.stderr,
     )
     if result["comboErrors"]:
         print(f"sf-history update errors: {json.dumps(result['comboErrors'], ensure_ascii=False)}", file=sys.stderr)
+    if result["stopReason"] is not None:
+        # (o): the safety net fired -- this must be loud, not just a
+        # `stop=...` fragment inside an otherwise routine-looking log line.
+        print(
+            f"sf-history update: FAILED -- request budget/rate-limit safety net stopped the run "
+            f"with {result['combosUnprocessed']}/{result['combos']} combos never attempted "
+            f"(stop={result['stopReason']})",
+            file=sys.stderr,
+        )
 
     cube_result = combined["cube"]
     if cube_result is not None:
         print(
             f"sf-history cube update: {cube_result['fetchedOk']}/{cube_result['combos']} combos ok, "
-            f"{cube_result['hourlyRowsWritten']} hourly rows written, {cube_result['requestsMade']} requests, "
-            f"{cube_result['total429']} x429, stop={cube_result['stopReason']}",
+            f"{cube_result['hourlyRowsWritten']} hourly rows written, {cube_result['requestsMade']} requests "
+            f"(budget={cube_result['maxRequests']}), {cube_result['total429']} x429, "
+            f"stop={cube_result['stopReason']}",
             file=sys.stderr,
         )
         if cube_result["comboErrors"]:
@@ -325,14 +385,17 @@ def main() -> int:
                 f"sf-history cube update errors: {json.dumps(cube_result['comboErrors'], ensure_ascii=False)}",
                 file=sys.stderr,
             )
+        if cube_result["stopReason"] is not None:
+            print(
+                f"sf-history cube update: FAILED -- request budget/rate-limit safety net stopped the run "
+                f"with {cube_result['combosUnprocessed']}/{cube_result['combos']} combos never attempted "
+                f"(stop={cube_result['stopReason']})",
+                file=sys.stderr,
+            )
     else:
         print(f"sf-history cube update: FAILED unexpectedly: {combined['cubeError']}", file=sys.stderr)
 
-    if result["stopReason"] is not None:
-        return 2  # SF failure keeps its existing exit code (pre-SH-39 meaning unchanged)
-    if cube_result is None or cube_result["stopReason"] is not None:
-        return 3  # CUBE-only failure: distinct code so it is never mistaken for an SF failure
-    return 0
+    return _exit_code(combined)
 
 
 if __name__ == "__main__":
