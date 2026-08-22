@@ -110,7 +110,13 @@ def test_equipment_root_and_item_keys_match_contract(_env: Path) -> None:
 def test_latest_root_keys_match_contract(_env: Path) -> None:
     class FakeCache:
         def get(self, item_id: int) -> dict[str, Any]:
-            return {"itemId": item_id, "latestUpdatedAt": "2026-08-05T01:40:00Z", "prices": [999.0] + [None] * 21}
+            return {
+                "itemId": item_id,
+                "latestUpdatedAt": "2026-08-05T01:40:00Z",
+                "prices": [999.0] + [None] * 21,
+                "cubes": [1.0, 2.0, None, None],
+                "cubeOrder": ["RED", "BLACK", "ADDITIONAL", "WHITE_ADDITIONAL"],
+            }
 
     app_module.app.state.latest_cache = FakeCache()
     try:
