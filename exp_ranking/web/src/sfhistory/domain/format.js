@@ -107,17 +107,34 @@ function weekdayShort(date, locale, timeZone = "UTC") {
 // guaranteed-plain form). `Intl` also picks the calendar system itself (no
 // `calendar` option passed) -- this is what makes `th` render the Buddhist
 // year (2569) without any special-casing here (plan §1/(b): "タイは仏暦の
-// まま"), and lets `hour12` follow each locale's own convention rather than
-// being forced one way (plan §1: "hour12 を強制しない").
+// まま").
+//
+// IMPL_PLAN_SH43 §(l)/(m) addendum (2026-08-22, user decision, post-review):
+// `hour12` IS now forced -- to `false`, i.e. always 24h -- reversing this
+// comment's original "hour12 を強制しない" stance for the *time* portion
+// only. The user's actual request was the calendar *date* order (the
+// "05/06" ambiguity); letting `Intl` also pick 12h/24h was this file's own
+// extra scope, and it surfaced a real inconsistency the architect caught in
+// the running app: the tooltip (en/zh-TW, 12h) and the heatmap's column
+// headers (`formatClockTime`/`formatLocalClockTime` below, deliberately
+// left as fixed 24h -- see those functions' own SH-43 notes) disagreed on
+// the same UTC-labeled hour within the very same screen. 24h was picked
+// over 12h for both: it is what the heatmap already had (no churn there),
+// and it reads unambiguously next to an explicit "UTC" suffix (no
+// "12:00 AM"-is-midnight-or-noon guessing). Date order / weekday placement /
+// calendar (Buddhist year) are untouched by this addendum -- only `hour12`.
 /** Renders `date` as a locale-native calendar string in `timeZone`, with the
  * short weekday folded in via `Intl`'s own `weekday: "short"` option
  * (rather than this file appending "(Weekday)" itself) -- each locale's
  * `Intl` data decides where the weekday sits (e.g. leading "Tue, " in en,
- * trailing "(火)" in ja). `withTime` adds hour/minute (locale's own 12h/24h
- * convention); omit it for a date-only string (`formatAxisDate`). Returns
- * `null` if `Intl` cannot format the given locale/zone (caller falls back to
- * the always-safe UTC ISO parts, same "never a hardcoded fallback string"
- * discipline `weekdayShort` above already follows). */
+ * trailing "(火)" in ja). `withTime` adds hour/minute, always 24h
+ * (`hour12: false`, IMPL_PLAN_SH43 §(l) addendum -- matches the heatmap's
+ * own fixed-24h column headers so the same UTC-labeled hour never reads
+ * differently in two places on the same screen); omit `withTime` for a
+ * date-only string (`formatAxisDate`, which has no hour12 question at all).
+ * Returns `null` if `Intl` cannot format the given locale/zone (caller
+ * falls back to the always-safe UTC ISO parts, same "never a hardcoded
+ * fallback string" discipline `weekdayShort` above already follows). */
 function localizedDateString(date, locale, timeZone, { withYear = true, withTime = false } = {}) {
   try {
     return new Intl.DateTimeFormat(locale, {
@@ -126,7 +143,7 @@ function localizedDateString(date, locale, timeZone, { withYear = true, withTime
       month: "2-digit",
       day: "2-digit",
       weekday: "short",
-      ...(withTime ? { hour: "2-digit", minute: "2-digit" } : {}),
+      ...(withTime ? { hour: "2-digit", minute: "2-digit", hour12: false } : {}),
     }).format(date);
   } catch {
     return null;

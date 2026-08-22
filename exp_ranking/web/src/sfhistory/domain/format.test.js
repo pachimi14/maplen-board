@@ -90,7 +90,13 @@ describe("formatExactNeso", () => {
 // picks each locale's own native order (docs/reports/SH43_LOCALE_DATE_FORMAT.md
 // has the full record). The zone itself is still fixed UTC (unchanged from
 // SH-14) and the literal " UTC" suffix is still appended verbatim.
-describe("date formatting (IMPL_PLAN_SH43: locale-native order, fixed UTC zone + weekday)", () => {
+//
+// IMPL_PLAN_SH43 §(l)/(m) addendum (2026-08-22, user decision, post-review):
+// the time portion is always 24h (`hour12: false`) in every locale -- the
+// architect caught en/zh-TW's 12h tooltip disagreeing with the heatmap's
+// always-24h column headers on the same screen. Only `hour12` reversed;
+// date order/weekday/calendar are unchanged from the first SH-43 commit.
+describe("date formatting (IMPL_PLAN_SH43: locale-native order, fixed UTC zone + weekday, forced 24h)", () => {
   it("formatAxisDate: UTC month/day in each locale's own order, with Intl's own weekday placement", () => {
     // 2026-03-08T00:00:00Z is a Sunday (UTC).
     expect(formatAxisDate("2026-03-08T00:00:00Z", { locale: "ja" })).toBe("03/08(日)");
@@ -104,9 +110,9 @@ describe("date formatting (IMPL_PLAN_SH43: locale-native order, fixed UTC zone +
     expect(formatAxisDate("2026-03-08T20:00:00Z", { locale: "en" })).toBe("Sun, 03/08");
   });
 
-  it("formatTooltipDate: full UTC date+time in each locale's own order (with an explicit 'UTC' marker) plus weekday", () => {
+  it("formatTooltipDate: full UTC date+time in each locale's own order (with an explicit 'UTC' marker) plus weekday, always 24h", () => {
     expect(formatTooltipDate("2026-08-04T11:00:00Z", { locale: "ja" })).toBe("2026/08/04(火) 11:00 UTC");
-    expect(formatTooltipDate("2026-08-04T11:00:00Z", { locale: "en" })).toBe("Tue, 08/04/2026, 11:00 AM UTC");
+    expect(formatTooltipDate("2026-08-04T11:00:00Z", { locale: "en" })).toBe("Tue, 08/04/2026, 11:00 UTC");
   });
 
   it("both return an empty string for an unparsable date rather than throwing", () => {
@@ -116,7 +122,7 @@ describe("date formatting (IMPL_PLAN_SH43: locale-native order, fixed UTC zone +
 
   it("both fall back to the default 'en' locale when no options are given (no crash, still a valid-looking string)", () => {
     expect(formatAxisDate("2026-03-08T00:00:00Z")).toBe("Sun, 03/08");
-    expect(formatTooltipDate("2026-03-08T00:00:00Z")).toBe("Sun, 03/08/2026, 12:00 AM UTC");
+    expect(formatTooltipDate("2026-03-08T00:00:00Z")).toBe("Sun, 03/08/2026, 00:00 UTC");
   });
 
   // IMPL_PLAN_SH15 §3: the current-value card's 20-minute official stamp
@@ -124,26 +130,46 @@ describe("date formatting (IMPL_PLAN_SH43: locale-native order, fixed UTC zone +
   // (SH-14's regulation carries forward unchanged, SH-43's locale-order
   // change applies here too since this just delegates), just a distinct
   // export name for that call site.
-  it("formatTimestamp: same locale-native UTC date+time+weekday formatting as formatTooltipDate", () => {
-    expect(formatTimestamp("2026-08-04T18:20:00Z", { locale: "en" })).toBe("Tue, 08/04/2026, 06:20 PM UTC");
+  it("formatTimestamp: same locale-native UTC date+time+weekday formatting as formatTooltipDate, always 24h", () => {
+    expect(formatTimestamp("2026-08-04T18:20:00Z", { locale: "en" })).toBe("Tue, 08/04/2026, 18:20 UTC");
     expect(formatTimestamp("2026-08-04T18:20:00Z", { locale: "ja" })).toBe("2026/08/04(火) 18:20 UTC");
     expect(formatTimestamp("not-a-date")).toBe("");
   });
 
   // (a)/(c)/(b) IMPL_PLAN_SH43 §5: the full 6-locale spread for one instant,
   // pinned verbatim so a future ICU/Node upgrade that silently reflows one
-  // locale's order is caught here rather than only in a manual report.
-  it("(a)(b)(c) all 6 shipped UI locales render their own standard order for the same instant (2026-08-18T04:55:00Z, a Tuesday)", () => {
+  // locale's order (or reintroduces 12h) is caught here rather than only in
+  // a manual report.
+  it("(a)(b)(c)(l) all 6 shipped UI locales render their own standard date order, always 24h, for the same instant (2026-08-18T04:55:00Z, a Tuesday)", () => {
     const iso = "2026-08-18T04:55:00Z";
     expect(formatTooltipDate(iso, { locale: "ja" })).toBe("2026/08/18(火) 04:55 UTC");
-    expect(formatTooltipDate(iso, { locale: "en" })).toBe("Tue, 08/18/2026, 04:55 AM UTC");
-    expect(formatTooltipDate(iso, { locale: "zh-TW" })).toBe("2026/08/18（週二） 上午04:55 UTC");
+    expect(formatTooltipDate(iso, { locale: "en" })).toBe("Tue, 08/18/2026, 04:55 UTC");
+    expect(formatTooltipDate(iso, { locale: "zh-TW" })).toBe("2026/08/18（週二） 04:55 UTC");
     // (b) th: Buddhist year 2569 (2026 + 543), day/month order -- never
     // fixed to the Gregorian year (user decision, plan §1/(b)).
     expect(formatTooltipDate(iso, { locale: "th" })).toBe("อ. 18/08/2569 04:55 UTC");
     // (c) vi/es: day/month order (never month/day).
     expect(formatTooltipDate(iso, { locale: "vi" })).toBe("04:55 Th 3, 18/08/2026 UTC");
     expect(formatTooltipDate(iso, { locale: "es" })).toBe("mar, 18/08/2026, 04:55 UTC");
+  });
+
+  // (m) IMPL_PLAN_SH43 addendum: en/zh-TW were the only two locales `Intl`
+  // resolved to 12h by default (measured in the first SH-43 pass) -- this
+  // pins that AM/PM/上午/下午 never appear now that `hour12: false` is
+  // forced, across every hour-of-day bucket a chart point can land on
+  // (00/04/08/12/16/20 UTC, design §9's 4h grid) so a midday/midnight
+  // boundary case can't silently reintroduce a meridiem marker.
+  it("(m) never renders AM/PM (en) or 上午/下午 (zh-TW), across every 4h bucket hour", () => {
+    for (const hour of [0, 4, 8, 12, 16, 20]) {
+      const iso = `2026-08-18T${String(hour).padStart(2, "0")}:00:00Z`;
+      const en = formatTooltipDate(iso, { locale: "en" });
+      const zhTw = formatTooltipDate(iso, { locale: "zh-TW" });
+      expect(en).not.toMatch(/AM|PM/i);
+      expect(zhTw).not.toMatch(/上午|下午/);
+      // sanity: still a valid-looking, non-empty string for every hour.
+      expect(en).toMatch(/\d{2}:00 UTC$/);
+      expect(zhTw).toMatch(/\d{2}:00 UTC$/);
+    }
   });
 });
 
@@ -326,13 +352,14 @@ describe("formatTimeZoneLabel (plan §1/§2-1: 'UTC+9' style zone disclosure)", 
 // IMPL_PLAN_SH43: same locale-native order change as `formatTooltipDate`
 // above -- the zone label itself (`formatTimeZoneLabel`) and which instant
 // gets converted to which wall clock are both unchanged from SH-29/SH-31.
+// §(l)/(m) addendum: always 24h here too (same `hour12: false`, no AM/PM).
 describe("formatTooltipDateLocal (plan §1: the chart tooltip's secondary local-time line)", () => {
-  it("renders the same instant as formatTooltipDate, converted to the given zone, with the zone label and weekday", () => {
+  it("renders the same instant as formatTooltipDate, converted to the given zone, with the zone label and weekday, always 24h", () => {
     // 2026-08-04T11:00:00Z + 9h -> 2026-08-04 20:00 JST, a Tuesday.
     // IMPL_PLAN_SH31: the zone label is now the "JST" abbreviation (was
     // "UTC+9" before this plan) -- see the ZONE_ABBREVIATIONS table above.
     expect(formatTooltipDateLocal("2026-08-04T11:00:00Z", { locale: "en", timeZone: "Asia/Tokyo" })).toBe(
-      "Tue, 08/04/2026, 08:00 PM JST",
+      "Tue, 08/04/2026, 20:00 JST",
     );
     expect(formatTooltipDateLocal("2026-08-04T11:00:00Z", { locale: "ja", timeZone: "Asia/Tokyo" })).toBe(
       "2026/08/04(火) 20:00 JST",
@@ -348,12 +375,12 @@ describe("formatTooltipDateLocal (plan §1: the chart tooltip's secondary local-
     expect(formatTooltipDateLocal("2026-08-05T12:00:00Z", { timeZone: "Asia/Tokyo" })).toContain("JST");
   });
 
-  it("a different timezone renders a different wall-clock time for the same instant, and never leaves the zone unlabeled", () => {
+  it("a different timezone renders a different wall-clock time for the same instant, always 24h, and never leaves the zone unlabeled", () => {
     expect(formatTooltipDateLocal("2026-08-04T11:00:00Z", { locale: "en", timeZone: "UTC" })).toBe(
-      "Tue, 08/04/2026, 11:00 AM UTC",
+      "Tue, 08/04/2026, 11:00 UTC",
     );
     expect(formatTooltipDateLocal("2026-08-04T11:00:00Z", { locale: "en", timeZone: "America/New_York" })).toBe(
-      "Tue, 08/04/2026, 07:00 AM UTC-4",
+      "Tue, 08/04/2026, 07:00 UTC-4",
     );
   });
 
@@ -364,6 +391,16 @@ describe("formatTooltipDateLocal (plan §1: the chart tooltip's secondary local-
 
   it("falls back to the runtime's own local zone when no timeZone is given (no crash, still a valid-looking string)", () => {
     expect(formatTooltipDateLocal("2026-08-04T11:00:00Z")).toMatch(/^.+\d{2}:\d{2}.*\S.*$/);
+  });
+
+  // (m) IMPL_PLAN_SH43 addendum: same AM/PM/上午/下午 absence guarantee as
+  // formatTooltipDate above, for the local-time line too.
+  it("(m) never renders AM/PM (en) even for an afternoon local hour", () => {
+    // 2026-08-04T11:00:00Z + 9h (Asia/Tokyo) = 20:00 -- would be "8:00 PM"
+    // under a 12h clock.
+    expect(formatTooltipDateLocal("2026-08-04T11:00:00Z", { locale: "en", timeZone: "Asia/Tokyo" })).not.toMatch(
+      /AM|PM/i,
+    );
   });
 });
 
