@@ -32,6 +32,29 @@ import { CUBE_TYPE_DISPLAY_NAMES, CUBE_TYPE_ORDER } from "../domain/cubeSeries.j
  * standalone control's own heading) as this row's accessible name -- the
  * translated string stays in active use (plan (g): no residual locale
  * key), it is simply no longer rendered as its own visible line.
+ *
+ * IMPL_PLAN_SH45 revision (統括 差し戻し, "(b) が満たせていません" --
+ * `.sfh-cube-legend-item-selected`'s CSS `border-color`/`background` never
+ * rendered visibly): the selected border/background are now set as an
+ * INLINE style, computed here from the exact same `colorByType` map the
+ * swatch beside it already uses -- an inline `style` always wins the CSS
+ * cascade over ANY external stylesheet rule (no dependency on selector
+ * specificity, source order, or `@layer`, all of which were candidate
+ * explanations that didn't fully account for what was measured), and it is
+ * what makes "選択中は枠を付ける" testable directly off this component's
+ * own SSR output (`CubeLegend.test.js`) without needing a real browser's
+ * CSS engine. `border-color`/`background` also now use the SAME resolved
+ * cube color the swatch/chart line already use (統括 instruction: "枠の色
+ * はそのキューブの色を使う... 凡例の点と対応が取れる"), not the generic
+ * `--theme-focus` accent -- those hex values are the exact ones
+ * `domain/cubeSeries.js#CUBE_TYPE_COLORS`'s own header already measured at
+ * >=3:1 WCAG contrast against both this screen's dark and light
+ * backgrounds (SH-44 completion report), so reusing them here for a
+ * *border* (a non-text use, the same bar that report measured against)
+ * carries that same guarantee forward without a new measurement pass per
+ * color. Font-weight stays a CSS class rule (`sfh-cube-legend-item-
+ * selected`, unchanged) -- 統括's own measurement showed that ONE property
+ * WAS applying correctly (400 -> 700), so it is not what needed to move.
  */
 export default function CubeLegend({ mainCubeType, additionalCubeTypes, colorByType, onToggleAdditional }) {
   const { t } = useTranslation();
@@ -45,6 +68,7 @@ export default function CubeLegend({ mainCubeType, additionalCubeTypes, colorByT
       </span>
       {additionalOptions.map((cubeType) => {
         const isOn = additionalCubeTypes.includes(cubeType);
+        const cubeColor = colorByType[cubeType];
         return (
           <button
             key={cubeType}
@@ -52,8 +76,13 @@ export default function CubeLegend({ mainCubeType, additionalCubeTypes, colorByT
             aria-pressed={isOn}
             onClick={() => onToggleAdditional(cubeType)}
             className={`sfh-cube-legend-item sfh-cube-legend-item-toggle ${isOn ? "sfh-cube-legend-item-selected" : ""}`}
+            style={
+              isOn
+                ? { borderColor: cubeColor, backgroundColor: `color-mix(in srgb, ${cubeColor} 18%, transparent)` }
+                : undefined
+            }
           >
-            <span className="sfh-cube-swatch" style={{ backgroundColor: colorByType[cubeType] }} aria-hidden="true" />
+            <span className="sfh-cube-swatch" style={{ backgroundColor: cubeColor }} aria-hidden="true" />
             {CUBE_TYPE_DISPLAY_NAMES[cubeType]}
           </button>
         );
