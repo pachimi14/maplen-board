@@ -151,9 +151,59 @@ function ChartTooltipContent({ active, payload, average, t, language }) {
 // still-open point is drawn (a hollow/open circle -- "中抜き"), never for
 // anything else on the `bridge` series (its other end is the last confirmed
 // point, already rendered, undotted, by the solid `confirmed` line below).
-function ProvisionalDot({ cx, cy, payload }) {
+//
+// IMPL_PLAN_SH44 §2-2 (g): `color` is now a prop (default "#22d3ee", the
+// exact literal this component always used before this plan) so the same
+// marker can be reused for an overlaid cube line's own dashed segment,
+// still keyed off the same `closed`-based `isOpenPoint` -- "4本それぞれで
+// 未終了足が破線になる" falls out of this for free, since every cube type's
+// series is built from the very same points (`domain/cubeSeries.js#
+// buildCubeSeries`) and therefore carries the same `closed` flag at the
+// same index (see that function's own header).
+function ProvisionalDot({ cx, cy, payload, color = "#22d3ee" }) {
   if (!isOpenPoint(payload) || cx == null || cy == null) return null;
-  return <circle cx={cx} cy={cy} r={4} fill="none" stroke="#22d3ee" strokeWidth={2} />;
+  return <circle cx={cx} cy={cy} r={4} fill="none" stroke={color} strokeWidth={2} />;
+}
+
+/**
+ * IMPL_PLAN_SH44 §2-2: merges N additional, already `withChartColumns`-
+ * processed row arrays into `mainRows`' own row objects, keyed by the
+ * shared `date` field -- each additional array's own `confirmed`/`bridge`
+ * columns land under `confirmed_${key}`/`bridge_${key}` on the matching
+ * `mainRows` row, so a single recharts `data` array can drive one <Line>
+ * pair per series while `mainRows`' own fields (what the 2 pre-existing
+ * <Line>s and `ChartTooltipContent` already read: `expected`/`delta`/
+ * `confirmed`/`bridge`/`displayDate`/...) are completely untouched.
+ *
+ * Never re-runs `isOpenPoint`/`withChartColumns` itself (`domain/
+ * chartColumns.js`'s own computation is unchanged by this plan, per plan
+ * §5) -- callers already ran that SAME, unmodified function once per
+ * series; this only zips the already-computed *results* together.
+ *
+ * `extraRowsList` entries whose `date` has no match in `mainRows` are
+ * skipped, not thrown on -- defensive only: every one of this plan's own
+ * callers derives every series (main and extra) from the very same
+ * `/sf-history/cube-prices` `points` array via `buildCubeSeries`
+ * (`domain/cubeSeries.js`), so the `date` sequence is identical across all
+ * of them in practice.
+ *
+ * `extraRowsList.length === 0` returns `mainRows` itself, unchanged (not a
+ * copy) -- this is what keeps `SfHistoryChart`'s existing call sites (no
+ * `extraSeries` prop passed at all) on the exact same `data` array shape
+ * this component has always produced (plan (j)).
+ */
+export function mergeExtraSeriesColumns(mainRows, extraRowsList) {
+  if (!extraRowsList.length) return mainRows;
+  const byDate = new Map(mainRows.map((row) => [row.date, { ...row }]));
+  for (const { key, rows } of extraRowsList) {
+    for (const row of rows) {
+      const target = byDate.get(row.date);
+      if (!target) continue;
+      target[`confirmed_${key}`] = row.confirmed;
+      target[`bridge_${key}`] = row.bridge;
+    }
+  }
+  return Array.from(byDate.values());
 }
 
 // IMPL_PLAN_SH38 §0/§1: a band's leading-gap fill (SH-37,
@@ -167,9 +217,30 @@ function ProvisionalDot({ cx, cy, payload }) {
 // the dashed segment is the chart's own last point) -- they read as
 // distinct because they are on different visual channels (fill vs. stroke)
 // entirely, not different styles of the same channel.
-export default function SfHistoryChart({ series, average, filledBands }) {
+// IMPL_PLAN_SH44 §2-2: `mainColor`/`mainStrokeWidth`/`extraSeries` are new,
+// all with the exact defaults this component's 2 <Line>s have always
+// hardcoded ("#22d3ee" / 2 / no extra lines at all) -- every existing call
+// site (SfHistoryRoot.jsx's own SF History chart, and this component's own
+// pre-SH44 tests) omits all 3, so its rendered output is byte-for-byte
+// unchanged (plan (j): "単系列で呼んだときの SF History の描画が1ピクセルも
+// 変わらない"). `extraSeries` is `[{ key, series, color, strokeWidth }]` --
+// each entry gets its own confirmed/dashed <Line> pair, merged onto the
+// same `data` array via `mergeExtraSeriesColumns` above so every line
+// shares one x-axis; this component itself does not know or care that its
+// only caller for a non-empty `extraSeries` is the cube-prices page
+// (`CubePricesRoot.jsx`) comparing multiple cube sub-types -- it is a
+// generic "overlay more lines on the same chart" capability, not
+// cube-specific.
+export default function SfHistoryChart({ series, average, filledBands, mainColor = "#22d3ee", mainStrokeWidth = 2, extraSeries = [] }) {
   const { t, language } = useTranslation();
-  const data = withChartColumns(withDeltas(series));
+  const mainData = withChartColumns(withDeltas(series));
+  const extraRowsList = extraSeries.map(({ key, series: extraSeriesRows, color, strokeWidth }) => ({
+    key,
+    color,
+    strokeWidth: strokeWidth ?? 1.5,
+    rows: withChartColumns(withDeltas(extraSeriesRows)),
+  }));
+  const data = mergeExtraSeriesColumns(mainData, extraRowsList);
 
   if (!data.length) {
     return <div className="flex h-64 items-center justify-center text-sm text-slate-500">{t("sfhistory.chart.empty")}</div>;
@@ -229,10 +300,10 @@ export default function SfHistoryChart({ series, average, filledBands }) {
             <Line
               type="monotone"
               dataKey="confirmed"
-              stroke="#22d3ee"
-              strokeWidth={2}
+              stroke={mainColor}
+              strokeWidth={mainStrokeWidth}
               dot={false}
-              activeDot={{ r: 4, fill: "#22d3ee", stroke: "#083344", strokeWidth: 2 }}
+              activeDot={{ r: 4, fill: mainColor, stroke: "#083344", strokeWidth: 2 }}
               connectNulls={false}
               isAnimationActive={false}
             />
@@ -242,15 +313,56 @@ export default function SfHistoryChart({ series, average, filledBands }) {
             <Line
               type="monotone"
               dataKey="bridge"
-              stroke="#22d3ee"
-              strokeWidth={2}
+              stroke={mainColor}
+              strokeWidth={mainStrokeWidth}
               strokeDasharray="5 4"
-              dot={<ProvisionalDot />}
-              activeDot={{ r: 5, fill: "transparent", stroke: "#22d3ee", strokeWidth: 2 }}
+              dot={<ProvisionalDot color={mainColor} />}
+              activeDot={{ r: 5, fill: "transparent", stroke: mainColor, strokeWidth: 2 }}
               connectNulls={false}
               isAnimationActive={false}
               legendType="none"
             />
+            {/* IMPL_PLAN_SH44 §2-2 (b)(c)(g): one confirmed/dashed <Line>
+                pair per additional cube type, always thinner than the main
+                pair above (plan (c): caller passes `strokeWidth` < `mainStrokeWidth`,
+                this component does not itself enforce the inequality --
+                CubePricesRoot.jsx's own header documents the exact values
+                used). `legendType="none"` on both, same as the main bridge
+                line above -- this component still renders no built-in
+                recharts <Legend/>; the cube-vs-color legend is a separate,
+                cube-specific component (`CubeLegend.jsx`) rendered by the
+                caller, not this shared one (plan (j): keeps this file's own
+                JSX output, for a call with no `extraSeries`, identical to
+                before this plan). */}
+            {extraRowsList.map(({ key, color, strokeWidth }) => (
+              <Line
+                key={`confirmed_${key}`}
+                type="monotone"
+                dataKey={`confirmed_${key}`}
+                stroke={color}
+                strokeWidth={strokeWidth}
+                dot={false}
+                activeDot={{ r: 3, fill: color, stroke: "#083344", strokeWidth: 1.5 }}
+                connectNulls={false}
+                isAnimationActive={false}
+                legendType="none"
+              />
+            ))}
+            {extraRowsList.map(({ key, color, strokeWidth }) => (
+              <Line
+                key={`bridge_${key}`}
+                type="monotone"
+                dataKey={`bridge_${key}`}
+                stroke={color}
+                strokeWidth={strokeWidth}
+                strokeDasharray="5 4"
+                dot={<ProvisionalDot color={color} />}
+                activeDot={{ r: 4, fill: "transparent", stroke: color, strokeWidth: 1.5 }}
+                connectNulls={false}
+                isAnimationActive={false}
+                legendType="none"
+              />
+            ))}
           </LineChart>
         </ResponsiveContainer>
       </div>
