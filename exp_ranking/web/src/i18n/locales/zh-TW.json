@@ -684,6 +684,14 @@
   "sfhistoryTabs": {
     "navLabel": "SF 紀錄頁面",
     "sfHistory": "SF History",
-    "newEquipment": "New Equipment"
+    "newEquipment": "New Equipment",
+    "cubePrices": "Cube Prices"
+  },
+  "sfhistoryCube": {
+    "pageDescription": "選擇裝備與魔方種類，即可查看市場價格的走勢，以及目前價格在這段歷史中處於什麼水準。",
+    "cubeType": {
+      "label": "魔方種類"
+    },
+    "whiteCubeNote": "White Cube 的價格歷史自 {{date}} 起開始記錄。"
   }
 }

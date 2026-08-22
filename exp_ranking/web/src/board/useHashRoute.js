@@ -191,6 +191,14 @@ export function parseHash(hash) {
     return { name: "starforceDiscovery", query };
   }
 
+  // IMPL_PLAN_SH41 §2: `#/starforce/cube-prices` -- the 3rd `Enhance History`
+  // tab, a SEPARATE route/root component from `#/starforce` below (plan §4:
+  // "既存の #/starforce は1文字も変えない"). Same "checked before the exact
+  // `/starforce` match" placement as `starforceDiscovery` above.
+  if (path === "/starforce/cube-prices") {
+    return { name: "starforceCubePrices", query };
+  }
+
   // IMPL_PLAN_SH5 §1: `#/starforce` -- the SF cost history chart screen
   // (design DESIGN_SF_COST_HISTORY.md U2). Added as its own block rather
   // than folded into the dashboard/tasks/schedule check above, so that
@@ -211,9 +219,11 @@ function buildHash(route) {
       ? "/group"
       : route?.name === "starforceDiscovery"
         ? "/starforce/discovery"
-        : route?.name === "dashboard" || route?.name === "tasks" || route?.name === "schedule" || route?.name === "raffle" || route?.name === "starforce"
-          ? `/${route.name}`
-          : "/";
+        : route?.name === "starforceCubePrices"
+          ? "/starforce/cube-prices"
+          : route?.name === "dashboard" || route?.name === "tasks" || route?.name === "schedule" || route?.name === "raffle" || route?.name === "starforce"
+            ? `/${route.name}`
+            : "/";
   return `#${path}${search ? `?${search}` : ""}`;
 }
 
@@ -413,6 +423,15 @@ export function navigateToStarforce(options = {}) {
 export function navigateToStarforceDiscovery(options = {}) {
   applyRoute(
     (base) => ({ name: "starforceDiscovery", query: normalizeQuery(base.query) }),
+    options,
+  );
+}
+
+/** Navigates to `#/starforce/cube-prices` (IMPL_PLAN_SH41 §2), keeping the
+ * shared query shape. */
+export function navigateToStarforceCubePrices(options = {}) {
+  applyRoute(
+    (base) => ({ name: "starforceCubePrices", query: normalizeQuery(base.query) }),
     options,
   );
 }

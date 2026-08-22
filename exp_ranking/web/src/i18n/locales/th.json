@@ -684,6 +684,14 @@
   "sfhistoryTabs": {
     "navLabel": "หน้าประวัติ SF",
     "sfHistory": "SF History",
-    "newEquipment": "New Equipment"
+    "newEquipment": "New Equipment",
+    "cubePrices": "Cube Prices"
+  },
+  "sfhistoryCube": {
+    "pageDescription": "เลือกอุปกรณ์และประเภทคิวบ์เพื่อดูการเปลี่ยนแปลงของราคาตลาด และดูว่าค่าปัจจุบันอยู่ในระดับใดเมื่อเทียบกับประวัติ",
+    "cubeType": {
+      "label": "ประเภทคิวบ์"
+    },
+    "whiteCubeNote": "ประวัติราคา White Cube เริ่มตั้งแต่ {{date}}"
   }
 }

@@ -684,6 +684,14 @@
   "sfhistoryTabs": {
     "navLabel": "Páginas de historial de SF",
     "sfHistory": "SF History",
-    "newEquipment": "New Equipment"
+    "newEquipment": "New Equipment",
+    "cubePrices": "Cube Prices"
+  },
+  "sfhistoryCube": {
+    "pageDescription": "Elige un equipo y un tipo de cubo para ver cómo ha evolucionado su precio de mercado y en qué nivel se sitúa el valor actual frente a ese historial.",
+    "cubeType": {
+      "label": "Tipo de cubo"
+    },
+    "whiteCubeNote": "El historial de precios de White Cube comienza el {{date}}."
   }
 }

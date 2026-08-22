@@ -684,6 +684,14 @@
   "sfhistoryTabs": {
     "navLabel": "Các trang Lịch sử SF",
     "sfHistory": "SF History",
-    "newEquipment": "New Equipment"
+    "newEquipment": "New Equipment",
+    "cubePrices": "Cube Prices"
+  },
+  "sfhistoryCube": {
+    "pageDescription": "Chọn một trang bị và loại hộp để xem giá thị trường đã thay đổi thế nào, và giá trị hiện tại đang ở mức nào so với lịch sử đó.",
+    "cubeType": {
+      "label": "Loại hộp"
+    },
+    "whiteCubeNote": "Lịch sử giá White Cube bắt đầu từ {{date}}."
   }
 }

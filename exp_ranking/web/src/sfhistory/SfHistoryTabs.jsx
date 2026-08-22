@@ -1,4 +1,4 @@
-import { navigateToStarforce, navigateToStarforceDiscovery } from "../board/useHashRoute.js";
+import { navigateToStarforce, navigateToStarforceCubePrices, navigateToStarforceDiscovery } from "../board/useHashRoute.js";
 import { useTranslation } from "../i18n/I18nContext.jsx";
 
 /**
@@ -26,8 +26,9 @@ import { useTranslation } from "../i18n/I18nContext.jsx";
  * Tab labels are always English in every locale -- same "product/route
  * name, not translated" treatment SH-30 already gave the top nav's own
  * "Enhance History" label (`app.openSfHistory`, identical value in all 6
- * locale files) -- `sfhistoryTabs.sfHistory`/`sfhistoryTabs.newEquipment`
- * below are English in en/ja/es/th/vi/zh-TW alike.
+ * locale files) -- `sfhistoryTabs.sfHistory`/`sfhistoryTabs.newEquipment`/
+ * `sfhistoryTabs.cubePrices` (IMPL_PLAN_SH41 §2) below are English in
+ * en/ja/es/th/vi/zh-TW alike.
  */
 export default function SfHistoryTabs({ active }) {
   const { t } = useTranslation();
@@ -54,6 +55,18 @@ export default function SfHistoryTabs({ active }) {
         className={`sfh-period-tab ${active === "discovery" ? "sfh-period-tab-active" : ""}`}
       >
         {t("sfhistoryTabs.newEquipment")}
+      </a>
+      {/* IMPL_PLAN_SH41 §2: 3rd tab -- `#/starforce/cube-prices`. */}
+      <a
+        href="#/starforce/cube-prices"
+        aria-current={active === "cubePrices" ? "page" : undefined}
+        onClick={(event) => {
+          event.preventDefault();
+          navigateToStarforceCubePrices();
+        }}
+        className={`sfh-period-tab ${active === "cubePrices" ? "sfh-period-tab-active" : ""}`}
+      >
+        {t("sfhistoryTabs.cubePrices")}
       </a>
     </nav>
   );
