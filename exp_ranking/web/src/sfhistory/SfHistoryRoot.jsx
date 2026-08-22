@@ -240,10 +240,14 @@ export default function SfHistoryRoot() {
             ページに同じタブが出る"). */}
         <SfHistoryTabs active="sfHistory" />
 
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t("sfhistory.pageTitle")}</h1>
-          <p className="mt-1.5 max-w-3xl text-sm text-slate-400">{t("sfhistory.pageDescription")}</p>
-        </div>
+        {/* IMPL_PLAN_SH42 §3 (C): no <h1> here -- the tab bar right above
+            already reads "Enhance History" (SfHistoryTabs.jsx), so a
+            second, page-level heading repeating that same name added
+            nothing (same reasoning DiscoveryRoot.jsx's own comment already
+            gives for dropping its own page title, SH-33 follow-up).
+            `sfhistory.pageTitle` is removed outright (not emptied) -- see
+            the i18n locale files' own diff. Description stays. */}
+        <p className="max-w-3xl text-sm text-slate-400">{t("sfhistory.pageDescription")}</p>
 
         {equipmentState.status === "loading" ? (
           <p className="text-sm text-slate-400">{t("sfhistory.loading")}</p>

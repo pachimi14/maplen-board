@@ -567,7 +567,6 @@
     "main30d": "30日増加量"
   },
   "sfhistory": {
-    "pageTitle": "Enhance History",
     "pageDescription": "装備と強化範囲を選ぶと、期待強化費用の推移と、現在値が過去のどの水準かを確認できます。",
     "loading": "読み込み中...",
     "equipment": {

@@ -567,7 +567,6 @@
     "main30d": "Ganancia 30 d?as"
   },
   "sfhistory": {
-    "pageTitle": "Enhance History",
     "pageDescription": "Elige un equipo y un rango de estrellas para ver cómo ha evolucionado su coste esperado de mejora y en qué nivel se sitúa el valor actual frente a ese historial.",
     "loading": "Cargando...",
     "equipment": {
