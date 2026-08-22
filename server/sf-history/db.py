@@ -976,6 +976,102 @@ def list_error_cube_combinations(conn: sqlite3.Connection) -> list[dict[str, Any
     ]
 
 
+# --- IMPL_PLAN_SH39 §5: sf_cube_price_history_4h access (cube_aggregate.py) -
+
+
+def distinct_cube_hourly_combinations(conn: sqlite3.Connection) -> list[tuple[int, str]]:
+    """Every (item_id, cube_sub_type) that has at least one hourly row."""
+    cur = conn.execute(
+        "SELECT DISTINCT item_id, cube_sub_type FROM sf_cube_price_history_hourly "
+        "ORDER BY item_id, cube_sub_type"
+    )
+    return [(row[0], row[1]) for row in cur.fetchall()]
+
+
+def cube_hourly_series(
+    conn: sqlite3.Connection, item_id: int, cube_sub_type: str, *, since: str | None = None
+) -> list[tuple[str, float]]:
+    """(price_at, end_price) pairs for one CUBE series, ordered by price_at.
+
+    Same ``since`` (inclusive, bucket-boundary) contract as ``hourly_series``
+    above -- feeds ``cube_aggregate.py``'s incremental re-derivation.
+    """
+    if since is None:
+        cur = conn.execute(
+            "SELECT price_at, end_price FROM sf_cube_price_history_hourly "
+            "WHERE item_id = ? AND cube_sub_type = ? ORDER BY price_at",
+            (item_id, cube_sub_type),
+        )
+    else:
+        cur = conn.execute(
+            "SELECT price_at, end_price FROM sf_cube_price_history_hourly "
+            "WHERE item_id = ? AND cube_sub_type = ? AND price_at >= ? ORDER BY price_at",
+            (item_id, cube_sub_type, since),
+        )
+    return [(row[0], row[1]) for row in cur.fetchall()]
+
+
+def replace_cube_4h_rows(
+    conn: sqlite3.Connection,
+    item_id: int,
+    cube_sub_type: str,
+    rows: Iterable[dict[str, Any]],
+    *,
+    since: str | None = None,
+) -> int:
+    """Fully replace (delete then insert) the 4h CUBE rows for one combination.
+
+    Same full-replace determinism discipline as ``replace_4h_rows`` above.
+    """
+    rows = list(rows)
+    if since is None:
+        conn.execute(
+            "DELETE FROM sf_cube_price_history_4h WHERE item_id = ? AND cube_sub_type = ?",
+            (item_id, cube_sub_type),
+        )
+    else:
+        conn.execute(
+            "DELETE FROM sf_cube_price_history_4h WHERE item_id = ? AND cube_sub_type = ? AND price_at >= ?",
+            (item_id, cube_sub_type, since),
+        )
+    conn.executemany(
+        """
+        INSERT INTO sf_cube_price_history_4h
+            (item_id, cube_sub_type, price_at, end_price, source_hour_at, generated_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        [
+            (
+                item_id,
+                cube_sub_type,
+                row["price_at"],
+                row["end_price"],
+                row["source_hour_at"],
+                row["generated_at"],
+            )
+            for row in rows
+        ],
+    )
+    conn.commit()
+    return len(rows)
+
+
+def count_cube_4h_rows(conn: sqlite3.Connection) -> int:
+    cur = conn.execute("SELECT COUNT(*) FROM sf_cube_price_history_4h")
+    return int(cur.fetchone()[0])
+
+
+def max_cube_4h_price_at_for_combo(
+    conn: sqlite3.Connection, item_id: int, cube_sub_type: str
+) -> str | None:
+    cur = conn.execute(
+        "SELECT MAX(price_at) FROM sf_cube_price_history_4h WHERE item_id = ? AND cube_sub_type = ?",
+        (item_id, cube_sub_type),
+    )
+    row = cur.fetchone()
+    return row[0] if row else None
+
+
 def max_star_by_item(conn: sqlite3.Connection) -> dict[int, int]:
     """``maxStar`` per item_id -- the union of ``max_upgrade_by_item``
     (hourly-history-derived) and ``discovery_max_upgrade_by_item`` (DISCOVERY-
