@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveCarriedSelection } from "./selectionCarry.js";
+import { guessPrefetchItemId, resolveCarriedSelection } from "./selectionCarry.js";
 
 const ITEMS = [
   { itemId: 1382265, itemName: "Arcane Umbra Staff", maxStar: 22 },
@@ -34,5 +34,20 @@ describe("resolveCarriedSelection (IMPL_PLAN_SH42 §2 B)", () => {
       itemId: 1382265,
       alias: { itemId: 1382265, itemName: "Arcane Umbra Staff" },
     });
+  });
+});
+
+describe("guessPrefetchItemId (IMPL_PLAN_SH46 §3 B)", () => {
+  it("guesses the carried itemId when present (no items list needed/available yet)", () => {
+    expect(guessPrefetchItemId({ itemId: 555, alias: { itemId: 555, itemName: "Some Gloves" } }, 1382265)).toBe(555);
+  });
+
+  it("falls back to defaultItemId when nothing was carried (fresh page load)", () => {
+    expect(guessPrefetchItemId(null, 1382265)).toBe(1382265);
+  });
+
+  it("falls back to defaultItemId for a malformed carried value (no itemId)", () => {
+    expect(guessPrefetchItemId({}, 1382265)).toBe(1382265);
+    expect(guessPrefetchItemId({ itemId: "not-a-number" }, 1382265)).toBe(1382265);
   });
 });

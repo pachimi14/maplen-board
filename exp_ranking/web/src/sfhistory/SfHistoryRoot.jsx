@@ -4,10 +4,10 @@ import { useTranslation } from "../i18n/I18nContext.jsx";
 import { useDashboardStore } from "../taskManager/storage/useDashboardStore.js";
 import { setDashboardThemeColor, setDashboardThemeDepth } from "../taskManager/domain/dashboardModel.js";
 import { sfHistorySource } from "./integrations/sfHistorySource.js";
-import { DEFAULT_PERIOD, defaultPresetForMaxStar, isValidStarRange, selectInitialItem } from "./domain/series.js";
+import { DEFAULT_INITIAL_ITEM_ID, DEFAULT_PERIOD, defaultPresetForMaxStar, isValidStarRange, selectInitialItem } from "./domain/series.js";
 import { buildScreenModel, isRangeReady } from "./domain/viewModel.js";
 import { formatFormingBandRanges, formatTooltipDate, groupFilledBands } from "./domain/format.js";
-import { resolveCarriedSelection } from "./domain/selectionCarry.js";
+import { guessPrefetchItemId, resolveCarriedSelection } from "./domain/selectionCarry.js";
 import { getCarriedSelection, setCarriedSelection } from "./selectionStore.js";
 import SfHistoryTabs from "./SfHistoryTabs.jsx";
 import EquipmentSelector from "./components/EquipmentSelector.jsx";
@@ -55,7 +55,17 @@ export default function SfHistoryRoot() {
   };
 
   const [equipmentState, setEquipmentState] = useState({ status: "loading", items: [] });
-  const [selectedItemId, setSelectedItemId] = useState(null); // representative id -- drives prices/latest
+  // IMPL_PLAN_SH46 §3 (B): seeded with a GUESS (carried selection's itemId,
+  // else SH-26's DEFAULT_INITIAL_ITEM_ID) instead of `null`, so the
+  // prices/latest effects below (both keyed on this state) start
+  // in parallel with the loadEquipment effect right below, rather than
+  // waiting for it to resolve first. Never the final, authoritative value
+  // -- see `guessPrefetchItemId`'s own header (domain/selectionCarry.js)
+  // for why the loadEquipment effect's existing `setSelectedItemId(picked.
+  // itemId)` call (unchanged by this plan) always corrects a wrong guess.
+  const [selectedItemId, setSelectedItemId] = useState(() =>
+    guessPrefetchItemId(getCarriedSelection(), DEFAULT_INITIAL_ITEM_ID),
+  ); // representative id -- drives prices/latest
   // IMPL_PLAN_SH9 §3-3: the exact alias row the user picked (may differ from
   // `selectedItemId`'s own representative name/id -- see EquipmentSelector's
   // header comment). Drives the search box's closed-state text and the

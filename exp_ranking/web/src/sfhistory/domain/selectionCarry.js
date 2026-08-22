@@ -32,3 +32,26 @@ export function resolveCarriedSelection(items, carried) {
       : { itemId: match.itemId, itemName: match.itemName };
   return { itemId: match.itemId, alias };
 }
+
+/**
+ * IMPL_PLAN_SH46 §3 (B): a best-effort GUESS at which itemId to start
+ * `/sf-history/prices` + `/sf-history/latest` for, in parallel with
+ * `/sf-history/equipment` -- before the equipment list has loaded, so
+ * `carried` cannot be validated against it yet (that is exactly what makes
+ * this NOT `resolveCarriedSelection` above, which requires `items`).
+ *
+ * Never the final, authoritative selection: the caller's equipment-load
+ * effect still computes the real `picked` item exactly as it did before
+ * this plan (`resolveCarriedSelection(result.items, carried) ??
+ * selectInitialItem(result.items)`) and always calls
+ * `setSelectedItemId(picked.itemId)` unconditionally once equipment
+ * arrives. If this guess turns out wrong -- a stale/absent carried
+ * selection, or `defaultItemId` itself having dropped out of the list
+ * (SH-26 §1(c)'s "穏当に劣化する" case) -- that later call corrects
+ * `selectedItemId`, and the wrongly-prefetched price/latest data is
+ * simply superseded by a fresh fetch for the correct id, the same way any
+ * other `selectedItemId` change already was before this plan.
+ */
+export function guessPrefetchItemId(carried, defaultItemId) {
+  return Number.isInteger(carried?.itemId) ? carried.itemId : defaultItemId;
+}
