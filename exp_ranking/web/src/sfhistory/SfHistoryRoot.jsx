@@ -7,6 +7,8 @@ import { sfHistorySource } from "./integrations/sfHistorySource.js";
 import { DEFAULT_PERIOD, defaultPresetForMaxStar, isValidStarRange, selectInitialItem } from "./domain/series.js";
 import { buildScreenModel, isRangeReady } from "./domain/viewModel.js";
 import { formatFormingBandRanges, formatTooltipDate, groupFilledBands } from "./domain/format.js";
+import { resolveCarriedSelection } from "./domain/selectionCarry.js";
+import { getCarriedSelection, setCarriedSelection } from "./selectionStore.js";
 import SfHistoryTabs from "./SfHistoryTabs.jsx";
 import EquipmentSelector from "./components/EquipmentSelector.jsx";
 import StarRangeSelector from "./components/StarRangeSelector.jsx";
@@ -76,13 +78,22 @@ export default function SfHistoryRoot() {
         return;
       }
       setEquipmentState({ status: "ready", items: result.items });
-      // IMPL_PLAN_SH26 §1: open on DEFAULT_INITIAL_ITEM_ID (Arcane Umbra
-      // Staff) when present, falling back to items[0] otherwise -- see
-      // selectInitialItem's own header comment in domain/series.js.
-      const first = selectInitialItem(result.items);
-      setSelectedItemId(first.itemId);
-      setSelectedAlias({ itemId: first.itemId, itemName: first.itemName });
-      setRange(defaultPresetForMaxStar(first.maxStar));
+      // IMPL_PLAN_SH42 §2 (B): open on whatever equipment was carried from
+      // the Cube/New Equipment tab, if it's still present in this page's
+      // own items -- falls back to the pre-existing SH-26 default
+      // (DEFAULT_INITIAL_ITEM_ID / Arcane Umbra Staff) otherwise, which is
+      // also exactly what runs on a fresh page load (the carried store is
+      // empty then -- plan §2/(f): "#/starforce を直接開いたときの初期選択
+      // は従来どおり").
+      const carried = resolveCarriedSelection(result.items, getCarriedSelection());
+      const picked = carried
+        ? result.items.find((item) => item.itemId === carried.itemId)
+        : selectInitialItem(result.items);
+      const alias = carried?.alias ?? { itemId: picked.itemId, itemName: picked.itemName };
+      setSelectedItemId(picked.itemId);
+      setSelectedAlias(alias);
+      setCarriedSelection(picked.itemId, alias);
+      setRange(defaultPresetForMaxStar(picked.maxStar));
     });
     return () => {
       cancelled = true;
@@ -100,7 +111,11 @@ export default function SfHistoryRoot() {
   // (`selectedAlias`, read by the "shared group" note below).
   function handleSelectEquipment(candidate) {
     setSelectedItemId(candidate.representativeItemId);
-    setSelectedAlias({ itemId: candidate.itemId, itemName: candidate.itemName });
+    const alias = { itemId: candidate.itemId, itemName: candidate.itemName };
+    setSelectedAlias(alias);
+    // IMPL_PLAN_SH42 §2 (B): an explicit pick carries over to the Cube/New
+    // Equipment tab too, same as the default pick above.
+    setCarriedSelection(candidate.representativeItemId, alias);
   }
 
   // design §7.1: if switching equipment makes the current range invalid

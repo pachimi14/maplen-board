@@ -6,6 +6,8 @@ import { setDashboardThemeColor, setDashboardThemeDepth } from "../taskManager/d
 import { sfHistorySource } from "./integrations/sfHistorySource.js";
 import { DEFAULT_PERIOD, computeStats, currentPercentile, sliceByPeriod } from "./domain/series.js";
 import { CUBE_TYPE_ORDER, buildCubeSeries, currentCubeValue } from "./domain/cubeSeries.js";
+import { resolveCarriedSelection } from "./domain/selectionCarry.js";
+import { getCarriedSelection, setCarriedSelection } from "./selectionStore.js";
 import SfHistoryTabs from "./SfHistoryTabs.jsx";
 import EquipmentSelector from "./components/EquipmentSelector.jsx";
 import CubeTypeSelector from "./components/CubeTypeSelector.jsx";
@@ -86,9 +88,16 @@ export default function CubePricesRoot() {
         return;
       }
       setEquipmentState({ status: "ready", items: result.items });
-      const first = result.items[0];
-      setSelectedItemId(first.itemId);
-      setSelectedAlias({ itemId: first.itemId, itemName: first.itemName });
+      // IMPL_PLAN_SH42 §2 (B): same carry-over as SfHistoryRoot.jsx's own
+      // equipment-load effect -- see that file's comment. Falls back to
+      // this page's own pre-existing default (items[0]) when nothing was
+      // carried, or the carried item isn't in this page's own list.
+      const carried = resolveCarriedSelection(result.items, getCarriedSelection());
+      const picked = carried ? result.items.find((item) => item.itemId === carried.itemId) : result.items[0];
+      const alias = carried?.alias ?? { itemId: picked.itemId, itemName: picked.itemName };
+      setSelectedItemId(picked.itemId);
+      setSelectedAlias(alias);
+      setCarriedSelection(picked.itemId, alias);
     });
     return () => {
       cancelled = true;
@@ -102,7 +111,10 @@ export default function CubePricesRoot() {
 
   function handleSelectEquipment(candidate) {
     setSelectedItemId(candidate.representativeItemId);
-    setSelectedAlias({ itemId: candidate.itemId, itemName: candidate.itemName });
+    const alias = { itemId: candidate.itemId, itemName: candidate.itemName };
+    setSelectedAlias(alias);
+    // IMPL_PLAN_SH42 §2 (B): carries over to SF/New Equipment too.
+    setCarriedSelection(candidate.representativeItemId, alias);
   }
 
   useEffect(() => {
