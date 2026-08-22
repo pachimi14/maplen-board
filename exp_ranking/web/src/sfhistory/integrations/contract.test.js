@@ -32,7 +32,11 @@ const INTENTIONALLY_DROPPED = {
     point: [],
   },
   latest: {
-    root: ["itemId"],
+    // IMPL_PLAN_SH40 (2026-08-22, 統括裁定): `cubes`/`cubeOrder` はサーバー側には実在するが、
+    // 画面(次スライス)がまだ `normalizeLatestPayload` を通していないため、
+    // 明示的にここに列挙する(沈黙のドロップではない、検出器の意図を満たす認識)。
+    // サーバーがさらに別のフィールドを足したら(このリストにない限り)、このファイルは引き続き赤くなる。
+    root: ["itemId", "cubes", "cubeOrder"],
   },
   equipment: {
     root: ["generatedAt", "excluded"],
@@ -95,7 +99,17 @@ describe("contract: /sf-history/prices", () => {
 });
 
 describe("contract: /sf-history/latest", () => {
-  const payload = { itemId: 1001, latestUpdatedAt: "2026-08-04T18:20:00Z", prices: [1, 2, null, 4] };
+  // IMPL_PLAN_SH40: the real server payload now also carries `cubes`/
+  // `cubeOrder` (see INTENTIONALLY_DROPPED.latest.root above) -- included
+  // here so this fixture matches the real contract shape, even though
+  // `normalizeLatestPayload` does not read them yet (画面は次スライス).
+  const payload = {
+    itemId: 1001,
+    latestUpdatedAt: "2026-08-04T18:20:00Z",
+    prices: [1, 2, null, 4],
+    cubes: [1, null, null, null],
+    cubeOrder: ["RED", "BLACK", "ADDITIONAL", "WHITE_ADDITIONAL"],
+  };
 
   it("keeps every contract root field, or documents the drop", () => {
     const result = normalizeLatestPayload(payload, 1001);
@@ -105,6 +119,36 @@ describe("contract: /sf-history/latest", () => {
       (field) => Object.prototype.hasOwnProperty.call(result, field),
       "latest.root",
     );
+  });
+});
+
+// IMPL_PLAN_SH40 accept criterion (n): the detector above must stay strict --
+// if the server adds YET ANOTHER field to `latest.root` that is neither
+// passed through by `normalizeLatestPayload` NOR added to
+// INTENTIONALLY_DROPPED.latest.root, `assertContractFieldsSurvive` must fail
+// loudly, not pass silently. This is a regression guard on the detector
+// itself (not on any real field) -- proves the negative-test property this
+// file exists for (SH-9/SH-16/SH-19) still holds after SH-40's fix, and
+// would still hold the next time a real field is added and forgotten here.
+describe("contract detector regression guard (accept criterion (n))", () => {
+  it("fails when a contract field is neither normalized through nor listed in INTENTIONALLY_DROPPED", () => {
+    const payload = {
+      itemId: 1001,
+      latestUpdatedAt: "2026-08-04T18:20:00Z",
+      prices: [1, 2, null, 4],
+      cubes: [1, null, null, null],
+      cubeOrder: ["RED", "BLACK", "ADDITIONAL", "WHITE_ADDITIONAL"],
+    };
+    const result = normalizeLatestPayload(payload, 1001);
+    const hypotheticalContractFields = ["itemId", "cubes", "cubeOrder", "totallyNewUndocumentedField"];
+    expect(() =>
+      assertContractFieldsSurvive(
+        hypotheticalContractFields,
+        INTENTIONALLY_DROPPED.latest.root,
+        (field) => Object.prototype.hasOwnProperty.call(result, field),
+        "latest.root (regression guard)",
+      ),
+    ).toThrow(/totallyNewUndocumentedField/);
   });
 });
 
