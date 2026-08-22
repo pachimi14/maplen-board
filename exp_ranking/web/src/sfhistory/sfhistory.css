@@ -471,3 +471,64 @@ html:not([data-theme-depth="deep"]) .sfh-root {
 .sfh-filled-band .recharts-reference-area-rect {
   fill: var(--sfh-color-filled-band);
 }
+
+/* IMPL_PLAN_SH44 §2-1/§2-2: cube-comparison chrome -- `CubeCompareSelector.jsx`
+   (the swatch inside each toggle button) and `CubeLegend.jsx` (one swatch +
+   name per cube type shown on the chart) both use this one small circle
+   class, colored inline (`style={{ backgroundColor: ... }}`) from
+   `domain/cubeSeries.js#resolveCubeColor`'s own already-depth-branched,
+   theme-color-NON-following hex (see that function's own header) -- no
+   `--sfh-*` custom property needed here at all, unlike `--sfh-color-
+   current-ring`/`--sfh-color-cheaper`/`-costlier` above: those back a
+   *border/text* color applied via a CSS class (so a variable is the
+   natural mechanism), while these swatches back a *per-cube* value chosen
+   at render time from a 4-entry map, which a single CSS custom property
+   cannot represent. */
+.sfh-cube-swatch {
+  display: inline-block;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 999px;
+  margin-right: 0.4rem;
+  vertical-align: middle;
+  flex: none;
+}
+
+.sfh-cube-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.9rem;
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+html:not([data-theme-depth="deep"]) .sfh-cube-legend {
+  color: #64748b;
+}
+
+.sfh-cube-legend-item {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* IMPL_PLAN_SH44 §2-2(d)/(k): the MAIN cube type's own legend entry is
+   bolder text -- the same "main = most prominent" convention the chart
+   itself uses (thicker line, `MAIN_CUBE_LINE_WIDTH` > `ADDITIONAL_CUBE_LINE_WIDTH`,
+   CubePricesRoot.jsx). */
+.sfh-cube-legend-item-main {
+  font-weight: 700;
+  color: inherit;
+}
+
+.sfh-cube-legend-badge {
+  margin-left: 0.4rem;
+  border-radius: 999px;
+  border: 1px solid var(--theme-card-border);
+  padding: 0.05rem 0.45rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--theme-focus);
+}

@@ -5,17 +5,34 @@ import { useDashboardStore } from "../taskManager/storage/useDashboardStore.js";
 import { setDashboardThemeColor, setDashboardThemeDepth } from "../taskManager/domain/dashboardModel.js";
 import { sfHistorySource } from "./integrations/sfHistorySource.js";
 import { DEFAULT_PERIOD, computeStats, currentPercentile, sliceByPeriod } from "./domain/series.js";
-import { CUBE_TYPE_ORDER, buildCubeSeries, currentCubeValue } from "./domain/cubeSeries.js";
+import {
+  CUBE_TYPE_DISPLAY_NAMES,
+  CUBE_TYPE_ORDER,
+  buildCubeSeries,
+  carryAdditionalCubeTypes,
+  currentCubeValue,
+  resolveCubeColor,
+} from "./domain/cubeSeries.js";
 import { resolveCarriedSelection } from "./domain/selectionCarry.js";
 import { getCarriedSelection, setCarriedSelection } from "./selectionStore.js";
 import SfHistoryTabs from "./SfHistoryTabs.jsx";
 import EquipmentSelector from "./components/EquipmentSelector.jsx";
 import CubeTypeSelector from "./components/CubeTypeSelector.jsx";
+import CubeCompareSelector from "./components/CubeCompareSelector.jsx";
+import CubeLegend from "./components/CubeLegend.jsx";
 import PeriodTabs from "./components/PeriodTabs.jsx";
 import SfHistoryChart from "./components/SfHistoryChart.jsx";
 import SummaryCards from "./components/SummaryCards.jsx";
 import WeekdayHeatmap from "./components/WeekdayHeatmap.jsx";
 import "./sfhistory.css";
+
+// IMPL_PLAN_SH44 §2-2: the main line's own stroke width and every
+// additional line's stroke width -- plan (c) "メインが最も太い。追加は細い"
+// -- kept as named constants (not inlined at the `<SfHistoryChart>` call
+// below) so the "main > additional" inequality this plan's own acceptance
+// criterion (c) depends on is visible at a glance, not buried in JSX props.
+const MAIN_CUBE_LINE_WIDTH = 2.5;
+const ADDITIONAL_CUBE_LINE_WIDTH = 1.5;
 
 // IMPL_PLAN_SH41 §0/K2: White Cube has no data before this date -- a fact
 // about the data (server: cube.py / update.py's own backfill start), not a
@@ -74,6 +91,11 @@ export default function CubePricesRoot() {
   const [selectedItemId, setSelectedItemId] = useState(null);
   const [selectedAlias, setSelectedAlias] = useState(null); // { itemId, itemName } -- see SfHistoryRoot.jsx's own note
   const [cubeType, setCubeType] = useState(CUBE_TYPE_ORDER[0]);
+  // IMPL_PLAN_SH44 §2-1: the 0-3 ADDITIONAL cube types overlaid on top of
+  // `cubeType` (the MAIN one, unchanged state above). Always `[]` on first
+  // render (plan (a): "初期は追加ゼロ") -- nothing below ever seeds it from
+  // anywhere else.
+  const [additionalCubeTypes, setAdditionalCubeTypes] = useState([]);
   const [period, setPeriod] = useState(DEFAULT_PERIOD);
 
   const [cubePricesState, setCubePricesState] = useState({ status: "idle", points: [], cubeOrder: null });
@@ -116,6 +138,35 @@ export default function CubePricesRoot() {
     // IMPL_PLAN_SH42 §2 (B): carries over to SF/New Equipment too.
     setCarriedSelection(candidate.representativeItemId, alias);
   }
+
+  // IMPL_PLAN_SH44 §2-1(k): carries the full displayed comparison set
+  // across a MAIN switch -- see `carryAdditionalCubeTypes`'s own header
+  // (domain/cubeSeries.js) for the full decision + rationale.
+  function handleCubeTypeChange(newCubeType) {
+    setAdditionalCubeTypes((previousAdditional) => carryAdditionalCubeTypes(cubeType, previousAdditional, newCubeType));
+    setCubeType(newCubeType);
+  }
+
+  function handleToggleAdditionalCubeType(candidateCubeType) {
+    setAdditionalCubeTypes((previousAdditional) =>
+      previousAdditional.includes(candidateCubeType)
+        ? previousAdditional.filter((existing) => existing !== candidateCubeType)
+        : [...previousAdditional, candidateCubeType],
+    );
+  }
+
+  // IMPL_PLAN_SH44 §2-2(e)/(f): one fixed hex per cube type, resolved once
+  // per theme-depth change (`resolveCubeColor`, domain/cubeSeries.js -- see
+  // that function's own header for the full "depth-branched, theme-color-
+  // NON-following" rationale). The SAME map feeds `CubeTypeSelector`'s
+  // sibling `CubeCompareSelector` swatches, `CubeLegend`'s swatches, and
+  // `SfHistoryChart`'s own line `stroke` props below -- one source, so a
+  // color can never drift between the selector/legend/chart.
+  const colorByType = useMemo(() => {
+    const map = {};
+    for (const type of CUBE_TYPE_ORDER) map[type] = resolveCubeColor(type, theme.themeDepth);
+    return map;
+  }, [theme.themeDepth]);
 
   useEffect(() => {
     if (selectedItemId == null) return;
@@ -162,6 +213,23 @@ export default function CubePricesRoot() {
   const currentExpected = latestState.status === "ready" ? currentCubeValue(latestState.cubes, latestState.cubeOrder, cubeType) : null;
   const percentile = useMemo(() => currentPercentile(periodSeries, currentExpected), [periodSeries, currentExpected]);
 
+  // IMPL_PLAN_SH44 §2-2: one period-sliced series per ADDITIONAL cube type,
+  // built the exact same way `fullSeries`/`periodSeries` above build the
+  // MAIN one (`buildCubeSeries` -> `sliceByPeriod`, same `cubePricesState.
+  // points`/`cubeOrder`/`period`) -- this is what guarantees every cube
+  // type's own series shares the identical `date` sequence
+  // `SfHistoryChart`'s `mergeExtraSeriesColumns` relies on (see that
+  // function's own header). Statistics/heatmap never read this -- plan §4:
+  // "追加のキューブの統計は出さない" -- only the chart's `extraSeries` prop
+  // below does.
+  const extraSeriesForChart = useMemo(() => {
+    if (!cubePricesReady || !additionalCubeTypes.length) return [];
+    return additionalCubeTypes.map((type) => {
+      const series = sliceByPeriod(buildCubeSeries(cubePricesState.points, cubePricesState.cubeOrder, type), period);
+      return { key: type, series, color: colorByType[type], strokeWidth: ADDITIONAL_CUBE_LINE_WIDTH };
+    });
+  }, [cubePricesReady, cubePricesState.points, cubePricesState.cubeOrder, additionalCubeTypes, period, colorByType]);
+
   return (
     <div className="site-theme sfh-root min-h-screen">
       <SiteHeader active="sfhistory" theme={theme} onThemeChange={handleThemeChange} />
@@ -185,7 +253,16 @@ export default function CubePricesRoot() {
                   onSelect={handleSelectEquipment}
                 />
               </div>
-              <CubeTypeSelector value={cubeType} onChange={setCubeType} />
+              <CubeTypeSelector value={cubeType} onChange={handleCubeTypeChange} />
+              {/* IMPL_PLAN_SH44 §2-1: separate control, 0-3 ADDITIONAL cube
+                  types (never `cubeType` itself -- see the component's own
+                  header). */}
+              <CubeCompareSelector
+                mainCubeType={cubeType}
+                selected={additionalCubeTypes}
+                colorByType={colorByType}
+                onToggle={handleToggleAdditionalCubeType}
+              />
             </div>
 
             <PeriodTabs value={period} onChange={setPeriod} />
@@ -197,6 +274,13 @@ export default function CubePricesRoot() {
               <p className="text-sm text-slate-400">{t("sfhistoryCube.whiteCubeNote", { date: WHITE_CUBE_DATA_START })}</p>
             ) : null}
 
+            {/* IMPL_PLAN_SH44 §3/§4(i): stats/heatmap below are the MAIN
+                cube type's own, never blended with any additional
+                selection -- this note is what makes that explicit on
+                screen, the same "factual note, not an evaluation" register
+                as the White Cube note above. */}
+            <p className="sfh-field-label">{t("sfhistoryCube.statsScope", { cube: CUBE_TYPE_DISPLAY_NAMES[cubeType] })}</p>
+
             <SummaryCards
               currentStatus={latestState.status}
               currentExpected={currentExpected}
@@ -204,6 +288,13 @@ export default function CubePricesRoot() {
               stats={stats}
               percentile={percentile}
             />
+
+            {/* IMPL_PLAN_SH44 §2-2(d): the legend, directly above the chart
+                it describes -- a separate component from SfHistoryChart.jsx
+                itself (see that component's own new-props comment for why),
+                so SfHistoryChart's own JSX output for a plain single-series
+                call (SF History) is untouched by this plan. */}
+            <CubeLegend mainCubeType={cubeType} additionalCubeTypes={additionalCubeTypes} colorByType={colorByType} />
 
             <div className="sfh-summary-card">
               {cubePricesState.status === "error" ? (
@@ -214,7 +305,19 @@ export default function CubePricesRoot() {
                 // No `filledBands` for cube prices (K1: no gap-filling --
                 // plan §3-2) -- SfHistoryChart's own `filledBandRange`
                 // already renders nothing at all for an empty array.
-                <SfHistoryChart series={periodSeries} average={stats.average} filledBands={[]} />
+                //
+                // IMPL_PLAN_SH44 §2-2: `mainColor`/`mainStrokeWidth`/
+                // `extraSeries` are all new, optional props (plan (j):
+                // SfHistoryRoot.jsx's own <SfHistoryChart> call, 2 lines
+                // below `import`, still passes none of them).
+                <SfHistoryChart
+                  series={periodSeries}
+                  average={stats.average}
+                  filledBands={[]}
+                  mainColor={colorByType[cubeType]}
+                  mainStrokeWidth={MAIN_CUBE_LINE_WIDTH}
+                  extraSeries={extraSeriesForChart}
+                />
               )}
             </div>
 

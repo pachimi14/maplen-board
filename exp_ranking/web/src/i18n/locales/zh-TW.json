@@ -692,6 +692,11 @@
     "cubeType": {
       "label": "魔方種類"
     },
+    "compare": {
+      "label": "比較對象",
+      "mainBadge": "主要"
+    },
+    "statsScope": "下方的統計與熱力圖僅顯示 {{cube}}。",
     "whiteCubeNote": "White Cube 的價格歷史自 {{date}} 起開始記錄。"
   }
 }

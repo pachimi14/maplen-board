@@ -692,6 +692,11 @@
     "cubeType": {
       "label": "Tipo de cubo"
     },
+    "compare": {
+      "label": "Comparar con",
+      "mainBadge": "Principal"
+    },
+    "statsScope": "Las estadísticas y el mapa de calor de abajo son solo para {{cube}}.",
     "whiteCubeNote": "El historial de precios de White Cube comienza el {{date}}."
   }
 }

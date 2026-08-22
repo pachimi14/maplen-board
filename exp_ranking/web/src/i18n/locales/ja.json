@@ -692,6 +692,11 @@
     "cubeType": {
       "label": "キューブ種類"
     },
+    "compare": {
+      "label": "比較するキューブ",
+      "mainBadge": "メイン"
+    },
+    "statsScope": "下の統計とヒートマップは{{cube}}のみが対象です。",
     "whiteCubeNote": "White Cube の価格履歴は{{date}}から開始しています。"
   }
 }

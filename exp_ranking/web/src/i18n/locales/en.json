@@ -692,6 +692,11 @@
     "cubeType": {
       "label": "Cube Type"
     },
+    "compare": {
+      "label": "Compare with",
+      "mainBadge": "Main"
+    },
+    "statsScope": "The stats and heatmap below are for {{cube}} only.",
     "whiteCubeNote": "White Cube price history starts {{date}}."
   }
 }

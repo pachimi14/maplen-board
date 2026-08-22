@@ -692,6 +692,11 @@
     "cubeType": {
       "label": "Loại hộp"
     },
+    "compare": {
+      "label": "So sánh với",
+      "mainBadge": "Chính"
+    },
+    "statsScope": "Số liệu và bản đồ nhiệt bên dưới chỉ dành cho {{cube}}.",
     "whiteCubeNote": "Lịch sử giá White Cube bắt đầu từ {{date}}."
   }
 }

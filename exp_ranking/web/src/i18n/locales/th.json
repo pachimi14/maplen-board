@@ -692,6 +692,11 @@
     "cubeType": {
       "label": "ประเภทคิวบ์"
     },
+    "compare": {
+      "label": "เปรียบเทียบกับ",
+      "mainBadge": "หลัก"
+    },
+    "statsScope": "สถิติและฮีตแมปด้านล่างเป็นข้อมูลของ {{cube}} เท่านั้น",
     "whiteCubeNote": "ประวัติราคา White Cube เริ่มตั้งแต่ {{date}}"
   }
 }
