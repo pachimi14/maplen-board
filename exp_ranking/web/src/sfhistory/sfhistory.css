@@ -472,9 +472,10 @@ html:not([data-theme-depth="deep"]) .sfh-root {
   fill: var(--sfh-color-filled-band);
 }
 
-/* IMPL_PLAN_SH44 §2-1/§2-2: cube-comparison chrome -- `CubeCompareSelector.jsx`
-   (the swatch inside each toggle button) and `CubeLegend.jsx` (one swatch +
-   name per cube type shown on the chart) both use this one small circle
+/* IMPL_PLAN_SH44 §2-1/§2-2 (updated IMPL_PLAN_SH45): cube-comparison chrome
+   -- `CubeLegend.jsx`'s own swatch (one per cube type, main entry AND every
+   toggleable additional entry, always shown regardless of selection state --
+   plan SH-45 "色の点は選択に関わらず出す") uses this one small circle
    class, colored inline (`style={{ backgroundColor: ... }}`) from
    `domain/cubeSeries.js#resolveCubeColor`'s own already-depth-branched,
    theme-color-NON-following hex (see that function's own header) -- no
@@ -531,4 +532,36 @@ html:not([data-theme-depth="deep"]) .sfh-cube-legend {
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--theme-focus);
+}
+
+/* IMPL_PLAN_SH45 (a)/(b): each ADDITIONAL cube type's own legend entry is
+   now the toggle control itself (a `<button>`, replacing the old separate
+   `CubeCompareSelector.jsx` tab strip) -- a plain, borderless button reset
+   so it reads as a legend entry first, a control second, matching the
+   non-interactive `.sfh-cube-legend-item-main` entry beside it at rest. */
+.sfh-cube-legend-item-toggle {
+  border: 1.5px solid transparent;
+  border-radius: 999px;
+  padding: 0.1rem 0.6rem 0.1rem 0.3rem;
+  margin: -0.1rem 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s, color 0.15s;
+}
+
+.sfh-cube-legend-item-toggle:hover {
+  border-color: var(--theme-card-border);
+}
+
+/* IMPL_PLAN_SH45 (b) (user instruction: "選択した分は枠を付ける") -- the
+   one visible marker that distinguishes a selected additional cube type
+   from an unselected one; the swatch/label stay identical either way
+   (plan: "色の点は選択に関わらず出す"). */
+.sfh-cube-legend-item-selected {
+  border-color: var(--theme-focus);
+  background: color-mix(in srgb, var(--theme-focus) 14%, transparent);
+  color: var(--theme-focus);
+  font-weight: 700;
 }

@@ -18,7 +18,6 @@ import { getCarriedSelection, setCarriedSelection } from "./selectionStore.js";
 import SfHistoryTabs from "./SfHistoryTabs.jsx";
 import EquipmentSelector from "./components/EquipmentSelector.jsx";
 import CubeTypeSelector from "./components/CubeTypeSelector.jsx";
-import CubeCompareSelector from "./components/CubeCompareSelector.jsx";
 import CubeLegend from "./components/CubeLegend.jsx";
 import PeriodTabs from "./components/PeriodTabs.jsx";
 import SfHistoryChart from "./components/SfHistoryChart.jsx";
@@ -158,10 +157,10 @@ export default function CubePricesRoot() {
   // IMPL_PLAN_SH44 §2-2(e)/(f): one fixed hex per cube type, resolved once
   // per theme-depth change (`resolveCubeColor`, domain/cubeSeries.js -- see
   // that function's own header for the full "depth-branched, theme-color-
-  // NON-following" rationale). The SAME map feeds `CubeTypeSelector`'s
-  // sibling `CubeCompareSelector` swatches, `CubeLegend`'s swatches, and
-  // `SfHistoryChart`'s own line `stroke` props below -- one source, so a
-  // color can never drift between the selector/legend/chart.
+  // NON-following" rationale). The SAME map feeds `CubeLegend`'s swatches
+  // (both the main entry and the now-integrated additional-toggle entries,
+  // IMPL_PLAN_SH45) and `SfHistoryChart`'s own line `stroke` props below --
+  // one source, so a color can never drift between the legend/chart.
   const colorByType = useMemo(() => {
     const map = {};
     for (const type of CUBE_TYPE_ORDER) map[type] = resolveCubeColor(type, theme.themeDepth);
@@ -254,15 +253,6 @@ export default function CubePricesRoot() {
                 />
               </div>
               <CubeTypeSelector value={cubeType} onChange={handleCubeTypeChange} />
-              {/* IMPL_PLAN_SH44 §2-1: separate control, 0-3 ADDITIONAL cube
-                  types (never `cubeType` itself -- see the component's own
-                  header). */}
-              <CubeCompareSelector
-                mainCubeType={cubeType}
-                selected={additionalCubeTypes}
-                colorByType={colorByType}
-                onToggle={handleToggleAdditionalCubeType}
-              />
             </div>
 
             <PeriodTabs value={period} onChange={setPeriod} />
@@ -289,12 +279,17 @@ export default function CubePricesRoot() {
               percentile={percentile}
             />
 
-            {/* IMPL_PLAN_SH44 §2-2(d): the legend, directly above the chart
-                it describes -- a separate component from SfHistoryChart.jsx
-                itself (see that component's own new-props comment for why),
-                so SfHistoryChart's own JSX output for a plain single-series
-                call (SF History) is untouched by this plan. */}
-            <CubeLegend mainCubeType={cubeType} additionalCubeTypes={additionalCubeTypes} colorByType={colorByType} />
+            {/* IMPL_PLAN_SH45: the legend, directly above the chart it
+                describes, IS the comparison control now (see CubeLegend.jsx's
+                own header) -- a separate component from SfHistoryChart.jsx
+                itself, so SfHistoryChart's own JSX output for a plain
+                single-series call (SF History) is untouched by this plan. */}
+            <CubeLegend
+              mainCubeType={cubeType}
+              additionalCubeTypes={additionalCubeTypes}
+              colorByType={colorByType}
+              onToggleAdditional={handleToggleAdditionalCubeType}
+            />
 
             <div className="sfh-summary-card">
               {cubePricesState.status === "error" ? (
