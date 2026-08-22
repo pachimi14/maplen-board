@@ -101,6 +101,34 @@ def test_fetch_history_page_always_sends_explicit_item_upgrade() -> None:
     assert "minTimestamp" in sent_params and "maxTimestamp" in sent_params
 
 
+def test_fetch_prospective_history_page_sends_prospective_params() -> None:
+    """SH-39 plan §0 I4/§7(g): itemUpgradeType=UPGRADE_PROSPECTIVE,
+    itemUpgradeSubType=<cube_sub_type>, itemUpgrade always 0."""
+    ftr = _make_fetcher([(200, {"points": []})])
+    status, payload = fetcher_mod.fetch_prospective_history_page(
+        ftr, 1003720, cube_sub_type="RED", window_days=160.0
+    )
+    assert status == 200
+    sent_params = ftr.session.calls[0]["params"]  # type: ignore[attr-defined]
+    assert sent_params["itemId"] == 1003720
+    assert sent_params["itemUpgradeType"] == "UPGRADE_PROSPECTIVE"
+    assert sent_params["itemUpgradeSubType"] == "RED"
+    assert sent_params["itemUpgrade"] == 0
+    assert sent_params["period"] == 2
+    assert "minTimestamp" in sent_params and "maxTimestamp" in sent_params
+
+
+def test_fetch_history_page_unchanged_by_the_new_prospective_function() -> None:
+    """SH-39 plan §7(g): fetch_history_page's own params must not gain
+    itemUpgradeType/itemUpgradeSubType -- the two functions are independent."""
+    ftr = _make_fetcher([(200, {"itemUpgrade": 5, "points": []})])
+    fetcher_mod.fetch_history_page(ftr, 1003720, item_upgrade=5, window_days=160.0)
+    sent_params = ftr.session.calls[0]["params"]  # type: ignore[attr-defined]
+    assert "itemUpgradeType" not in sent_params
+    assert "itemUpgradeSubType" not in sent_params
+    assert sent_params["itemUpgrade"] == 5
+
+
 def test_log_as_dicts_round_trips_every_request() -> None:
     ftr = _make_fetcher([(200, {}), (200, {})])
     ftr.get("http://x", {"a": 1}, endpoint="history", note="n1")

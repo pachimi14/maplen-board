@@ -225,3 +225,43 @@ def fetch_history_page(
     }
     status, payload, _text = fetcher.get(HISTORY_URL, params, endpoint="history", note=note)
     return status, payload
+
+
+def fetch_prospective_history_page(
+    fetcher: Fetcher,
+    item_id: int,
+    *,
+    cube_sub_type: str,
+    window_days: float,
+    period: int = 2,
+    note: str = "",
+) -> tuple[int, dict[str, Any] | None]:
+    """Fetch one (item_id, cube_sub_type) page of 1-hour CUBE price history.
+
+    IMPL_PLAN_SH39: same ``HISTORY_URL`` as ``fetch_history_page``, with
+    ``itemUpgradeType=UPGRADE_PROSPECTIVE`` and ``itemUpgradeSubType=
+    <cube_sub_type>`` (one of ``cube.CUBE_SUB_TYPES``) added, and
+    ``itemUpgrade`` always fixed at 0 (plan §0 I4: a cube has no star concept
+    -- ``1``/``10`` are both 0-point upstream, only ``0`` is valid).
+
+    A DELIBERATELY separate function, not a new optional parameter bolted
+    onto ``fetch_history_page`` -- plan §7: "``fetch_history_page`` は SF
+    専用のまま変えず、prospective 用の関数を別に足す" -- so that function's
+    existing signature/behavior stays byte-for-byte unchanged (accept
+    criterion (g)).
+    """
+    now_sec = _now_epoch_sec()
+    min_sec = now_sec - int(window_days * 86400)
+    params: dict[str, Any] = {
+        "itemId": item_id,
+        "itemUpgradeType": "UPGRADE_PROSPECTIVE",
+        "itemUpgradeSubType": cube_sub_type,
+        "itemUpgrade": 0,
+        "period": period,
+        "minTimestamp": min_sec,
+        "maxTimestamp": now_sec,
+    }
+    status, payload, _text = fetcher.get(
+        HISTORY_URL, params, endpoint="history-prospective", note=note
+    )
+    return status, payload
