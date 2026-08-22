@@ -682,10 +682,11 @@
     }
   },
   "sfhistoryTabs": {
-    "navLabel": "Páginas de historial de SF",
-    "sfHistory": "SF History",
+    "navLabel": "Secciones del sitio",
+    "subNavLabel": "Páginas de Enhance History",
     "newEquipment": "New Equipment",
-    "cubePrices": "Cube Prices"
+    "sf": "SF",
+    "cube": "Cube"
   },
   "sfhistoryCube": {
     "pageDescription": "Elige un equipo y un tipo de cubo para ver cómo ha evolucionado su precio de mercado y en qué nivel se sitúa el valor actual frente a ese historial.",

@@ -682,10 +682,11 @@
     }
   },
   "sfhistoryTabs": {
-    "navLabel": "SF History pages",
-    "sfHistory": "SF History",
+    "navLabel": "Site sections",
+    "subNavLabel": "Enhance History pages",
     "newEquipment": "New Equipment",
-    "cubePrices": "Cube Prices"
+    "sf": "SF",
+    "cube": "Cube"
   },
   "sfhistoryCube": {
     "pageDescription": "Pick a piece of gear and a cube type to see how its market price has moved, and where the current value sits against that history.",

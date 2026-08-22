@@ -682,10 +682,11 @@
     }
   },
   "sfhistoryTabs": {
-    "navLabel": "หน้าประวัติ SF",
-    "sfHistory": "SF History",
+    "navLabel": "ส่วนต่าง ๆ ของเว็บไซต์",
+    "subNavLabel": "หน้าใน Enhance History",
     "newEquipment": "New Equipment",
-    "cubePrices": "Cube Prices"
+    "sf": "SF",
+    "cube": "Cube"
   },
   "sfhistoryCube": {
     "pageDescription": "เลือกอุปกรณ์และประเภทคิวบ์เพื่อดูการเปลี่ยนแปลงของราคาตลาด และดูว่าค่าปัจจุบันอยู่ในระดับใดเมื่อเทียบกับประวัติ",

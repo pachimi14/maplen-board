@@ -682,10 +682,11 @@
     }
   },
   "sfhistoryTabs": {
-    "navLabel": "SF履歴ページ",
-    "sfHistory": "SF History",
+    "navLabel": "サイトのセクション",
+    "subNavLabel": "Enhance History のページ",
     "newEquipment": "New Equipment",
-    "cubePrices": "Cube Prices"
+    "sf": "SF",
+    "cube": "Cube"
   },
   "sfhistoryCube": {
     "pageDescription": "装備とキューブの種類を選ぶと、市場価格の推移と、現在値が過去のどの水準かを確認できます。",

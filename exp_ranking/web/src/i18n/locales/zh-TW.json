@@ -682,10 +682,11 @@
     }
   },
   "sfhistoryTabs": {
-    "navLabel": "SF 紀錄頁面",
-    "sfHistory": "SF History",
+    "navLabel": "網站區塊",
+    "subNavLabel": "Enhance History 頁面",
     "newEquipment": "New Equipment",
-    "cubePrices": "Cube Prices"
+    "sf": "SF",
+    "cube": "Cube"
   },
   "sfhistoryCube": {
     "pageDescription": "選擇裝備與魔方種類，即可查看市場價格的走勢，以及目前價格在這段歷史中處於什麼水準。",

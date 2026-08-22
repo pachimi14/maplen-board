@@ -172,6 +172,19 @@ html:not([data-theme-depth="deep"]) .sfh-field-label {
   color: #04121b;
 }
 
+/* IMPL_PLAN_SH42 §1 (A): wraps SfHistoryTabs.jsx's two `<nav>` strips (top
+   level [Enhance History]/[New Equipment], 2nd level [SF]/[Cube]) -- a
+   small fixed gap between the two rows rather than the page's own
+   `space-y-5` (that spacing is sized for unrelated content blocks, too
+   loose for two tab rows that read as one navigation unit). No effect on
+   width/overflow (plan (i)): both children keep `.sfh-period-tabs`'s own
+   `flex-wrap: wrap`, so this group only ever grows taller, never wider. */
+.sfh-tabs-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
 .sfh-period-tabs {
   display: inline-flex;
   /* IMPL_PLAN_SH41 §2/(j): this class is now shared by 3 tab strips

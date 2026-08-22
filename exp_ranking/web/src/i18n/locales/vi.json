@@ -682,10 +682,11 @@
     }
   },
   "sfhistoryTabs": {
-    "navLabel": "Các trang Lịch sử SF",
-    "sfHistory": "SF History",
+    "navLabel": "Các phần của trang",
+    "subNavLabel": "Các trang trong Enhance History",
     "newEquipment": "New Equipment",
-    "cubePrices": "Cube Prices"
+    "sf": "SF",
+    "cube": "Cube"
   },
   "sfhistoryCube": {
     "pageDescription": "Chọn một trang bị và loại hộp để xem giá thị trường đã thay đổi thế nào, và giá trị hiện tại đang ở mức nào so với lịch sử đó.",
