@@ -9,6 +9,11 @@
     "$comment": "GET /sf-history/latest?itemId=. Always fully present.",
     "root": ["itemId", "latestUpdatedAt", "prices"]
   },
+  "cubePrices": {
+    "$comment": "IMPL_PLAN_SH40 -- GET /sf-history/cube-prices?itemId=. Same shape/semantics as `prices` above (`root`/`point` docs there apply), just `prices[22]` -> `cubes[4]` and `upgradeCount` -> `cubeOrder` (the fixed RED/BLACK/ADDITIONAL/WHITE_ADDITIONAL order, this route's `upgradeCount` counterpart). `null` slots where that cube-sub-type has no data at that point (e.g. White Bonus Cube before 2026-06-11 -- normal, never 0/backfilled).",
+    "root": ["itemId", "interval", "labelIs", "startDate", "endDate", "provisionalDate", "priceVersion", "cubeOrder", "points"],
+    "point": ["date", "cubes", "provisional", "closed", "asOf"]
+  },
   "equipment": {
     "$comment": "GET /sf-history/equipment. `root` and `item` are both always fully present (no optional keys on this endpoint).",
     "root": ["generatedAt", "excluded", "items"],

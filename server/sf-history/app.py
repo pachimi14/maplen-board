@@ -31,6 +31,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 
 import aggregate
+import cube
 import db
 import discovery
 import fetch_latest
@@ -43,6 +44,16 @@ DEFAULT_ALLOWED_ORIGINS = ("https://lulumi-tools.com",)
 
 DISPLAY_WINDOW_DAYS = 150  # design §10: "4時間足・最大150日"
 UPGRADE_COUNT = 22  # itemUpgrade 0..21 (plan §8 condition 6)
+
+# IMPL_PLAN_SH40 §2: `/sf-history/cube-prices` -- same DISPLAY_WINDOW_DAYS
+# window as `/sf-history/prices` (plan §2: "期間の指定方法を SF と揃える" --
+# `/sf-history/prices` itself takes no `?days=`, a fixed 150-day window, so
+# this route matches that, not a new per-request parameter). `CUBE_COUNT`/
+# `CUBE_INDEX` are this route's `UPGRADE_COUNT` counterpart -- `cube.
+# CUBE_SUB_TYPES`'s fixed order IS the "応答から順序が分かる情報" (plan §2(c)),
+# exposed as `cubeOrder` on the response root.
+CUBE_COUNT = len(cube.CUBE_SUB_TYPES)
+CUBE_INDEX: dict[str, int] = {sub_type: i for i, sub_type in enumerate(cube.CUBE_SUB_TYPES)}
 
 # IMPL_PLAN_SH32 §2 C: the `/sf-history/discovery/*` routes below are pure DB
 # reads (plan §5(i): "上流を叩かない") -- `app.state.latest_cache` (the only
@@ -575,6 +586,155 @@ def latest(request: Request, itemId: str | None = None) -> JSONResponse:
         return _error(f"upstream enhance-price/latest failed: {exc}", request, status_code=503)
 
     return _json(result, request)
+
+
+# --- IMPL_PLAN_SH40 §2: CUBE (Red/Black/Bonus Potential/White Bonus) price
+# series -- "既存 /sf-history/prices と同じ流儀" (plan §2): same root shape,
+# same `closed`/`provisional` semantics, same DISPLAY_WINDOW_DAYS window, one
+# request returns all 4 cube sub-types for one item, index-aligned to
+# `cube.CUBE_SUB_TYPES` (`cubeOrder` on the response root is this route's
+# `upgradeCount` counterpart). Unlike `prices()`, there is no per-item
+# "confirmed max upgrade" concept to bound iteration -- every item is always
+# iterated over the same fixed 4 `CUBE_SUB_TYPES` (a band with no data at a
+# given point, e.g. White before 2026-06-11 -- J2 -- simply never gets a row
+# at that `price_at`, so its slot stays `None`; no special-casing needed,
+# same "absent row = None slot" mechanism `prices()` already relies on for a
+# missing upgrade). No `formingBands`/DISCOVERY-fill logic here -- that is
+# `/sf-history/discovery/prices`'s own domain (plan §4: touches neither).
+@app.get("/sf-history/cube-prices")
+def cube_prices(request: Request, itemId: str | None = None) -> JSONResponse:
+    item_id, error_response = _parse_item_id(itemId, request)
+    if error_response is not None:
+        return error_response
+
+    if _item_by_id(item_id) is None:
+        return _error(f"unknown itemId {item_id}", request, status_code=404)
+
+    now = datetime.now(timezone.utc)
+    cutoff = _format_iso_utc(now - timedelta(days=DISPLAY_WINDOW_DAYS))
+    candidate_date = aggregate.bucket_start(_format_iso_utc(now))
+    candidate_bucket_end = aggregate.bucket_end(candidate_date)
+
+    conn = db.connect(_db_path())
+    try:
+        rows = db.cube_four_h_rows_for_item(conn, item_id)
+        price_version = db.cube_latest_generated_at_for_item(conn, item_id)
+
+        by_date: dict[str, list[float | None]] = {}
+        for cube_sub_type, price_at, end_price in rows:
+            if price_at < cutoff:
+                continue
+            index = CUBE_INDEX.get(cube_sub_type)
+            if index is None:
+                continue
+            slot = by_date.setdefault(price_at, [None] * CUBE_COUNT)
+            # Same 2-decimal transport rounding as `prices()` -- see that
+            # route's comment on `sf_price_history_4h.end_price` for why
+            # (the stored value keeps full precision; only this response
+            # boundary rounds it).
+            slot[index] = round(end_price, 2)
+
+        dates = sorted(by_date)
+        points = [{"date": d, "cubes": by_date[d], "closed": True} for d in dates]
+        last_confirmed_date = dates[-1] if dates else None
+
+        # Elapsed-but-unaggregated buckets (IMPL_PLAN_SH19 §1/§3's rule,
+        # mirrored from `prices()`): a bucket whose own 4h window has already
+        # ended but that the periodic aggregation job has not persisted yet.
+        # `in_progress_cubes`/`in_progress_has_data` are the hourly-derived
+        # *fallback* for the still-open bucket, used only if the shared
+        # `latest` cache has no `cubes` for this item (upstream failure or a
+        # legacy-endpoint cache with no potential data at all).
+        derived_by_date: dict[str, list[float | None]] = {}
+        in_progress_cubes: list[float | None] = [None] * CUBE_COUNT
+        in_progress_has_data = False
+        for cube_sub_type in cube.CUBE_SUB_TYPES:
+            index = CUBE_INDEX[cube_sub_type]
+            hourly_rows = db.cube_hourly_series(conn, item_id, cube_sub_type, since=last_confirmed_date)
+            for bucket in aggregate.compute_buckets(hourly_rows, now=now):
+                bucket_date = bucket["price_at"]
+                if last_confirmed_date is not None and bucket_date <= last_confirmed_date:
+                    continue  # already confirmed -- sf_cube_price_history_4h stays authoritative
+                if bucket_date < cutoff:
+                    continue
+                slot = derived_by_date.setdefault(bucket_date, [None] * CUBE_COUNT)
+                slot[index] = round(bucket["end_price"], 2)
+
+            in_progress_rows = [
+                (price_at, end_price)
+                for price_at, end_price in hourly_rows
+                if candidate_date <= price_at < candidate_bucket_end
+            ]
+            if in_progress_rows:
+                _, latest_end_price = max(in_progress_rows, key=lambda row: row[0])
+                in_progress_cubes[index] = round(latest_end_price, 2)
+                in_progress_has_data = True
+
+        provisional_points: list[dict[str, Any]] = []
+        for bucket_date in sorted(derived_by_date):
+            provisional_points.append(
+                {
+                    "date": bucket_date,
+                    "cubes": derived_by_date[bucket_date],
+                    "provisional": True,
+                    "closed": True,
+                }
+            )
+    finally:
+        conn.close()
+
+    # The single still-open-bucket point -- same sourcing rule as `prices()`:
+    # the shared `latest` cache (no extra upstream call, plan §3/(e)) when
+    # available, falling back to the hourly-derived value above only on
+    # upstream failure or when that cache entry carries no usable `cubes`.
+    in_progress_point: dict[str, Any] | None = None
+    if candidate_date not in by_date:
+        cache: LatestPriceCache = request.app.state.latest_cache
+        try:
+            latest_result = cache.get(item_id)
+        except UpstreamLatestError:
+            latest_result = None
+
+        cubes_from_cache = latest_result.get("cubes") if latest_result is not None else None
+        if cubes_from_cache is not None:
+            provisional_cubes = [round(p, 2) if p is not None else None for p in cubes_from_cache]
+            as_of = latest_result.get("latestUpdatedAt")
+            has_as_of = isinstance(as_of, str) and bool(as_of)
+            in_progress_point = {
+                "date": candidate_date,
+                "cubes": provisional_cubes,
+                "provisional": True,
+                "closed": False,
+            }
+            if has_as_of:
+                in_progress_point["asOf"] = as_of
+        elif in_progress_has_data:
+            in_progress_point = {
+                "date": candidate_date,
+                "cubes": in_progress_cubes,
+                "provisional": True,
+                "closed": False,
+            }
+    if in_progress_point is not None:
+        provisional_points.append(in_progress_point)
+
+    points.extend(provisional_points)
+    provisional_date = provisional_points[-1]["date"] if provisional_points else None
+
+    return _json(
+        {
+            "itemId": item_id,
+            "interval": "4h",
+            "labelIs": "bucketStart",
+            "startDate": dates[0] if dates else None,
+            "endDate": dates[-1] if dates else None,
+            "provisionalDate": provisional_date,
+            "priceVersion": price_version,
+            "cubeOrder": list(cube.CUBE_SUB_TYPES),
+            "points": points,
+        },
+        request,
+    )
 
 
 # --- IMPL_PLAN_SH32 §2 C: DISCOVERY (bonus period) page -- DB reads only ----

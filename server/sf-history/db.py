@@ -1072,6 +1072,32 @@ def max_cube_4h_price_at_for_combo(
     return row[0] if row else None
 
 
+# --- IMPL_PLAN_SH40 §2: app.py's `/sf-history/cube-prices` reads -----------
+# The CUBE counterparts of `four_h_rows_for_item` / `latest_generated_at_
+# for_item` above -- same "既存 /sf-history/prices と同じ流儀" shape, keyed
+# by `cube_sub_type` instead of `item_upgrade`.
+
+
+def cube_four_h_rows_for_item(conn: sqlite3.Connection, item_id: int) -> list[tuple[str, str, float]]:
+    """(cube_sub_type, price_at, end_price) for every 4h CUBE row of one
+    item, ordered. CUBE counterpart of ``four_h_rows_for_item``."""
+    cur = conn.execute(
+        "SELECT cube_sub_type, price_at, end_price FROM sf_cube_price_history_4h "
+        "WHERE item_id = ? ORDER BY price_at, cube_sub_type",
+        (item_id,),
+    )
+    return [(row[0], row[1], row[2]) for row in cur.fetchall()]
+
+
+def cube_latest_generated_at_for_item(conn: sqlite3.Connection, item_id: int) -> str | None:
+    """CUBE counterpart of ``latest_generated_at_for_item``."""
+    cur = conn.execute(
+        "SELECT MAX(generated_at) FROM sf_cube_price_history_4h WHERE item_id = ?", (item_id,)
+    )
+    row = cur.fetchone()
+    return row[0] if row else None
+
+
 def max_star_by_item(conn: sqlite3.Connection) -> dict[int, int]:
     """``maxStar`` per item_id -- the union of ``max_upgrade_by_item``
     (hourly-history-derived) and ``discovery_max_upgrade_by_item`` (DISCOVERY-
