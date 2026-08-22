@@ -6,6 +6,8 @@ import { setDashboardThemeColor, setDashboardThemeDepth } from "../../taskManage
 import { discoverySource } from "./integrations/discoverySource.js";
 import { formatTooltipDate } from "../domain/format.js";
 import { isObservationStale } from "./domain/bands.js";
+import { resolveCarriedSelection } from "../domain/selectionCarry.js";
+import { getCarriedSelection, setCarriedSelection } from "../selectionStore.js";
 import SfHistoryTabs from "../SfHistoryTabs.jsx";
 import DiscoveryCubeTable from "./components/DiscoveryCubeTable.jsx";
 import DiscoveryEquipmentSelector from "./components/DiscoveryEquipmentSelector.jsx";
@@ -53,10 +55,18 @@ export default function DiscoveryRoot() {
         return;
       }
       setEquipmentState({ status: "ready", items: result.items });
-      const first = result.items[0];
-      if (first) {
-        setSelectedItemId(first.itemId);
-        setSelectedAlias({ itemId: first.itemId, itemName: first.itemName });
+      if (result.items.length) {
+        // IMPL_PLAN_SH42 §2 (B)/(e): New Equipment only ever has the 3
+        // monitored items -- resolveCarriedSelection returns null (falls
+        // back to this page's own pre-existing items[0] default) whenever
+        // whatever was carried from SF/Cube isn't one of them, which is the
+        // common case and must not break this page (SH-26 "穏当に劣化する").
+        const carried = resolveCarriedSelection(result.items, getCarriedSelection());
+        const picked = carried ? result.items.find((item) => item.itemId === carried.itemId) : result.items[0];
+        const alias = carried?.alias ?? { itemId: picked.itemId, itemName: picked.itemName };
+        setSelectedItemId(picked.itemId);
+        setSelectedAlias(alias);
+        setCarriedSelection(picked.itemId, alias);
       }
     });
     return () => {
@@ -110,7 +120,10 @@ export default function DiscoveryRoot() {
 
   function handleSelectEquipment(candidate) {
     setSelectedItemId(candidate.representativeItemId);
-    setSelectedAlias({ itemId: candidate.itemId, itemName: candidate.itemName });
+    const alias = { itemId: candidate.itemId, itemName: candidate.itemName };
+    setSelectedAlias(alias);
+    // IMPL_PLAN_SH42 §2 (B): carries over to SF/Cube too.
+    setCarriedSelection(candidate.representativeItemId, alias);
   }
 
   const stale = pricesState.status === "ready" && isObservationStale(pricesState.observedAt);

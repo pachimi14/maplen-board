@@ -127,6 +127,29 @@ describe("parseHash: #/starforce/discovery (IMPL_PLAN_SH32 §2 C)", () => {
   });
 });
 
+describe("parseHash: #/starforce/cube-prices (IMPL_PLAN_SH41 §2)", () => {
+  it("parses '#/starforce/cube-prices' as its own route, not 'starforce'", async () => {
+    const { parseHash } = await freshModule();
+    const route = parseHash("#/starforce/cube-prices");
+    expect(route.name).toBe("starforceCubePrices");
+  });
+
+  it("round-trips '#/starforce/cube-prices' through navigateToStarforceCubePrices", async () => {
+    installFakeWindow("#/");
+    const { navigateToStarforceCubePrices, parseHash } = await freshModule();
+    navigateToStarforceCubePrices();
+    await flushRouteCommit();
+    expect(globalThis.window.location.hash).toBe("#/starforce/cube-prices");
+    expect(parseHash(globalThis.window.location.hash).name).toBe("starforceCubePrices");
+  });
+
+  it("does not disturb the existing '#/starforce' / '#/starforce/discovery' routes", async () => {
+    const { parseHash } = await freshModule();
+    expect(parseHash("#/starforce").name).toBe("starforce");
+    expect(parseHash("#/starforce/discovery").name).toBe("starforceDiscovery");
+  });
+});
+
 describe("navigateToGroup / navigateToList round trip (T4b §22.4)", () => {
   it("navigateToGroup() from the list produces '#/group', preserving the current query", async () => {
     installFakeWindow("#/?sort=weekly&minLevel=230");

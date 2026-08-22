@@ -5,14 +5,30 @@ This follows the rate-control discipline established by SH-1's
 requests, a hard request budget, User-Agent set explicitly, every request
 logged) and extends it for a much larger run (IMPL_PLAN_SH2 §2):
 
-  - the request budget is 700 (616 = 28 items x 22 upgrades, plus retry
-    headroom), not 60
+  - every ``Fetcher`` is given a hard request budget (not 60, SH-1's probe
+    size). ``DEFAULT_MAX_REQUESTS`` (700) is a static fallback for callers
+    that pick their own budget explicitly (``scripts/backfill.py`` /
+    ``scripts/cube_backfill.py``, both driven by an operator-controlled
+    ``--max-requests`` flag). Callers whose workload size is data-derived
+    and grows over time (``scripts/update.py``'s differential update) must
+    NOT hardcode a budget against a snapshot of "how many combos there are
+    today" -- IMPL_PLAN_SH39 follow-up (統括, 2026-08-22 本番実測): a budget
+    frozen at 700 against a docstring's stale equipment-count-derived figure
+    silently truncated every run once the equipment list grew past that
+    figure (more combos than the budget), dropping the list's tail-end
+    updates on EVERY run with a 0 exit code nobody was watching. ``derive_max_requests``
+    below exists for exactly this class of caller: it recomputes the budget
+    from the actual combo count every run, so the number can never go stale
+    again.
   - HTTP 429 no longer stops immediately on the first occurrence -- it backs
-    off exponentially and retries the *same* request, because a 616-request
-    run is far more likely to graze a transient limit than a 45-request
-    probe was. It still stops hard, and well before doing real damage:
-    3 consecutive 429s, or more than 5 total 429s across the run, raise and
-    the caller (scripts/backfill.py) must stop (plan §7 condition 1).
+    off exponentially and retries the *same* request, because a large run is
+    far more likely to graze a transient limit than a 45-request probe was.
+    It still stops hard, and well before doing real damage: 3 consecutive
+    429s, or more than 5 total 429s across the run, raise and the caller
+    must stop (plan §7 condition 1). This IS the rate-limit safety net --
+    the request budget above is a coarser, separate safety net ("did this
+    run do roughly the amount of work it set out to do", not "are we being
+    polite to the upstream").
 
 All HTTP calls in this backfill -- including the one-off ones made while
 developing/debugging it -- must go through this ``Fetcher`` (SH-1's P2
@@ -35,6 +51,17 @@ HISTORY_URL = "https://msu.io/maplestoryn/api/msn/dynamicpricing/enhance-price/h
 DEFAULT_MAX_REQUESTS = 700
 MIN_INTERVAL_SEC = 1.0
 REQUEST_TIMEOUT_SEC = 30
+
+# Retry headroom added on top of a workload's own combo count by
+# `derive_max_requests` below. Bounded by what a run's OTHER safety net (the
+# 429 counters above) can even let happen before it hard-stops the run on
+# its own: at most MAX_TOTAL_429 (5) 429 responses are tolerated across an
+# entire run before TotalTooManyRequestsExceededError raises, and each one
+# costs at most one retried request slot -- so at most 5 request slots can
+# ever be "wasted" on legitimate retries before that other safety net fires.
+# 50 gives an order of magnitude of comfortable margin above that bound
+# without being large enough to mask an actual runaway (this budget's job).
+REQUEST_BUDGET_HEADROOM = 50
 
 # Backoff waited *before* retrying the Nth consecutive 429 (N=1,2,3,...).
 # In practice only the first two entries are ever used: the 3rd consecutive
@@ -225,3 +252,64 @@ def fetch_history_page(
     }
     status, payload, _text = fetcher.get(HISTORY_URL, params, endpoint="history", note=note)
     return status, payload
+
+
+def fetch_prospective_history_page(
+    fetcher: Fetcher,
+    item_id: int,
+    *,
+    cube_sub_type: str,
+    window_days: float,
+    period: int = 2,
+    note: str = "",
+) -> tuple[int, dict[str, Any] | None]:
+    """Fetch one (item_id, cube_sub_type) page of 1-hour CUBE price history.
+
+    IMPL_PLAN_SH39: same ``HISTORY_URL`` as ``fetch_history_page``, with
+    ``itemUpgradeType=UPGRADE_PROSPECTIVE`` and ``itemUpgradeSubType=
+    <cube_sub_type>`` (one of ``cube.CUBE_SUB_TYPES``) added, and
+    ``itemUpgrade`` always fixed at 0 (plan §0 I4: a cube has no star concept
+    -- ``1``/``10`` are both 0-point upstream, only ``0`` is valid).
+
+    A DELIBERATELY separate function, not a new optional parameter bolted
+    onto ``fetch_history_page`` -- plan §7: "``fetch_history_page`` は SF
+    専用のまま変えず、prospective 用の関数を別に足す" -- so that function's
+    existing signature/behavior stays byte-for-byte unchanged (accept
+    criterion (g)).
+    """
+    now_sec = _now_epoch_sec()
+    min_sec = now_sec - int(window_days * 86400)
+    params: dict[str, Any] = {
+        "itemId": item_id,
+        "itemUpgradeType": "UPGRADE_PROSPECTIVE",
+        "itemUpgradeSubType": cube_sub_type,
+        "itemUpgrade": 0,
+        "period": period,
+        "minTimestamp": min_sec,
+        "maxTimestamp": now_sec,
+    }
+    status, payload, _text = fetcher.get(
+        HISTORY_URL, params, endpoint="history-prospective", note=note
+    )
+    return status, payload
+
+
+def derive_max_requests(combo_count: int, *, headroom: int = REQUEST_BUDGET_HEADROOM) -> int:
+    """The request budget a workload of ``combo_count`` (item, sub-key) pairs
+    needs: enough for every combo to be attempted once, plus ``headroom`` for
+    legitimate retries (see ``REQUEST_BUDGET_HEADROOM``'s own comment).
+
+    This is the fix for the class of bug IMPL_PLAN_SH39's follow-up found in
+    production: a budget PINNED to a snapshot of "how many combos there were
+    when this constant was written" goes stale the moment the workload grows
+    (``scripts/update.py``'s ``run_update``/``run_cube_update`` now call this
+    every run instead of defaulting to ``DEFAULT_MAX_REQUESTS`` -- the budget
+    is always freshly derived from the ACTUAL equipment list being iterated,
+    never a number frozen at some past commit).
+
+    Deliberately does NOT clamp against ``DEFAULT_MAX_REQUESTS`` in either
+    direction -- a caller with more or fewer combos than the historical 700
+    figure must get a budget sized for its OWN real workload, not the old
+    constant.
+    """
+    return combo_count + headroom

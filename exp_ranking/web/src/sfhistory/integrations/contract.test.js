@@ -14,7 +14,7 @@
 // domain module sitting right next to it -- no new tooling invented here).
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { normalizeEquipmentPayload, normalizeLatestPayload, normalizePricesPayload } from "./sfHistorySource.js";
+import { normalizeCubePricesPayload, normalizeEquipmentPayload, normalizeLatestPayload, normalizePricesPayload } from "./sfHistorySource.js";
 
 const CONTRACT = JSON.parse(
   readFileSync(new URL("../../../../../server/sf-history/contract/response_fields.json", import.meta.url), "utf8"),
@@ -32,7 +32,23 @@ const INTENTIONALLY_DROPPED = {
     point: [],
   },
   latest: {
+    // IMPL_PLAN_SH41 §1: `cubes`/`cubeOrder` removed from this list --
+    // `normalizeLatestPayload` now passes both through (this slice actually
+    // uses them, CubePricesRoot.jsx). Only `itemId` (the request-echo field,
+    // never needed downstream -- same treatment `prices.root` already gives
+    // it) stays intentionally dropped.
     root: ["itemId"],
+  },
+  cubePrices: {
+    // IMPL_PLAN_SH41 §1: same drop set as `prices.root` above, minus
+    // `upgradeCount` (this route has no such field -- its counterpart,
+    // `cubeOrder`, IS passed through). `itemId`/`interval`/`labelIs` are
+    // dropped for the same reason `prices.root` drops them: the caller
+    // already knows the itemId it requested, and every point on this route
+    // is 4h/bucketStart the same way `prices` is, with nothing downstream
+    // reading either field back off the normalized result.
+    root: ["itemId", "interval", "labelIs"],
+    point: [],
   },
   equipment: {
     root: ["generatedAt", "excluded"],
@@ -95,7 +111,16 @@ describe("contract: /sf-history/prices", () => {
 });
 
 describe("contract: /sf-history/latest", () => {
-  const payload = { itemId: 1001, latestUpdatedAt: "2026-08-04T18:20:00Z", prices: [1, 2, null, 4] };
+  // IMPL_PLAN_SH40 carried `cubes`/`cubeOrder` on this response; IMPL_PLAN_SH41
+  // §1 is what makes `normalizeLatestPayload` actually read them (see
+  // INTENTIONALLY_DROPPED.latest.root above).
+  const payload = {
+    itemId: 1001,
+    latestUpdatedAt: "2026-08-04T18:20:00Z",
+    prices: [1, 2, null, 4],
+    cubes: [1, null, null, null],
+    cubeOrder: ["RED", "BLACK", "ADDITIONAL", "WHITE_ADDITIONAL"],
+  };
 
   it("keeps every contract root field, or documents the drop", () => {
     const result = normalizeLatestPayload(payload, 1001);
@@ -105,6 +130,93 @@ describe("contract: /sf-history/latest", () => {
       (field) => Object.prototype.hasOwnProperty.call(result, field),
       "latest.root",
     );
+  });
+
+  // IMPL_PLAN_SH41 §1 accept criterion (a): the exact regression this slice
+  // exists to fix -- `cubes`/`cubeOrder` must actually reach the returned
+  // object now, not just be absent from INTENTIONALLY_DROPPED (a field could
+  // vanish from that list by mistake while the normalizer still silently
+  // drops it; this pins the real value, not just presence-of-key).
+  it("passes through cubes/cubeOrder (IMPL_PLAN_SH41 §1: no longer intentionally dropped)", () => {
+    const result = normalizeLatestPayload(payload, 1001);
+    expect(result.cubes).toEqual([1, null, null, null]);
+    expect(result.cubeOrder).toEqual(["RED", "BLACK", "ADDITIONAL", "WHITE_ADDITIONAL"]);
+  });
+});
+
+describe("contract: /sf-history/cube-prices", () => {
+  const rootPayload = {
+    itemId: 1001,
+    interval: "4h",
+    labelIs: "bucketStart",
+    startDate: "2026-01-01T00:00:00Z",
+    endDate: "2026-01-05T00:00:00Z",
+    provisionalDate: "2026-01-05T04:00:00Z",
+    priceVersion: "v1",
+    cubeOrder: ["RED", "BLACK", "ADDITIONAL", "WHITE_ADDITIONAL"],
+    points: [{ date: "2026-01-01T00:00:00Z", cubes: [1, 2, 3, null], closed: true }],
+  };
+
+  it("keeps every contract root field, or documents the drop", () => {
+    const result = normalizeCubePricesPayload(rootPayload, 1001);
+    assertContractFieldsSurvive(
+      CONTRACT.cubePrices.root,
+      INTENTIONALLY_DROPPED.cubePrices.root,
+      (field) => Object.prototype.hasOwnProperty.call(result, field),
+      "cubePrices.root",
+    );
+  });
+
+  it("keeps every contract point field somewhere across the point shapes it can occur in, or documents the drop", () => {
+    // Same three shapes as the /sf-history/prices point test above.
+    const payload = {
+      itemId: 1001,
+      cubeOrder: ["RED", "BLACK", "ADDITIONAL", "WHITE_ADDITIONAL"],
+      points: [
+        { date: "2026-01-01T00:00:00Z", cubes: [1, 2, 3, null], closed: true },
+        { date: "2026-01-02T00:00:00Z", cubes: [1, 2, 3, null], provisional: true, closed: true },
+        { date: "2026-01-03T00:00:00Z", cubes: [1, 2, 3, null], provisional: true, closed: false, asOf: "2026-01-03T00:10:00Z" },
+      ],
+    };
+    const result = normalizeCubePricesPayload(payload, 1001);
+    const seen = new Set();
+    result.points.forEach((point) => Object.keys(point).forEach((key) => seen.add(key)));
+    assertContractFieldsSurvive(
+      CONTRACT.cubePrices.point,
+      INTENTIONALLY_DROPPED.cubePrices.point,
+      (field) => seen.has(field),
+      "cubePrices.point",
+    );
+  });
+});
+
+// IMPL_PLAN_SH40 accept criterion (n): the detector above must stay strict --
+// if the server adds YET ANOTHER field to `latest.root` that is neither
+// passed through by `normalizeLatestPayload` NOR added to
+// INTENTIONALLY_DROPPED.latest.root, `assertContractFieldsSurvive` must fail
+// loudly, not pass silently. This is a regression guard on the detector
+// itself (not on any real field) -- proves the negative-test property this
+// file exists for (SH-9/SH-16/SH-19) still holds after SH-40's fix, and
+// would still hold the next time a real field is added and forgotten here.
+describe("contract detector regression guard (accept criterion (n))", () => {
+  it("fails when a contract field is neither normalized through nor listed in INTENTIONALLY_DROPPED", () => {
+    const payload = {
+      itemId: 1001,
+      latestUpdatedAt: "2026-08-04T18:20:00Z",
+      prices: [1, 2, null, 4],
+      cubes: [1, null, null, null],
+      cubeOrder: ["RED", "BLACK", "ADDITIONAL", "WHITE_ADDITIONAL"],
+    };
+    const result = normalizeLatestPayload(payload, 1001);
+    const hypotheticalContractFields = ["itemId", "cubes", "cubeOrder", "totallyNewUndocumentedField"];
+    expect(() =>
+      assertContractFieldsSurvive(
+        hypotheticalContractFields,
+        INTENTIONALLY_DROPPED.latest.root,
+        (field) => Object.prototype.hasOwnProperty.call(result, field),
+        "latest.root (regression guard)",
+      ),
+    ).toThrow(/totallyNewUndocumentedField/);
   });
 });
 

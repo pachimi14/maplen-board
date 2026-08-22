@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -99,6 +100,62 @@ def test_fetch_history_page_always_sends_explicit_item_upgrade() -> None:
     assert sent_params["itemId"] == 123
     assert sent_params["period"] == 2
     assert "minTimestamp" in sent_params and "maxTimestamp" in sent_params
+
+
+def test_fetch_prospective_history_page_sends_prospective_params() -> None:
+    """SH-39 plan §0 I4/§7(g): itemUpgradeType=UPGRADE_PROSPECTIVE,
+    itemUpgradeSubType=<cube_sub_type>, itemUpgrade always 0."""
+    ftr = _make_fetcher([(200, {"points": []})])
+    status, payload = fetcher_mod.fetch_prospective_history_page(
+        ftr, 1003720, cube_sub_type="RED", window_days=160.0
+    )
+    assert status == 200
+    sent_params = ftr.session.calls[0]["params"]  # type: ignore[attr-defined]
+    assert sent_params["itemId"] == 1003720
+    assert sent_params["itemUpgradeType"] == "UPGRADE_PROSPECTIVE"
+    assert sent_params["itemUpgradeSubType"] == "RED"
+    assert sent_params["itemUpgrade"] == 0
+    assert sent_params["period"] == 2
+    assert "minTimestamp" in sent_params and "maxTimestamp" in sent_params
+
+
+def test_fetch_history_page_unchanged_by_the_new_prospective_function() -> None:
+    """SH-39 plan §7(g): fetch_history_page's own params must not gain
+    itemUpgradeType/itemUpgradeSubType -- the two functions are independent."""
+    ftr = _make_fetcher([(200, {"itemUpgrade": 5, "points": []})])
+    fetcher_mod.fetch_history_page(ftr, 1003720, item_upgrade=5, window_days=160.0)
+    sent_params = ftr.session.calls[0]["params"]  # type: ignore[attr-defined]
+    assert "itemUpgradeType" not in sent_params
+    assert "itemUpgradeSubType" not in sent_params
+    assert sent_params["itemUpgrade"] == 5
+
+
+# --- IMPL_PLAN_SH39 follow-up (統括, 2026-08-22 本番実測): workload-derived
+# request budget, and no more stale item-count docstring.
+
+
+def test_derive_max_requests_is_combo_count_plus_headroom() -> None:
+    assert fetcher_mod.derive_max_requests(748) == 748 + fetcher_mod.REQUEST_BUDGET_HEADROOM
+    assert fetcher_mod.derive_max_requests(136) == 136 + fetcher_mod.REQUEST_BUDGET_HEADROOM
+    assert fetcher_mod.derive_max_requests(0) == fetcher_mod.REQUEST_BUDGET_HEADROOM
+
+
+def test_derive_max_requests_tracks_a_grown_workload_not_a_fixed_constant() -> None:
+    """(n): the derived budget for a bigger workload must itself be bigger --
+    it is not clamped to (or derived from) the historical DEFAULT_MAX_REQUESTS."""
+    smaller = fetcher_mod.derive_max_requests(700)
+    larger = fetcher_mod.derive_max_requests(900)
+    assert larger > smaller
+    assert larger == 900 + fetcher_mod.REQUEST_BUDGET_HEADROOM
+
+
+def test_module_docstring_has_no_stale_28_items_item_count() -> None:
+    """(q): the "616 = 28 items x 22 upgrades" figure that went stale in
+    production (real count grew to 34) must not remain anywhere in this
+    module's docs -- IMPL_PLAN_SH39 follow-up (統括, 2026-08-22 本番実測)."""
+    source = Path(fetcher_mod.__file__).read_text(encoding="utf-8")
+    assert "28 items" not in source
+    assert "616" not in source
 
 
 def test_log_as_dicts_round_trips_every_request() -> None:

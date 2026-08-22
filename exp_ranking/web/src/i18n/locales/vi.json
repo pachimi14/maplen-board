@@ -567,7 +567,6 @@
     "main30d": "T?ng 30 ng?y"
   },
   "sfhistory": {
-    "pageTitle": "Enhance History",
     "pageDescription": "Chọn một trang bị và khoảng sao để xem chi phí nâng cấp kỳ vọng đã thay đổi thế nào, và giá trị hiện tại đang ở mức nào so với lịch sử đó.",
     "loading": "Đang tải...",
     "equipment": {
@@ -682,8 +681,22 @@
     }
   },
   "sfhistoryTabs": {
-    "navLabel": "Các trang Lịch sử SF",
-    "sfHistory": "SF History",
-    "newEquipment": "New Equipment"
+    "navLabel": "Các phần của trang",
+    "subNavLabel": "Các trang trong Enhance History",
+    "newEquipment": "New Equipment",
+    "sf": "SF",
+    "cube": "Cube"
+  },
+  "sfhistoryCube": {
+    "pageDescription": "Chọn một trang bị và loại hộp để xem giá thị trường đã thay đổi thế nào, và giá trị hiện tại đang ở mức nào so với lịch sử đó.",
+    "cubeType": {
+      "label": "Loại hộp"
+    },
+    "compare": {
+      "label": "So sánh với",
+      "mainBadge": "Chính"
+    },
+    "statsScope": "Số liệu và bản đồ nhiệt bên dưới chỉ dành cho {{cube}}.",
+    "whiteCubeNote": "Lịch sử giá White Cube bắt đầu từ {{date}}."
   }
 }

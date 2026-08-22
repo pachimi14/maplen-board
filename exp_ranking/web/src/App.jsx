@@ -10,6 +10,7 @@ import RaffleCalculatorRoot from "./raffle/RaffleCalculatorRoot.jsx";
 import { useDashboardStore } from "./taskManager/storage/useDashboardStore.js";
 import SfHistoryRoot from "./sfhistory/SfHistoryRoot.jsx";
 import DiscoveryRoot from "./sfhistory/discovery/DiscoveryRoot.jsx";
+import CubePricesRoot from "./sfhistory/CubePricesRoot.jsx";
 import { useSiteTheme } from "./siteTheme.js";
 
 const RANKING_THEME_STORAGE_KEY = "maplen-board-ranking-theme-v1";
@@ -66,7 +67,11 @@ function AppShell() {
   // same dashboard theme source as `#/starforce` (see SfHistoryRoot.jsx's
   // own comment on this exact flag) -- added to the SAME condition rather
   // than a new one, since it needs identical treatment for identical reasons.
-  const usesDashboardTheme = isTaskManagerRoute || route.name === "starforce" || route.name === "starforceDiscovery";
+  // IMPL_PLAN_SH41 §2: `#/starforce/cube-prices` (CubePricesRoot) shares the
+  // same dashboard theme source as `#/starforce`/`#/starforce/discovery`,
+  // for the same reason -- added to the SAME condition.
+  const usesDashboardTheme =
+    isTaskManagerRoute || route.name === "starforce" || route.name === "starforceDiscovery" || route.name === "starforceCubePrices";
   const activeTheme = usesDashboardTheme
     ? { themeColor: dashboardStore.state.themeColor || "green", themeDepth: dashboardStore.state.themeDepth || "deep" }
     : isRaffleRoute
@@ -102,6 +107,13 @@ function AppShell() {
   // ルも変えない" -- the `starforce` branch right below is untouched.
   if (route.name === "starforceDiscovery") {
     return <DiscoveryRoot />;
+  }
+
+  // IMPL_PLAN_SH41 §2: `#/starforce/cube-prices` -- new route, own root
+  // component, same "checked before the exact `starforce` match" placement
+  // as `starforceDiscovery` above.
+  if (route.name === "starforceCubePrices") {
+    return <CubePricesRoot />;
   }
 
   // IMPL_PLAN_SH5 §1: `#/starforce` -- new route, own root component, does

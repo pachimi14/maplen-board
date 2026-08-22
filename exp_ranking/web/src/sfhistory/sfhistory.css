@@ -172,8 +172,31 @@ html:not([data-theme-depth="deep"]) .sfh-field-label {
   color: #04121b;
 }
 
+/* IMPL_PLAN_SH42 §1 (A): wraps SfHistoryTabs.jsx's two `<nav>` strips (top
+   level [Enhance History]/[New Equipment], 2nd level [SF]/[Cube]) -- a
+   small fixed gap between the two rows rather than the page's own
+   `space-y-5` (that spacing is sized for unrelated content blocks, too
+   loose for two tab rows that read as one navigation unit). No effect on
+   width/overflow (plan (i)): both children keep `.sfh-period-tabs`'s own
+   `flex-wrap: wrap`, so this group only ever grows taller, never wider. */
+.sfh-tabs-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
 .sfh-period-tabs {
   display: inline-flex;
+  /* IMPL_PLAN_SH41 §2/(j): this class is now shared by 3 tab strips
+     (PeriodTabs, the 3-entry SfHistoryTabs page nav, and CubeTypeSelector's
+     4 cube-type buttons) -- `flex-wrap: wrap` is a no-op whenever a strip's
+     content already fits its available width (every existing usage,
+     unchanged), and is what keeps a narrower viewport from forcing the page
+     itself into horizontal scroll instead of just wrapping this one strip
+     to a second line (the exact class of bug the user flagged: the
+     unrelated top nav is already over budget at 375px; this strip must not
+     repeat that). */
+  flex-wrap: wrap;
   border-radius: 0.6rem;
   background: var(--theme-card-bg);
   padding: 0.2rem;
@@ -447,4 +470,143 @@ html:not([data-theme-depth="deep"]) .sfh-root {
 
 .sfh-filled-band .recharts-reference-area-rect {
   fill: var(--sfh-color-filled-band);
+}
+
+/* IMPL_PLAN_SH44 §2-1/§2-2 (updated IMPL_PLAN_SH45): cube-comparison chrome
+   -- `CubeLegend.jsx`'s own swatch (one per cube type, main entry AND every
+   toggleable additional entry, always shown regardless of selection state --
+   plan SH-45 "色の点は選択に関わらず出す") uses this one small circle
+   class, colored inline (`style={{ backgroundColor: ... }}`) from
+   `domain/cubeSeries.js#resolveCubeColor`'s own already-depth-branched,
+   theme-color-NON-following hex (see that function's own header) -- no
+   `--sfh-*` custom property needed here at all, unlike `--sfh-color-
+   current-ring`/`--sfh-color-cheaper`/`-costlier` above: those back a
+   *border/text* color applied via a CSS class (so a variable is the
+   natural mechanism), while these swatches back a *per-cube* value chosen
+   at render time from a 4-entry map, which a single CSS custom property
+   cannot represent. */
+.sfh-cube-swatch {
+  display: inline-block;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 999px;
+  margin-right: 0.4rem;
+  vertical-align: middle;
+  flex: none;
+}
+
+.sfh-cube-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.9rem;
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+html:not([data-theme-depth="deep"]) .sfh-cube-legend {
+  color: #64748b;
+}
+
+.sfh-cube-legend-item {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* IMPL_PLAN_SH44 §2-2(d)/(k): the MAIN cube type's own legend entry is
+   bolder text -- the same "main = most prominent" convention the chart
+   itself uses (thicker line, `MAIN_CUBE_LINE_WIDTH` > `ADDITIONAL_CUBE_LINE_WIDTH`,
+   CubePricesRoot.jsx). */
+.sfh-cube-legend-item-main {
+  font-weight: 700;
+  color: inherit;
+}
+
+.sfh-cube-legend-badge {
+  margin-left: 0.4rem;
+  border-radius: 999px;
+  border: 1px solid var(--theme-card-border);
+  padding: 0.05rem 0.45rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--theme-focus);
+}
+
+/* IMPL_PLAN_SH45 (a)/(b): each ADDITIONAL cube type's own legend entry is
+   now the toggle control itself (a `<button>`, replacing the old separate
+   `CubeCompareSelector.jsx` tab strip) -- a plain, borderless button reset
+   so it reads as a legend entry first, a control second, matching the
+   non-interactive `.sfh-cube-legend-item-main` entry beside it at rest.
+   `border`/`border-radius`/`padding` here are the SHAPE every state (rest,
+   hover, selected) shares -- `border-color` itself is only ever set here
+   for the REST state (transparent); the hover preview below and the
+   selected state (CubeLegend.jsx's own inline `style`, not a class here --
+   see that component's own header for why) both only ever override
+   `border-color`/`background`, never the shape. No `transition` on
+   `border-color`/`background-color` (removed 差し戻し revision): 統括's
+   own measurement of the selected state read `border-color` as still
+   transparent right after a click -- a transition delays the *painted*
+   value, and `getComputedStyle` read too soon can still report the
+   pre-transition value: the change is now instantaneous instead, so
+   "selected" is never ambiguous to measure. */
+.sfh-cube-legend-item-toggle {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  padding: 0.1rem 0.6rem 0.1rem 0.3rem;
+  margin: -0.1rem 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.sfh-cube-legend-item-toggle:hover {
+  border-color: var(--theme-card-border);
+}
+
+/* IMPL_PLAN_SH45 差し戻し revision (b) (user instruction: "選択した分は
+   枠を付ける"): `border-color`/`background` themselves are NOT set here
+   any more -- CubeLegend.jsx sets them as an inline `style` (the exact
+   resolved cube color, `colorByType[cubeType]`, the same source the
+   swatch beside it already uses), which always wins the cascade over any
+   class rule regardless of specificity/order, closing off the whole class
+   of "class is present but the declared style never painted" failure this
+   revision exists to fix. This class only carries what stayed correct in
+   統括's own measurement (`fontWeight` 400 -> 700, confirmed instant, no
+   transition needed) plus a second, GUARANTEED-visible ring (below).
+
+   ★実測 (docs/reports/SH45_completion.md 追記): the inline cube-colored
+   border alone is not always enough -- `domain/cubeSeries.js#
+   CUBE_TYPE_COLORS`'s "light" branch (used at both `light` AND `standard`
+   depth -- `resolveCubeColor` only branches on `deep` vs not) was measured
+   at WCAG 3:1 against a plain white card background (SH-44), but THIS
+   control sits on `.sfh-root`'s own page-background gradient, not a card
+   -- and at `standard` depth that gradient is `--theme-standard-bg-*`,
+   which is theme-color-TINTED (pastel green/blue/purple/orange, unlike
+   `light` depth's near-white). Measured live (headless render, real
+   `--theme-standard-bg-*` values, all 4 accent colors): RED/BLACK/
+   ADDITIONAL's own "light"-branch hex drops to 2.30-2.98:1 there -- BELOW
+   the 3:1 floor in 21 of 144 checked (depth x theme x cube x gradient-stop)
+   combinations. This is exactly the SH-37 "theme-following color sinks
+   into a themed background" trap (統括's own warning) -- `domain/
+   cubeSeries.js` cannot be touched to fix its color table (plan §3), so
+   the fix here is the same one SH-37 already used for an identical
+   problem: `outline` in the fixed, depth-branched (never theme-color-
+   branched) `--sfh-color-current-ring` -- already `.sfh-root`'s own
+   variable, already proven >=17:1 at `deep`/`light` depth elsewhere in
+   this file. Measured against the SAME real `--theme-standard-bg-*`
+   values above: minimum 9.32:1 across all 36 depth x theme x gradient-
+   stop combinations -- comfortably clears 3:1 everywhere, so this outline
+   is what actually GUARANTEES "選択中は枠を付ける" is visible; the inline
+   cube-colored `border-color` stays as the color-identity cue (matches
+   the swatch beside it, plan's stated preference) layered inside it,
+   exactly the two-signal split `.sfh-heatmap-cell-current` (outline,
+   fixed ring) + `.sfh-heatmap-cell-lowest`/`-highest` (inset box-shadow,
+   semantic color) already use side by side in this same file. */
+.sfh-cube-legend-item-selected {
+  font-weight: 700;
+  outline: 2px solid var(--sfh-color-current-ring);
+  outline-offset: 1px;
 }

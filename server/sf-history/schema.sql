@@ -173,3 +173,61 @@ CREATE TABLE IF NOT EXISTS sf_discovery_cube_price_history (
     fetched_at   TEXT    NOT NULL,
     PRIMARY KEY (item_id, cube_item_id, price_at)
 );
+
+-- IMPL_PLAN_SH39: CUBE (prospective) price history -- data-only slice, no
+-- API/screen yet. Same shape/discipline as sf_price_history_hourly/_4h/
+-- sf_history_backfill_progress above, for the `itemUpgradeType=
+-- UPGRADE_PROSPECTIVE` upstream (Red/Black/Bonus Potential/White Bonus cube
+-- prices) instead of `UPGRADE_STAR_FORCE`. NEW tables only -- plan §3/§7:
+-- sf_price_history_hourly/_4h/sf_history_backfill_progress are never written
+-- to by this feature. A cube has no itemUpgrade concept (plan §0 I4:
+-- itemUpgrade=0 is the only valid value upstream -- 1/10 are both 0-point),
+-- so there is deliberately no `item_upgrade` column here (plan §3); the
+-- series key is (item_id, cube_sub_type) instead of (item_id, item_upgrade).
+-- `cube_sub_type` is always one of `cube.CUBE_SUB_TYPES` (RED / BLACK /
+-- ADDITIONAL / WHITE_ADDITIONAL, plan §1) -- the upstream's own
+-- SUSPICIOUS / SUSPICIOUS_ADDITIONAL (Occult cubes) are out of scope by
+-- user ruling and never written here.
+CREATE TABLE IF NOT EXISTS sf_cube_price_history_hourly (
+    item_id           INTEGER NOT NULL,
+    cube_sub_type     TEXT    NOT NULL,
+    price_at          TEXT    NOT NULL,   -- ISO8601 UTC ("2026-08-04T16:00:00Z")
+    step              INTEGER,
+    avg_price         REAL,
+    max_price         REAL,
+    min_price         REAL,
+    end_price         REAL    NOT NULL,   -- NESO, unconverted (same convention as
+                                           -- sf_price_history_hourly.end_price -- see
+                                           -- that column's own comment; no conversion
+                                           -- code is written against this column).
+    sum_enhance_count INTEGER NOT NULL DEFAULT 0,
+    fetched_at        TEXT    NOT NULL,
+    PRIMARY KEY (item_id, cube_sub_type, price_at)
+);
+
+CREATE TABLE IF NOT EXISTS sf_cube_history_backfill_progress (
+    item_id       INTEGER NOT NULL,
+    cube_sub_type TEXT    NOT NULL,
+    status        TEXT    NOT NULL,   -- 'done' | 'error'
+    row_count     INTEGER NOT NULL DEFAULT 0,
+    oldest_at     TEXT,
+    newest_at     TEXT,
+    updated_at    TEXT    NOT NULL,
+    note          TEXT,
+    PRIMARY KEY (item_id, cube_sub_type)
+);
+
+-- 4-hour buckets derived from sf_cube_price_history_hourly, by
+-- `cube_aggregate.py` (the CUBE counterpart of `aggregate.py`, which reuses
+-- `aggregate.compute_buckets` UNCHANGED -- plan §5/§7: "aggregate.py の改変
+-- 禁止"). Same derivation rule as sf_price_history_4h (see that table's own
+-- comment for "区間開始"/"最後に存在する時刻"/"進行中の区間は確定しない").
+CREATE TABLE IF NOT EXISTS sf_cube_price_history_4h (
+    item_id        INTEGER NOT NULL,
+    cube_sub_type  TEXT    NOT NULL,
+    price_at       TEXT    NOT NULL,   -- 区間開始 UTC
+    end_price      REAL    NOT NULL,
+    source_hour_at TEXT    NOT NULL,   -- 採用した1時間足の時刻
+    generated_at   TEXT    NOT NULL,
+    PRIMARY KEY (item_id, cube_sub_type, price_at)
+);

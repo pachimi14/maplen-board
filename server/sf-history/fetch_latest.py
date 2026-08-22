@@ -39,6 +39,9 @@ whether an API key is configured (never per-request -- see app.py's
   prices}`) in the exact same units, so every caller of `LatestPriceCache`
   (app.py's `prices()`/`latest()`) is unaffected by which upstream actually
   answered -- IMPL_PLAN_SH23 §3-1: "応答のフィールド集合は変えない".
+  IMPL_PLAN_SH40 §3 adds `cubes`/`cubeOrder` to that same shape (both
+  parsers, unconditionally) -- the legacy endpoint has no `potential` data
+  at all, so its `cubes` is always `[None] * CUBE_COUNT` (plan (g)).
 
 Why a fixed TTL again (IMPL_PLAN_SH23 §3-2): SH-15 derived each entry's TTL
 from that response's own `latestUpdatedAt`, tuned for the legacy endpoint's
@@ -85,6 +88,7 @@ from typing import Any
 
 import requests
 
+import cube
 from fetcher import USER_AGENT
 
 LATEST_URL = "https://msu.io/maplestoryn/api/msn/dynamicpricing/enhance-price/latest"
@@ -97,6 +101,7 @@ MAX_TTL_SECONDS = 1200.0  # guard ceiling, ditto -- an env var can never push th
 REQUEST_TIMEOUT_SECONDS = 5.0
 UPGRADE_COUNT = 22  # itemUpgrade 0..21, matching `prices[]` (plan §8 condition 6)
 PRICE_DIVISOR = 1e18  # design P2 / SH1_API_PROBE.md M1: closePrice / endPrice = 1e18
+CUBE_COUNT = len(cube.CUBE_SUB_TYPES)  # IMPL_PLAN_SH40 §3, matching `cubes[]` below
 
 
 class UpstreamLatestError(RuntimeError):
@@ -114,8 +119,61 @@ class _CacheEntry:
     result: dict[str, Any]
 
 
+def parse_potential_cubes(payload: dict[str, Any]) -> list[float | None]:
+    """IMPL_PLAN_SH40 §3: the CUBE (potential) counterpart of `starforce`'s
+    price read, from the SAME `dynamicprice` response `parse_openapi_payload`
+    already fetches (J3: "いまは starforce だけ読んで捨てている" -- this is
+    the one place that stops discarding it). `data.currentPrices.potential`
+    is keyed by each cube's own itemId (confirmed live 2026-08-22 probe;
+    `discovery.py`'s `parse_dynamicprice_cube_points` reads the identical
+    map for a different purpose) -- `cube.CUBE_ITEM_ID_BY_SUB_TYPE` maps
+    each of this feature's 4 `cube.CUBE_SUB_TYPES` onto that itemId.
+
+    Purely additive and never raises (plan §3: "上流への追加リクエストを発
+    生させない" implies this can never be the reason a `latest`/`prices`
+    response fails) -- a missing/malformed `potential` map, or a payload with
+    no usable `data.currentPrices` at all (e.g. the legacy endpoint's
+    completely different shape), yields `[None] * CUBE_COUNT` rather than
+    raising (plan (g): "potential が欠けている装備でも、SF側の現在価格は
+    従来どおり返る"). Index-aligned to `cube.CUBE_SUB_TYPES`'s fixed order --
+    callers expose that order alongside this list (plan (c)), never
+    re-derive it here.
+    """
+    data = payload.get("data")
+    if not isinstance(data, dict):
+        data = payload
+    current_prices = data.get("currentPrices")
+    potential = current_prices.get("potential") if isinstance(current_prices, dict) else None
+    cubes: list[float | None] = [None] * CUBE_COUNT
+    if not isinstance(potential, dict):
+        return cubes
+
+    for index, sub_type in enumerate(cube.CUBE_SUB_TYPES):
+        entry = potential.get(str(cube.CUBE_ITEM_ID_BY_SUB_TYPE[sub_type]))
+        if not isinstance(entry, dict):
+            continue
+        current = entry.get("currentPrice")
+        if not isinstance(current, dict):
+            continue
+        raw_price = current.get("price")
+        if raw_price is None:
+            continue
+        try:
+            cubes[index] = float(raw_price) / PRICE_DIVISOR
+        except (TypeError, ValueError):
+            continue
+    return cubes
+
+
 def parse_latest_payload(item_id: int, payload: dict[str, Any]) -> dict[str, Any]:
-    """Parse the legacy, unauthenticated `enhance-price/latest` response."""
+    """Parse the legacy, unauthenticated `enhance-price/latest` response.
+
+    IMPL_PLAN_SH40 §3/(g): this upstream has no `potential` data at all (a
+    completely different payload shape, no `data.currentPrices`) -- `cubes`
+    is always `[None] * CUBE_COUNT` here, never guessed at. `cubeOrder` is
+    this codebase's own fixed constant (`cube.CUBE_SUB_TYPES`), not something
+    read from the upstream, so it is always present regardless.
+    """
     star_force = payload.get("starForce") or []
     prices: list[float | None] = [None] * UPGRADE_COUNT
     for entry in star_force:
@@ -127,6 +185,8 @@ def parse_latest_payload(item_id: int, payload: dict[str, Any]) -> dict[str, Any
         "itemId": item_id,
         "latestUpdatedAt": payload.get("latestUpdatedAt"),
         "prices": prices,
+        "cubes": [None] * CUBE_COUNT,
+        "cubeOrder": list(cube.CUBE_SUB_TYPES),
     }
 
 
@@ -177,7 +237,18 @@ def parse_openapi_payload(item_id: int, payload: dict[str, Any]) -> dict[str, An
         if latest_updated_at is None and isinstance(start_date, str) and start_date:
             latest_updated_at = start_date
 
-    return {"itemId": item_id, "latestUpdatedAt": latest_updated_at, "prices": prices}
+    # IMPL_PLAN_SH40 §3 (J3): `cubes` reads the SAME response's
+    # `data.currentPrices.potential` -- no additional upstream request. Added
+    # strictly after every existing `starforce`/`prices`/`latestUpdatedAt`
+    # line above is untouched, so the pre-SH40 result for those keys never
+    # moves (plan §4: "既存の結果を変えない").
+    return {
+        "itemId": item_id,
+        "latestUpdatedAt": latest_updated_at,
+        "prices": prices,
+        "cubes": parse_potential_cubes(payload),
+        "cubeOrder": list(cube.CUBE_SUB_TYPES),
+    }
 
 
 class LatestPriceCache:

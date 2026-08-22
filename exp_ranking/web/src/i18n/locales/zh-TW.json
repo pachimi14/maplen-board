@@ -567,7 +567,6 @@
     "main30d": "30???"
   },
   "sfhistory": {
-    "pageTitle": "Enhance History",
     "pageDescription": "選擇裝備與強化星數範圍，即可查看期望強化費用的走勢，以及目前價格在這段歷史中處於什麼水準。",
     "loading": "載入中...",
     "equipment": {
@@ -682,8 +681,22 @@
     }
   },
   "sfhistoryTabs": {
-    "navLabel": "SF 紀錄頁面",
-    "sfHistory": "SF History",
-    "newEquipment": "New Equipment"
+    "navLabel": "網站區塊",
+    "subNavLabel": "Enhance History 頁面",
+    "newEquipment": "New Equipment",
+    "sf": "SF",
+    "cube": "Cube"
+  },
+  "sfhistoryCube": {
+    "pageDescription": "選擇裝備與魔方種類，即可查看市場價格的走勢，以及目前價格在這段歷史中處於什麼水準。",
+    "cubeType": {
+      "label": "魔方種類"
+    },
+    "compare": {
+      "label": "比較對象",
+      "mainBadge": "主要"
+    },
+    "statsScope": "下方的統計與熱力圖僅顯示 {{cube}}。",
+    "whiteCubeNote": "White Cube 的價格歷史自 {{date}} 起開始記錄。"
   }
 }

@@ -567,7 +567,6 @@
     "main30d": "????? 30 ???"
   },
   "sfhistory": {
-    "pageTitle": "Enhance History",
     "pageDescription": "เลือกอุปกรณ์และช่วงดาวเพื่อดูการเปลี่ยนแปลงของค่าใช้จ่ายคาดการณ์ในการอัปเกรด และดูว่าค่าปัจจุบันอยู่ในระดับใดเมื่อเทียบกับประวัติ",
     "loading": "กำลังโหลด...",
     "equipment": {
@@ -682,8 +681,22 @@
     }
   },
   "sfhistoryTabs": {
-    "navLabel": "หน้าประวัติ SF",
-    "sfHistory": "SF History",
-    "newEquipment": "New Equipment"
+    "navLabel": "ส่วนต่าง ๆ ของเว็บไซต์",
+    "subNavLabel": "หน้าใน Enhance History",
+    "newEquipment": "New Equipment",
+    "sf": "SF",
+    "cube": "Cube"
+  },
+  "sfhistoryCube": {
+    "pageDescription": "เลือกอุปกรณ์และประเภทคิวบ์เพื่อดูการเปลี่ยนแปลงของราคาตลาด และดูว่าค่าปัจจุบันอยู่ในระดับใดเมื่อเทียบกับประวัติ",
+    "cubeType": {
+      "label": "ประเภทคิวบ์"
+    },
+    "compare": {
+      "label": "เปรียบเทียบกับ",
+      "mainBadge": "หลัก"
+    },
+    "statsScope": "สถิติและฮีตแมปด้านล่างเป็นข้อมูลของ {{cube}} เท่านั้น",
+    "whiteCubeNote": "ประวัติราคา White Cube เริ่มตั้งแต่ {{date}}"
   }
 }

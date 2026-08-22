@@ -567,7 +567,6 @@
     "main30d": "30-day gain"
   },
   "sfhistory": {
-    "pageTitle": "Enhance History",
     "pageDescription": "Pick a piece of gear and a star range to see how its Expected enhancement cost has moved, and where the current value sits against that history.",
     "loading": "Loading...",
     "equipment": {
@@ -682,8 +681,22 @@
     }
   },
   "sfhistoryTabs": {
-    "navLabel": "SF History pages",
-    "sfHistory": "SF History",
-    "newEquipment": "New Equipment"
+    "navLabel": "Site sections",
+    "subNavLabel": "Enhance History pages",
+    "newEquipment": "New Equipment",
+    "sf": "SF",
+    "cube": "Cube"
+  },
+  "sfhistoryCube": {
+    "pageDescription": "Pick a piece of gear and a cube type to see how its market price has moved, and where the current value sits against that history.",
+    "cubeType": {
+      "label": "Cube Type"
+    },
+    "compare": {
+      "label": "Compare with",
+      "mainBadge": "Main"
+    },
+    "statsScope": "The stats and heatmap below are for {{cube}} only.",
+    "whiteCubeNote": "White Cube price history starts {{date}}."
   }
 }

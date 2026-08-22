@@ -567,7 +567,6 @@
     "main30d": "30日増加量"
   },
   "sfhistory": {
-    "pageTitle": "Enhance History",
     "pageDescription": "装備と強化範囲を選ぶと、期待強化費用の推移と、現在値が過去のどの水準かを確認できます。",
     "loading": "読み込み中...",
     "equipment": {
@@ -682,8 +681,22 @@
     }
   },
   "sfhistoryTabs": {
-    "navLabel": "SF履歴ページ",
-    "sfHistory": "SF History",
-    "newEquipment": "New Equipment"
+    "navLabel": "サイトのセクション",
+    "subNavLabel": "Enhance History のページ",
+    "newEquipment": "New Equipment",
+    "sf": "SF",
+    "cube": "Cube"
+  },
+  "sfhistoryCube": {
+    "pageDescription": "装備とキューブの種類を選ぶと、市場価格の推移と、現在値が過去のどの水準かを確認できます。",
+    "cubeType": {
+      "label": "キューブ種類"
+    },
+    "compare": {
+      "label": "比較するキューブ",
+      "mainBadge": "メイン"
+    },
+    "statsScope": "下の統計とヒートマップは{{cube}}のみが対象です。",
+    "whiteCubeNote": "White Cube の価格履歴は{{date}}から開始しています。"
   }
 }

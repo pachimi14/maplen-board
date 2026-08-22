@@ -37,6 +37,7 @@ from starlette.requests import Request
 
 import aggregate
 import app as app_module
+import cube
 import db
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -109,7 +110,13 @@ def test_equipment_root_and_item_keys_match_contract(_env: Path) -> None:
 def test_latest_root_keys_match_contract(_env: Path) -> None:
     class FakeCache:
         def get(self, item_id: int) -> dict[str, Any]:
-            return {"itemId": item_id, "latestUpdatedAt": "2026-08-05T01:40:00Z", "prices": [999.0] + [None] * 21}
+            return {
+                "itemId": item_id,
+                "latestUpdatedAt": "2026-08-05T01:40:00Z",
+                "prices": [999.0] + [None] * 21,
+                "cubes": [1.0, 2.0, None, None],
+                "cubeOrder": ["RED", "BLACK", "ADDITIONAL", "WHITE_ADDITIONAL"],
+            }
 
     app_module.app.state.latest_cache = FakeCache()
     try:
@@ -182,6 +189,83 @@ def test_prices_point_keys_cover_the_full_contract(tmp_path: Path, monkeypatch: 
             assert keys <= contract_point_keys, f"unexpected point keys: {keys - contract_point_keys}"
             seen_keys |= keys
         # a contract key never actually observed -> Python side must fail.
+        assert seen_keys == contract_point_keys, f"contract point keys never observed: {contract_point_keys - seen_keys}"
+    finally:
+        app_module.app.state.latest_cache = app_module._build_latest_cache()
+
+
+# --- IMPL_PLAN_SH40: `/sf-history/cube-prices` -- same contract discipline as
+# `prices` above, mirrored for the CUBE (RED/BLACK/ADDITIONAL/WHITE_ADDITIONAL)
+# series (plan §2: "既存 /sf-history/prices と同じ流儀").
+
+
+def test_cube_prices_root_keys_match_contract(_env: Path) -> None:
+    response = app_module.cube_prices(_request(), itemId="1001")
+    body = json.loads(response.body)
+    assert set(body.keys()) == set(CONTRACT["cubePrices"]["root"])
+
+
+def test_cube_prices_point_keys_cover_the_full_contract(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """CUBE counterpart of `test_prices_point_keys_cover_the_full_contract`
+    -- drives one request through all 3 point shapes this route ever
+    produces (confirmed, elapsed-but-unaggregated-provisional, in-progress
+    with `asOf`)."""
+    items_path = _write_items(tmp_path)
+    db_path = tmp_path / "x.sqlite"
+    conn = db.connect(db_path)
+    db.apply_schema(conn)
+
+    now = datetime.now(timezone.utc)
+    current_bucket = aggregate.parse_iso_utc(aggregate.bucket_start(now.strftime("%Y-%m-%dT%H:%M:%SZ")))
+    missing_bucket = current_bucket - timedelta(hours=4)  # fully elapsed, never aggregated
+    confirmed_bucket = missing_bucket - timedelta(hours=4)  # already in sf_cube_price_history_4h
+
+    confirmed_iso = aggregate.format_iso_utc(confirmed_bucket)
+    missing_iso = aggregate.format_iso_utc(missing_bucket)
+
+    db.replace_cube_4h_rows(
+        conn, 1001, "RED",
+        [{"price_at": confirmed_iso, "end_price": 100.0, "source_hour_at": confirmed_iso, "generated_at": "2026-08-05T01:00:00Z"}],
+    )
+    hourly_at_missing = aggregate.format_iso_utc(missing_bucket + timedelta(hours=1))
+    for cube_sub_type in cube.CUBE_SUB_TYPES:
+        db.upsert_cube_hourly_rows(
+            conn, 1001, cube_sub_type,
+            [{"date": hourly_at_missing, "endPrice": 200.0, "sumEnhanceCnt": 0}],
+            "irrelevant",
+        )
+    conn.close()
+
+    monkeypatch.setenv("SF_HISTORY_DB_PATH", str(db_path))
+    monkeypatch.setenv("SF_HISTORY_ITEMS_PATH", str(items_path))
+    app_module._items_cache = None
+    app_module._items_cache_key = None
+
+    class FakeCache:
+        def get(self, item_id: int) -> dict[str, Any]:
+            return {
+                "itemId": item_id,
+                "latestUpdatedAt": "2026-08-05T01:40:00Z",
+                "prices": [999.0] + [None] * 21,
+                "cubes": [111.0, None, None, None],
+                "cubeOrder": list(cube.CUBE_SUB_TYPES),
+            }
+
+    app_module.app.state.latest_cache = FakeCache()
+    try:
+        response = app_module.cube_prices(_request(), itemId="1001")
+        body = json.loads(response.body)
+        points = body["points"]
+        assert len(points) == 3  # confirmed, elapsed-provisional, in-progress
+
+        contract_point_keys = set(CONTRACT["cubePrices"]["point"])
+        seen_keys: set[str] = set()
+        for point in points:
+            keys = set(point.keys())
+            assert keys <= contract_point_keys, f"unexpected point keys: {keys - contract_point_keys}"
+            seen_keys |= keys
         assert seen_keys == contract_point_keys, f"contract point keys never observed: {contract_point_keys - seen_keys}"
     finally:
         app_module.app.state.latest_cache = app_module._build_latest_cache()

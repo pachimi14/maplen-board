@@ -4,9 +4,11 @@ import { useTranslation } from "../i18n/I18nContext.jsx";
 import { useDashboardStore } from "../taskManager/storage/useDashboardStore.js";
 import { setDashboardThemeColor, setDashboardThemeDepth } from "../taskManager/domain/dashboardModel.js";
 import { sfHistorySource } from "./integrations/sfHistorySource.js";
-import { DEFAULT_PERIOD, defaultPresetForMaxStar, isValidStarRange, selectInitialItem } from "./domain/series.js";
+import { DEFAULT_INITIAL_ITEM_ID, DEFAULT_PERIOD, defaultPresetForMaxStar, isValidStarRange, selectInitialItem } from "./domain/series.js";
 import { buildScreenModel, isRangeReady } from "./domain/viewModel.js";
 import { formatFormingBandRanges, formatTooltipDate, groupFilledBands } from "./domain/format.js";
+import { guessPrefetchItemId, resolveCarriedSelection } from "./domain/selectionCarry.js";
+import { getCarriedSelection, setCarriedSelection } from "./selectionStore.js";
 import SfHistoryTabs from "./SfHistoryTabs.jsx";
 import EquipmentSelector from "./components/EquipmentSelector.jsx";
 import StarRangeSelector from "./components/StarRangeSelector.jsx";
@@ -53,7 +55,17 @@ export default function SfHistoryRoot() {
   };
 
   const [equipmentState, setEquipmentState] = useState({ status: "loading", items: [] });
-  const [selectedItemId, setSelectedItemId] = useState(null); // representative id -- drives prices/latest
+  // IMPL_PLAN_SH46 §3 (B): seeded with a GUESS (carried selection's itemId,
+  // else SH-26's DEFAULT_INITIAL_ITEM_ID) instead of `null`, so the
+  // prices/latest effects below (both keyed on this state) start
+  // in parallel with the loadEquipment effect right below, rather than
+  // waiting for it to resolve first. Never the final, authoritative value
+  // -- see `guessPrefetchItemId`'s own header (domain/selectionCarry.js)
+  // for why the loadEquipment effect's existing `setSelectedItemId(picked.
+  // itemId)` call (unchanged by this plan) always corrects a wrong guess.
+  const [selectedItemId, setSelectedItemId] = useState(() =>
+    guessPrefetchItemId(getCarriedSelection(), DEFAULT_INITIAL_ITEM_ID),
+  ); // representative id -- drives prices/latest
   // IMPL_PLAN_SH9 §3-3: the exact alias row the user picked (may differ from
   // `selectedItemId`'s own representative name/id -- see EquipmentSelector's
   // header comment). Drives the search box's closed-state text and the
@@ -76,13 +88,22 @@ export default function SfHistoryRoot() {
         return;
       }
       setEquipmentState({ status: "ready", items: result.items });
-      // IMPL_PLAN_SH26 §1: open on DEFAULT_INITIAL_ITEM_ID (Arcane Umbra
-      // Staff) when present, falling back to items[0] otherwise -- see
-      // selectInitialItem's own header comment in domain/series.js.
-      const first = selectInitialItem(result.items);
-      setSelectedItemId(first.itemId);
-      setSelectedAlias({ itemId: first.itemId, itemName: first.itemName });
-      setRange(defaultPresetForMaxStar(first.maxStar));
+      // IMPL_PLAN_SH42 §2 (B): open on whatever equipment was carried from
+      // the Cube/New Equipment tab, if it's still present in this page's
+      // own items -- falls back to the pre-existing SH-26 default
+      // (DEFAULT_INITIAL_ITEM_ID / Arcane Umbra Staff) otherwise, which is
+      // also exactly what runs on a fresh page load (the carried store is
+      // empty then -- plan §2/(f): "#/starforce を直接開いたときの初期選択
+      // は従来どおり").
+      const carried = resolveCarriedSelection(result.items, getCarriedSelection());
+      const picked = carried
+        ? result.items.find((item) => item.itemId === carried.itemId)
+        : selectInitialItem(result.items);
+      const alias = carried?.alias ?? { itemId: picked.itemId, itemName: picked.itemName };
+      setSelectedItemId(picked.itemId);
+      setSelectedAlias(alias);
+      setCarriedSelection(picked.itemId, alias);
+      setRange(defaultPresetForMaxStar(picked.maxStar));
     });
     return () => {
       cancelled = true;
@@ -100,7 +121,11 @@ export default function SfHistoryRoot() {
   // (`selectedAlias`, read by the "shared group" note below).
   function handleSelectEquipment(candidate) {
     setSelectedItemId(candidate.representativeItemId);
-    setSelectedAlias({ itemId: candidate.itemId, itemName: candidate.itemName });
+    const alias = { itemId: candidate.itemId, itemName: candidate.itemName };
+    setSelectedAlias(alias);
+    // IMPL_PLAN_SH42 §2 (B): an explicit pick carries over to the Cube/New
+    // Equipment tab too, same as the default pick above.
+    setCarriedSelection(candidate.representativeItemId, alias);
   }
 
   // design §7.1: if switching equipment makes the current range invalid
@@ -225,10 +250,14 @@ export default function SfHistoryRoot() {
             ページに同じタブが出る"). */}
         <SfHistoryTabs active="sfHistory" />
 
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t("sfhistory.pageTitle")}</h1>
-          <p className="mt-1.5 max-w-3xl text-sm text-slate-400">{t("sfhistory.pageDescription")}</p>
-        </div>
+        {/* IMPL_PLAN_SH42 §3 (C): no <h1> here -- the tab bar right above
+            already reads "Enhance History" (SfHistoryTabs.jsx), so a
+            second, page-level heading repeating that same name added
+            nothing (same reasoning DiscoveryRoot.jsx's own comment already
+            gives for dropping its own page title, SH-33 follow-up).
+            `sfhistory.pageTitle` is removed outright (not emptied) -- see
+            the i18n locale files' own diff. Description stays. */}
+        <p className="max-w-3xl text-sm text-slate-400">{t("sfhistory.pageDescription")}</p>
 
         {equipmentState.status === "loading" ? (
           <p className="text-sm text-slate-400">{t("sfhistory.loading")}</p>

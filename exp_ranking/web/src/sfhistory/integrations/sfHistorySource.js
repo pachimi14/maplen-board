@@ -148,16 +148,101 @@ export function normalizePricesPayload(payload, expectedItemId) {
   };
 }
 
-/** `/sf-history/latest?itemId=` -> the current-price point (design §6). */
+/** IMPL_PLAN_SH40 §3 / IMPL_PLAN_SH41 §1: `payload.cubes` -- the current
+ * price for each of `cube.CUBE_SUB_TYPES`'s 4 entries, index-aligned to
+ * `payload.cubeOrder`. `null`/malformed input -> `null` (never invents a
+ * 4-wide array of zeros -- same "無い数字を発明しない" discipline
+ * `toFiniteOrNull` already applies per-entry). */
+function normalizeCubesArray(rawCubes) {
+  return Array.isArray(rawCubes) ? rawCubes.map(toFiniteOrNull) : null;
+}
+
+/** IMPL_PLAN_SH41 §1: `payload.cubeOrder` -- the fixed sub-type order
+ * (`["RED","BLACK","ADDITIONAL","WHITE_ADDITIONAL"]`) the `cubes`/`cubes[]`
+ * arrays above are index-aligned to. Passed through as-is (never re-sorted
+ * or guessed) -- `null` for a missing/malformed value. */
+function normalizeCubeOrder(rawCubeOrder) {
+  return Array.isArray(rawCubeOrder) && rawCubeOrder.every((entry) => typeof entry === "string")
+    ? rawCubeOrder
+    : null;
+}
+
+/** `/sf-history/latest?itemId=` -> the current-price point (design §6).
+ *
+ * IMPL_PLAN_SH41 §1 (statute correction): the server has carried `cubes`/
+ * `cubeOrder` on this response since IMPL_PLAN_SH40 §3, but this normalizer
+ * did not read them yet -- deliberately enumerated in
+ * `integrations/contract.test.js`'s `INTENTIONALLY_DROPPED.latest.root`
+ * until this slice actually used them (SH-40's own comment there). This is
+ * the pass-through this plan's §1 requires: the exact same
+ * `normalizeCubesArray`/`normalizeCubeOrder` helpers `normalizeCubePricesPayload`
+ * below uses for the 4h series, applied here to the single current-price
+ * point.
+ */
 export function normalizeLatestPayload(payload, expectedItemId) {
   if (!payload || payload.itemId !== expectedItemId || !Array.isArray(payload.prices)) {
-    return { ok: false, code: "invalidFormat", prices: null, latestUpdatedAt: null };
+    return { ok: false, code: "invalidFormat", prices: null, latestUpdatedAt: null, cubes: null, cubeOrder: null };
   }
   return {
     ok: true,
     code: "ok",
     prices: payload.prices.map(toFiniteOrNull),
     latestUpdatedAt: typeof payload.latestUpdatedAt === "string" ? payload.latestUpdatedAt : null,
+    cubes: normalizeCubesArray(payload.cubes),
+    cubeOrder: normalizeCubeOrder(payload.cubeOrder),
+  };
+}
+
+/** `/sf-history/cube-prices?itemId=` -> the 4h-bucketed CUBE price series
+ * (IMPL_PLAN_SH40 §2 / IMPL_PLAN_SH41 §1). Same root shape and
+ * `provisional`/`closed`/`asOf` point semantics as `normalizePricesPayload`
+ * above (server: "既存 /sf-history/prices と同じ流儀") -- this function does
+ * not reimplement that gating, it mirrors it field-for-field, just reading
+ * `point.cubes` instead of `point.prices` and the response's own `cubeOrder`
+ * instead of `upgradeCount`.
+ *
+ * K1 (IMPL_PLAN_SH41 §0): there is no Expected-cost calculation for cubes --
+ * `cubes[]` is the raw market price, passed straight through and never fed
+ * into `starforce.js`. K2: a cube sub-type absent at a given point (e.g.
+ * White Bonus Cube before 2026-06-11) stays `null` here, exactly as the
+ * server sent it -- never 0, never backfilled from a neighboring point.
+ */
+export function normalizeCubePricesPayload(payload, expectedItemId) {
+  if (!payload || payload.itemId !== expectedItemId || !Array.isArray(payload.points)) {
+    return {
+      ok: false,
+      code: "invalidFormat",
+      points: [],
+      priceVersion: null,
+      startDate: null,
+      endDate: null,
+      provisionalDate: null,
+      cubeOrder: null,
+    };
+  }
+  const points = payload.points
+    .filter((point) => typeof point?.date === "string" && Array.isArray(point?.cubes))
+    .map((point) => {
+      const normalized = {
+        date: point.date,
+        cubes: point.cubes.map(toFiniteOrNull),
+        provisional: point.provisional === true,
+        closed: point.closed !== false,
+      };
+      if (typeof point.asOf === "string" && point.asOf) {
+        normalized.asOf = point.asOf;
+      }
+      return normalized;
+    });
+  return {
+    ok: true,
+    code: "ok",
+    points,
+    priceVersion: typeof payload.priceVersion === "string" ? payload.priceVersion : null,
+    startDate: typeof payload.startDate === "string" ? payload.startDate : null,
+    endDate: typeof payload.endDate === "string" ? payload.endDate : null,
+    provisionalDate: typeof payload.provisionalDate === "string" ? payload.provisionalDate : null,
+    cubeOrder: normalizeCubeOrder(payload.cubeOrder),
   };
 }
 
@@ -214,6 +299,8 @@ export function createSfHistorySource({
             code: response.status === 503 ? "upstreamUnavailable" : response.status === 404 ? "notFound" : "httpError",
             prices: null,
             latestUpdatedAt: null,
+            cubes: null,
+            cubeOrder: null,
           };
         }
         return normalizeLatestPayload(await response.json(), itemId);
@@ -223,6 +310,42 @@ export function createSfHistorySource({
           code: error?.name === "AbortError" ? "aborted" : "networkError",
           prices: null,
           latestUpdatedAt: null,
+          cubes: null,
+          cubeOrder: null,
+        };
+      }
+    },
+
+    // IMPL_PLAN_SH41 §1: same shape/error-mapping as `loadPrices` above --
+    // this is `/sf-history/cube-prices`'s own counterpart, not a variant of
+    // `loadPrices` (a different server route, `normalizeCubePricesPayload`,
+    // not `normalizePricesPayload`).
+    async loadCubePrices(itemId, { signal } = {}) {
+      try {
+        const response = await fetchImpl(`${baseUrl}/sf-history/cube-prices?itemId=${encodeURIComponent(itemId)}`, { signal });
+        if (!response.ok) {
+          return {
+            ok: false,
+            code: response.status === 404 ? "notFound" : "httpError",
+            points: [],
+            priceVersion: null,
+            startDate: null,
+            endDate: null,
+            provisionalDate: null,
+            cubeOrder: null,
+          };
+        }
+        return normalizeCubePricesPayload(await response.json(), itemId);
+      } catch (error) {
+        return {
+          ok: false,
+          code: error?.name === "AbortError" ? "aborted" : "networkError",
+          points: [],
+          priceVersion: null,
+          startDate: null,
+          endDate: null,
+          provisionalDate: null,
+          cubeOrder: null,
         };
       }
     },

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   createSfHistorySource,
+  normalizeCubePricesPayload,
   normalizeEquipmentPayload,
   normalizeLatestPayload,
   normalizePricesPayload,
@@ -31,6 +32,19 @@ const latestPayload = {
   itemId: 1003720,
   latestUpdatedAt: "2026-08-04T18:20:00Z",
   prices: [1, 2, null, 4],
+  cubes: [636809.13, 778760.18, 1048901.68, 1202408.98],
+  cubeOrder: ["RED", "BLACK", "ADDITIONAL", "WHITE_ADDITIONAL"],
+};
+
+const cubePricesPayload = {
+  itemId: 1003720,
+  interval: "4h",
+  labelIs: "bucketStart",
+  startDate: "2026-03-25T00:00:00Z",
+  endDate: "2026-08-21T20:00:00Z",
+  priceVersion: "2026-08-22T00:00:00Z",
+  cubeOrder: ["RED", "BLACK", "ADDITIONAL", "WHITE_ADDITIONAL"],
+  points: [{ date: "2026-03-25T00:00:00Z", cubes: [894882.28, 1638568.1, 2185268.35, null] }],
 };
 
 describe("normalizeEquipmentPayload", () => {
@@ -206,6 +220,66 @@ describe("normalizeLatestPayload", () => {
   it("is invalidFormat for a mismatched itemId", () => {
     expect(normalizeLatestPayload(latestPayload, 1).ok).toBe(false);
   });
+
+  // IMPL_PLAN_SH41 §1: `cubes`/`cubeOrder` are no longer intentionally
+  // dropped (see contract.test.js) -- this pins the actual pass-through.
+  it("IMPL_PLAN_SH41 §1: passes through cubes/cubeOrder", () => {
+    const result = normalizeLatestPayload(latestPayload, 1003720);
+    expect(result.cubes).toEqual([636809.13, 778760.18, 1048901.68, 1202408.98]);
+    expect(result.cubeOrder).toEqual(["RED", "BLACK", "ADDITIONAL", "WHITE_ADDITIONAL"]);
+  });
+
+  it("IMPL_PLAN_SH41 §1: defaults cubes/cubeOrder to null when the server omits them", () => {
+    const result = normalizeLatestPayload({ itemId: 1003720, prices: [1] }, 1003720);
+    expect(result.cubes).toBeNull();
+    expect(result.cubeOrder).toBeNull();
+  });
+});
+
+describe("normalizeCubePricesPayload", () => {
+  it("K1/K2: passes through raw cube prices as-is, converting non-finite entries to null (never a computed value)", () => {
+    const result = normalizeCubePricesPayload(cubePricesPayload, 1003720);
+    expect(result.ok).toBe(true);
+    expect(result.points).toEqual([
+      { date: "2026-03-25T00:00:00Z", cubes: [894882.28, 1638568.1, 2185268.35, null], provisional: false, closed: true },
+    ]);
+    expect(result.cubeOrder).toEqual(["RED", "BLACK", "ADDITIONAL", "WHITE_ADDITIONAL"]);
+    expect(result.priceVersion).toBe("2026-08-22T00:00:00Z");
+    expect(result.endDate).toBe("2026-08-21T20:00:00Z");
+  });
+
+  it("K2: a cube sub-type with no data at a point (e.g. White Bonus Cube before 2026-06-11) stays null, never 0/backfilled", () => {
+    const result = normalizeCubePricesPayload(cubePricesPayload, 1003720);
+    expect(result.points[0].cubes[3]).toBeNull();
+  });
+
+  it("is invalidFormat if the response itemId does not match the request", () => {
+    expect(normalizeCubePricesPayload(cubePricesPayload, 1234).ok).toBe(false);
+  });
+
+  it("passes through a trailing provisional/open point the same way normalizePricesPayload does", () => {
+    const payloadWithOpenBucket = {
+      ...cubePricesPayload,
+      points: [
+        ...cubePricesPayload.points,
+        {
+          date: "2026-08-22T00:00:00Z",
+          cubes: [636809.13, 778760.18, 1048901.68, 1202408.98],
+          provisional: true,
+          closed: false,
+          asOf: "2026-08-22T00:05:00Z",
+        },
+      ],
+    };
+    const result = normalizeCubePricesPayload(payloadWithOpenBucket, 1003720);
+    expect(result.points[1]).toEqual({
+      date: "2026-08-22T00:00:00Z",
+      cubes: [636809.13, 778760.18, 1048901.68, 1202408.98],
+      provisional: true,
+      closed: false,
+      asOf: "2026-08-22T00:05:00Z",
+    });
+  });
 });
 
 describe("createSfHistorySource (design §10.2: simple requests only, no custom headers)", () => {
@@ -232,7 +306,14 @@ describe("createSfHistorySource (design §10.2: simple requests only, no custom 
     const fetchImpl = vi.fn().mockResolvedValue({ ok: false, status: 503 });
     const source = createSfHistorySource({ baseUrl: "https://api.example", fetchImpl });
     return source.loadLatest(1003720).then((result) => {
-      expect(result).toEqual({ ok: false, code: "upstreamUnavailable", prices: null, latestUpdatedAt: null });
+      expect(result).toEqual({
+        ok: false,
+        code: "upstreamUnavailable",
+        prices: null,
+        latestUpdatedAt: null,
+        cubes: null,
+        cubeOrder: null,
+      });
     });
   });
 
@@ -240,6 +321,24 @@ describe("createSfHistorySource (design §10.2: simple requests only, no custom 
     const fetchImpl = vi.fn().mockResolvedValue({ ok: false, status: 404 });
     const source = createSfHistorySource({ baseUrl: "https://api.example", fetchImpl });
     return source.loadPrices(123).then((result) => {
+      expect(result.code).toBe("notFound");
+    });
+  });
+
+  it("loadCubePrices builds the itemId query string against the cube-prices route", () => {
+    const fetchImpl = vi.fn().mockResolvedValue({ ok: true, json: async () => cubePricesPayload });
+    const source = createSfHistorySource({ baseUrl: "https://api.example", fetchImpl });
+    return source.loadCubePrices(1003720).then((result) => {
+      expect(result.ok).toBe(true);
+      expect(fetchImpl.mock.calls[0][0]).toBe("https://api.example/sf-history/cube-prices?itemId=1003720");
+      expect(Object.keys(fetchImpl.mock.calls[0][1] || {})).not.toContain("headers");
+    });
+  });
+
+  it("loadCubePrices maps a 404 to notFound", () => {
+    const fetchImpl = vi.fn().mockResolvedValue({ ok: false, status: 404 });
+    const source = createSfHistorySource({ baseUrl: "https://api.example", fetchImpl });
+    return source.loadCubePrices(123).then((result) => {
       expect(result.code).toBe("notFound");
     });
   });

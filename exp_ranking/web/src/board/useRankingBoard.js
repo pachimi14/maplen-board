@@ -69,6 +69,26 @@ const FALLBACK_EXP_TABLE = {
 
 const PAGE_SIZE = 20;
 
+// IMPL_PLAN_SH46 §2: `#/starforce` and its two sibling Enhance History tabs
+// render their own root components with their own data sources
+// (sfhistory/integrations/sfHistorySource.js and
+// sfhistory/discovery/integrations/discoverySource.js) and never call
+// `useBoard()`/read `characters`/`meta` from this hook (verified: no
+// `useBoard` import anywhere under src/sfhistory/, SH-46 report) -- so this
+// hook must not fetch the ~1.5MB `rankings.json` + `shard-51.json` payload
+// for them (§0 L3). This is an EXCLUDE list (not an allow list): every
+// other current and future route defaults to "needs ranking data" (the
+// original, pre-SH-46 behavior) unless explicitly added here. Task Manager
+// (`dashboard`/`tasks`/`schedule`) and `raffle` are deliberately NOT in this
+// set -- plan §2: "Task Manager 系は対象外"; raffle's own ranking-first
+// search reuses this same fetch via `rankingCharacters`/`rankingLoading`
+// props from App.jsx (see that file's own S1 comment).
+const RANKING_SKIP_ROUTES = new Set(["starforce", "starforceDiscovery", "starforceCubePrices"]);
+
+export function shouldLoadRankingData(routeName) {
+  return !RANKING_SKIP_ROUTES.has(routeName);
+}
+
 function parseExpTable(meta) {
   const table = meta?.expTable || {};
   const parsed = { ...FALLBACK_EXP_TABLE };
@@ -307,10 +327,44 @@ export function useRankingBoard(route) {
     return t("sort.gainRanking", { period: periodLabels[sortKey] });
   }, [sortKey, t, periodLabels]);
 
+  // IMPL_PLAN_SH46 §2: gates *whether/when* the fetch below starts, without
+  // changing the fetch itself. Split into two effects rather than one
+  // effect keyed on `route.name` directly, so a route change among the
+  // ranking-needing routes (list/detail/group/dashboard/tasks/schedule/
+  // raffle) never re-triggers this: `rankingFetchStarted` only ever flips
+  // false -> true, once, the first time the route actually needs ranking
+  // data (which may be on mount, or later after starting on an Enhance
+  // History route -- (c) "SF -> ランキング画面 と移動したら取得が走る") --
+  // it is never reset back to false, so re-entering an Enhance History
+  // route afterward does not "un-load" already-fetched data, and returning
+  // to a ranking route does not refetch it (matches the original
+  // fetch-once-per-session behavior for routes that do need it).
+  const [rankingFetchStarted, setRankingFetchStarted] = useState(false);
+
   useEffect(() => {
+    if (!shouldLoadRankingData(route.name)) {
+      // (d) "loading が張り付かない": if the very first route rendered is
+      // an Enhance History one, nothing else would ever flip the initial
+      // `loading === true` back to false, since the fetch below never
+      // starts for these routes.
+      setLoading(false);
+      return;
+    }
+    setRankingFetchStarted(true);
+  }, [route.name]);
+
+  useEffect(() => {
+    if (!rankingFetchStarted) {
+      return;
+    }
     let cancelled = false;
 
     async function loadRankings() {
+      // Mirrors the pre-SH-46 initial `useState(true)` for the case this
+      // fetch starts later than mount (started on an Enhance History
+      // route, then navigated to a ranking route -- `loading` may already
+      // have been set to `false` by the gating effect above by then).
+      setLoading(true);
       try {
         const candidates = ["data/v2/rankings.json"];
         let payload = null;
@@ -361,7 +415,7 @@ export function useRankingBoard(route) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [rankingFetchStarted]);
 
   const ensureHistories = useCallback(
     async (targets) => {

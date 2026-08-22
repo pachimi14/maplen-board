@@ -90,26 +90,95 @@ function weekdayShort(date, locale, timeZone = "UTC") {
   }
 }
 
+// IMPL_PLAN_SH43 (2026-08-22, user decision): every function below that
+// renders a *calendar date* (month/day/year order) now lets
+// `Intl.DateTimeFormat` pick that order itself, instead of this file
+// hand-assembling `${month}/${day}` or `${year}-${month}-${day}` (SH-14's
+// ISO-order convention). This is a genuine display change, not a bug fix --
+// see docs/reports/SH43_LOCALE_DATE_FORMAT.md for the record -- prompted by
+// the user's own observation that `05/06` reads as "5月6日" in ja but
+// "June 5" in en/es/vi under the old fixed order. `timeZone: "UTC"` is still
+// passed explicitly (SH-14's zone stays authoritative/unchanged) and the
+// literal " UTC" suffix is still appended by this file, never handed to
+// `Intl`'s own `timeZoneName` (kept consistent with `formatTimeZoneLabel`'s
+// own SH-31 rationale a few functions down: `Intl`'s timezone-name
+// rendering is inconsistent across locales/zones, e.g. it wraps the name in
+// "[...]" brackets for zh-TW -- a literal, untranslated suffix stays the one
+// guaranteed-plain form). `Intl` also picks the calendar system itself (no
+// `calendar` option passed) -- this is what makes `th` render the Buddhist
+// year (2569) without any special-casing here (plan §1/(b): "タイは仏暦の
+// まま").
+//
+// IMPL_PLAN_SH43 §(l)/(m) addendum (2026-08-22, user decision, post-review):
+// `hour12` IS now forced -- to `false`, i.e. always 24h -- reversing this
+// comment's original "hour12 を強制しない" stance for the *time* portion
+// only. The user's actual request was the calendar *date* order (the
+// "05/06" ambiguity); letting `Intl` also pick 12h/24h was this file's own
+// extra scope, and it surfaced a real inconsistency the architect caught in
+// the running app: the tooltip (en/zh-TW, 12h) and the heatmap's column
+// headers (`formatClockTime`/`formatLocalClockTime` below, deliberately
+// left as fixed 24h -- see those functions' own SH-43 notes) disagreed on
+// the same UTC-labeled hour within the very same screen. 24h was picked
+// over 12h for both: it is what the heatmap already had (no churn there),
+// and it reads unambiguously next to an explicit "UTC" suffix (no
+// "12:00 AM"-is-midnight-or-noon guessing). Date order / weekday placement /
+// calendar (Buddhist year) are untouched by this addendum -- only `hour12`.
+/** Renders `date` as a locale-native calendar string in `timeZone`, with the
+ * short weekday folded in via `Intl`'s own `weekday: "short"` option
+ * (rather than this file appending "(Weekday)" itself) -- each locale's
+ * `Intl` data decides where the weekday sits (e.g. leading "Tue, " in en,
+ * trailing "(火)" in ja). `withTime` adds hour/minute, always 24h
+ * (`hour12: false`, IMPL_PLAN_SH43 §(l) addendum -- matches the heatmap's
+ * own fixed-24h column headers so the same UTC-labeled hour never reads
+ * differently in two places on the same screen); omit `withTime` for a
+ * date-only string (`formatAxisDate`, which has no hour12 question at all).
+ * Returns `null` if `Intl` cannot format the given locale/zone (caller
+ * falls back to the always-safe UTC ISO parts, same "never a hardcoded
+ * fallback string" discipline `weekdayShort` above already follows). */
+function localizedDateString(date, locale, timeZone, { withYear = true, withTime = false } = {}) {
+  try {
+    return new Intl.DateTimeFormat(locale, {
+      timeZone,
+      ...(withYear ? { year: "numeric" } : {}),
+      month: "2-digit",
+      day: "2-digit",
+      weekday: "short",
+      ...(withTime ? { hour: "2-digit", minute: "2-digit", hour12: false } : {}),
+    }).format(date);
+  } catch {
+    return null;
+  }
+}
+
 /** Short axis tick label from a bucket-start ISO date, in UTC with the
- * weekday appended (plan §2/(a): "08/04 (Thu)" style). */
+ * weekday folded in by `Intl` (plan §2/(a): e.g. "Sun, 03/08" in en,
+ * "03/08(日)" in ja -- each locale's own month/day order and weekday
+ * placement, IMPL_PLAN_SH43). */
 export function formatAxisDate(isoDate, { locale = "en" } = {}) {
   const date = new Date(isoDate);
   if (Number.isNaN(date.getTime())) return "";
+  const localized = localizedDateString(date, locale, "UTC", { withYear: false });
+  if (localized != null) return localized;
   const parts = utcDateTimeParts(date);
   const weekday = weekdayShort(date, locale);
   return weekday ? `${parts.month}/${parts.day} (${weekday})` : `${parts.month}/${parts.day}`;
 }
 
 /** Full tooltip date label (design §9: "ラベルは区間開始時刻"), in UTC with
- * the weekday appended (plan §2/(a): "2026-08-04 20:00 UTC (Thu)" style).
- * The literal "UTC" is embedded directly in the string here (IMPL_PLAN_SH14
- * §0-1/#4): the page no longer has a calc-conditions block to disclose the
- * timezone once elsewhere (SH-13 removed that block), so this tooltip is now
- * the disclosure. "UTC" itself is not translated (same treatment as the
- * "NESO" unit in `formatExactNeso` above). */
+ * the weekday folded in by `Intl` and an explicit "UTC" suffix
+ * (IMPL_PLAN_SH43: locale-native year/month/day order + weekday placement +
+ * hour12/24 convention, e.g. "Tue, 08/04/2026, 11:00 AM UTC" in en, "อ.
+ * 04/08/2569 11:00 UTC" in th). The literal "UTC" is embedded directly in
+ * the string here (IMPL_PLAN_SH14 §0-1/#4): the page no longer has a
+ * calc-conditions block to disclose the timezone once elsewhere (SH-13
+ * removed that block), so this tooltip is now the disclosure. "UTC" itself
+ * is not translated (same treatment as the "NESO" unit in `formatExactNeso`
+ * above). */
 export function formatTooltipDate(isoDate, { locale = "en" } = {}) {
   const date = new Date(isoDate);
   if (Number.isNaN(date.getTime())) return "";
+  const localized = localizedDateString(date, locale, "UTC", { withTime: true });
+  if (localized != null) return `${localized} UTC`;
   const parts = utcDateTimeParts(date);
   const weekday = weekdayShort(date, locale);
   const base = `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute} UTC`;
@@ -190,7 +259,14 @@ export function groupFilledBands(filledBands) {
  * Handles a day rollover the same way `utcDateTimeParts` already normalizes
  * any UTC-midnight "24" ICU can emit, so a bucket starting `20:00` correctly
  * ends at `00:00` (not `24:00`). Returns `null` for an unparsable date
- * (never invents a range). */
+ * (never invents a range).
+ *
+ * IMPL_PLAN_SH43: kept as a plain 24h "HH:MM" pair for the same reason as
+ * `formatClockTime` -- a bare clock range has no month/day-order ambiguity
+ * to fix, and the caller's `sfhistory.chart.tooltipBucketRange*` templates
+ * already read `{{start}}`/`{{end}}` as this exact "HH:MM" shape in every
+ * locale's translation string (`i18n/locales/*.json`, untouched by this
+ * plan). */
 export function formatBucketRange(isoDate) {
   const start = new Date(isoDate);
   if (Number.isNaN(start.getTime())) return null;
@@ -274,7 +350,18 @@ export function weekdayShortLabel(weekdayIndex, locale = "en") {
  * headers (IMPL_PLAN_SH14 §4: now always a fixed UTC hour -- 00/04/08/12/
  * 16/20 -- rather than a resolved local wall-clock time). `null`/`null` (an
  * empty column, no data at all in that slot) renders as "--:--" rather than
- * "00:00" (never inventing a time that wasn't observed). */
+ * "00:00" (never inventing a time that wasn't observed).
+ *
+ * IMPL_PLAN_SH43 (2026-08-22): deliberately kept a fixed 24h zero-padded
+ * clock-position label, not routed through `Intl`/`hour12` like the
+ * calendar-date functions above. Two reasons: (1) there is no month/day-
+ * order ambiguity for a bare "HH:MM" the way there is for a date -- the
+ * problem this plan exists to fix does not apply here; (2) the heatmap's 6
+ * columns already share a tight `minmax(0, 1fr)` budget at 375px
+ * (sfhistory.css's `.sfh-heatmap-grid`) -- appending "AM"/"PM" (en) or a CJK
+ * "上午"/"下午" prefix (zh-TW) measured to roughly double the label width
+ * and risks column overflow. Same "narrow-space, judgment call" precedent
+ * IMPL_PLAN_SH29 §1 already set for the chart axis staying UTC-only. */
 export function formatClockTime(hour, minute) {
   if (hour == null || minute == null) return "--:--";
   return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
@@ -412,18 +499,21 @@ export function formatTimeZoneLabel(timeZone, referenceDate = new Date()) {
 }
 
 /** plan §1: the chart tooltip's *secondary* local-time line -- same shape
- * as `formatTooltipDate` (full date+time+weekday) but read in `timeZone`
- * (defaults to the viewer's own), with `formatTimeZoneLabel` appended so
- * the line is self-explaining on its own without needing the UTC line
- * above it for context (e.g. "2026-08-05 21:00 UTC+9 (Thu)"). Returns "" for
- * an unparsable date, same as `formatTooltipDate`. */
+ * as `formatTooltipDate` (full date+time+weekday, locale-native order,
+ * IMPL_PLAN_SH43) but read in `timeZone` (defaults to the viewer's own),
+ * with `formatTimeZoneLabel` appended so the line is self-explaining on its
+ * own without needing the UTC line above it for context (e.g. "Tue,
+ * 08/05/2026, 09:00 PM UTC+9" in en, "2026/08/05(火) 21:00 UTC+9" in ja).
+ * Returns "" for an unparsable date, same as `formatTooltipDate`. */
 export function formatTooltipDateLocal(isoDate, { locale = "en", timeZone } = {}) {
   const date = new Date(isoDate);
   if (Number.isNaN(date.getTime())) return "";
   const tz = timeZone || localTimeZone();
+  const zoneLabel = formatTimeZoneLabel(tz, date);
+  const localized = localizedDateString(date, locale, tz, { withTime: true });
+  if (localized != null) return `${localized} ${zoneLabel}`;
   const parts = localizedDateTimeParts(date, tz);
   const weekday = weekdayShort(date, locale, tz);
-  const zoneLabel = formatTimeZoneLabel(tz, date);
   const base = `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute} ${zoneLabel}`;
   return weekday ? `${base} (${weekday})` : base;
 }
@@ -439,7 +529,11 @@ export function formatTooltipDateLocal(isoDate, { locale = "en", timeZone } = {}
  * `weekdayStats.js#buildWeekdayHeatmap` -- the cell grouping is computed
  * entirely in fixed UTC before this ever runs, so this cannot move a single
  * cell (plan §2: "集計は UTC 基準のまま変えない"). `null`/`null` (an empty
- * column) still renders "--:--", matching `formatClockTime`. */
+ * column) still renders "--:--", matching `formatClockTime`.
+ *
+ * IMPL_PLAN_SH43: same fixed 24h zero-padded output, same rationale as
+ * `formatClockTime` above (no date-order ambiguity in a bare clock time;
+ * the heatmap column already has two stacked lines in a narrow grid cell). */
 export function formatLocalClockTime(hour, minute, { timeZone, referenceDate = new Date() } = {}) {
   if (hour == null || minute == null) return "--:--";
   const tz = timeZone || localTimeZone();
