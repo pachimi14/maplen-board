@@ -51,6 +51,10 @@ export function combineSelectedPartyClears(clears, memberIds) {
     drops: [],
   }]));
   const historyMemberIds = new Set();
+  // S3 (docs/IMPL_PLAN_RAFFLE_REWARD_VOCAB.md): excludedRewards lives on each source clear, not
+  // per member -- merged the same way member drops/amounts are, same name summed across every
+  // combined clear, so the note shown for a multi-clear selection covers all of them.
+  const excludedTotals = new Map();
   for (const clear of clears) {
     clear.historyMemberIds.forEach((memberId) => historyMemberIds.add(memberId));
     for (const member of clear.members) {
@@ -60,6 +64,9 @@ export function combineSelectedPartyClears(clears, memberIds) {
       combined.ascendantNeso += BigInt(member.ascendantNeso);
       combined.drops.push(...member.drops);
     }
+    for (const reward of Array.isArray(clear.excludedRewards) ? clear.excludedRewards : []) {
+      excludedTotals.set(reward.name, (excludedTotals.get(reward.name) || 0n) + BigInt(reward.quantity));
+    }
   }
   return {
     clearId: "combined-" + clears.map((clear) => clear.clearId).join("+"),
@@ -68,6 +75,7 @@ export function combineSelectedPartyClears(clears, memberIds) {
     historyMemberIds: memberIds.filter((memberId) => historyMemberIds.has(memberId)),
     complete: true,
     sourceClears: clears,
+    excludedRewards: [...excludedTotals].map(([name, quantity]) => ({ name, quantity: quantity.toString() })),
     members: memberIds.map((memberId) => {
       const member = combinedByMember.get(memberId);
       return {

@@ -9,7 +9,7 @@ from contracts import CreateJobRequest
 
 
 SCHEMA_VERSION = 3
-CLASSIFICATION_VERSION = 2
+CLASSIFICATION_VERSION = 3
 TARGET_BOSSES = {"Lucid": "LUCID", "Will": "WILL"}
 TARGET_COINS = {"LUCID": "Phantasma Coin", "WILL": "Arachno Coin"}
 FT_ITEM_NAME = "Sealed Mirror World Nodestone"
@@ -26,6 +26,12 @@ CLEAR_CLUSTER_WINDOW = timedelta(hours=1)
 POWER_CRYSTAL_PATTERN = re.compile(
     r"^(?P<amount>\d+)(?P<suffix>[KM]?) Power Crystal Coupon$", re.IGNORECASE
 )
+# docs/IMPL_PLAN_RAFFLE_REWARD_VOCAB.md S1: the official API switched Power Crystal from a
+# coupon item (name-pattern, resolved via metadata) to a direct-amount item at this fixed
+# itemId (quantity IS the Power Crystal amount, face value 1). Metadata for it 404s, same as
+# NESO's itemId 1 -- both are currency-like IDs with no item metadata entry.
+POWER_CRYSTAL_DIRECT_ITEM_ID = 1000
+RING_BOX_NAME_SUFFIX = "Ring Box"
 
 def _drops(boss: str, member_index: int) -> list[dict]:
     drops = []
@@ -54,7 +60,7 @@ def fixture_result(request: CreateJobRequest) -> dict:
         members = []
         for index, character in enumerate(request.characters):
             members.append({"memberId": character.memberId, "bossNeso": "600" if index == 0 else "0", "powerCrystalAmount": "100" if index == 0 else "0", "ascendantNeso": "50" if index == 0 else "0", "drops": _drops(boss, index)})
-        clears.append({"clearId": "fixture-" + boss.lower(), "boss": boss, "bossDifficulty": difficulty, "ascendantTier": ascendant_tier, "partyCount": len(request.characters), "historyMemberIds": [character.memberId for character in request.characters], "complete": True, "members": members})
+        clears.append({"clearId": "fixture-" + boss.lower(), "boss": boss, "bossDifficulty": difficulty, "ascendantTier": ascendant_tier, "partyCount": len(request.characters), "historyMemberIds": [character.memberId for character in request.characters], "complete": True, "members": members, "excludedRewards": []})
     member_wallets = {character.memberId: character.walletOverride or _fixture_wallet_address(character.assetKey) for character in request.characters}
     return {"raffleResults": raffle_results, "clears": clears, "warnings": [{"code": "fixture_mode"}], "errors": [], "memberWallets": member_wallets}
 
@@ -116,6 +122,8 @@ def _layer_names(layer: dict | None) -> tuple[str, str, str | None]:
 def _classification(item_id: int, metadata: dict | None) -> tuple[str, str]:
     if item_id == 1:
         return "NESO", "NESO"
+    if item_id == POWER_CRYSTAL_DIRECT_ITEM_ID:
+        return "POWER_CRYSTAL", "Power Crystal"
     name = _text((metadata or {}).get("itemName")) or f"Item {item_id}"
     if name in TARGET_COINS.values() and _text((metadata or {}).get("tier1")) == "Exchange Currency":
         return "COIN", name
@@ -123,6 +131,13 @@ def _classification(item_id: int, metadata: dict | None) -> tuple[str, str]:
         return "POWER_CRYSTAL", name
     if name == FT_ITEM_NAME:
         return "FT_ITEM", name
+    # docs/IMPL_PLAN_RAFFLE_REWARD_VOCAB.md S2: Rank N Special Skill Ring Box (tier1=Voucher,
+    # like Sealed Mirror World Nodestone) is sellable gear-adjacent loot, not a raffle currency
+    # -- treated as EQUIPMENT so it gets a sale-price input like other drops. Suffix match (not
+    # a literal name list) so a future "Rank 8 ..." tier keeps working without a code change
+    # (LULU-130 lesson: exact-name matching alone breaks on upstream vocabulary growth).
+    if _text((metadata or {}).get("tier1")) == "Voucher" and name.endswith(RING_BOX_NAME_SUFFIX):
+        return "EQUIPMENT", name
     if _text((metadata or {}).get("tier0")) == "Item":
         return "EQUIPMENT", name
     return "OTHER", name
@@ -139,6 +154,20 @@ def _power_crystal_face_value(metadata: dict | None) -> int:
         return 0
     multiplier = {"": 1, "K": 1_000, "M": 1_000_000}[match.group("suffix").upper()]
     return int(match.group("amount")) * multiplier
+
+
+def _power_crystal_amount(prize: dict, metadata: dict | None) -> int:
+    """docs/IMPL_PLAN_RAFFLE_REWARD_VOCAB.md S1: resolves a single prize's Power Crystal
+    contribution under either vocabulary the official API has used. `itemId 1000` is a direct
+    grant -- the prize's quantity IS the Power Crystal amount (face value 1, no metadata
+    needed/available). The older `"<N>[K|M] Power Crystal Coupon"` name pattern is still
+    honored so past rounds (already-settled coupon-style history) keep recalculating the same
+    way (no regression)."""
+    item_id = _item_id(prize)
+    quantity = _quantity(prize)
+    if item_id == POWER_CRYSTAL_DIRECT_ITEM_ID:
+        return quantity
+    return quantity * _power_crystal_face_value(metadata)
 
 
 def _clear_entries(history: dict) -> list[tuple[datetime, int]]:
@@ -162,43 +191,65 @@ def _clear_entries(history: dict) -> list[tuple[datetime, int]]:
     return result
 
 
-def _one_hour_party_cluster(
+def _one_hour_party_clusters(
     member_histories: dict[str, list[tuple[dict, datetime, int]]],
     expected_party_count: int,
-) -> tuple[dict[str, tuple[dict, int]], bool]:
-    records = []
-    ambiguous = False
+) -> tuple[list[tuple[dict[str, tuple[dict, int]], datetime]], bool]:
+    """Greedy-partitions every history record matching `expected_party_count` into
+    one-hour-window clusters (docs/IMPL_PLAN_RAFFLE_MULTI_CLEAR.md S1). Unlike the
+    single-cluster predecessor this fully floats a member's repeated clears at the
+    same official party size: each is kept (no longer dropped outright) and only
+    excluded from a cluster it would collide with (two records for the same member
+    inside the same one-hour window), which is the one case still flagged via the
+    returned `ambiguous` bool. Disjoint same-size groups (e.g. two independent
+    6-person parties) are no longer forced to tie-break away; every non-conflicting
+    cluster is returned as its own independent candidate.
+    """
+    records: list[tuple[datetime, str, dict, int]] = []
     for member_id, values in member_histories.items():
-        matching = [value for value in values if value[2] == expected_party_count]
-        if len(matching) > 1:
-            ambiguous = True
-            continue
-        if len(matching) == 1:
-            history, cleared_at, party_count = matching[0]
-            records.append((cleared_at, member_id, history, party_count))
+        for history, cleared_at, party_count in values:
+            if party_count == expected_party_count:
+                records.append((cleared_at, member_id, history, party_count))
     records.sort(key=lambda value: value[0])
-    minimum_members = 1
-    best_count = 0
-    best_clusters: dict[frozenset[str], list[tuple[datetime, str, dict, int]]] = {}
-    right = 0
-    for left in range(len(records)):
-        if right < left:
-            right = left
-        while right < len(records) and records[right][0] - records[left][0] <= CLEAR_CLUSTER_WINDOW:
-            right += 1
-        window = records[left:right]
-        if len(window) < minimum_members:
+
+    assigned = [False] * len(records)
+    ambiguous = False
+    clusters: list[list[tuple[datetime, str, dict, int]]] = []
+    for seed_index in range(len(records)):
+        if assigned[seed_index]:
             continue
-        member_set = frozenset(value[1] for value in window)
-        if len(window) > best_count:
-            best_count = len(window)
-            best_clusters = {member_set: window}
-        elif len(window) == best_count:
-            best_clusters[member_set] = window
-    if best_count < minimum_members or len(best_clusters) != 1:
-        return {}, ambiguous or len(best_clusters) > 1
-    cluster = next(iter(best_clusters.values()))
-    return {member_id: (history, party_count) for _cleared_at, member_id, history, party_count in cluster}, ambiguous
+        seed_time = records[seed_index][0]
+        cluster_member_ids = {records[seed_index][1]}
+        cluster = [records[seed_index]]
+        assigned[seed_index] = True
+        for candidate_index in range(seed_index + 1, len(records)):
+            if assigned[candidate_index]:
+                continue
+            cleared_at, member_id, _history, _party_count = records[candidate_index]
+            if cleared_at - seed_time > CLEAR_CLUSTER_WINDOW:
+                break
+            if member_id in cluster_member_ids:
+                # Same member has a second clear for this official party size inside
+                # this cluster's one-hour window: which one belongs here is
+                # genuinely ambiguous, so it is left out (and left unassigned --
+                # it may still form its own cluster later if it doesn't collide
+                # with anything else).
+                ambiguous = True
+                continue
+            cluster_member_ids.add(member_id)
+            cluster.append(records[candidate_index])
+            assigned[candidate_index] = True
+        if len(cluster) > expected_party_count:
+            # Cannot exceed the official party size; discard as unresolved.
+            continue
+        clusters.append(cluster)
+    return [
+        (
+            {member_id: (history, party_count) for _cleared_at, member_id, history, party_count in cluster},
+            cluster[0][0],
+        )
+        for cluster in clusters
+    ], ambiguous
 
 
 def _is_ascendant(layer: dict | None) -> bool:
@@ -273,6 +324,7 @@ def _sum_item(history: dict | None, item_id: int) -> int:
 
 def _member_settlement(member_id: str, boss_code: str, history: dict, ascendant: dict | None, item_metadata: dict[int, dict], drop_scope: str = "") -> dict:
     drops = []
+    excluded_rewards: list[tuple[str, int]] = []
     drop_prefix = boss_code.lower() + ("-" + drop_scope if drop_scope else "") + "-" + member_id
     coin_name = TARGET_COINS[boss_code]
     coin_quantity = 0
@@ -296,18 +348,38 @@ def _member_settlement(member_id: str, boss_code: str, history: dict, ascendant:
             # asked for a resale price like coin/equipment so it can be settled the same way.
             ft_item_index += 1
             drops.append({"dropId": f"{drop_prefix}-ftitem-{ft_item_index}", "category": "FT_ITEM", "name": name, "quantity": str(quantity), "imageUrl": _item_icon_url(item_metadata.get(item_id))})
+        elif classification == "OTHER":
+            # docs/IMPL_PLAN_RAFFLE_REWARD_VOCAB.md S3: a reward that falls out of every
+            # distributable category used to vanish silently (the exact class of bug behind
+            # LULU-119/130 and this plan's Ring Box/itemId-1000 fixes). Surfaced instead of
+            # dropped, so the next vocabulary drift is visible in the UI, not just in a stale
+            # payout total.
+            excluded_rewards.append((name, quantity))
     if coin_quantity:
         drops.insert(0, {"dropId": f"{drop_prefix}-coin", "category": "COIN", "name": coin_name, "quantity": str(coin_quantity), "imageUrl": coin_image_url})
     power_crystal = 0
     for prize in _prizes(ascendant or {}):
-        quantity = _quantity(prize)
         item_id = _item_id(prize)
-        power_crystal += quantity * _power_crystal_face_value(item_metadata.get(item_id))
-    return {"memberId": member_id, "bossNeso": str(_sum_item(history, 1)), "powerCrystalAmount": str(power_crystal), "ascendantNeso": str(_sum_item(ascendant, 1)), "drops": drops}
+        power_crystal += _power_crystal_amount(prize, item_metadata.get(item_id))
+    return {"memberId": member_id, "bossNeso": str(_sum_item(history, 1)), "powerCrystalAmount": str(power_crystal), "ascendantNeso": str(_sum_item(ascendant, 1)), "drops": drops, "excludedRewards": excluded_rewards}
 
 
 def _empty_member_settlement(member_id: str) -> dict:
-    return {"memberId": member_id, "bossNeso": "0", "powerCrystalAmount": "0", "ascendantNeso": "0", "drops": []}
+    return {"memberId": member_id, "bossNeso": "0", "powerCrystalAmount": "0", "ascendantNeso": "0", "drops": [], "excludedRewards": []}
+
+
+def _clear_excluded_rewards(members: list[dict]) -> list[dict]:
+    """Aggregates each member's excludedRewards (S3) into one same-name-summed list for the
+    whole clear, then strips the internal-only per-member field back off `members` so it never
+    leaks into the payload's member objects (the field belongs on the clear, not the member)."""
+    totals: dict[str, int] = {}
+    order: list[str] = []
+    for member in members:
+        for name, quantity in member.pop("excludedRewards", []):
+            if name not in totals:
+                order.append(name)
+            totals[name] = totals.get(name, 0) + quantity
+    return [{"name": name, "quantity": str(totals[name])} for name in order]
 
 
 def normalize_live_history(request: CreateJobRequest, character_histories: dict[str, list[dict]], layers: list[dict], item_metadata: dict[int, dict], initial_errors: list[dict] | None = None) -> dict:
@@ -368,10 +440,10 @@ def normalize_live_history(request: CreateJobRequest, character_histories: dict[
             # have multiple independent clears (e.g. a 5-person party and a separate 6-person
             # party both clearing Hard Will), and the caller decides which to combine.
             for official_party_count in observed_party_counts:
-                cluster, ambiguous = _one_hour_party_cluster(member_histories, official_party_count)
-                if cluster and len(cluster) <= official_party_count:
-                    if ambiguous:
-                        warnings.append({"code": "ambiguous_party_cluster", "boss": boss_code, "bossDifficulty": difficulty, "partyCount": official_party_count})
+                clusters, ambiguous = _one_hour_party_clusters(member_histories, official_party_count)
+                if ambiguous:
+                    warnings.append({"code": "ambiguous_party_cluster", "boss": boss_code, "bossDifficulty": difficulty, "partyCount": official_party_count})
+                for cluster_index, (cluster, cluster_cleared_at) in enumerate(clusters, start=1):
                     members = []
                     history_member_ids = []
                     missing_ascendant_tier = None
@@ -391,7 +463,9 @@ def normalize_live_history(request: CreateJobRequest, character_histories: dict[
                         # clear rather than only surfacing zeroed amounts.
                         warnings.append({"code": "ascendant_not_found", "boss": boss_code, "bossDifficulty": difficulty, "expectedTier": missing_ascendant_tier})
                     clears.append({
-                        "clearId": f"clear-{boss_code.lower()}-{difficulty.lower()}-p{official_party_count}",
+                        # Index disambiguates independent same-partyCount clusters (S1):
+                        # every cluster gets its own clearId, even when there is only one.
+                        "clearId": f"clear-{boss_code.lower()}-{difficulty.lower()}-p{official_party_count}-{cluster_index}",
                         "boss": boss_code,
                         "bossDifficulty": difficulty,
                         "ascendantTier": ascendant_tier,
@@ -399,7 +473,7 @@ def normalize_live_history(request: CreateJobRequest, character_histories: dict[
                         "historyMemberIds": history_member_ids,
                         "complete": True,
                         "members": members,
+                        "clearedAt": cluster_cleared_at.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
+                        "excludedRewards": _clear_excluded_rewards(members),
                     })
-                elif ambiguous:
-                    warnings.append({"code": "ambiguous_party_cluster", "boss": boss_code, "bossDifficulty": difficulty, "partyCount": official_party_count})
     return {"raffleResults": raffle_results, "clears": clears, "warnings": warnings, "errors": errors}

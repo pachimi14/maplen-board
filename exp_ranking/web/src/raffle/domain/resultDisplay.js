@@ -113,9 +113,17 @@ export function formatRaffleTimestamp(value) {
 }
 
 const POWER_CRYSTAL_COUPON_PATTERN = /^(\d+)([KM]?) Power Crystal Coupon$/i;
+// docs/IMPL_PLAN_RAFFLE_REWARD_VOCAB.md S4: the official API now also grants Power Crystal
+// directly (server classification POWER_CRYSTAL, display name literally "Power Crystal",
+// quantity IS the amount -- face value 1). The legacy coupon-name pattern (quantity = coupon
+// count, face value from the name) is kept unchanged so older rounds' weekly totals do not
+// change.
+const POWER_CRYSTAL_DIRECT_NAME = "power crystal";
 
 export function powerCrystalFaceValue(rewardName) {
-  const match = POWER_CRYSTAL_COUPON_PATTERN.exec(String(rewardName || "").trim());
+  const trimmed = String(rewardName || "").trim();
+  if (trimmed.toLocaleLowerCase() === POWER_CRYSTAL_DIRECT_NAME) return 1n;
+  const match = POWER_CRYSTAL_COUPON_PATTERN.exec(trimmed);
   if (!match) return 0n;
   const multiplier = { "": 1n, K: 1_000n, M: 1_000_000n }[match[2].toLocaleUpperCase()];
   return BigInt(match[1]) * multiplier;
