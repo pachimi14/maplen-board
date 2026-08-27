@@ -16,9 +16,18 @@ const ASCENDANT_TIER_BY_CLEAR = Object.freeze({
 const INTEGER_PATTERN = /^\d+$/;
 const ITEM_ICON_PATTERN = /^https:\/\/api-static\.msu\.io\/itemimages\/[A-Za-z0-9_./-]+$/;
 const WALLET_PATTERN = /^0x[0-9a-fA-F]{40}$/;
+const ISO_8601_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,9})?(Z|[+-]\d{2}:\d{2})$/;
 
 function validIntegerString(value) {
   return typeof value === "string" && INTEGER_PATTERN.test(value) && value.length <= 60;
+}
+
+// A clear's clearedAt (docs/IMPL_PLAN_RAFFLE_MULTI_CLEAR.md S1/S2) is the cluster's earliest
+// history timestamp, used only to let a person tell apart same-boss/difficulty/partyCount
+// candidates in the UI -- an invalid/missing value degrades to "no time shown" rather than
+// failing the whole payload.
+function normalizedClearedAt(value) {
+  return typeof value === "string" && ISO_8601_PATTERN.test(value) ? value : "";
 }
 
 // memberWallets (LULU-069/LULU-103): each requested party member's own owner
@@ -61,20 +70,19 @@ export function normalizeJobPayload(payload) {
   // Up to 6 party sizes per boss/difficulty (LULU-096 independent clusters) x 3 difficulties x 2 bosses.
   if (!Array.isArray(payload.clears) || payload.clears.length > 36) return { ok: false, code: "invalidClears" };
   const clearIds = new Set();
-  const clearIdentities = new Set();
   const dropIds = new Set();
+  const normalizedClears = [];
   for (const clear of payload.clears) {
     const registeredCount = Array.isArray(clear?.members) ? clear.members.length : 0;
     const clearKey = clear?.boss + ":" + clear?.bossDifficulty;
-    // A given boss+difficulty may legitimately produce multiple independent clear candidates
-    // (one per observed partyCount cluster), so uniqueness is keyed on partyCount as well.
-    const clearIdentity = clearKey + ":" + clear?.partyCount;
     const expectedAscendantTier = ASCENDANT_TIER_BY_CLEAR[clearKey];
-    if (!clear || typeof clear.clearId !== "string" || !clear.clearId || clearIds.has(clear.clearId) || !RAFFLE_BOSSES.includes(clear.boss) || clearIdentities.has(clearIdentity) || clear.complete !== true || !expectedAscendantTier || clear.ascendantTier !== expectedAscendantTier || !Number.isInteger(clear.partyCount) || clear.partyCount < 1 || clear.partyCount > 6 || !Array.isArray(clear.members) || registeredCount < 1 || registeredCount > 6 || !Array.isArray(clear.historyMemberIds) || clear.historyMemberIds.length < 1 || clear.historyMemberIds.length > registeredCount || clear.historyMemberIds.length > clear.partyCount) {
+    // A given boss+difficulty+partyCount may legitimately produce multiple independent clear
+    // candidates (e.g. two disjoint one-hour parties both clearing at the same official party
+    // size -- docs/IMPL_PLAN_RAFFLE_MULTI_CLEAR.md), so uniqueness is keyed on clearId alone.
+    if (!clear || typeof clear.clearId !== "string" || !clear.clearId || clearIds.has(clear.clearId) || !RAFFLE_BOSSES.includes(clear.boss) || clear.complete !== true || !expectedAscendantTier || clear.ascendantTier !== expectedAscendantTier || !Number.isInteger(clear.partyCount) || clear.partyCount < 1 || clear.partyCount > 6 || !Array.isArray(clear.members) || registeredCount < 1 || registeredCount > 6 || !Array.isArray(clear.historyMemberIds) || clear.historyMemberIds.length < 1 || clear.historyMemberIds.length > registeredCount || clear.historyMemberIds.length > clear.partyCount) {
       return { ok: false, code: "invalidClear" };
     }
     clearIds.add(clear.clearId);
-    clearIdentities.add(clearIdentity);
     const memberIds = new Set();
     for (const member of clear.members) {
       if (!member || typeof member.memberId !== "string" || !member.memberId || memberIds.has(member.memberId) || !validIntegerString(member.bossNeso) || !validIntegerString(member.powerCrystalAmount) || !validIntegerString(member.ascendantNeso) || !Array.isArray(member.drops)) {
@@ -92,6 +100,7 @@ export function normalizeJobPayload(payload) {
     if (historyMemberIds.size !== clear.historyMemberIds.length || clear.historyMemberIds.some((memberId) => typeof memberId !== "string" || !memberIds.has(memberId))) {
       return { ok: false, code: "invalidClear" };
     }
+    normalizedClears.push({ ...clear, clearedAt: normalizedClearedAt(clear.clearedAt) });
   }
 
   return {
@@ -103,7 +112,7 @@ export function normalizeJobPayload(payload) {
       status: payload.status,
       progress: { completedCharacters: progress.completedCharacters, totalCharacters: progress.totalCharacters, stage: typeof progress.stage === "string" ? progress.stage : payload.status, elapsedMs: progress.elapsedMs },
       raffleResults: payload.raffleResults,
-      clears: payload.clears,
+      clears: normalizedClears,
       warnings: Array.isArray(payload.warnings) ? payload.warnings : [],
       errors: Array.isArray(payload.errors) ? payload.errors : [],
       memberWallets: normalizeMemberWallets(payload.memberWallets),

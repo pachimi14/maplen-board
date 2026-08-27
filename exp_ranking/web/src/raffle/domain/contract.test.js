@@ -71,7 +71,7 @@ describe("normalizeJobPayload", () => {
     expect(normalizeJobPayload(value).code).toBe("invalidClearMember");
   });
 
-  it("accepts multiple difficulties of one boss but rejects duplicate difficulty candidates", () => {
+  it("accepts multiple difficulties of one boss but rejects an incomplete clear", () => {
     const incomplete = payload();
     incomplete.clears[0].complete = false;
     expect(normalizeJobPayload(incomplete).code).toBe("invalidClear");
@@ -83,12 +83,15 @@ describe("normalizeJobPayload", () => {
     mixed.clears[1].historyMemberIds = ["member-2"];
     mixed.clears[1].members.forEach((member) => { member.drops = []; });
     expect(normalizeJobPayload(mixed).ok).toBe(true);
+    // docs/IMPL_PLAN_RAFFLE_MULTI_CLEAR.md S2: a second candidate that ends up with the exact
+    // same boss+difficulty+partyCount as clears[0] is no longer rejected on that basis alone --
+    // two independent clusters can legitimately share it (distinct clearId is what matters).
     mixed.clears[1].bossDifficulty = "HARD";
     mixed.clears[1].ascendantTier = "Divine Ascendant";
-    expect(normalizeJobPayload(mixed).code).toBe("invalidClear");
+    expect(normalizeJobPayload(mixed).ok).toBe(true);
   });
 
-  it("accepts independent partyCount clusters of the same boss+difficulty but rejects an exact duplicate (LULU-096)", () => {
+  it("accepts independent partyCount clusters of the same boss+difficulty but rejects a duplicate clearId (LULU-096)", () => {
     const multiCluster = payload();
     multiCluster.clears.push(structuredClone(multiCluster.clears[0]));
     multiCluster.clears[1].clearId = "clear-lucid-hard-p6";
@@ -100,9 +103,43 @@ describe("normalizeJobPayload", () => {
 
     const exactDuplicate = payload();
     exactDuplicate.clears.push(structuredClone(exactDuplicate.clears[0]));
-    exactDuplicate.clears[1].clearId = "clear-lucid-hard-p2-duplicate";
     exactDuplicate.clears[1].members.forEach((member) => { member.drops = []; });
     expect(normalizeJobPayload(exactDuplicate).code).toBe("invalidClear");
+  });
+
+  // docs/IMPL_PLAN_RAFFLE_MULTI_CLEAR.md S2: two independent clusters can legitimately share
+  // the same boss+difficulty+partyCount (e.g. two disjoint one-hour parties both clearing at
+  // 6 people); uniqueness is keyed on clearId alone, not boss:difficulty:partyCount.
+  it("accepts two independent clusters at the same boss+difficulty+partyCount when clearId differs", () => {
+    const sameCount = payload();
+    sameCount.clears.push(structuredClone(sameCount.clears[0]));
+    sameCount.clears[1].clearId = "clear-lucid-hard-p2-2";
+    sameCount.clears[1].historyMemberIds = ["member-2"];
+    sameCount.clears[1].members.forEach((member) => { member.drops = []; });
+    const result = normalizeJobPayload(sameCount);
+    expect(result.ok).toBe(true);
+    expect(result.data.clears.map((clear) => [clear.clearId, clear.partyCount])).toEqual([
+      ["clear-lucid-hard", 2],
+      ["clear-lucid-hard-p2-2", 2],
+    ]);
+  });
+
+  // docs/IMPL_PLAN_RAFFLE_MULTI_CLEAR.md S3: clearedAt lets the UI tell apart same-partyCount
+  // candidates by clear time. Invalid/missing values degrade to "" rather than failing the
+  // payload.
+  it("accepts a valid ISO 8601 clearedAt and normalizes an invalid one to an empty string", () => {
+    const withValidClearedAt = payload();
+    withValidClearedAt.clears[0].clearedAt = "2026-07-23T14:00:00Z";
+    expect(normalizeJobPayload(withValidClearedAt).data.clears[0].clearedAt).toBe("2026-07-23T14:00:00Z");
+
+    const withInvalidClearedAt = payload();
+    withInvalidClearedAt.clears[0].clearedAt = "not-a-date";
+    const invalidResult = normalizeJobPayload(withInvalidClearedAt);
+    expect(invalidResult.ok).toBe(true);
+    expect(invalidResult.data.clears[0].clearedAt).toBe("");
+
+    const withoutClearedAt = payload();
+    expect(normalizeJobPayload(withoutClearedAt).data.clears[0].clearedAt).toBe("");
   });
 
   it("accepts the repository shared weekly contract fixture", () => {
