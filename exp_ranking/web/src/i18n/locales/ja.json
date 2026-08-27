@@ -78,6 +78,7 @@
     "selectedCandidateCount": "{{count}}件を合算",
     "distributionRoster": "保存PT {{memberCount}}人で分配",
     "chooseAtLeastOneCandidate": "分配に含めるボス難易度を1件以上選択してください。",
+    "excludedRewardsNote": "分配対象外の報酬: {{list}}",
     "item_coin": "コイン",
     "item_equipment": "装備ドロップ",
     "item_ftItem": "ウィルFT Item",

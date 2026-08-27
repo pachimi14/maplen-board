@@ -663,6 +663,51 @@ def test_ring_box_classifies_as_equipment_and_surfaces_a_sellable_drop() -> None
 
     member = result["clears"][0]["members"][0]
     assert member["drops"] == [{"dropId": "lucid-hard-m1-equipment-1", "category": "EQUIPMENT", "name": "Rank 6 Special Skill Ring Box", "quantity": "1", "imageUrl": ""}]
+    assert result["clears"][0]["excludedRewards"] == []
+
+
+def test_clear_surfaces_excluded_other_rewards_merged_by_name_across_members() -> None:
+    # Acceptance criterion 5 (docs/IMPL_PLAN_RAFFLE_REWARD_VOCAB.md): OTHER-classified rewards
+    # (still not distributable, e.g. Sealed Nodestone) are surfaced per clear instead of
+    # vanishing, with same-name quantities merged across every member of the clear.
+    request = request_for("m1", "m2")
+    histories = {
+        "m1": [{
+            "raffledAt": request.raffledAt,
+            "layerId": 205041,
+            "clearInformations": [{"clearedAt": "2026-08-27T14:00:00Z", "partyCount": 2}],
+            "prizes": [{"itemId": 2358005, "winCount": {"value": "1"}}],
+        }],
+        "m2": [{
+            "raffledAt": request.raffledAt,
+            "layerId": 205041,
+            "clearInformations": [{"clearedAt": "2026-08-27T14:00:30Z", "partyCount": 2}],
+            "prizes": [{"itemId": 2358005, "winCount": {"value": "2"}}],
+        }],
+    }
+    layers = [{"layerId": 205041, "boss": {"bossName": "Lucid", "difficulty": "DIFFICULTY_HARD", "raffleLayerName": "Hard Lucid"}}]
+    metadata = {2358005: {"itemName": "Sealed Nodestone", "tier0": "Consumable", "tier1": "Voucher"}}
+
+    result = normalize_live_history(request, histories, layers, metadata)
+
+    assert result["clears"][0]["excludedRewards"] == [{"name": "Sealed Nodestone", "quantity": "3"}]
+    # Internal-only field must never leak into the member payload.
+    assert all("excludedRewards" not in member for member in result["clears"][0]["members"])
+
+
+def test_clear_with_no_other_rewards_has_empty_excluded_rewards() -> None:
+    request = request_for("m1")
+    histories = {"m1": [{
+        "raffledAt": request.raffledAt,
+        "layerId": 205041,
+        "clearInformations": [{"clearedAt": "2026-08-27T14:00:00Z", "partyCount": 1}],
+        "prizes": [{"itemId": 1, "winCount": {"value": "100"}}],
+    }]}
+    layers = [{"layerId": 205041, "boss": {"bossName": "Lucid", "difficulty": "DIFFICULTY_HARD", "raffleLayerName": "Hard Lucid"}}]
+
+    result = normalize_live_history(request, histories, layers, {})
+
+    assert result["clears"][0]["excludedRewards"] == []
 
 
 def test_shared_contract_fixture_matches_fixture_normalizer() -> None:

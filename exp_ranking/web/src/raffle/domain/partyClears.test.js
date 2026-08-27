@@ -106,6 +106,56 @@ describe("Party Clear candidates", () => {
       { memberId: "member-2", bossNeso: "200", powerCrystalAmount: "60", ascendantNeso: "30", drops: normal.members[1].drops },
     ]);
   });
+  // S3 (docs/IMPL_PLAN_RAFFLE_REWARD_VOCAB.md): excludedRewards lives on the clear, not the
+  // member, and must merge same-name quantities across every combined source clear.
+  it("merges excludedRewards by name across every combined source clear", () => {
+    const hard = clear({
+      clearId: "clear-will-hard",
+      boss: "WILL",
+      bossDifficulty: "HARD",
+      ascendantTier: "Eternal Ascendant",
+      members: [
+        { memberId: "member-1", bossNeso: "0", powerCrystalAmount: "0", ascendantNeso: "0", drops: [] },
+        { memberId: "member-2", bossNeso: "0", powerCrystalAmount: "0", ascendantNeso: "0", drops: [] },
+      ],
+      excludedRewards: [{ name: "Sealed Nodestone", quantity: "1" }],
+    });
+    const normal = clear({
+      clearId: "clear-will-normal",
+      boss: "WILL",
+      bossDifficulty: "NORMAL",
+      ascendantTier: "Glorious Ascendant",
+      historyMemberIds: ["member-2"],
+      members: [
+        { memberId: "member-1", bossNeso: "0", powerCrystalAmount: "0", ascendantNeso: "0", drops: [] },
+        { memberId: "member-2", bossNeso: "0", powerCrystalAmount: "0", ascendantNeso: "0", drops: [] },
+      ],
+      excludedRewards: [{ name: "Sealed Nodestone", quantity: "2" }, { name: "Green Florin", quantity: "5" }],
+    });
+
+    const combined = combineSelectedPartyClears([hard, normal], ["member-1", "member-2"]);
+
+    expect(combined.excludedRewards).toEqual([
+      { name: "Sealed Nodestone", quantity: "3" },
+      { name: "Green Florin", quantity: "5" },
+    ]);
+  });
+
+  it("defaults to an empty excludedRewards list when source clears omit it", () => {
+    const hard = clear({
+      clearId: "clear-will-hard",
+      boss: "WILL",
+      bossDifficulty: "HARD",
+      ascendantTier: "Eternal Ascendant",
+      members: [
+        { memberId: "member-1", bossNeso: "0", powerCrystalAmount: "0", ascendantNeso: "0", drops: [] },
+        { memberId: "member-2", bossNeso: "0", powerCrystalAmount: "0", ascendantNeso: "0", drops: [] },
+      ],
+    });
+    const combined = combineSelectedPartyClears([hard], ["member-1", "member-2"]);
+    expect(combined.excludedRewards).toEqual([]);
+  });
+
   it("groups mixed difficulties under the same boss for explicit selection", () => {
     const hard = clear({ clearId: "clear-will-hard", boss: "WILL", bossDifficulty: "HARD", ascendantTier: "Eternal Ascendant" });
     const normal = clear({ clearId: "clear-will-normal", boss: "WILL", bossDifficulty: "NORMAL", ascendantTier: "Glorious Ascendant", historyMemberIds: ["member-2"] });

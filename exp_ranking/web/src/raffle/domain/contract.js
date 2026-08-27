@@ -1,5 +1,5 @@
 export const RAFFLE_SCHEMA_VERSION = 3;
-export const RAFFLE_CLASSIFICATION_VERSION = 2;
+export const RAFFLE_CLASSIFICATION_VERSION = 3;
 export const RAFFLE_BOSSES = Object.freeze(["LUCID", "WILL"]);
 export const RAFFLE_JOB_STATUSES = Object.freeze(["queued", "resolving", "fetching", "normalizing", "complete", "partial", "error", "cancelled"]);
 const RESULT_OUTCOMES = new Set(["WIN", "LOSE", "UNKNOWN"]);
@@ -42,6 +42,24 @@ function normalizeMemberWallets(value) {
     if (typeof memberId === "string" && memberId && typeof wallet === "string" && WALLET_PATTERN.test(wallet)) {
       result[memberId] = wallet;
     }
+  }
+  return result;
+}
+
+// excludedRewards (docs/IMPL_PLAN_RAFFLE_REWARD_VOCAB.md S3): rewards this clear won that
+// fell out of every distributable category (classification OTHER server-side), surfaced so a
+// future classification gap is visible instead of silently vanishing (the exact class of bug
+// behind LULU-119/130 and this plan's own Ring Box/itemId-1000 fixes). Same degrade-gracefully
+// treatment as clearedAt/memberWallets: missing/malformed entries drop out rather than
+// failing the whole payload.
+function normalizedExcludedRewards(value) {
+  if (!Array.isArray(value)) return [];
+  const result = [];
+  for (const entry of value) {
+    if (entry && typeof entry.name === "string" && entry.name && validIntegerString(entry.quantity)) {
+      result.push({ name: entry.name, quantity: entry.quantity });
+    }
+    if (result.length >= 50) break;
   }
   return result;
 }
@@ -100,7 +118,7 @@ export function normalizeJobPayload(payload) {
     if (historyMemberIds.size !== clear.historyMemberIds.length || clear.historyMemberIds.some((memberId) => typeof memberId !== "string" || !memberIds.has(memberId))) {
       return { ok: false, code: "invalidClear" };
     }
-    normalizedClears.push({ ...clear, clearedAt: normalizedClearedAt(clear.clearedAt) });
+    normalizedClears.push({ ...clear, clearedAt: normalizedClearedAt(clear.clearedAt), excludedRewards: normalizedExcludedRewards(clear.excludedRewards) });
   }
 
   return {

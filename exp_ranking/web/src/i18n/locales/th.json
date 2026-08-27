@@ -78,6 +78,7 @@
     "selectedCandidateCount": "รวม {{count}} รายการ",
     "distributionRoster": "แบ่งให้สมาชิกปาร์ตี้ที่บันทึกไว้ทั้ง {{memberCount}} คน",
     "chooseAtLeastOneCandidate": "เลือกระดับความยากของบอสอย่างน้อยหนึ่งรายการ",
+    "excludedRewardsNote": "รางวัลที่ไม่รวมในการแบ่งปัน: {{list}}",
     "item_coin": "เหรียญ",
     "item_equipment": "อุปกรณ์ดรอป",
     "item_ftItem": "Will FT Item",

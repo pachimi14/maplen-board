@@ -325,6 +325,13 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
   const activeClearBossLabel = activeClear
     ? [...new Set(activeClear.sourceClears.map((clear) => formatPartyClearTitle(clear)))].join(", ")
     : "";
+  // S3 (docs/IMPL_PLAN_RAFFLE_REWARD_VOCAB.md): informational only (not an alert -- Sealed
+  // Nodestone shows up most weeks, so alerting on it would just be noise) note listing every
+  // reward this clear won that fell out of every distributable category, so a future
+  // classification gap is visible in the UI instead of silently vanishing.
+  const excludedRewardsText = activeClear?.excludedRewards?.length
+    ? activeClear.excludedRewards.map((reward) => reward.name + " ×" + reward.quantity).join(", ")
+    : "";
 
   useEffect(() => {
     if (activeSetting?.calculated?.ok) scrollElementIntoView(settlementRef.current);
@@ -420,6 +427,7 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
                       {ITEM_KEYS.map((key) => <label key={key} className="flex items-center gap-2 rounded-lg border border-slate-200 p-2 text-sm dark:border-slate-700"><input type="checkbox" checked={activeSetting.include[key]} onChange={(event) => updateBossSetting(activeClear.boss, (setting) => ({ ...setting, include: { ...setting.include, [key]: event.target.checked } }))} />{t("raffle.item_" + key)}</label>)}
                       {hasFtItemDrop ? <label key="ftItem" className="flex items-center gap-2 rounded-lg border border-slate-200 p-2 text-sm dark:border-slate-700"><input type="checkbox" checked={activeSetting.include.ftItem} onChange={(event) => updateBossSetting(activeClear.boss, (setting) => ({ ...setting, include: { ...setting.include, ftItem: event.target.checked } }))} />{t("raffle.item_ftItem")}</label> : null}
                     </div>
+                    {excludedRewardsText ? <p className="raffle-hint-text">{t("raffle.excludedRewardsNote", { list: excludedRewardsText })}</p> : null}
                     {activeSetting.include.powerCrystal ? <label className="raffle-label max-w-xl">{t("raffle.powerCrystalRate")}<div className="raffle-rate-inline mt-1"><span>{t("raffle.powerCrystalRatePrefix")}</span><input className="raffle-input raffle-rate-input" inputMode="decimal" value={activeSetting.powerCrystalNesoRate} onChange={(event) => updateBossSetting(activeClear.boss, (setting) => ({ ...setting, powerCrystalNesoRate: event.target.value }))} /><span>{t("raffle.powerCrystalRateSuffix")}</span></div><span className="mt-1 block text-xs font-normal text-slate-500 dark:text-slate-400">{t("raffle.powerCrystalRateHelp")}</span></label> : null}
                     {saleableDrops.length ? <p className="raffle-hint-text">{t("raffle.saleAmountBlankIsZero")}</p> : null}
                     {saleableDrops.map(({ member, drop }) => {

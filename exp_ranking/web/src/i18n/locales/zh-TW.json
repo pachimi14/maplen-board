@@ -78,6 +78,7 @@
     "selectedCandidateCount": "合併 {{count}} 項",
     "distributionRoster": "由已儲存隊伍的 {{memberCount}} 人分配",
     "chooseAtLeastOneCandidate": "請至少選擇一個首領難度進行分配。",
+    "excludedRewardsNote": "不列入分配的獎勵：{{list}}",
     "item_coin": "硬幣",
     "item_equipment": "裝備掉落",
     "item_ftItem": "Will FT Item",

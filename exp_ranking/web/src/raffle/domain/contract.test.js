@@ -142,12 +142,40 @@ describe("normalizeJobPayload", () => {
     expect(normalizeJobPayload(withoutClearedAt).data.clears[0].clearedAt).toBe("");
   });
 
+  // S3 (docs/IMPL_PLAN_RAFFLE_REWARD_VOCAB.md): excludedRewards surfaces OTHER-classified,
+  // non-distributable rewards so a future classification gap is visible instead of silently
+  // vanishing. Same degrade-gracefully treatment as clearedAt/memberWallets.
+  it("accepts a valid excludedRewards list and defaults to empty when missing/invalid", () => {
+    const withRewards = payload();
+    withRewards.clears[0].excludedRewards = [{ name: "Sealed Nodestone", quantity: "2" }];
+    const result = normalizeJobPayload(withRewards);
+    expect(result.ok).toBe(true);
+    expect(result.data.clears[0].excludedRewards).toEqual([{ name: "Sealed Nodestone", quantity: "2" }]);
+
+    expect(normalizeJobPayload(payload()).data.clears[0].excludedRewards).toEqual([]);
+  });
+
+  it("silently drops malformed excludedRewards entries instead of failing the whole payload", () => {
+    const value = payload();
+    value.clears[0].excludedRewards = [
+      { name: "Sealed Nodestone", quantity: "2" },
+      { name: "", quantity: "1" },
+      { name: "Bad Quantity", quantity: "not-a-number" },
+      { quantity: "3" },
+      "not-an-object",
+    ];
+    const result = normalizeJobPayload(value);
+    expect(result.ok).toBe(true);
+    expect(result.data.clears[0].excludedRewards).toEqual([{ name: "Sealed Nodestone", quantity: "2" }]);
+  });
+
   it("accepts the repository shared weekly contract fixture", () => {
     const fixtureUrl = new URL("../../../../../testdata/raffle/v1/cases/fixture-lucid.json", import.meta.url);
     const fixture = JSON.parse(readFileSync(fixtureUrl, "utf8"));
     const result = normalizeJobPayload(fixture.expectedJob);
     expect(result.ok).toBe(true);
     expect(result.data.clears.map((clear) => clear.boss)).toEqual(["LUCID", "WILL"]);
+    expect(result.data.clears.map((clear) => clear.excludedRewards)).toEqual([[], []]);
     expect(result.data.memberWallets).toEqual({ "member-1": "0x0b89e0acd94a1998c9c7c7ba707d8e639cd44135" });
   });
 });

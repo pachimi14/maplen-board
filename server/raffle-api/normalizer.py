@@ -60,7 +60,7 @@ def fixture_result(request: CreateJobRequest) -> dict:
         members = []
         for index, character in enumerate(request.characters):
             members.append({"memberId": character.memberId, "bossNeso": "600" if index == 0 else "0", "powerCrystalAmount": "100" if index == 0 else "0", "ascendantNeso": "50" if index == 0 else "0", "drops": _drops(boss, index)})
-        clears.append({"clearId": "fixture-" + boss.lower(), "boss": boss, "bossDifficulty": difficulty, "ascendantTier": ascendant_tier, "partyCount": len(request.characters), "historyMemberIds": [character.memberId for character in request.characters], "complete": True, "members": members})
+        clears.append({"clearId": "fixture-" + boss.lower(), "boss": boss, "bossDifficulty": difficulty, "ascendantTier": ascendant_tier, "partyCount": len(request.characters), "historyMemberIds": [character.memberId for character in request.characters], "complete": True, "members": members, "excludedRewards": []})
     member_wallets = {character.memberId: character.walletOverride or _fixture_wallet_address(character.assetKey) for character in request.characters}
     return {"raffleResults": raffle_results, "clears": clears, "warnings": [{"code": "fixture_mode"}], "errors": [], "memberWallets": member_wallets}
 
@@ -324,6 +324,7 @@ def _sum_item(history: dict | None, item_id: int) -> int:
 
 def _member_settlement(member_id: str, boss_code: str, history: dict, ascendant: dict | None, item_metadata: dict[int, dict], drop_scope: str = "") -> dict:
     drops = []
+    excluded_rewards: list[tuple[str, int]] = []
     drop_prefix = boss_code.lower() + ("-" + drop_scope if drop_scope else "") + "-" + member_id
     coin_name = TARGET_COINS[boss_code]
     coin_quantity = 0
@@ -347,17 +348,38 @@ def _member_settlement(member_id: str, boss_code: str, history: dict, ascendant:
             # asked for a resale price like coin/equipment so it can be settled the same way.
             ft_item_index += 1
             drops.append({"dropId": f"{drop_prefix}-ftitem-{ft_item_index}", "category": "FT_ITEM", "name": name, "quantity": str(quantity), "imageUrl": _item_icon_url(item_metadata.get(item_id))})
+        elif classification == "OTHER":
+            # docs/IMPL_PLAN_RAFFLE_REWARD_VOCAB.md S3: a reward that falls out of every
+            # distributable category used to vanish silently (the exact class of bug behind
+            # LULU-119/130 and this plan's Ring Box/itemId-1000 fixes). Surfaced instead of
+            # dropped, so the next vocabulary drift is visible in the UI, not just in a stale
+            # payout total.
+            excluded_rewards.append((name, quantity))
     if coin_quantity:
         drops.insert(0, {"dropId": f"{drop_prefix}-coin", "category": "COIN", "name": coin_name, "quantity": str(coin_quantity), "imageUrl": coin_image_url})
     power_crystal = 0
     for prize in _prizes(ascendant or {}):
         item_id = _item_id(prize)
         power_crystal += _power_crystal_amount(prize, item_metadata.get(item_id))
-    return {"memberId": member_id, "bossNeso": str(_sum_item(history, 1)), "powerCrystalAmount": str(power_crystal), "ascendantNeso": str(_sum_item(ascendant, 1)), "drops": drops}
+    return {"memberId": member_id, "bossNeso": str(_sum_item(history, 1)), "powerCrystalAmount": str(power_crystal), "ascendantNeso": str(_sum_item(ascendant, 1)), "drops": drops, "excludedRewards": excluded_rewards}
 
 
 def _empty_member_settlement(member_id: str) -> dict:
-    return {"memberId": member_id, "bossNeso": "0", "powerCrystalAmount": "0", "ascendantNeso": "0", "drops": []}
+    return {"memberId": member_id, "bossNeso": "0", "powerCrystalAmount": "0", "ascendantNeso": "0", "drops": [], "excludedRewards": []}
+
+
+def _clear_excluded_rewards(members: list[dict]) -> list[dict]:
+    """Aggregates each member's excludedRewards (S3) into one same-name-summed list for the
+    whole clear, then strips the internal-only per-member field back off `members` so it never
+    leaks into the payload's member objects (the field belongs on the clear, not the member)."""
+    totals: dict[str, int] = {}
+    order: list[str] = []
+    for member in members:
+        for name, quantity in member.pop("excludedRewards", []):
+            if name not in totals:
+                order.append(name)
+            totals[name] = totals.get(name, 0) + quantity
+    return [{"name": name, "quantity": str(totals[name])} for name in order]
 
 
 def normalize_live_history(request: CreateJobRequest, character_histories: dict[str, list[dict]], layers: list[dict], item_metadata: dict[int, dict], initial_errors: list[dict] | None = None) -> dict:
@@ -452,5 +474,6 @@ def normalize_live_history(request: CreateJobRequest, character_histories: dict[
                         "complete": True,
                         "members": members,
                         "clearedAt": cluster_cleared_at.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
+                        "excludedRewards": _clear_excluded_rewards(members),
                     })
     return {"raffleResults": raffle_results, "clears": clears, "warnings": warnings, "errors": errors}

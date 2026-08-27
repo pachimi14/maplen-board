@@ -78,6 +78,7 @@
     "selectedCandidateCount": "{{count}} combinados",
     "distributionRoster": "Repartir entre los {{memberCount}} miembros guardados",
     "chooseAtLeastOneCandidate": "Selecciona al menos una dificultad de jefe para repartir.",
+    "excludedRewardsNote": "Recompensas excluidas del reparto: {{list}}",
     "item_coin": "Moneda",
     "item_equipment": "Equipo obtenido",
     "item_ftItem": "Will FT Item",

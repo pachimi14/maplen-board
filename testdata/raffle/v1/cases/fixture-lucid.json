@@ -8,7 +8,7 @@
   },
   "expectedJob": {
     "schemaVersion": 3,
-    "classificationVersion": 2,
+    "classificationVersion": 3,
     "status": "complete",
     "progress": { "completedCharacters": 1, "totalCharacters": 1, "stage": "complete", "elapsedMs": 10 },
     "raffleResults": [
@@ -70,7 +70,8 @@
               { "dropId": "fixture-lucid-coin", "category": "COIN", "name": "Phantasma Coin", "quantity": "10" }
             ]
           }
-        ]
+        ],
+        "excludedRewards": []
       },
       {
         "clearId": "fixture-will",
@@ -92,7 +93,8 @@
               { "dropId": "fixture-will-coin", "category": "COIN", "name": "Arachno Coin", "quantity": "10" }
             ]
           }
-        ]
+        ],
+        "excludedRewards": []
       }
     ],
     "warnings": [{ "code": "fixture_mode" }],
