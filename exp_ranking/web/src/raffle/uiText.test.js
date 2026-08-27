@@ -194,6 +194,21 @@ describe("describeSettlementError", () => {
     const text = describeSettlementError({ code: "fractional_neso" }, { t: tEn });
     expect(text).toBe(en.raffle.errorFractionalNeso);
   });
+
+  // docs/IMPL_PLAN_RAFFLE_EXTRA_REWARD.md
+  it("describes an invalid_extra_reward_member error with the exact documented copy", () => {
+    expect(describeSettlementError({ code: "invalid_extra_reward_member" }, { t })).toBe(t("raffle.errorInvalidExtraRewardMember"));
+  });
+
+  it("describes a malformed extraRewardAmount field error using the extra-reward label", () => {
+    const memberMap = { "member-1": { displayName: "pachimi" } };
+    const text = describeSettlementError(
+      { code: "invalid_integer", field: "extraRewardAmount", memberId: "member-1" },
+      { t, memberMap },
+    );
+    expect(text).toContain("pachimi");
+    expect(text).toContain(t("raffle.item_extraReward"));
+  });
 });
 
 describe("pcPortionAmount (C1: value-vs-actual-NESO clarity, acceptance criterion 1)", () => {

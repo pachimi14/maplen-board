@@ -38,6 +38,11 @@ export default function SettlementResult({ calculation, include, memberMap, memb
     include.coin ? { key: "coin", label: t("raffle.item_coin"), total: calculation.categoryTotals.coinSaleNeso } : null,
     include.equipment ? { key: "equipment", label: t("raffle.item_equipment"), total: calculation.categoryTotals.equipmentSaleNeso } : null,
     include.ftItem ? { key: "ftItem", label: t("raffle.item_ftItem"), total: calculation.categoryTotals.ftItemSaleNeso } : null,
+    // docs/IMPL_PLAN_RAFFLE_EXTRA_REWARD.md: extra reward has no include
+    // toggle (it isn't a boss-drop category) -- its column/row only shows up
+    // once the party has actually entered a non-zero extra reward this week,
+    // so a party that never uses it sees the exact same table it always has.
+    calculation.categoryTotals.extraReward !== "0" ? { key: "extraReward", label: t("raffle.item_extraReward"), total: calculation.categoryTotals.extraReward } : null,
   ].filter(Boolean);
 
   function categoryQuantity(category) {

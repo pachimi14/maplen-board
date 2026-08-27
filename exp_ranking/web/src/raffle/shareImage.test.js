@@ -842,6 +842,50 @@ describe("buildSettlementShareModel all-zero column hiding (G3, LULU-119 follow-
   });
 });
 
+// docs/IMPL_PLAN_RAFFLE_EXTRA_REWARD.md acceptance criterion 5: extra reward
+// has no include toggle, so its share-image column follows the same
+// all-zero-hiding rule as coin/otherSales (G3) -- present only when the party
+// actually used it this week, so an unused party's shared image is unchanged.
+describe("buildSettlementShareModel extra reward column (docs/IMPL_PLAN_RAFFLE_EXTRA_REWARD.md)", () => {
+  function extraRewardCalculation(extraRewards) {
+    const result = calculateSettlement({
+      boss: "LUCID",
+      complete: true,
+      historyMemberIds: ["a", "b"],
+      partyOrder: ["a", "b"],
+      include: { coin: false, equipment: false, ftItem: false, bossNeso: true, powerCrystal: false, ascendantNeso: false },
+      powerCrystalNesoRate: "1",
+      saleNesoByDropId: {},
+      extraRewards,
+      members: [
+        { memberId: "a", bossNeso: "50", powerCrystalAmount: "0", ascendantNeso: "0", drops: [] },
+        { memberId: "b", bossNeso: "0", powerCrystalAmount: "0", ascendantNeso: "0", drops: [] },
+      ],
+    });
+    expect(result.ok).toBe(true);
+    return result;
+  }
+
+  const include = { coin: false, equipment: false, ftItem: false, bossNeso: true, powerCrystal: false, ascendantNeso: false };
+
+  it("omits the extraReward column entirely when no extra reward was entered (unused feature -> unchanged image)", () => {
+    const calculation = extraRewardCalculation([]);
+    expect(calculation.categoryTotals.extraReward).toBe("0");
+    const model = buildSettlementShareModel(calculation, memberMap, include, "1", t);
+    expect(model.memberCategoryColumns.map((column) => column.key)).not.toContain("extraReward");
+  });
+
+  it("shows the extraReward column once at least one member has a non-zero extra reward", () => {
+    const calculation = extraRewardCalculation([{ rowId: "r1", memberId: "a", amountNeso: "1000" }]);
+    expect(calculation.categoryTotals.extraReward).toBe("1000");
+    const model = buildSettlementShareModel(calculation, memberMap, include, "1", t);
+    expect(model.memberCategoryColumns.map((column) => column.key)).toContain("extraReward");
+    const aliceRow = model.memberRows.find((row) => row.memberId === "a");
+    const cell = aliceRow.categoryCells.find((entry) => entry.key === "extraReward");
+    expect(cell).toEqual({ key: "extraReward", primary: neso("1000"), secondary: null, zero: false });
+  });
+});
+
 describe("measureSettlementShareImageHeight", () => {
   it("grows with more member/transfer rows", () => {
     const calculation = compositeCalculation();

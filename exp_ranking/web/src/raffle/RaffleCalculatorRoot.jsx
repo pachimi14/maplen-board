@@ -28,6 +28,11 @@ function initialBossSetting() {
     include: { coin: true, equipment: true, ftItem: true, bossNeso: true, powerCrystal: true, ascendantNeso: true },
     powerCrystalNesoRate: "1.1",
     saleNesoByDropId: {},
+    // docs/IMPL_PLAN_RAFFLE_EXTRA_REWARD.md: rows of { rowId, memberId,
+    // amountNeso }, added via the "+ extra reward" button. Starts empty (0
+    // rows) so a party that never uses it sees no change at all -- not
+    // persisted (same as the rest of this per-boss distribution setting).
+    extraRewards: [],
     calculated: null,
   };
 }
@@ -251,6 +256,23 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
     setDistribution((current) => ({ ...current, [boss]: { ...updater(current[boss]), calculated: null } }));
   }
 
+  // docs/IMPL_PLAN_RAFFLE_EXTRA_REWARD.md: "+ extra reward" adds one row
+  // (defaults to the first party member so the row is immediately valid --
+  // the user still has to pick the intended member and amount).
+  function addExtraRewardRow(boss) {
+    const rowId = "extra-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+    const defaultMemberId = jobResult?.partyOrder?.[0] || "";
+    updateBossSetting(boss, (setting) => ({ ...setting, extraRewards: [...setting.extraRewards, { rowId, memberId: defaultMemberId, amountNeso: "" }] }));
+  }
+
+  function updateExtraRewardRow(boss, rowId, patch) {
+    updateBossSetting(boss, (setting) => ({ ...setting, extraRewards: setting.extraRewards.map((row) => row.rowId === rowId ? { ...row, ...patch } : row) }));
+  }
+
+  function removeExtraRewardRow(boss, rowId) {
+    updateBossSetting(boss, (setting) => ({ ...setting, extraRewards: setting.extraRewards.filter((row) => row.rowId !== rowId) }));
+  }
+
   function calculateBoss(clear) {
     const sourceClears = Array.isArray(clear?.sourceClears) ? clear.sourceClears : [clear];
     if (sourceClears.some((source) => requiresDistributionConfirmation(source) && !confirmedClearIds.includes(source.clearId))) return;
@@ -265,6 +287,7 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
       include: setting.include,
       powerCrystalNesoRate: setting.powerCrystalNesoRate,
       saleNesoByDropId: setting.saleNesoByDropId,
+      extraRewards: setting.extraRewards,
       carryoverEnabled: activeParty?.carryoverEnabled === true,
       previousCarryoverByMemberId,
     });
@@ -442,6 +465,23 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
                         </span>
                       </label>;
                     })}
+                    <div className="raffle-extra-reward-section">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <h4 className="font-semibold">{t("raffle.item_extraReward")}</h4>
+                        <button type="button" className="raffle-button-secondary" onClick={() => addExtraRewardRow(activeClear.boss)}>{t("raffle.addExtraReward")}</button>
+                      </div>
+                      <p className="raffle-hint-text">{t("raffle.extraRewardHelp")}</p>
+                      {activeSetting.extraRewards.map((row) => <div key={row.rowId} className="raffle-extra-reward-row mt-2 grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-center">
+                        <select className="raffle-input" value={row.memberId} onChange={(event) => updateExtraRewardRow(activeClear.boss, row.rowId, { memberId: event.target.value })}>
+                          {jobResult.partyOrder.map((memberId) => <option key={memberId} value={memberId}>{jobResult.memberMap[memberId]?.displayName || memberId}</option>)}
+                        </select>
+                        <label className="raffle-label">
+                          <span className="mt-1 block text-xs font-normal text-slate-500">{t("raffle.extraRewardAmountLabel")}</span>
+                          <input className="raffle-input mt-1" inputMode="numeric" value={row.amountNeso} placeholder="0" onChange={(event) => updateExtraRewardRow(activeClear.boss, row.rowId, { amountNeso: event.target.value })} />
+                        </label>
+                        <button type="button" className="raffle-button-remove" onClick={() => removeExtraRewardRow(activeClear.boss, row.rowId)}>{t("raffle.remove")}</button>
+                      </div>)}
+                    </div>
                     <button type="button" className="raffle-button-primary w-full" disabled={!distributionRosterConfirmed} onClick={() => calculateBoss(activeClear)}>{t("raffle.calculateDistribution")}</button>
                     {!distributionRosterConfirmed ? <p className="raffle-hint-text">{t("raffle.confirmBeforeCalculate")}</p> : null}
                     <div ref={settlementRef}>
