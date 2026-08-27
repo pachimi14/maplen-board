@@ -75,6 +75,42 @@ describe("raffle result display", () => {
     expect(powerCrystalFaceValue("10M Power Crystal Coupon")).toBe(10000000n);
   });
 
+  // S4 (docs/IMPL_PLAN_RAFFLE_REWARD_VOCAB.md): the official API now also grants Power
+  // Crystal directly (server classification POWER_CRYSTAL, display name literally "Power
+  // Crystal", quantity IS the amount). Before this fix the weekly-totals preview silently
+  // showed 0 for this reward -- the same symptom the user originally reported.
+  it("sums a direct Power Crystal grant (quantity IS the amount, face value 1)", () => {
+    expect(powerCrystalFaceValue("Power Crystal")).toBe(1n);
+    expect(powerCrystalFaceValue(" power crystal ")).toBe(1n);
+    const summary = summarizeRaffleResults([
+      { rewards: [{ rewardName: "Power Crystal", classification: "POWER_CRYSTAL", quantity: "55000000", won: true }] },
+    ]);
+    expect(summary.totalPowerCrystal).toBe("55000000");
+  });
+
+  it("keeps the legacy coupon-name total unchanged (no regression)", () => {
+    const summary = summarizeRaffleResults([
+      { rewards: [{ rewardName: "10M Power Crystal Coupon", classification: "POWER_CRYSTAL", quantity: "5", won: true }] },
+    ]);
+    expect(summary.totalPowerCrystal).toBe("50000000");
+  });
+
+  it("sums a mix of direct-grant and legacy-coupon Power Crystal rewards", () => {
+    const summary = summarizeRaffleResults([
+      { rewards: [
+        { rewardName: "Power Crystal", classification: "POWER_CRYSTAL", quantity: "55000000", won: true },
+        { rewardName: "10M Power Crystal Coupon", classification: "POWER_CRYSTAL", quantity: "5", won: true },
+      ] },
+    ]);
+    expect(summary.totalPowerCrystal).toBe("105000000");
+  });
+
+  it("treats a non-matching name as face value 0", () => {
+    expect(powerCrystalFaceValue("Item 1000")).toBe(0n);
+    expect(powerCrystalFaceValue("Something Else")).toBe(0n);
+    expect(powerCrystalFaceValue("")).toBe(0n);
+  });
+
   it("groups repeated won items without mixing classifications", () => {
     expect(groupWonRewards([
       { rewardName: "Phantasma Coin", classification: "COIN", quantity: "1", won: true, iconUrl: "https://api-static.msu.io/itemimages/icon/4310218.png" },
