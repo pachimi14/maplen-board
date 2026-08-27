@@ -16,7 +16,7 @@ from contracts import CharacterSearchRequest, CreateJobRequest, ResolveCharacter
 from item_metadata_store import ItemMetadataStore
 from job_queue import JobQueue
 from msu_client import DailyBudgetExceeded, GlobalStartLimiter, MsuClient, UpstreamError
-from normalizer import SCHEMA_VERSION, fixture_result, normalize_live_history
+from normalizer import POWER_CRYSTAL_DIRECT_ITEM_ID, SCHEMA_VERSION, fixture_result, normalize_live_history
 from rate_limit import TokenBucketLimiter
 
 
@@ -70,7 +70,16 @@ def _positive_prize_item_ids(histories: list[dict], raffled_at: str) -> set[int]
                 normalized_item_id = int(item_id)
             except (InvalidOperation, TypeError, ValueError):
                 continue
-            if quantity.is_finite() and quantity > 0 and quantity == quantity.to_integral_value() and normalized_item_id > 1:
+            if (
+                quantity.is_finite()
+                and quantity > 0
+                and quantity == quantity.to_integral_value()
+                and normalized_item_id > 1
+                # docs/IMPL_PLAN_RAFFLE_REWARD_VOCAB.md S1: itemId 1000 (direct Power Crystal
+                # grant) has no item metadata, just like NESO's itemId 1 -- fetching it always
+                # 404s (upstream_item_metadata_unavailable) for no benefit.
+                and normalized_item_id != POWER_CRYSTAL_DIRECT_ITEM_ID
+            ):
                 item_ids.add(normalized_item_id)
     return item_ids
 

@@ -9,7 +9,7 @@ from contracts import CreateJobRequest
 
 
 SCHEMA_VERSION = 3
-CLASSIFICATION_VERSION = 2
+CLASSIFICATION_VERSION = 3
 TARGET_BOSSES = {"Lucid": "LUCID", "Will": "WILL"}
 TARGET_COINS = {"LUCID": "Phantasma Coin", "WILL": "Arachno Coin"}
 FT_ITEM_NAME = "Sealed Mirror World Nodestone"
@@ -26,6 +26,11 @@ CLEAR_CLUSTER_WINDOW = timedelta(hours=1)
 POWER_CRYSTAL_PATTERN = re.compile(
     r"^(?P<amount>\d+)(?P<suffix>[KM]?) Power Crystal Coupon$", re.IGNORECASE
 )
+# docs/IMPL_PLAN_RAFFLE_REWARD_VOCAB.md S1: the official API switched Power Crystal from a
+# coupon item (name-pattern, resolved via metadata) to a direct-amount item at this fixed
+# itemId (quantity IS the Power Crystal amount, face value 1). Metadata for it 404s, same as
+# NESO's itemId 1 -- both are currency-like IDs with no item metadata entry.
+POWER_CRYSTAL_DIRECT_ITEM_ID = 1000
 
 def _drops(boss: str, member_index: int) -> list[dict]:
     drops = []
@@ -116,6 +121,8 @@ def _layer_names(layer: dict | None) -> tuple[str, str, str | None]:
 def _classification(item_id: int, metadata: dict | None) -> tuple[str, str]:
     if item_id == 1:
         return "NESO", "NESO"
+    if item_id == POWER_CRYSTAL_DIRECT_ITEM_ID:
+        return "POWER_CRYSTAL", "Power Crystal"
     name = _text((metadata or {}).get("itemName")) or f"Item {item_id}"
     if name in TARGET_COINS.values() and _text((metadata or {}).get("tier1")) == "Exchange Currency":
         return "COIN", name
@@ -139,6 +146,20 @@ def _power_crystal_face_value(metadata: dict | None) -> int:
         return 0
     multiplier = {"": 1, "K": 1_000, "M": 1_000_000}[match.group("suffix").upper()]
     return int(match.group("amount")) * multiplier
+
+
+def _power_crystal_amount(prize: dict, metadata: dict | None) -> int:
+    """docs/IMPL_PLAN_RAFFLE_REWARD_VOCAB.md S1: resolves a single prize's Power Crystal
+    contribution under either vocabulary the official API has used. `itemId 1000` is a direct
+    grant -- the prize's quantity IS the Power Crystal amount (face value 1, no metadata
+    needed/available). The older `"<N>[K|M] Power Crystal Coupon"` name pattern is still
+    honored so past rounds (already-settled coupon-style history) keep recalculating the same
+    way (no regression)."""
+    item_id = _item_id(prize)
+    quantity = _quantity(prize)
+    if item_id == POWER_CRYSTAL_DIRECT_ITEM_ID:
+        return quantity
+    return quantity * _power_crystal_face_value(metadata)
 
 
 def _clear_entries(history: dict) -> list[tuple[datetime, int]]:
@@ -322,9 +343,8 @@ def _member_settlement(member_id: str, boss_code: str, history: dict, ascendant:
         drops.insert(0, {"dropId": f"{drop_prefix}-coin", "category": "COIN", "name": coin_name, "quantity": str(coin_quantity), "imageUrl": coin_image_url})
     power_crystal = 0
     for prize in _prizes(ascendant or {}):
-        quantity = _quantity(prize)
         item_id = _item_id(prize)
-        power_crystal += quantity * _power_crystal_face_value(item_metadata.get(item_id))
+        power_crystal += _power_crystal_amount(prize, item_metadata.get(item_id))
     return {"memberId": member_id, "bossNeso": str(_sum_item(history, 1)), "powerCrystalAmount": str(power_crystal), "ascendantNeso": str(_sum_item(ascendant, 1)), "drops": drops}
 
 

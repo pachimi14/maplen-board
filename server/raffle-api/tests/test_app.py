@@ -301,6 +301,57 @@ def test_live_processor_reuses_persistent_metadata_after_memory_reset(tmp_path) 
     assert second["clears"][0]["members"][0]["drops"][0]["name"] == "Phantasma Coin"
     assert second["errors"] == []
 
+def test_power_crystal_direct_item_id_needs_no_metadata_and_is_not_fetched() -> None:
+    # docs/IMPL_PLAN_RAFFLE_REWARD_VOCAB.md S1: itemId 1000 is a direct Power Crystal grant
+    # (quantity IS the amount). It must resolve to POWER_CRYSTAL/settle without ever being
+    # requested from upstream metadata (which 404s for it, like NESO's itemId 1) -- a fetch
+    # attempt here would previously surface as `item_metadata_unavailable`.
+    class StubMsuClient:
+        def get_layers_static(self):
+            return [
+                {"layerId": 205041, "boss": {"bossName": "Lucid", "difficulty": "DIFFICULTY_HARD", "raffleLayerName": "Hard Lucid"}},
+                {"layerId": 900001, "contents": {"groupName": "Divine Ascendant", "layerName": "Divine Ascendant"}},
+            ]
+
+        def get_character_private(self, asset_key):
+            return {"assetKey": asset_key, "walletAddress": "wallet-test-only"}
+
+        def get_character_history(self, _asset_key, _wallet_address, raffled_at):
+            return [
+                {
+                    "raffledAt": raffled_at,
+                    "layerId": 205041,
+                    "clearInformations": [{"clearedAt": "2026-07-25T11:35:31Z", "partyCount": 1}],
+                    "prizes": [{"itemId": 1, "winCount": {"value": "3000000"}}],
+                },
+                {
+                    "raffledAt": raffled_at,
+                    "layerId": 900001,
+                    "clearInformations": [],
+                    "prizes": [
+                        {"itemId": 1, "winCount": {"value": "70000000"}},
+                        {"itemId": 1000, "winCount": {"value": "55000000"}},
+                    ],
+                },
+            ]
+
+        def get_item_metadata(self, item_id):
+            raise AssertionError(f"itemId {item_id} should never be requested from upstream metadata")
+
+    request = CreateJobRequest.model_validate(request_body())
+    processor = _live_processor(
+        settings(fixture_mode=False),
+        StubMsuClient(),
+        BoundedTtlCache(max_bytes=1024 * 1024),
+        BoundedTtlCache(max_bytes=1024 * 1024),
+    )
+
+    result = processor(request, lambda _completed, _stage: None, threading.Event())
+
+    assert result["errors"] == []
+    assert result["clears"][0]["members"][0]["powerCrystalAmount"] == "55000000"
+    assert result["clears"][0]["members"][0]["ascendantNeso"] == "70000000"
+
 def test_queue_full_returns_retry_after(monkeypatch) -> None:
     with TestClient(create_app(settings())) as client:
         monkeypatch.setattr(client.app.state.job_queue, "create", lambda _payload: None)

@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from contracts import CreateJobRequest
-from normalizer import _boss_distribution_context, fixture_result, normalize_live_history
+from normalizer import _boss_distribution_context, _classification, fixture_result, normalize_live_history
 
 
 def request_for(*member_ids: str) -> CreateJobRequest:
@@ -562,6 +562,83 @@ def test_lucid_clear_never_surfaces_ft_item_drop_even_if_metadata_matches() -> N
     result = normalize_live_history(request, histories, layers, metadata)
 
     assert result["clears"][0]["members"][0]["drops"] == []
+
+
+def test_item_id_1000_classifies_as_power_crystal_with_no_metadata() -> None:
+    # docs/IMPL_PLAN_RAFFLE_REWARD_VOCAB.md S1: itemId 1000 is a direct Power Crystal grant.
+    # Metadata for it 404s upstream (same as NESO's itemId 1), so classification must not
+    # depend on it being present.
+    assert _classification(1000, None) == ("POWER_CRYSTAL", "Power Crystal")
+    assert _classification(1000, {}) == ("POWER_CRYSTAL", "Power Crystal")
+
+
+def test_ascendant_power_crystal_direct_item_id_amount_equals_quantity() -> None:
+    # Acceptance criterion 1 (docs/IMPL_PLAN_RAFFLE_REWARD_VOCAB.md): the real-data shape --
+    # an Ascendant history awarding `Item 1000 x 55,000,000` -- must settle to a
+    # powerCrystalAmount of exactly 55,000,000, with no item metadata supplied at all (this
+    # used to be 0 before this fix, since only the coupon-name pattern was recognized).
+    request = request_for("m1")
+    histories = {
+        "m1": [
+            {
+                "raffledAt": request.raffledAt,
+                "layerId": 205044,
+                "clearInformations": [{"clearedAt": "2026-08-27T14:00:00Z", "partyCount": 1}],
+                "prizes": [{"itemId": 1, "winCount": {"value": "70000000"}}],
+            },
+            {
+                "raffledAt": request.raffledAt,
+                "layerId": 900101,
+                "clearInformations": [],
+                "prizes": [
+                    {"itemId": 1, "winCount": {"value": "70000000"}},
+                    {"itemId": 1000, "winCount": {"value": "55000000"}},
+                ],
+            },
+        ]
+    }
+    layers = [
+        {"layerId": 205044, "boss": {"bossName": "Will", "difficulty": "DIFFICULTY_HARD", "raffleLayerName": "Hard Will"}},
+        {"layerId": 900101, "contents": {"groupName": "Ascendant Tier Raffle", "layerName": "Eternal Ascendant"}},
+    ]
+
+    result = normalize_live_history(request, histories, layers, {})
+
+    member = result["clears"][0]["members"][0]
+    assert member["powerCrystalAmount"] == "55000000"
+    assert member["ascendantNeso"] == "70000000"
+
+
+def test_legacy_power_crystal_coupon_still_recalculates_the_same_way() -> None:
+    # Acceptance criterion 2 (docs/IMPL_PLAN_RAFFLE_REWARD_VOCAB.md): the old coupon-item
+    # vocabulary (name pattern resolved via metadata) must keep working unchanged for
+    # already-settled/older rounds -- no regression from adding the itemId 1000 direct path.
+    request = request_for("m1")
+    histories = {
+        "m1": [
+            {
+                "raffledAt": request.raffledAt,
+                "layerId": 205044,
+                "clearInformations": [{"clearedAt": "2026-07-25T11:35:31Z", "partyCount": 1}],
+                "prizes": [],
+            },
+            {
+                "raffledAt": request.raffledAt,
+                "layerId": 900101,
+                "clearInformations": [],
+                "prizes": [{"itemId": 2832960, "winCount": {"value": "5"}}],
+            },
+        ]
+    }
+    layers = [
+        {"layerId": 205044, "boss": {"bossName": "Will", "difficulty": "DIFFICULTY_HARD", "raffleLayerName": "Hard Will"}},
+        {"layerId": 900101, "contents": {"groupName": "Ascendant Tier Raffle", "layerName": "Eternal Ascendant"}},
+    ]
+    metadata = {2832960: {"itemName": "10M Power Crystal Coupon"}}
+
+    result = normalize_live_history(request, histories, layers, metadata)
+
+    assert result["clears"][0]["members"][0]["powerCrystalAmount"] == "50000000"
 
 
 def test_shared_contract_fixture_matches_fixture_normalizer() -> None:
