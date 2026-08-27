@@ -71,6 +71,7 @@
     "multipleDifficultyHelp": "同一ボスに複数の難易度履歴があります。分配に含めるものを選択してください。複数選択すると合算します。",
     "historyCoverage": "履歴 {{historyCount}}/{{memberCount}}人",
     "participantCounts": "討伐 {{partyCount}}人・履歴参加 {{historyCount}}人・分配 {{distributionCount}}人",
+    "clearedAtLabel": "討伐時刻: {{time}}",
     "distributionConfirmation": "分配人数の確認",
     "distributionConfirmationHelp": "討伐人数・履歴参加人数・分配人数が一致していません。内容を確認し、候補ごとに分配人数を承認してください。",
     "confirmDistributionRoster": "登録済みの{{distributionCount}}人で分配する",

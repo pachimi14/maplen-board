@@ -71,6 +71,7 @@
     "multipleDifficultyHelp": "Có nhiều độ khó cho cùng một boss. Chọn một hoặc nhiều mục; các mục đã chọn sẽ được cộng gộp.",
     "historyCoverage": "Lịch sử {{historyCount}}/{{memberCount}} thành viên",
     "participantCounts": "Hạ boss {{partyCount}} · có lịch sử {{historyCount}} · chia {{distributionCount}} người",
+    "clearedAtLabel": "Hạ gục lúc {{time}}",
     "distributionConfirmation": "Xác nhận số người chia",
     "distributionConfirmationHelp": "Số người hạ boss, có lịch sử và được lưu để chia không khớp. Hãy xác nhận từng mục trước khi tính.",
     "confirmDistributionRoster": "Chia cho {{distributionCount}} thành viên đã lưu",

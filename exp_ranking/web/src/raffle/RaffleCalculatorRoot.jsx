@@ -45,6 +45,14 @@ function formatNesoPreview(value, locale) {
   }
 }
 
+// S3 (docs/IMPL_PLAN_RAFFLE_MULTI_CLEAR.md): same boss/difficulty/partyCount candidates are
+// otherwise indistinguishable in the UI, so the clear time (when the server resolved one) is
+// shown alongside the label. Falls back to no text at all when clearedAt is empty/invalid --
+// this never blocks selecting or confirming a candidate.
+function clearedAtLabel(clear, t, language) {
+  const local = formatRaffleRoundLocal(clear?.clearedAt, { locale: language });
+  return local ? t("raffle.clearedAtLabel", { time: local }) : "";
+}
 
 export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLoading = false, rankingLoadError = "" } = {}) {
   const { t, language } = useTranslation();
@@ -386,7 +394,7 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
                     <p className="mb-3 text-sm text-amber-900 dark:text-amber-100">{t("raffle.multipleDifficultyHelp")}</p>
                     <div className="space-y-2">{group.clears.map((clear) => <label key={clear.clearId} className="flex cursor-pointer items-start gap-3 rounded-lg border border-amber-300 bg-white p-3 dark:border-amber-800 dark:bg-slate-950">
                       <input type="checkbox" className="mt-1" checked={selectedClearIdsByBoss[group.boss]?.includes(clear.clearId) || false} onChange={() => toggleClearSelection(clear)} />
-                      <span><strong className="block">{formatPartyClearTitle(clear)}</strong><span className="text-xs text-slate-500">{t("raffle.participantCounts", { partyCount: clear.partyCount, historyCount: clear.historyMemberIds.length, distributionCount: clear.members.length })}</span></span>
+                      <span><strong className="block">{formatPartyClearTitle(clear)}</strong><span className="text-xs text-slate-500">{t("raffle.participantCounts", { partyCount: clear.partyCount, historyCount: clear.historyMemberIds.length, distributionCount: clear.members.length })}</span>{clearedAtLabel(clear, t, language) ? <span className="block text-xs text-slate-500">{clearedAtLabel(clear, t, language)}</span> : null}</span>
                     </label>)}</div>
                   </fieldset> : null)}
                   {clearGroups.some((group) => selectedClearIdsByBoss[group.boss]?.length) ? <div className="grid grid-cols-2 gap-2">{clearGroups.filter((group) => selectedClearIdsByBoss[group.boss]?.length).map((group) => {
@@ -398,14 +406,14 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
                     <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-3 dark:border-emerald-800 dark:bg-emerald-950/20">
                       <h3 className="font-semibold">{formatPartyBossName(activeClear.boss)} · {t("raffle.distributionItems")}</h3>
                       <p className="mt-1 text-sm">{t("raffle.distributionRoster", { memberCount: activeClear.members.length })}</p>
-                      <ul className="mt-2 space-y-1 text-sm">{activeClear.sourceClears.map((clear) => <li key={clear.clearId}><strong>{formatPartyClearTitle(clear)}</strong> · {t("raffle.participantCounts", { partyCount: clear.partyCount, historyCount: clear.historyMemberIds.length, distributionCount: clear.members.length })}</li>)}</ul>
+                      <ul className="mt-2 space-y-1 text-sm">{activeClear.sourceClears.map((clear) => <li key={clear.clearId}><strong>{formatPartyClearTitle(clear)}</strong> · {t("raffle.participantCounts", { partyCount: clear.partyCount, historyCount: clear.historyMemberIds.length, distributionCount: clear.members.length })}{clearedAtLabel(clear, t, language) ? " · " + clearedAtLabel(clear, t, language) : ""}</li>)}</ul>
                     </div>
                     {confirmationRequiredClears.length ? <fieldset className="rounded-xl border border-amber-400 bg-amber-50 p-4 dark:border-amber-700 dark:bg-amber-950/20">
                       <legend className="px-1 font-bold">{t("raffle.distributionConfirmation")}</legend>
                       <p className="mb-3 text-sm text-amber-900 dark:text-amber-100">{t("raffle.distributionConfirmationHelp")}</p>
                       <div className="space-y-2">{confirmationRequiredClears.map((clear) => <label key={clear.clearId} className="flex cursor-pointer items-start gap-3 rounded-lg border border-amber-300 bg-white p-3 dark:border-amber-800 dark:bg-slate-950">
                         <input type="checkbox" className="mt-1" checked={confirmedClearIds.includes(clear.clearId)} onChange={() => toggleDistributionConfirmation(clear.clearId)} />
-                        <span><strong className="block">{formatPartyClearTitle(clear)}</strong><span className="text-xs text-slate-600 dark:text-slate-300">{t("raffle.participantCounts", { partyCount: clear.partyCount, historyCount: clear.historyMemberIds.length, distributionCount: clear.members.length })}</span><span className="mt-1 block text-sm font-semibold">{t("raffle.confirmDistributionRoster", { distributionCount: clear.members.length })}</span></span>
+                        <span><strong className="block">{formatPartyClearTitle(clear)}</strong><span className="text-xs text-slate-600 dark:text-slate-300">{t("raffle.participantCounts", { partyCount: clear.partyCount, historyCount: clear.historyMemberIds.length, distributionCount: clear.members.length })}</span>{clearedAtLabel(clear, t, language) ? <span className="block text-xs text-slate-600 dark:text-slate-300">{clearedAtLabel(clear, t, language)}</span> : null}<span className="mt-1 block text-sm font-semibold">{t("raffle.confirmDistributionRoster", { distributionCount: clear.members.length })}</span></span>
                       </label>)}</div>
                     </fieldset> : null}
                     <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">

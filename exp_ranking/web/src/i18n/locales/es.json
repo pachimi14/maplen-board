@@ -71,6 +71,7 @@
     "multipleDifficultyHelp": "Hay varias dificultades del mismo jefe. Selecciona una o más; las selecciones múltiples se suman.",
     "historyCoverage": "Historial de {{historyCount}}/{{memberCount}} miembros",
     "participantCounts": "Derrota {{partyCount}} · historial {{historyCount}} · reparto {{distributionCount}} miembros",
+    "clearedAtLabel": "Derrotado a las {{time}}",
     "distributionConfirmation": "Confirmar miembros del reparto",
     "distributionConfirmationHelp": "Los números de la derrota, el historial y el reparto guardado no coinciden. Confirma cada opción antes de calcular.",
     "confirmDistributionRoster": "Repartir entre los {{distributionCount}} miembros guardados",

@@ -71,6 +71,7 @@
     "multipleDifficultyHelp": "Multiple difficulties were found for this boss. Select one or more to include; multiple selections are combined.",
     "historyCoverage": "History {{historyCount}}/{{memberCount}} members",
     "participantCounts": "Clear {{partyCount}} · history {{historyCount}} · split {{distributionCount}} members",
+    "clearedAtLabel": "Cleared at {{time}}",
     "distributionConfirmation": "Confirm distribution members",
     "distributionConfirmationHelp": "The official clear, raffle history, and saved distribution counts do not all match. Confirm each candidate before calculating.",
     "confirmDistributionRoster": "Split among the {{distributionCount}} saved members",
