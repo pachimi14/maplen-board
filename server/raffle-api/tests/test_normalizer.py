@@ -227,6 +227,10 @@ def test_exactly_one_hour_apart_is_the_same_party() -> None:
 
 
 def test_more_than_one_hour_apart_is_not_the_same_party() -> None:
+    # docs/IMPL_PLAN_RAFFLE_MULTI_CLEAR.md S1 (failure mode B fix): m1 and m2 are not
+    # the same party (more than an hour apart), so they no longer tie-break each
+    # other away -- each becomes its own independent one-member candidate instead of
+    # the whole partyCount being silently dropped.
     request = request_for("m1", "m2")
     histories = {
         "m1": [{"raffledAt": request.raffledAt, "layerId": 205044, "clearInformations": [{"clearedAt": "2026-07-23T14:00:00Z", "partyCount": 2}], "prizes": []}],
@@ -234,7 +238,9 @@ def test_more_than_one_hour_apart_is_not_the_same_party() -> None:
     }
     layers = [{"layerId": 205044, "boss": {"bossName": "Will", "difficulty": "DIFFICULTY_HARD", "raffleLayerName": "Hard Will"}}]
 
-    assert normalize_live_history(request, histories, layers, {})["clears"] == []
+    clears = normalize_live_history(request, histories, layers, {})["clears"]
+    assert [clear["historyMemberIds"] for clear in clears] == [["m1"], ["m2"]]
+    assert {clear["clearId"] for clear in clears} == {"clear-will-hard-p2-1", "clear-will-hard-p2-2"}
 
 
 def test_official_party_count_and_saved_distribution_roster_are_independent() -> None:
@@ -305,7 +311,16 @@ def test_unrelated_lucid_times_do_not_contaminate_a_valid_will_party() -> None:
 
     clears = normalize_live_history(request, histories, layers, {})["clears"]
 
-    assert [(clear["boss"], clear["historyMemberIds"]) for clear in clears] == [("WILL", ["m1", "m2", "m3", "m4"])]
+    # boss_code partitions clustering entirely (LUCID and WILL never share `member_histories`),
+    # so the Will cluster below is unaffected by however Lucid's own six mutually-unrelated
+    # (>1 day apart) single-member clears resolve. docs/IMPL_PLAN_RAFFLE_MULTI_CLEAR.md S1
+    # (failure mode B fix): those six disjoint Lucid singles no longer tie-break each other
+    # away -- each now correctly surfaces as its own one-member candidate instead of the whole
+    # Lucid partyCount=6 being silently dropped.
+    will_clears = [clear for clear in clears if clear["boss"] == "WILL"]
+    lucid_clears = [clear for clear in clears if clear["boss"] == "LUCID"]
+    assert [clear["historyMemberIds"] for clear in will_clears] == [["m1", "m2", "m3", "m4"]]
+    assert sorted(clear["historyMemberIds"] for clear in lucid_clears) == [[f"m{index}"] for index in range(1, 7)]
 
 
 def test_mixed_will_difficulties_create_separate_candidates_for_user_selection() -> None:
@@ -364,7 +379,9 @@ def test_five_and_six_person_hard_will_clusters_both_return_as_independent_candi
     clears = normalize_live_history(request, histories, layers, {})["clears"]
 
     assert len(clears) == 2
-    assert {clear["clearId"] for clear in clears} == {"clear-will-hard-p5", "clear-will-hard-p6"}
+    # docs/IMPL_PLAN_RAFFLE_MULTI_CLEAR.md S1: clearId always carries a per-cluster
+    # index (even when a partyCount only resolves one cluster).
+    assert {clear["clearId"] for clear in clears} == {"clear-will-hard-p5-1", "clear-will-hard-p6-1"}
     five_clear = next(clear for clear in clears if clear["partyCount"] == 5)
     six_clear = next(clear for clear in clears if clear["partyCount"] == 6)
     assert five_clear["boss"] == "WILL" and five_clear["bossDifficulty"] == "HARD"
@@ -374,12 +391,13 @@ def test_five_and_six_person_hard_will_clusters_both_return_as_independent_candi
     assert [member["bossNeso"] for member in six_clear["members"]] == ["0"] * 5 + ["900000"]
 
 
-def test_ambiguous_party_count_cluster_is_excluded_without_affecting_other_candidates() -> None:
+def test_two_disjoint_same_size_groups_both_resolve_independently() -> None:
+    # docs/IMPL_PLAN_RAFFLE_MULTI_CLEAR.md S1, failure mode B regression test: two disjoint
+    # one-hour windows of equal size at partyCount=6 (m1+m2 vs m3+m4) used to tie-break each
+    # other away entirely (both clusters silently dropped). Both must now resolve as
+    # independent candidates, alongside the unrelated clean partyCount=5 candidate.
     request = request_for("m1", "m2", "m3", "m4", "m5")
     histories = {
-        # partyCount=6: two disjoint one-hour windows of equal size (m1+m2 vs m3+m4) tie for
-        # the largest cluster, so this partyCount cannot be resolved and must be dropped with
-        # a warning while the clean partyCount=5 candidate below is still returned.
         "m1": [{"raffledAt": request.raffledAt, "layerId": 205044, "clearInformations": [{"clearedAt": "2026-07-23T14:00:00Z", "partyCount": 6}], "prizes": []}],
         "m2": [{"raffledAt": request.raffledAt, "layerId": 205044, "clearInformations": [{"clearedAt": "2026-07-23T14:10:00Z", "partyCount": 6}], "prizes": []}],
         "m3": [{"raffledAt": request.raffledAt, "layerId": 205044, "clearInformations": [{"clearedAt": "2026-07-23T18:00:00Z", "partyCount": 6}], "prizes": []}],
@@ -396,17 +414,98 @@ def test_ambiguous_party_count_cluster_is_excluded_without_affecting_other_candi
     layers = [{"layerId": 205044, "boss": {"bossName": "Will", "difficulty": "DIFFICULTY_HARD", "raffleLayerName": "Hard Will"}}]
 
     result = normalize_live_history(request, histories, layers, {})
+    clears = result["clears"]
 
-    assert [clear["partyCount"] for clear in result["clears"]] == [5]
-    assert result["clears"][0]["clearId"] == "clear-will-hard-p5"
-    assert result["clears"][0]["historyMemberIds"] == ["m1", "m2", "m5"]
-    # No Ascendant-tier history is fed into this fixture, so the resolved partyCount=5 clear
-    # also raises `ascendant_not_found` (fail-visible instead of a silent 0 -- see
-    # docs/IMPL_PLAN_RAFFLE_ASCENDANT_MATCH.md S2) alongside the unrelated partyCount=6
-    # ambiguity this test exists to cover.
-    assert result["warnings"] == [
-        {"code": "ascendant_not_found", "boss": "WILL", "bossDifficulty": "HARD", "expectedTier": "Eternal Ascendant"},
+    assert [clear["partyCount"] for clear in clears] == [5, 6, 6]
+    assert {clear["clearId"] for clear in clears} == {"clear-will-hard-p5-1", "clear-will-hard-p6-1", "clear-will-hard-p6-2"}
+    five_clear = next(clear for clear in clears if clear["partyCount"] == 5)
+    six_clears = [clear for clear in clears if clear["partyCount"] == 6]
+    assert five_clear["historyMemberIds"] == ["m1", "m2", "m5"]
+    assert sorted(clear["historyMemberIds"] for clear in six_clears) == [["m1", "m2"], ["m3", "m4"]]
+    assert five_clear["clearedAt"] == "2026-07-23T20:00:00Z"
+    assert {clear["clearedAt"] for clear in six_clears} == {"2026-07-23T14:00:00Z", "2026-07-23T18:00:00Z"}
+    # Two disjoint groups is a normal situation, not a conflict -- no ambiguity warning.
+    # No Ascendant-tier history is fed into this fixture, so every resolved clear also raises
+    # `ascendant_not_found` (fail-visible instead of a silent 0 -- see
+    # docs/IMPL_PLAN_RAFFLE_ASCENDANT_MATCH.md S2).
+    assert result["warnings"] == [{"code": "ascendant_not_found", "boss": "WILL", "bossDifficulty": "HARD", "expectedTier": "Eternal Ascendant"}] * 3
+
+
+def test_same_member_repeating_at_the_same_party_size_appears_in_both_well_separated_clusters() -> None:
+    # Acceptance criterion 2 (docs/IMPL_PLAN_RAFFLE_MULTI_CLEAR.md): m1 clears Hard Will twice
+    # at partyCount=6, in two well-separated (>1 hour apart) parties. Failure mode A used to
+    # drop m1 from the candidate pool entirely; m1 must now appear in both clusters.
+    request = request_for("m1", "m2", "m3", "m4", "m5")
+    histories = {
+        "m1": [
+            {"raffledAt": request.raffledAt, "layerId": 205044, "clearInformations": [{"clearedAt": "2026-07-23T14:00:00Z", "partyCount": 6}]},
+            {"raffledAt": request.raffledAt, "layerId": 205044, "clearInformations": [{"clearedAt": "2026-07-23T20:00:00Z", "partyCount": 6}]},
+        ],
+        "m2": [{"raffledAt": request.raffledAt, "layerId": 205044, "clearInformations": [{"clearedAt": "2026-07-23T14:01:00Z", "partyCount": 6}]}],
+        "m3": [{"raffledAt": request.raffledAt, "layerId": 205044, "clearInformations": [{"clearedAt": "2026-07-23T14:02:00Z", "partyCount": 6}]}],
+        "m4": [{"raffledAt": request.raffledAt, "layerId": 205044, "clearInformations": [{"clearedAt": "2026-07-23T20:01:00Z", "partyCount": 6}]}],
+        "m5": [{"raffledAt": request.raffledAt, "layerId": 205044, "clearInformations": [{"clearedAt": "2026-07-23T20:02:00Z", "partyCount": 6}]}],
+    }
+    for member_id in histories:
+        for history in histories[member_id]:
+            history["prizes"] = []
+    layers = [{"layerId": 205044, "boss": {"bossName": "Will", "difficulty": "DIFFICULTY_HARD", "raffleLayerName": "Hard Will"}}]
+
+    result = normalize_live_history(request, histories, layers, {})
+
+    assert [clear["historyMemberIds"] for clear in result["clears"]] == [["m1", "m2", "m3"], ["m1", "m4", "m5"]]
+    assert not [warning for warning in result["warnings"] if warning["code"] == "ambiguous_party_cluster"]
+
+
+def test_same_member_repeating_within_the_same_one_hour_window_is_ambiguous() -> None:
+    # Acceptance criterion 5 (docs/IMPL_PLAN_RAFFLE_MULTI_CLEAR.md): unlike the well-separated
+    # case above, m1's two partyCount=6 clears both land inside the same one-hour window here
+    # (which one belongs to the m1+m2 cluster is genuinely ambiguous), so this specific
+    # collision must still raise `ambiguous_party_cluster` -- while the clean m1+m2 cluster and
+    # m1's own leftover single-member cluster are still both returned.
+    request = request_for("m1", "m2")
+    histories = {
+        "m1": [
+            {"raffledAt": request.raffledAt, "layerId": 205044, "clearInformations": [{"clearedAt": "2026-07-23T14:00:00Z", "partyCount": 6}], "prizes": []},
+            {"raffledAt": request.raffledAt, "layerId": 205044, "clearInformations": [{"clearedAt": "2026-07-23T14:05:00Z", "partyCount": 6}], "prizes": []},
+        ],
+        "m2": [{"raffledAt": request.raffledAt, "layerId": 205044, "clearInformations": [{"clearedAt": "2026-07-23T14:02:00Z", "partyCount": 6}], "prizes": []}],
+    }
+    layers = [{"layerId": 205044, "boss": {"bossName": "Will", "difficulty": "DIFFICULTY_HARD", "raffleLayerName": "Hard Will"}}]
+
+    result = normalize_live_history(request, histories, layers, {})
+
+    assert [clear["historyMemberIds"] for clear in result["clears"]] == [["m1", "m2"], ["m1"]]
+    assert [warning for warning in result["warnings"] if warning["code"] == "ambiguous_party_cluster"] == [
         {"code": "ambiguous_party_cluster", "boss": "WILL", "bossDifficulty": "HARD", "partyCount": 6},
+    ]
+
+
+def test_four_person_group_and_two_disjoint_six_person_groups_all_resolve_as_three_candidates() -> None:
+    # Acceptance criterion 1 (docs/IMPL_PLAN_RAFFLE_MULTI_CLEAR.md): the reported "4 people, 6
+    # people, 6 people" scenario -- a partyCount=4 cluster plus two disjoint partyCount=6
+    # clusters -- must all resolve as three independent candidates.
+    request = request_for("m1", "m2", "m3", "m4", "m5", "m6")
+    histories = {
+        "m1": [{"raffledAt": request.raffledAt, "layerId": 205044, "clearInformations": [{"clearedAt": "2026-07-23T10:00:00Z", "partyCount": 4}], "prizes": []}],
+        "m2": [{"raffledAt": request.raffledAt, "layerId": 205044, "clearInformations": [{"clearedAt": "2026-07-23T10:01:00Z", "partyCount": 4}], "prizes": []}],
+        "m3": [{"raffledAt": request.raffledAt, "layerId": 205044, "clearInformations": [{"clearedAt": "2026-07-23T10:02:00Z", "partyCount": 4}], "prizes": []}] + [
+            {"raffledAt": request.raffledAt, "layerId": 205044, "clearInformations": [{"clearedAt": "2026-07-23T14:00:00Z", "partyCount": 6}], "prizes": []}
+        ],
+        "m4": [{"raffledAt": request.raffledAt, "layerId": 205044, "clearInformations": [{"clearedAt": "2026-07-23T10:03:00Z", "partyCount": 4}], "prizes": []}],
+        "m5": [{"raffledAt": request.raffledAt, "layerId": 205044, "clearInformations": [{"clearedAt": "2026-07-23T20:00:00Z", "partyCount": 6}], "prizes": []}],
+        "m6": [{"raffledAt": request.raffledAt, "layerId": 205044, "clearInformations": [{"clearedAt": "2026-07-23T20:01:00Z", "partyCount": 6}], "prizes": []}],
+    }
+    histories["m1"].append({"raffledAt": request.raffledAt, "layerId": 205044, "clearInformations": [{"clearedAt": "2026-07-23T14:01:00Z", "partyCount": 6}], "prizes": []})
+    layers = [{"layerId": 205044, "boss": {"bossName": "Will", "difficulty": "DIFFICULTY_HARD", "raffleLayerName": "Hard Will"}}]
+
+    clears = normalize_live_history(request, histories, layers, {})["clears"]
+
+    assert len(clears) == 3
+    assert sorted((clear["partyCount"], tuple(clear["historyMemberIds"])) for clear in clears) == [
+        (4, ("m1", "m2", "m3", "m4")),
+        (6, ("m1", "m3")),
+        (6, ("m5", "m6")),
     ]
 
 

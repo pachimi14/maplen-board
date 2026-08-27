@@ -162,43 +162,65 @@ def _clear_entries(history: dict) -> list[tuple[datetime, int]]:
     return result
 
 
-def _one_hour_party_cluster(
+def _one_hour_party_clusters(
     member_histories: dict[str, list[tuple[dict, datetime, int]]],
     expected_party_count: int,
-) -> tuple[dict[str, tuple[dict, int]], bool]:
-    records = []
-    ambiguous = False
+) -> tuple[list[tuple[dict[str, tuple[dict, int]], datetime]], bool]:
+    """Greedy-partitions every history record matching `expected_party_count` into
+    one-hour-window clusters (docs/IMPL_PLAN_RAFFLE_MULTI_CLEAR.md S1). Unlike the
+    single-cluster predecessor this fully floats a member's repeated clears at the
+    same official party size: each is kept (no longer dropped outright) and only
+    excluded from a cluster it would collide with (two records for the same member
+    inside the same one-hour window), which is the one case still flagged via the
+    returned `ambiguous` bool. Disjoint same-size groups (e.g. two independent
+    6-person parties) are no longer forced to tie-break away; every non-conflicting
+    cluster is returned as its own independent candidate.
+    """
+    records: list[tuple[datetime, str, dict, int]] = []
     for member_id, values in member_histories.items():
-        matching = [value for value in values if value[2] == expected_party_count]
-        if len(matching) > 1:
-            ambiguous = True
-            continue
-        if len(matching) == 1:
-            history, cleared_at, party_count = matching[0]
-            records.append((cleared_at, member_id, history, party_count))
+        for history, cleared_at, party_count in values:
+            if party_count == expected_party_count:
+                records.append((cleared_at, member_id, history, party_count))
     records.sort(key=lambda value: value[0])
-    minimum_members = 1
-    best_count = 0
-    best_clusters: dict[frozenset[str], list[tuple[datetime, str, dict, int]]] = {}
-    right = 0
-    for left in range(len(records)):
-        if right < left:
-            right = left
-        while right < len(records) and records[right][0] - records[left][0] <= CLEAR_CLUSTER_WINDOW:
-            right += 1
-        window = records[left:right]
-        if len(window) < minimum_members:
+
+    assigned = [False] * len(records)
+    ambiguous = False
+    clusters: list[list[tuple[datetime, str, dict, int]]] = []
+    for seed_index in range(len(records)):
+        if assigned[seed_index]:
             continue
-        member_set = frozenset(value[1] for value in window)
-        if len(window) > best_count:
-            best_count = len(window)
-            best_clusters = {member_set: window}
-        elif len(window) == best_count:
-            best_clusters[member_set] = window
-    if best_count < minimum_members or len(best_clusters) != 1:
-        return {}, ambiguous or len(best_clusters) > 1
-    cluster = next(iter(best_clusters.values()))
-    return {member_id: (history, party_count) for _cleared_at, member_id, history, party_count in cluster}, ambiguous
+        seed_time = records[seed_index][0]
+        cluster_member_ids = {records[seed_index][1]}
+        cluster = [records[seed_index]]
+        assigned[seed_index] = True
+        for candidate_index in range(seed_index + 1, len(records)):
+            if assigned[candidate_index]:
+                continue
+            cleared_at, member_id, _history, _party_count = records[candidate_index]
+            if cleared_at - seed_time > CLEAR_CLUSTER_WINDOW:
+                break
+            if member_id in cluster_member_ids:
+                # Same member has a second clear for this official party size inside
+                # this cluster's one-hour window: which one belongs here is
+                # genuinely ambiguous, so it is left out (and left unassigned --
+                # it may still form its own cluster later if it doesn't collide
+                # with anything else).
+                ambiguous = True
+                continue
+            cluster_member_ids.add(member_id)
+            cluster.append(records[candidate_index])
+            assigned[candidate_index] = True
+        if len(cluster) > expected_party_count:
+            # Cannot exceed the official party size; discard as unresolved.
+            continue
+        clusters.append(cluster)
+    return [
+        (
+            {member_id: (history, party_count) for _cleared_at, member_id, history, party_count in cluster},
+            cluster[0][0],
+        )
+        for cluster in clusters
+    ], ambiguous
 
 
 def _is_ascendant(layer: dict | None) -> bool:
@@ -368,10 +390,10 @@ def normalize_live_history(request: CreateJobRequest, character_histories: dict[
             # have multiple independent clears (e.g. a 5-person party and a separate 6-person
             # party both clearing Hard Will), and the caller decides which to combine.
             for official_party_count in observed_party_counts:
-                cluster, ambiguous = _one_hour_party_cluster(member_histories, official_party_count)
-                if cluster and len(cluster) <= official_party_count:
-                    if ambiguous:
-                        warnings.append({"code": "ambiguous_party_cluster", "boss": boss_code, "bossDifficulty": difficulty, "partyCount": official_party_count})
+                clusters, ambiguous = _one_hour_party_clusters(member_histories, official_party_count)
+                if ambiguous:
+                    warnings.append({"code": "ambiguous_party_cluster", "boss": boss_code, "bossDifficulty": difficulty, "partyCount": official_party_count})
+                for cluster_index, (cluster, cluster_cleared_at) in enumerate(clusters, start=1):
                     members = []
                     history_member_ids = []
                     missing_ascendant_tier = None
@@ -391,7 +413,9 @@ def normalize_live_history(request: CreateJobRequest, character_histories: dict[
                         # clear rather than only surfacing zeroed amounts.
                         warnings.append({"code": "ascendant_not_found", "boss": boss_code, "bossDifficulty": difficulty, "expectedTier": missing_ascendant_tier})
                     clears.append({
-                        "clearId": f"clear-{boss_code.lower()}-{difficulty.lower()}-p{official_party_count}",
+                        # Index disambiguates independent same-partyCount clusters (S1):
+                        # every cluster gets its own clearId, even when there is only one.
+                        "clearId": f"clear-{boss_code.lower()}-{difficulty.lower()}-p{official_party_count}-{cluster_index}",
                         "boss": boss_code,
                         "bossDifficulty": difficulty,
                         "ascendantTier": ascendant_tier,
@@ -399,7 +423,6 @@ def normalize_live_history(request: CreateJobRequest, character_histories: dict[
                         "historyMemberIds": history_member_ids,
                         "complete": True,
                         "members": members,
+                        "clearedAt": cluster_cleared_at.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
                     })
-                elif ambiguous:
-                    warnings.append({"code": "ambiguous_party_cluster", "boss": boss_code, "bossDifficulty": difficulty, "partyCount": official_party_count})
     return {"raffleResults": raffle_results, "clears": clears, "warnings": warnings, "errors": errors}
