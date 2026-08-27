@@ -286,6 +286,120 @@ describe("calculateSettlement", () => {
   });
 });
 
+// docs/IMPL_PLAN_RAFFLE_EXTRA_REWARD.md: extra reward is NESO already
+// received outside the raffle (e.g. a carry's cut) that the party wants
+// folded into this week's distribution. It skips the 5% sale fee (unlike
+// coin/equipment/FT Item) and is added straight to the member's gross AND
+// transferableNeso.
+describe("calculateSettlement extra reward (docs/IMPL_PLAN_RAFFLE_EXTRA_REWARD.md)", () => {
+  function sixMemberInput(overrides = {}) {
+    const partyOrder = ["m1", "m2", "m3", "m4", "m5", "m6"];
+    const members = partyOrder.map((memberId) => ({
+      memberId,
+      bossNeso: "60000000",
+      powerCrystalAmount: "0",
+      ascendantNeso: "0",
+      drops: [],
+    }));
+    return {
+      boss: "LUCID",
+      complete: true,
+      historyMemberIds: partyOrder,
+      partyOrder,
+      include: { coin: false, equipment: false, bossNeso: true, powerCrystal: false, ascendantNeso: false },
+      powerCrystalNesoRate: "1",
+      saleNesoByDropId: {},
+      members,
+      ...overrides,
+    };
+  }
+
+  // Acceptance criterion 1: 6 people each win 60,000,000, m3 additionally
+  // receives a 60,000,000 extra reward (e.g. a carry's cut) -> m3 alone pays
+  // 50,000,000 and the other 5 each receive 10,000,000 (5 transfers summing
+  // to 50,000,000).
+  it("acceptance 1: m3's 60,000,000 extra reward makes m3 pay 50,000,000 and the other 5 each receive 10,000,000", () => {
+    const result = calculateSettlement(sixMemberInput({
+      extraRewards: [{ rowId: "r1", memberId: "m3", amountNeso: "60000000" }],
+    }));
+    expect(result.ok).toBe(true);
+    expect(result.total).toBe("420000000");
+    expect(result.baseShare).toBe("70000000");
+    const m3 = result.members.find((member) => member.memberId === "m3");
+    expect(m3).toMatchObject({ gross: "120000000", payment: "50000000", receipt: "0" });
+    const others = result.members.filter((member) => member.memberId !== "m3");
+    expect(others.every((member) => member.payment === "0" && member.receipt === "10000000")).toBe(true);
+    expect(result.transfers).toHaveLength(5);
+    expect(result.transfers.every((transfer) => transfer.fromMemberId === "m3" && transfer.amount === "10000000")).toBe(true);
+    const totalPaid = result.transfers.reduce((sum, transfer) => sum + BigInt(transfer.amount), 0n);
+    expect(totalPaid).toBe(50000000n);
+  });
+
+  // Acceptance criterion 2: the 5% sale fee never applies to extra reward --
+  // 60,000,000 in contributes exactly 60,000,000 to gross, not 57,000,000.
+  it("acceptance 2: does not deduct the 5% sale fee from extra reward", () => {
+    const result = calculateSettlement(sixMemberInput({
+      extraRewards: [{ rowId: "r1", memberId: "m3", amountNeso: "60000000" }],
+    }));
+    expect(result.ok).toBe(true);
+    expect(result.categoryTotals.extraReward).toBe("60000000");
+    const m3 = result.members.find((member) => member.memberId === "m3");
+    expect(m3.extraReward).toBe("60000000");
+    expect(BigInt(m3.gross)).toBe(60000000n + 60000000n);
+  });
+
+  // Acceptance criterion 3: two rows for the same member are summed.
+  it("acceptance 3: sums multiple rows for the same member", () => {
+    const result = calculateSettlement(sixMemberInput({
+      extraRewards: [
+        { rowId: "r1", memberId: "m3", amountNeso: "30000000" },
+        { rowId: "r2", memberId: "m3", amountNeso: "30000000" },
+      ],
+    }));
+    expect(result.ok).toBe(true);
+    const m3 = result.members.find((member) => member.memberId === "m3");
+    expect(m3.extraReward).toBe("60000000");
+    expect(result.categoryTotals.extraReward).toBe("60000000");
+  });
+
+  // Acceptance criterion 4: a blank amount is treated as 0 (LULU-126-style
+  // blank-is-zero), and the calculation still completes; a genuinely
+  // malformed (non-blank) amount still errors.
+  it("acceptance 4: treats a blank amount as 0 and still errors on a malformed (non-blank) amount", () => {
+    const blank = calculateSettlement(sixMemberInput({
+      extraRewards: [{ rowId: "r1", memberId: "m3", amountNeso: "" }],
+    }));
+    expect(blank.ok).toBe(true);
+    expect(blank.categoryTotals.extraReward).toBe("0");
+
+    const malformed = calculateSettlement(sixMemberInput({
+      extraRewards: [{ rowId: "r1", memberId: "m3", amountNeso: "abc" }],
+    }));
+    expect(malformed.ok).toBe(false);
+    expect(malformed.errors).toContainEqual(expect.objectContaining({ code: "invalid_integer", field: "extraRewardAmount", memberId: "m3" }));
+  });
+
+  it("rejects a row whose memberId is not part of the saved party", () => {
+    const result = calculateSettlement(sixMemberInput({
+      extraRewards: [{ rowId: "r1", memberId: "not-a-member", amountNeso: "1000" }],
+    }));
+    expect(result.ok).toBe(false);
+    expect(result.errors).toContainEqual(expect.objectContaining({ code: "invalid_extra_reward_member", memberId: "not-a-member" }));
+  });
+
+  // Acceptance criterion 5 (domain half): with no extraRewards at all, the
+  // category total is 0 -- the UI hides the "extra reward" column/row
+  // whenever this is "0" (see SettlementResult.jsx/shareImage.js), so the
+  // existing look is unchanged when the feature is unused.
+  it("acceptance 5: reports a 0 category total and per-member extraReward when no extraRewards are given", () => {
+    const result = calculateSettlement(sixMemberInput());
+    expect(result.ok).toBe(true);
+    expect(result.categoryTotals.extraReward).toBe("0");
+    expect(result.members.every((member) => member.extraReward === "0")).toBe(true);
+    expect(result.total).toBe("360000000");
+  });
+});
+
 // LULU-099: Power Crystal rate is now a divisor ("1 NESO = [rate] Power
 // Crystal") instead of a multiplier. IMPL_PLAN_RAFFLE_PC_RATE_DIVIDE.md
 // acceptance criteria 1-2: pin the documented 100,000,000 PC examples and

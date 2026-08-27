@@ -80,6 +80,7 @@ const SETTLEMENT_FIELD_LABEL_KEYS = Object.freeze({
   previousCarryover: "raffle.previousCarryover",
   saleNeso: "raffle.saleAmount",
   dropQuantity: "raffle.quantity",
+  extraRewardAmount: "raffle.item_extraReward",
 });
 
 function settlementFieldLabel(t, field) {
@@ -104,6 +105,7 @@ const SETTLEMENT_STATIC_KEYS = Object.freeze({
   party_mismatch: "raffle.errorPartyMismatch",
   invalid_drop: "raffle.errorInvalidDrop",
   carryover_not_balanced: "raffle.carryoverNotBalanced",
+  invalid_extra_reward_member: "raffle.errorInvalidExtraRewardMember",
 });
 
 /**

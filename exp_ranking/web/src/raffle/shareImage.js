@@ -186,6 +186,12 @@ export function buildSettlementShareModel(calculation, memberMap, include, power
     BigInt(member.equipmentSaleNeso || "0") + BigInt(member.ftItemSaleNeso || "0") !== 0n);
   const showCarryoverColumns = calculation.carryoverEnabled === true
     && calculation.members.some((member) => member.previousCarryover !== "0" || member.nextCarryover !== "0");
+  // docs/IMPL_PLAN_RAFFLE_EXTRA_REWARD.md: extra reward has no include
+  // toggle (it isn't a boss-drop category), so it follows the same
+  // all-zero-hiding rule as coin/otherSales above instead of an include
+  // flag -- shown only when at least one member actually has a non-zero
+  // extra reward this week.
+  const showExtraRewardColumn = calculation.categoryTotals.extraReward !== "0";
 
   // C4: same active-category-column set as the on-screen member table
   // (settlementCategoryColumns), with the Power Crystal "non-transferable"
@@ -201,6 +207,9 @@ export function buildSettlementShareModel(calculation, memberMap, include, power
     .map((column) => ({ ...column, note: column.key === "powerCrystal" ? t("raffle.powerCrystalNonTransferable") : null }));
   if (showOtherSalesColumn) {
     memberCategoryColumns.push({ key: OTHER_SALES_KEY, label: t("raffle.otherSales"), note: null });
+  }
+  if (showExtraRewardColumn) {
+    memberCategoryColumns.push({ key: "extraReward", label: t("raffle.item_extraReward"), note: null });
   }
 
   // G2/LULU-119 follow-up round 3 (user adjustment): previous carryover is
