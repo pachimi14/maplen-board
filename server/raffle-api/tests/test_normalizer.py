@@ -641,6 +641,30 @@ def test_legacy_power_crystal_coupon_still_recalculates_the_same_way() -> None:
     assert result["clears"][0]["members"][0]["powerCrystalAmount"] == "50000000"
 
 
+def test_ring_box_classifies_as_equipment_and_surfaces_a_sellable_drop() -> None:
+    # Acceptance criterion 3 (docs/IMPL_PLAN_RAFFLE_REWARD_VOCAB.md): Rank N Special Skill Ring
+    # Box (tier1=Voucher, like Sealed Mirror World Nodestone) is now sellable EQUIPMENT, unlike
+    # the still-excluded generic Sealed Nodestone.
+    assert _classification(2358013, {"itemName": "Rank 2 Special Skill Ring Box", "tier0": "Consumable", "tier1": "Voucher"}) == ("EQUIPMENT", "Rank 2 Special Skill Ring Box")
+
+    request = request_for("m1")
+    histories = {
+        "m1": [{
+            "raffledAt": request.raffledAt,
+            "layerId": 205041,
+            "clearInformations": [{"clearedAt": "2026-08-27T14:00:00Z", "partyCount": 1}],
+            "prizes": [{"itemId": 2358017, "winCount": {"value": "1"}}],
+        }]
+    }
+    layers = [{"layerId": 205041, "boss": {"bossName": "Lucid", "difficulty": "DIFFICULTY_HARD", "raffleLayerName": "Hard Lucid"}}]
+    metadata = {2358017: {"itemName": "Rank 6 Special Skill Ring Box", "tier0": "Consumable", "tier1": "Voucher"}}
+
+    result = normalize_live_history(request, histories, layers, metadata)
+
+    member = result["clears"][0]["members"][0]
+    assert member["drops"] == [{"dropId": "lucid-hard-m1-equipment-1", "category": "EQUIPMENT", "name": "Rank 6 Special Skill Ring Box", "quantity": "1", "imageUrl": ""}]
+
+
 def test_shared_contract_fixture_matches_fixture_normalizer() -> None:
     root = Path(__file__).resolve().parents[3]
     fixture = json.loads((root / "testdata" / "raffle" / "v1" / "cases" / "fixture-lucid.json").read_text(encoding="utf-8"))

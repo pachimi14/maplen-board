@@ -10,9 +10,11 @@ from normalizer import _classification
 # Real-metadata regression guard (LULU-119 / docs/IMPL_PLAN_RAFFLE_DROP_CLASSIFY.md §F1-3).
 #
 # The fixture is a machine snapshot of the official item metadata vocabulary actually
-# observed in production (236 entries: itemId / itemName / tier0 / tier1 only). It is
-# intentionally NOT hand-authored so that `_classification` regressions against the real
-# tier0/tier1 vocabulary are caught even when synthetic unit-test fixtures stay green.
+# observed in production (236 entries: itemId / itemName / tier0 / tier1 only), plus 6
+# real-data Rank 2-7 Special Skill Ring Box entries added for
+# docs/IMPL_PLAN_RAFFLE_REWARD_VOCAB.md S2 (242 total). It is intentionally NOT hand-authored
+# so that `_classification` regressions against the real tier0/tier1 vocabulary are caught
+# even when synthetic unit-test fixtures stay green.
 #
 # Known-vocabulary table (must stay in sync with the production snapshot):
 #   tier0=Item,       tier1 in {Decoration, Armor, Utility, Set-up, Weapon} -> EQUIPMENT
@@ -20,6 +22,7 @@ from normalizer import _classification
 #   tier0=Consumable, tier1=Exchange Currency, other names                 -> OTHER
 #   tier0=Consumable, tier1=ETC (Power Crystal Coupon)                     -> POWER_CRYSTAL
 #   tier0=Consumable, tier1=Voucher, name == "Sealed Mirror World Nodestone" -> FT_ITEM
+#   tier0=Consumable, tier1=Voucher, name ends with "Ring Box"             -> EQUIPMENT
 #   tier0=Consumable, tier1=Voucher, other names (e.g. "Sealed Nodestone") -> OTHER
 KNOWN_VOCABULARY = {
     ("Item", "Decoration"): "EQUIPMENT",
@@ -29,10 +32,11 @@ KNOWN_VOCABULARY = {
     ("Item", "Weapon"): "EQUIPMENT",
     ("Consumable", "Exchange Currency"): None,  # resolved per-item below (COIN vs OTHER)
     ("Consumable", "ETC"): "POWER_CRYSTAL",
-    ("Consumable", "Voucher"): None,  # resolved per-item below (FT_ITEM vs OTHER)
+    ("Consumable", "Voucher"): None,  # resolved per-item below (FT_ITEM vs EQUIPMENT vs OTHER)
 }
 TARGET_COIN_NAMES = {"Phantasma Coin", "Arachno Coin"}
 FT_ITEM_NAME = "Sealed Mirror World Nodestone"
+RING_BOX_NAME_SUFFIX = "Ring Box"
 
 
 def _load_vocabulary() -> list[dict]:
@@ -55,7 +59,9 @@ def _expected_classification(entry: dict) -> str:
     if key == ("Consumable", "Exchange Currency"):
         return "COIN" if name in TARGET_COIN_NAMES else "OTHER"
     if key == ("Consumable", "Voucher"):
-        return "FT_ITEM" if name == FT_ITEM_NAME else "OTHER"
+        if name == FT_ITEM_NAME:
+            return "FT_ITEM"
+        return "EQUIPMENT" if name.endswith(RING_BOX_NAME_SUFFIX) else "OTHER"
     return KNOWN_VOCABULARY[key]
 
 
@@ -63,7 +69,7 @@ VOCABULARY = _load_vocabulary()
 
 
 def test_vocabulary_fixture_has_expected_size() -> None:
-    assert len(VOCABULARY) == 236
+    assert len(VOCABULARY) == 242
 
 
 @pytest.mark.parametrize("entry", VOCABULARY, ids=lambda entry: f"{entry['itemId']}:{entry['itemName']}")
@@ -88,6 +94,17 @@ def test_sealed_mirror_world_nodestone_is_ft_item_and_sealed_nodestone_is_other(
     generic = next(entry for entry in VOCABULARY if entry["itemName"] == "Sealed Nodestone")
     assert _classification(ft_item["itemId"], ft_item) == ("FT_ITEM", "Sealed Mirror World Nodestone")
     assert _classification(generic["itemId"], generic) == ("OTHER", "Sealed Nodestone")
+
+
+def test_ring_boxes_are_equipment_and_generic_sealed_nodestone_stays_other() -> None:
+    # docs/IMPL_PLAN_RAFFLE_REWARD_VOCAB.md S2: Ring Box (tier1=Voucher, name-suffix match) is
+    # now sellable EQUIPMENT; the still-excluded Sealed Nodestone (same tier0/tier1) is
+    # unaffected -- only the Ring Box name distinguishes them.
+    ring_boxes = [entry for entry in VOCABULARY if entry["itemName"].endswith(RING_BOX_NAME_SUFFIX)]
+    assert len(ring_boxes) == 6
+    assert all(_classification(entry["itemId"], entry)[0] == "EQUIPMENT" for entry in ring_boxes)
+    generic = next(entry for entry in VOCABULARY if entry["itemName"] == "Sealed Nodestone")
+    assert _classification(generic["itemId"], generic)[0] == "OTHER"
 
 
 def test_power_crystal_coupons_are_classified() -> None:

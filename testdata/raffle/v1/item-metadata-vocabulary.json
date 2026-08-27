@@ -1414,5 +1414,41 @@
   "itemName": "Zzz Raccoon",
   "tier0": "Item",
   "tier1": "Utility"
+ },
+ {
+  "itemId": 2358013,
+  "itemName": "Rank 2 Special Skill Ring Box",
+  "tier0": "Consumable",
+  "tier1": "Voucher"
+ },
+ {
+  "itemId": 2358014,
+  "itemName": "Rank 3 Special Skill Ring Box",
+  "tier0": "Consumable",
+  "tier1": "Voucher"
+ },
+ {
+  "itemId": 2358015,
+  "itemName": "Rank 4 Special Skill Ring Box",
+  "tier0": "Consumable",
+  "tier1": "Voucher"
+ },
+ {
+  "itemId": 2358016,
+  "itemName": "Rank 5 Special Skill Ring Box",
+  "tier0": "Consumable",
+  "tier1": "Voucher"
+ },
+ {
+  "itemId": 2358017,
+  "itemName": "Rank 6 Special Skill Ring Box",
+  "tier0": "Consumable",
+  "tier1": "Voucher"
+ },
+ {
+  "itemId": 2358018,
+  "itemName": "Rank 7 Special Skill Ring Box",
+  "tier0": "Consumable",
+  "tier1": "Voucher"
  }
 ]

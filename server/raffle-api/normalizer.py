@@ -31,6 +31,7 @@ POWER_CRYSTAL_PATTERN = re.compile(
 # itemId (quantity IS the Power Crystal amount, face value 1). Metadata for it 404s, same as
 # NESO's itemId 1 -- both are currency-like IDs with no item metadata entry.
 POWER_CRYSTAL_DIRECT_ITEM_ID = 1000
+RING_BOX_NAME_SUFFIX = "Ring Box"
 
 def _drops(boss: str, member_index: int) -> list[dict]:
     drops = []
@@ -130,6 +131,13 @@ def _classification(item_id: int, metadata: dict | None) -> tuple[str, str]:
         return "POWER_CRYSTAL", name
     if name == FT_ITEM_NAME:
         return "FT_ITEM", name
+    # docs/IMPL_PLAN_RAFFLE_REWARD_VOCAB.md S2: Rank N Special Skill Ring Box (tier1=Voucher,
+    # like Sealed Mirror World Nodestone) is sellable gear-adjacent loot, not a raffle currency
+    # -- treated as EQUIPMENT so it gets a sale-price input like other drops. Suffix match (not
+    # a literal name list) so a future "Rank 8 ..." tier keeps working without a code change
+    # (LULU-130 lesson: exact-name matching alone breaks on upstream vocabulary growth).
+    if _text((metadata or {}).get("tier1")) == "Voucher" and name.endswith(RING_BOX_NAME_SUFFIX):
+        return "EQUIPMENT", name
     if _text((metadata or {}).get("tier0")) == "Item":
         return "EQUIPMENT", name
     return "OTHER", name
