@@ -141,6 +141,23 @@ export function calculateSettlement(input) {
   const seenDrops = new Set();
   const historyMemberIds = new Set(Array.isArray(input?.historyMemberIds) ? input.historyMemberIds : []);
 
+  // Extra reward (docs/IMPL_PLAN_RAFFLE_EXTRA_REWARD.md): NESO already
+  // received outside the raffle (e.g. a carry's cut sent by other parties)
+  // that the party wants folded into this week's distribution. Unlike
+  // coin/equipment/FT Item it is not a marketplace sale, so the 5% sale fee
+  // never applies here -- each row's amount is added straight into its
+  // member's gross/transferableNeso. Same-member rows are summed.
+  const extraRewardByMemberId = new Map();
+  for (const row of Array.isArray(input?.extraRewards) ? input.extraRewards : []) {
+    const rowMemberId = row?.memberId;
+    const amount = parseInteger(row?.amountNeso, "extraRewardAmount", errors, { memberId: rowMemberId, required: false });
+    if (!memberMap.has(rowMemberId)) {
+      errors.push(problem("invalid_extra_reward_member", "extraRewardMember", rowMemberId));
+      continue;
+    }
+    extraRewardByMemberId.set(rowMemberId, (extraRewardByMemberId.get(rowMemberId) || 0n) + amount);
+  }
+
   const rows = partyOrder.map((memberId) => {
     const member = memberMap.get(memberId) || {};
     const bossNeso = include.bossNeso
@@ -211,7 +228,10 @@ export function calculateSettlement(input) {
     const previousCarryover = carryoverEnabled
       ? parseSignedInteger(input?.previousCarryoverByMemberId?.[memberId] ?? "0", "previousCarryover", errors, memberId)
       : 0n;
-    const transferableNeso = bossNeso + ascendantNeso + coinSaleNeso + equipmentSaleNeso + ftItemSaleNeso;
+    const extraReward = extraRewardByMemberId.get(memberId) || 0n;
+    // Extra reward is already-received NESO (not a marketplace sale), so it
+    // skips the 5% sale fee and goes straight into transferableNeso.
+    const transferableNeso = bossNeso + ascendantNeso + coinSaleNeso + equipmentSaleNeso + ftItemSaleNeso + extraReward;
     return {
       memberId,
       hasHistory: historyMemberIds.has(memberId),
@@ -226,6 +246,7 @@ export function calculateSettlement(input) {
       equipmentDrops,
       ftItemQuantity,
       ftItemSaleNeso,
+      extraReward,
       previousCarryover,
       transferableNeso,
       gross: transferableNeso + powerCrystalNeso,
@@ -281,6 +302,7 @@ export function calculateSettlement(input) {
     equipmentDrops: row.equipmentDrops,
     ftItemQuantity: stringifyChecked(row.ftItemQuantity, outputErrors, "ftItemQuantity", row.memberId),
     ftItemSaleNeso: stringifyChecked(row.ftItemSaleNeso, outputErrors, "ftItemSaleNeso", row.memberId),
+    extraReward: stringifyChecked(row.extraReward, outputErrors, "extraReward", row.memberId),
     transferableNeso: stringifyChecked(row.transferableNeso, outputErrors, "transferableNeso", row.memberId),
     previousCarryover: stringifyChecked(row.previousCarryover, outputErrors, "previousCarryover", row.memberId),
     gross: stringifyChecked(row.gross, outputErrors, "gross", row.memberId),
@@ -306,6 +328,7 @@ export function calculateSettlement(input) {
     equipmentSaleNeso: stringifyChecked(sumBy(rows, "equipmentSaleNeso"), outputErrors, "categoryEquipmentSaleNeso"),
     ftItemQuantity: stringifyChecked(sumBy(rows, "ftItemQuantity"), outputErrors, "categoryFtItemQuantity"),
     ftItemSaleNeso: stringifyChecked(sumBy(rows, "ftItemSaleNeso"), outputErrors, "categoryFtItemSaleNeso"),
+    extraReward: stringifyChecked(sumBy(rows, "extraReward"), outputErrors, "categoryExtraReward"),
     transferableNeso: stringifyChecked(sumBy(rows, "transferableNeso"), outputErrors, "categoryTransferableNeso"),
   };
   const equipmentDrops = finalized.flatMap((row) => row.equipmentDrops.map((drop) => ({ ...drop, memberId: row.memberId })));
