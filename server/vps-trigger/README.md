@@ -123,6 +123,20 @@ run already warmed up when the data lands.
 
 ## PAT 失効の検知 ("quiet failure" detection)
 
+> ### 現在稼働中の PAT
+>
+> | 項目 | 値 |
+> |---|---|
+> | **有効期限** | **2027-08-28** |
+> | 対象リポジトリ | `pachimi14/maplen-board` のみ |
+> | 権限 | `Actions: Read and write` のみ(+ 自動付与の `Metadata: Read-only`) |
+> | 配置 | `~/.config/lulumi-tools/github-dispatch.env`(`chmod 600`、botuser のみ読める) |
+> | 稼働開始 | 2026-08-28(DECISION_LOG **LULU-140**) |
+>
+> **2027-08-28 までにローテーションすること。** 期限を過ぎると VPS 主系が
+> 静かに止まり、GitHub cron のフォールバックだけになる(データは失われないが、
+> このプランが解消したはずの遅延・ドロップのリスクが戻る)。
+
 A fine-grained PAT expires (max 1 year) or can be revoked. If that happens
 and nobody notices, the VPS trigger silently stops firing and the site
 quietly falls back to the GitHub cron schedule alone (still working, but
