@@ -1,0 +1,28 @@
+[Unit]
+Description=Lulumi Tools -- dispatch MapleN Board Pages workflow from VPS (one-shot)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# One-shot, NOT a daemon -- same discipline as the sf-history *.service
+# examples (server/sf-history/deploy/). This unit does nothing but run
+# dispatch_pages_workflow.sh, which POSTs exactly one workflow_dispatch
+# request and exits (docs/IMPL_PLAN_vps-trigger.md §2.4 "VPS の役割は
+# 「ボタンを押す」だけ"). All fetching/DB/Release stays on GitHub Actions.
+Type=oneshot
+User=botuser
+Group=botuser
+WorkingDirectory=/home/botuser/apps/lulumi-tools-vps-trigger
+# ★秘密情報: GITHUB_DISPATCH_PAT lives ONLY in this file, root-owned 0600,
+# never in git. See ../README.md "PAT setup".
+EnvironmentFile=/etc/lulumi-tools/github-dispatch.env
+ExecStart=/home/botuser/apps/lulumi-tools-vps-trigger/dispatch_pages_workflow.sh
+# Non-zero exit (including exit code 2 for an expired/revoked PAT, see the
+# script's header comment) marks this unit failed, so it shows up in
+# `systemctl --failed` and `journalctl -u vps-trigger-dispatch.service` --
+# the detection mechanism for "PAT 失効の検知" (../README.md).
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
