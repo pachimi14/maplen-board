@@ -66,38 +66,60 @@ curl -sS -X POST -o /dev/null -w '%{http_code}' \
 
 ## Deploy on the VPS
 
-```bash
-# 1. App directory + script
-sudo mkdir -p /home/botuser/apps/lulumi-tools-vps-trigger
-sudo cp server/vps-trigger/dispatch_pages_workflow.sh \
-  /home/botuser/apps/lulumi-tools-vps-trigger/
-sudo chmod +x /home/botuser/apps/lulumi-tools-vps-trigger/dispatch_pages_workflow.sh
-sudo chown -R botuser:botuser /home/botuser/apps/lulumi-tools-vps-trigger
+> **sudo is not needed.** This runs as a **systemd *user* unit** under
+> `botuser`, matching the existing units on this host (`live-exp.service`,
+> `notifications.service`, ...). `Linger=yes` is already enabled for
+> `botuser`, so user timers fire even with nobody logged in.
+>
+> **Steps 1 and 3 are already done** (2026-08-28). Only **step 2 (the PAT)**
+> is left, and it must be done by the repository owner -- never by an agent.
 
-# 2. Secret env file -- root-only readable, PAT lives ONLY here, never in git.
-sudo install -d -m 0755 /etc/lulumi-tools
-sudo tee /etc/lulumi-tools/github-dispatch.env >/dev/null <<'EOF'
+```bash
+# 1. App directory + script  [DONE 2026-08-28]
+#    Piped straight out of git so the file keeps LF endings -- copying from a
+#    Windows checkout ships CRLF and bash then fails with
+#    "syntax error near unexpected token `$'in'`".
+mkdir -p ~/apps/lulumi-tools-vps-trigger
+git show HEAD:server/vps-trigger/dispatch_pages_workflow.sh   | ssh botuser@<vps> 'cat > ~/apps/lulumi-tools-vps-trigger/dispatch_pages_workflow.sh'
+ssh botuser@<vps> 'chmod 755 ~/apps/lulumi-tools-vps-trigger/dispatch_pages_workflow.sh'
+
+# 2. Secret env file  [YOU DO THIS -- run it on the VPS as botuser]
+#    Only botuser can read it. root can read anything anyway, so putting it
+#    under /etc buys no extra protection here.
+mkdir -p ~/.config/lulumi-tools && chmod 700 ~/.config/lulumi-tools
+cat > ~/.config/lulumi-tools/github-dispatch.env <<'EOF'
 GITHUB_DISPATCH_PAT=__REPLACE_WITH_YOUR_FINE_GRAINED_PAT__
 EOF
-sudo chmod 600 /etc/lulumi-tools/github-dispatch.env
-sudo chown root:root /etc/lulumi-tools/github-dispatch.env
+chmod 600 ~/.config/lulumi-tools/github-dispatch.env
 
-# 3. systemd unit + timer (same flow as server/sf-history's *.example files)
-sudo cp server/vps-trigger/deploy/vps-trigger-dispatch.service.example \
-  /etc/systemd/system/vps-trigger-dispatch.service
-sudo cp server/vps-trigger/deploy/vps-trigger-dispatch.timer.example \
-  /etc/systemd/system/vps-trigger-dispatch.timer
-# If the VPS is not running in UTC, edit OnCalendar in the .timer unit first
-# (see the comment inside vps-trigger-dispatch.timer.example).
-sudo systemctl daemon-reload
-sudo systemctl enable --now vps-trigger-dispatch.timer
+# 3. systemd *user* unit + timer  [DONE 2026-08-28]
+cp server/vps-trigger/deploy/vps-trigger-dispatch.service.example   ~/.config/systemd/user/vps-trigger-dispatch.service
+cp server/vps-trigger/deploy/vps-trigger-dispatch.timer.example   ~/.config/systemd/user/vps-trigger-dispatch.timer
+systemctl --user daemon-reload
+systemctl --user enable --now vps-trigger-dispatch.timer
+systemctl --user list-timers vps-trigger-dispatch.timer   # confirm next run
 
-# 4. Manual smoke test (does a real dispatch -- only run this once you're
-#    ready to trigger an actual workflow run):
-sudo systemctl start vps-trigger-dispatch.service
-sudo systemctl status vps-trigger-dispatch.service
-sudo journalctl -u vps-trigger-dispatch.service -n 20
+# 4. Manual smoke test -- this performs a REAL dispatch, so only run it when
+#    you are ready to trigger an actual workflow run.
+systemctl --user start vps-trigger-dispatch.service
+systemctl --user status vps-trigger-dispatch.service
+journalctl --user -u vps-trigger-dispatch.service -n 20
 ```
+
+**The timer fires at JST 09:06.** This host runs `Asia/Tokyo`, so
+`OnCalendar=*-*-* 09:06:00` is wall-clock JST. On a UTC host use
+`00:06:00` instead. The official ranking finishes rebuilding around
+**JST 09:09:30-09:10:15** (measured over 6 consecutive days), and the
+workflow itself polls until the rebuild is complete, so 09:06 leaves the
+run already warmed up when the data lands.
+
+**Verified failure modes** (both checked on the VPS, 2026-08-28):
+
+| Situation | Behaviour |
+|---|---|
+| env file missing | systemd fails the unit: `Failed to load environment files`. Loud, not silent. |
+| `GITHUB_DISPATCH_PAT` unset/empty | script exits **1** with `GITHUB_DISPATCH_PAT is not set (refusing to run)` |
+| PAT expired/revoked | script exits **2** with `PAT rejected (HTTP 401)`. **The token value never appears in output.** |
 
 ## PAT 失効の検知 ("quiet failure" detection)
 
@@ -115,17 +137,17 @@ back to the schedule-drop risk this plan exists to reduce) -- a "静かな異
 - A non-zero exit marks the systemd unit **failed**, which is checkable
   without any extra tooling:
   ```bash
-  systemctl --failed                              # lists vps-trigger-dispatch.service if it failed
+  systemctl --user --failed                              # lists vps-trigger-dispatch.service if it failed
   journalctl -u vps-trigger-dispatch.service -n 20 # shows the HTTP status + diagnostic line
   ```
 - Recommended (optional, not required by this plan): point any monitoring
-  you already run at `systemctl --failed` (e.g. a daily cron/health-check
+  you already run at `systemctl --user --failed` (e.g. a daily cron/health-check
   script, or `OnFailure=` in the `.service` unit pointing at a notification
   unit) so a 401/403 surfaces somewhere you'll actually see it, not just in
   `journalctl` waiting to be read.
 - When you do see a 401/403: rotate the PAT (repeat "PAT setup" above),
-  replace only the value in `/etc/lulumi-tools/github-dispatch.env`, then
-  `sudo systemctl start vps-trigger-dispatch.service` to confirm it now
+  replace only the value in `~/.config/lulumi-tools/github-dispatch.env`, then
+  `systemctl --user start vps-trigger-dispatch.service` to confirm it now
   exits 0.
 
 ## Rollback
@@ -134,5 +156,5 @@ Stop and disable the timer; the GitHub cron schedule (4 runs/day) continues
 unchanged and is unaffected by anything in this directory.
 
 ```bash
-sudo systemctl disable --now vps-trigger-dispatch.timer
+systemctl --user disable --now vps-trigger-dispatch.timer
 ```
