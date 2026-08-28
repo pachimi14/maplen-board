@@ -224,19 +224,87 @@ def _snapshot_signature(
     )
 
 
+def _deep_probe_page(baseline_row_count: int) -> int:
+    """Deep page number used to confirm the official rebuild finished (condition②).
+
+    Auto-scaled from yesterday's row count so it tracks population growth
+    without a hardcoded page number (docs/IMPL_PLAN_vps-trigger.md §2.1).
+    The 0.9 factor tolerates a small day-over-day population dip without
+    misjudging the rebuild as incomplete.
+    """
+    return max(2, int(baseline_row_count * 0.9 / API_MAX_PAGE_SIZE))
+
+
+def _deep_page_rebuild_complete(
+    session: requests.Session,
+    page_no: int,
+    min_level: int,
+    logger: logging.Logger,
+) -> bool:
+    """Condition② -- has the official rebuild reached RANKING_MIN_LEVEL depth?
+
+    A single extra request per call (§3 基準13). Not simply not-yet-ready
+    (HTTP failure, empty page, or max level below min_level) is treated the
+    same as "not ready", so the caller keeps polling.
+    """
+    try:
+        status, ranking, _ = _fetch_ranking_page(session, page_no)
+    except requests.RequestException as exc:
+        logger.warning("Deep-page probe (page %s) failed: %s", page_no, exc)
+        return False
+
+    if status != 200 or not ranking:
+        logger.info(
+            "Deep-page probe (page %s) not ready yet: status=%s entries=%s",
+            page_no,
+            status,
+            len(ranking),
+        )
+        return False
+
+    max_level = max(_entry_level(entry) for entry in ranking)
+    ready = max_level >= min_level
+    if not ready:
+        logger.info(
+            "Deep-page probe (page %s) not ready yet: max_level=%s < min_level=%s",
+            page_no,
+            max_level,
+            min_level,
+        )
+    return ready
+
+
 def wait_for_ranking_update(
     baseline_rows: list[tuple[int, str, int, int]],
     *,
     poll_interval_sec: float,
     timeout_sec: float,
     settle_sec: float,
+    min_level: int | None = None,
 ) -> bool:
-    """Poll one lightweight page until the official ranking changes."""
+    """Poll until the official ranking has both changed and finished rebuilding.
+
+    Two AND'd conditions (docs/IMPL_PLAN_vps-trigger.md §2.1):
+    ① (existing) the lightweight page-1 signature differs from yesterday's
+      baseline -- the rebuild has *started*.
+    ② (new) a deep page (auto-scaled from yesterday's row count via
+      `_deep_probe_page`) still has entries at/above `min_level` -- the
+      rebuild has *finished* reaching Lv225+ depth.
+    Both must hold in the same probe to report success; otherwise polling
+    continues to the next probe. If there is no baseline at all (cold
+    start), there is nothing to diff against for ①, so this returns
+    immediately without probing (② is moot/skipped) -- unchanged from prior
+    behavior, avoiding a pointless wait to timeout.
+    """
     logger = logging.getLogger(__name__)
     baseline = _snapshot_signature(baseline_rows[:API_MAX_PAGE_SIZE])
     if not baseline or timeout_sec <= 0:
         logger.info("Ranking update probe skipped: no baseline or timeout disabled")
         return False
+
+    if min_level is None:
+        min_level = config.ranking_min_level()
+    probe_page = _deep_probe_page(len(baseline_rows))
 
     session = _make_session()
     deadline = time.monotonic() + timeout_sec
@@ -250,15 +318,23 @@ def wait_for_ranking_update(
         else:
             if status == 200 and ranking:
                 if _api_ranking_signature(ranking[:API_MAX_PAGE_SIZE]) != baseline:
+                    if _deep_page_rebuild_complete(session, probe_page, min_level, logger):
+                        logger.info(
+                            "Official ranking update detected after %s probes; settling for %ss",
+                            probe_count,
+                            settle_sec,
+                        )
+                        if settle_sec > 0:
+                            time.sleep(settle_sec)
+                        return True
                     logger.info(
-                        "Official ranking update detected after %s probes; settling for %ss",
+                        "Official ranking page 1 changed but rebuild incomplete "
+                        "(probe %s, deep_page=%s)",
                         probe_count,
-                        settle_sec,
+                        probe_page,
                     )
-                    if settle_sec > 0:
-                        time.sleep(settle_sec)
-                    return True
-                logger.info("Official ranking not updated yet (probe %s)", probe_count)
+                else:
+                    logger.info("Official ranking not updated yet (probe %s)", probe_count)
             else:
                 logger.warning(
                     "Ranking update probe %s returned HTTP %s", probe_count, status
@@ -888,6 +964,7 @@ def run() -> int:
                 poll_interval_sec=config.ranking_update_poll_interval_sec(),
                 timeout_sec=config.ranking_update_poll_timeout_sec(),
                 settle_sec=config.ranking_update_settle_sec(),
+                min_level=min_level,
             )
 
         import_character_meta_file(db_path, meta_json_path)

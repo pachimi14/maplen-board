@@ -68,7 +68,12 @@ def test_update_probe_waits_for_changed_first_page(monkeypatch) -> None:
     ]
     changed = [dict(entry) for entry in unchanged]
     changed[0]["exp"] += 1
-    responses = iter([(200, unchanged, ""), (200, changed, "")])
+    # Third response is the deep-page probe (condition②) fired once page 1
+    # differs from baseline; a rebuild-complete page (max level >= min_level).
+    deep_page_ready = [{"rank": 1, "characterName": "Deep", "level": 225, "exp": 1}]
+    responses = iter(
+        [(200, unchanged, ""), (200, changed, ""), (200, deep_page_ready, "")]
+    )
     sleep_calls: list[float] = []
 
     monkeypatch.setattr(main, "_make_session", object)
@@ -81,6 +86,7 @@ def test_update_probe_waits_for_changed_first_page(monkeypatch) -> None:
         poll_interval_sec=45,
         timeout_sec=1200,
         settle_sec=45,
+        min_level=225,
     )
 
     assert detected is True
