@@ -1,0 +1,18 @@
+[Unit]
+Description=Run vps-trigger-dispatch.service daily at JST 09:06
+
+[Timer]
+# docs/IMPL_PLAN_vps-trigger.md §2.4: the official ranking update lands at
+# JST 9:09:30-9:10:15 (6 consecutive days measured, §0 "実測"). 09:06 gives
+# the Actions runner ~1 minute to start/set up before probe1 begins polling
+# (probe interval 45s -- probe8 lands right around the real detection time).
+#
+# This example assumes the VPS runs in UTC (09:06 JST = 00:06 UTC). If the
+# VPS's local timezone is already JST, use `OnCalendar=*-*-* 09:06:00`
+# instead. Check with `timedatectl` before enabling.
+OnCalendar=*-*-* 00:06:00
+Persistent=true
+RandomizedDelaySec=15
+
+[Install]
+WantedBy=timers.target
