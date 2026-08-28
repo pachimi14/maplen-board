@@ -41,6 +41,12 @@ on:
         description: "ランキング API を再取得する（手動実行時はオン推奨）"
         type: boolean
         default: true
+      wait_for_update:
+        description: >-
+          公式ランキングの再構築完了をポーリングで待ってから取得する（VPS からの定刻起動は既定 true。
+          過去日の緊急手動救出のみ false にする — ベースラインと現在値が既に異なるため待つ必要がない）
+        type: boolean
+        default: true
 
 concurrency:
   group: maplen-board-pages
@@ -194,7 +200,7 @@ jobs:
           RANKING_MAX_PAGES: "2000"
           RANKING_REQUEST_DELAY_SEC: "0.8"
           RANKING_UPDATE_POLL_INTERVAL_SEC: "45"
-          RANKING_UPDATE_POLL_TIMEOUT_SEC: "1200"
+          RANKING_UPDATE_POLL_TIMEOUT_SEC: "2700"
           RANKING_UPDATE_SETTLE_SEC: "45"
           RANKING_FRESHNESS_MIN_CHANGED: "100"
           SNAPSHOT_RETENTION_DAYS: "90"
@@ -222,7 +228,12 @@ jobs:
           # S1 in the T12 P3 completion report.
           SNAPSHOT_IMPORT_FROM_V2_SHARDS: ${{ contains(github.event.head_commit.message, '[web-only]') && 'false' || 'true' }}
           PAGES_SITE_URL: https://lulumi-tools.com
-          ENFORCE_JST_FETCH_WINDOW: ${{ github.event_name == 'schedule' && 'true' || '' }}
+          # IMPL_PLAN_vps-trigger.md §2.3: schedule は常時待つ。workflow_dispatch
+          # (VPS からの定刻起動を含む) は `wait_for_update` 入力(既定 true)で待つ。
+          # push はこれまでどおり待たない(空文字)。main.py 側は待機とポーリングの
+          # 両方をこのフラグ1本で囲っているため(wait_until_jst_fetch_window /
+          # wait_for_ranking_update)、force_fetch とは独立した入力にしている。
+          ENFORCE_JST_FETCH_WINDOW: ${{ github.event_name == 'schedule' && 'true' || (github.event_name == 'workflow_dispatch' && inputs.wait_for_update && 'true' || '') }}
           SKIP_RUN_IF_RANKING_DAY_EXISTS: "true"
           SKIP_DEPLOY_IF_DAY_CAPTURED: ${{ github.event_name == 'schedule' && 'true' || 'false' }}
           FORCE_RANKING_FETCH: ${{ github.event_name == 'workflow_dispatch' && inputs.force_fetch && 'true' || '' }}
