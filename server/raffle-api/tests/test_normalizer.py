@@ -756,6 +756,125 @@ def test_chaos_slime_clear_generates_with_zero_coin_and_power_crystal() -> None:
     assert member["drops"] == []
 
 
+def test_chaos_slime_ring_box_won_from_ascendant_classifies_as_equipment_drop() -> None:
+    # docs/IMPL_PLAN_RAFFLE_CHAOS_SLIME.md S5 acceptance criterion 3, orchestrator follow-up
+    # ruling (2026-09-03): per the real observed shape, the Ring Box is one of the Ascendant
+    # raffle layer's own prizes (an alternative to NESO), not a boss-layer prize.
+    request = request_for("m1")
+    histories = {
+        "m1": [
+            {
+                "raffledAt": request.raffledAt,
+                "layerId": 205045,
+                "clearInformations": [{"clearedAt": "2026-08-22T14:30:13.660Z", "partyCount": 1}],
+                "prizes": [],
+            },
+            {
+                "raffledAt": request.raffledAt,
+                "layerId": 900201,
+                "clearInformations": [],
+                "prizes": [{"itemId": 2358012, "winCount": {"value": "1"}}],
+            },
+        ]
+    }
+    layers = [
+        {"layerId": 205045, "boss": {"bossName": "Guardian Angel Slime", "difficulty": "DIFFICULTY_CHAOS", "raffleLayerName": "Chaos Guardian Angel Slime"}},
+        {"layerId": 900201, "contents": {"groupName": "Ascendant Tier Raffle", "layerName": "Eternal Ascendant Chaos Guardian"}},
+    ]
+    metadata = {2358012: {"itemName": "Rank 1 Special Skill Ring Box", "tier0": "Consumable", "tier1": "Voucher"}}
+
+    result = normalize_live_history(request, histories, layers, metadata)
+
+    clear = result["clears"][0]
+    member = clear["members"][0]
+    assert member["drops"] == [{"dropId": "slime-chaos-m1-ascendant-equipment-1", "category": "EQUIPMENT", "name": "Rank 1 Special Skill Ring Box", "quantity": "1", "imageUrl": ""}]
+    assert clear["excludedRewards"] == []
+    assert member["ascendantNeso"] == "0"
+
+
+def test_ascendant_ring_box_surfaces_as_equipment_drop_for_lucid_too() -> None:
+    # Orchestrator follow-up ruling (2026-09-03): a class-wide regression, not Slime-specific.
+    # Independent verification found this already happening in production -- pachimi won a
+    # Rank 3 Special Skill Ring Box (itemId 2358014) from Divine Ascendant (Hard Lucid's own
+    # Ascendant tier) on 2026-08-27, and it never surfaced anywhere (not a drop, not
+    # excludedRewards) before this fix. Reproduces that exact real-data shape.
+    request = request_for("m1")
+    histories = {
+        "m1": [
+            {
+                "raffledAt": request.raffledAt,
+                "layerId": 205041,
+                "clearInformations": [{"clearedAt": "2026-08-21T14:00:00Z", "partyCount": 3}],
+                "prizes": [{"itemId": 1, "winCount": {"value": "9000000"}}, {"itemId": 4310218, "winCount": {"value": "4"}}],
+            },
+            {
+                "raffledAt": request.raffledAt,
+                "layerId": 900301,
+                "clearInformations": [],
+                "prizes": [{"itemId": 2358014, "winCount": {"value": "1"}}],
+            },
+        ]
+    }
+    layers = [
+        {"layerId": 205041, "boss": {"bossName": "Lucid", "difficulty": "DIFFICULTY_HARD", "raffleLayerName": "Hard Lucid"}},
+        {"layerId": 900301, "contents": {"groupName": "Divine Ascendant", "layerName": "Divine Ascendant"}},
+    ]
+    metadata = {
+        4310218: {"itemName": "Phantasma Coin", "tier1": "Exchange Currency"},
+        2358014: {"itemName": "Rank 3 Special Skill Ring Box", "tier0": "Consumable", "tier1": "Voucher"},
+    }
+
+    result = normalize_live_history(request, histories, layers, metadata)
+
+    member = result["clears"][0]["members"][0]
+    assert {"dropId": "lucid-hard-m1-ascendant-equipment-1", "category": "EQUIPMENT", "name": "Rank 3 Special Skill Ring Box", "quantity": "1", "imageUrl": ""} in member["drops"]
+    assert result["clears"][0]["excludedRewards"] == []
+    # Existing Lucid coin/NESO amounts must not change (docs/IMPL_PLAN_RAFFLE_CHAOS_SLIME.md
+    # acceptance criterion 5): the Ascendant-layer scan is additive only.
+    assert member["bossNeso"] == "9000000"
+    coin_drop = next(drop for drop in member["drops"] if drop["category"] == "COIN")
+    assert coin_drop == {"dropId": "lucid-hard-m1-coin", "category": "COIN", "name": "Phantasma Coin", "quantity": "4", "imageUrl": ""}
+
+
+def test_ascendant_and_boss_layer_equipment_drop_ids_never_collide_within_a_clear() -> None:
+    # docs/IMPL_PLAN_RAFFLE_CHAOS_SLIME.md acceptance criterion 9, orchestrator follow-up
+    # ruling: a boss-layer drop and an Ascendant-layer drop for the same member must never
+    # share a dropId -- the web side keys its sale-price input by dropId, so a collision would
+    # silently misattribute one drop's sale price to the other.
+    request = request_for("m1")
+    histories = {
+        "m1": [
+            {
+                "raffledAt": request.raffledAt,
+                "layerId": 205041,
+                "clearInformations": [{"clearedAt": "2026-08-21T14:00:00Z", "partyCount": 1}],
+                "prizes": [{"itemId": 1001000, "winCount": {"value": "1"}}],
+            },
+            {
+                "raffledAt": request.raffledAt,
+                "layerId": 900301,
+                "clearInformations": [],
+                "prizes": [{"itemId": 2358014, "winCount": {"value": "1"}}],
+            },
+        ]
+    }
+    layers = [
+        {"layerId": 205041, "boss": {"bossName": "Lucid", "difficulty": "DIFFICULTY_HARD", "raffleLayerName": "Hard Lucid"}},
+        {"layerId": 900301, "contents": {"groupName": "Divine Ascendant", "layerName": "Divine Ascendant"}},
+    ]
+    metadata = {
+        1001000: {"itemName": "Arcane Test Hat", "tier0": "Item", "tier1": "Armor"},
+        2358014: {"itemName": "Rank 3 Special Skill Ring Box", "tier0": "Consumable", "tier1": "Voucher"},
+    }
+
+    result = normalize_live_history(request, histories, layers, metadata)
+
+    member = result["clears"][0]["members"][0]
+    drop_ids = [drop["dropId"] for drop in member["drops"]]
+    assert len(drop_ids) == len(set(drop_ids))
+    assert {drop["name"] for drop in member["drops"]} == {"Arcane Test Hat", "Rank 3 Special Skill Ring Box"}
+
+
 def test_chaos_slime_coin_classified_reward_surfaces_as_excluded_not_silently_dropped() -> None:
     # docs/IMPL_PLAN_RAFFLE_CHAOS_SLIME.md S2 regression: Slime has no coin configured at all
     # (TARGET_COINS has no "SLIME" entry), so a COIN-classified reward it wins must be

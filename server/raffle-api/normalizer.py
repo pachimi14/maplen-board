@@ -343,55 +343,97 @@ def _sum_item(history: dict | None, item_id: int) -> int:
     return sum(_quantity(prize) for prize in _prizes(history) if _item_id(prize) == item_id)
 
 
+def _reward_outcome(prize: dict, coin_name: str, boss_code: str, item_metadata: dict[int, dict]) -> tuple[str, str, int, str] | None:
+    """Classifies a single prize (from either the boss's own history or its Ascendant-tier
+    history -- LULU-141 follow-up, orchestrator ruling 2026-09-03) into a settlement outcome:
+    `(kind, name, quantity, imageUrl)`, `kind` one of "coin_match" / "coin_other" /
+    "equipment" / "ft_item" / "other". Returns `None` for a zero-quantity prize, or one this
+    function never settles at all (NESO, Power Crystal -- summed by the caller separately from
+    both histories; a non-Will FT_ITEM). Callers of this function are responsible for excluding
+    NESO/Power-Crystal-classified prizes from an Ascendant history *before* calling it, so
+    their amounts are not double-counted on top of the caller's own separate summation."""
+    quantity = _quantity(prize)
+    if quantity <= 0:
+        return None
+    item_id = _item_id(prize)
+    classification, name = _classification(item_id, item_metadata.get(item_id))
+    image_url = _item_icon_url(item_metadata.get(item_id))
+    if classification == "COIN":
+        return ("coin_match" if name == coin_name else "coin_other", name, quantity, image_url)
+    if classification == "EQUIPMENT":
+        return ("equipment", name, quantity, image_url)
+    if classification == "FT_ITEM":
+        # Only surfaced for Will clears (Lucid/Slime never roll this item); the affiliate is
+        # asked for a resale price like coin/equipment so it can be settled the same way.
+        return ("ft_item", name, quantity, image_url) if boss_code == "WILL" else None
+    if classification == "OTHER":
+        return ("other", name, quantity, image_url)
+    return None
+
+
 def _member_settlement(member_id: str, boss_code: str, history: dict, ascendant: dict | None, item_metadata: dict[int, dict], drop_scope: str = "") -> dict:
     drops = []
     excluded_rewards: list[tuple[str, int]] = []
     drop_prefix = boss_code.lower() + ("-" + drop_scope if drop_scope else "") + "-" + member_id
     # docs/IMPL_PLAN_RAFFLE_CHAOS_SLIME.md S2: not every distribution-target boss has a coin
     # (SLIME does not), so this is `.get(..., "")` rather than a `[...]` lookup that would raise
-    # KeyError. `coin_name == ""` never equals a real reward name, so the branch below always
-    # takes the "COIN classified but no matching coin configured" path for such a boss.
+    # KeyError. `coin_name == ""` never equals a real reward name, so `_reward_outcome` always
+    # resolves to "coin_other" (fail-visible in excludedRewards) for such a boss.
     coin_name = TARGET_COINS.get(boss_code, "")
     coin_quantity = 0
     coin_image_url = ""
-    equipment_index = 0
-    ft_item_index = 0
-    for prize in _prizes(history):
-        quantity = _quantity(prize)
-        if quantity <= 0:
-            continue
-        item_id = _item_id(prize)
-        classification, name = _classification(item_id, item_metadata.get(item_id))
-        if classification == "COIN" and name == coin_name:
-            coin_quantity += quantity
-            coin_image_url = coin_image_url or _item_icon_url(item_metadata.get(item_id))
-        elif classification == "COIN":
-            # docs/IMPL_PLAN_RAFFLE_CHAOS_SLIME.md S2: a COIN-classified reward that does not
-            # match this boss's configured coin name (including a boss with no coin configured
-            # at all, e.g. SLIME) used to fall out of every branch and vanish silently -- the
-            # same failure class as LULU-119/130. Surfaced instead, same as OTHER below.
-            excluded_rewards.append((name, quantity))
-        elif classification == "EQUIPMENT":
-            equipment_index += 1
-            drops.append({"dropId": f"{drop_prefix}-equipment-{equipment_index}", "category": "EQUIPMENT", "name": name, "quantity": str(quantity), "imageUrl": _item_icon_url(item_metadata.get(item_id))})
-        elif classification == "FT_ITEM" and boss_code == "WILL":
-            # Only surfaced for Will clears (Lucid never rolls this item); the affiliate is
-            # asked for a resale price like coin/equipment so it can be settled the same way.
-            ft_item_index += 1
-            drops.append({"dropId": f"{drop_prefix}-ftitem-{ft_item_index}", "category": "FT_ITEM", "name": name, "quantity": str(quantity), "imageUrl": _item_icon_url(item_metadata.get(item_id))})
-        elif classification == "OTHER":
-            # docs/IMPL_PLAN_RAFFLE_REWARD_VOCAB.md S3: a reward that falls out of every
-            # distributable category used to vanish silently (the exact class of bug behind
-            # LULU-119/130 and this plan's Ring Box/itemId-1000 fixes). Surfaced instead of
-            # dropped, so the next vocabulary drift is visible in the UI, not just in a stale
-            # payout total.
-            excluded_rewards.append((name, quantity))
-    if coin_quantity:
-        drops.insert(0, {"dropId": f"{drop_prefix}-coin", "category": "COIN", "name": coin_name, "quantity": str(coin_quantity), "imageUrl": coin_image_url})
+
+    def _apply(prizes: list[dict], drop_id_segment: str) -> None:
+        # docs/IMPL_PLAN_RAFFLE_CHAOS_SLIME.md follow-up (LULU-141 orchestrator ruling,
+        # 2026-09-03): applied to both the boss's own history (drop_id_segment="") and its
+        # Ascendant-tier history (drop_id_segment="ascendant-"). The segment keeps every
+        # generated dropId unique within a clear (a boss-layer Ring Box and an
+        # Ascendant-layer Ring Box for the same member can never collide), which matters
+        # because the web side keys its per-drop sale-price input by dropId -- a collision
+        # would let one drop's sale price silently overwrite the other's.
+        nonlocal coin_quantity, coin_image_url
+        equipment_index = 0
+        ft_item_index = 0
+        for prize in prizes:
+            outcome = _reward_outcome(prize, coin_name, boss_code, item_metadata)
+            if outcome is None:
+                continue
+            kind, name, quantity, image_url = outcome
+            if kind == "coin_match":
+                coin_quantity += quantity
+                coin_image_url = coin_image_url or image_url
+            elif kind == "equipment":
+                equipment_index += 1
+                drops.append({"dropId": f"{drop_prefix}-{drop_id_segment}equipment-{equipment_index}", "category": "EQUIPMENT", "name": name, "quantity": str(quantity), "imageUrl": image_url})
+            elif kind == "ft_item":
+                ft_item_index += 1
+                drops.append({"dropId": f"{drop_prefix}-{drop_id_segment}ftitem-{ft_item_index}", "category": "FT_ITEM", "name": name, "quantity": str(quantity), "imageUrl": image_url})
+            else:
+                # "coin_other" (docs/IMPL_PLAN_RAFFLE_CHAOS_SLIME.md S2) and "other"
+                # (docs/IMPL_PLAN_RAFFLE_REWARD_VOCAB.md S3): a reward that falls out of every
+                # distributable category used to vanish silently (LULU-119/130's failure
+                # class). Surfaced instead of dropped, so the next vocabulary drift -- or an
+                # Ascendant-layer prize this loop previously never even looked at -- is visible
+                # in the UI, not just in a stale payout total.
+                excluded_rewards.append((name, quantity))
+
+    _apply(_prizes(history), "")
+
     power_crystal = 0
+    ascendant_other_prizes = []
     for prize in _prizes(ascendant or {}):
         item_id = _item_id(prize)
-        power_crystal += _power_crystal_amount(prize, item_metadata.get(item_id))
+        if item_id == 1:
+            continue  # NESO -- summed separately via `_sum_item(ascendant, 1)` below.
+        classification, _name = _classification(item_id, item_metadata.get(item_id))
+        if classification == "POWER_CRYSTAL":
+            power_crystal += _power_crystal_amount(prize, item_metadata.get(item_id))
+            continue
+        ascendant_other_prizes.append(prize)
+    _apply(ascendant_other_prizes, "ascendant-")
+
+    if coin_quantity:
+        drops.insert(0, {"dropId": f"{drop_prefix}-coin", "category": "COIN", "name": coin_name, "quantity": str(coin_quantity), "imageUrl": coin_image_url})
     return {"memberId": member_id, "bossNeso": str(_sum_item(history, 1)), "powerCrystalAmount": str(power_crystal), "ascendantNeso": str(_sum_item(ascendant, 1)), "drops": drops, "excludedRewards": excluded_rewards}
 
 
