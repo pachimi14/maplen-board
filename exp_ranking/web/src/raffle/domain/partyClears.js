@@ -1,7 +1,7 @@
-const DISTRIBUTABLE_BOSSES = new Set(["LUCID", "WILL"]);
+const DISTRIBUTABLE_BOSSES = new Set(["LUCID", "WILL", "SLIME"]);
 
 export function formatPartyBossName(boss) {
-  return boss === "LUCID" ? "Lucid" : boss === "WILL" ? "Will" : "";
+  return boss === "LUCID" ? "Lucid" : boss === "WILL" ? "Will" : boss === "SLIME" ? "Guardian Angel Slime" : "";
 }
 
 export function formatPartyClearTitle(clear) {
@@ -35,7 +35,7 @@ export function selectPartyClearCandidates(clears, memberIds) {
 }
 
 export function groupPartyClearCandidates(clears) {
-  return ["LUCID", "WILL"]
+  return ["LUCID", "WILL", "SLIME"]
     .map((boss) => ({ boss, clears: (Array.isArray(clears) ? clears : []).filter((clear) => clear.boss === boss) }))
     .filter((group) => group.clears.length);
 }

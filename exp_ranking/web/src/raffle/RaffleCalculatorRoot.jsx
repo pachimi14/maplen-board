@@ -38,7 +38,7 @@ function initialBossSetting() {
 }
 
 function initialDistributionSettings() {
-  return { LUCID: initialBossSetting(), WILL: initialBossSetting() };
+  return { LUCID: initialBossSetting(), WILL: initialBossSetting(), SLIME: initialBossSetting() };
 }
 
 function formatNesoPreview(value, locale) {
@@ -83,7 +83,7 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
   const [resultTab, setResultTab] = useState("raffles");
   const [selectedResultMemberId, setSelectedResultMemberId] = useState("");
   const [activeClearBoss, setActiveClearBoss] = useState("");
-  const [selectedClearIdsByBoss, setSelectedClearIdsByBoss] = useState({ LUCID: [], WILL: [] });
+  const [selectedClearIdsByBoss, setSelectedClearIdsByBoss] = useState({ LUCID: [], WILL: [], SLIME: [] });
   const [confirmedClearIds, setConfirmedClearIds] = useState([]);
   const [distribution, setDistribution] = useState(initialDistributionSettings);
   const resultsSectionRef = useRef(null);
@@ -134,6 +134,7 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
     setDistribution((current) => ({
       LUCID: { ...current.LUCID, calculated: null },
       WILL: { ...current.WILL, calculated: null },
+      SLIME: { ...current.SLIME, calculated: null },
     }));
   }
 
@@ -226,7 +227,7 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
     setRequestError("");
     setJobResult(null);
     setDistribution(initialDistributionSettings());
-    setSelectedClearIdsByBoss({ LUCID: [], WILL: [] });
+    setSelectedClearIdsByBoss({ LUCID: [], WILL: [], SLIME: [] });
     setConfirmedClearIds([]);
     const memberMap = {};
     const characters = sortPartyMembers(activeParty.members).map((member, index) => {
@@ -241,7 +242,7 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
     const memberIds = characters.map((character) => character.memberId);
     const clears = selectPartyClearCandidates(result.data.clears, memberIds);
     const clearGroups = groupPartyClearCandidates(clears);
-    const initialSelections = { LUCID: [], WILL: [] };
+    const initialSelections = { LUCID: [], WILL: [], SLIME: [] };
     clearGroups.forEach((group) => {
       if (group.clears.length === 1) initialSelections[group.boss] = [group.clears[0].clearId];
     });
@@ -301,6 +302,7 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
     setDistribution((current) => ({
       LUCID: { ...current.LUCID, calculated: null },
       WILL: { ...current.WILL, calculated: null },
+      SLIME: { ...current.SLIME, calculated: null },
     }));
   }
   function toggleClearSelection(clear) {
