@@ -8,7 +8,7 @@
   },
   "expectedJob": {
     "schemaVersion": 3,
-    "classificationVersion": 3,
+    "classificationVersion": 4,
     "status": "complete",
     "progress": { "completedCharacters": 1, "totalCharacters": 1, "stage": "complete", "elapsedMs": 10 },
     "raffleResults": [
@@ -92,6 +92,27 @@
             "drops": [
               { "dropId": "fixture-will-coin", "category": "COIN", "name": "Arachno Coin", "quantity": "10" }
             ]
+          }
+        ],
+        "excludedRewards": []
+      },
+      {
+        "clearId": "fixture-slime",
+        "boss": "SLIME",
+        "bossDifficulty": "CHAOS",
+        "ascendantTier": "Eternal Ascendant Chaos Guardian",
+        "partyCount": 1,
+        "historyMemberIds": [
+          "member-1"
+        ],
+        "complete": true,
+        "members": [
+          {
+            "memberId": "member-1",
+            "bossNeso": "0",
+            "powerCrystalAmount": "0",
+            "ascendantNeso": "50",
+            "drops": []
           }
         ],
         "excludedRewards": []

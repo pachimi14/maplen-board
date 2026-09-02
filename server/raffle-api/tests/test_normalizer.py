@@ -15,13 +15,18 @@ def request_for(*member_ids: str) -> CreateJobRequest:
 
 def test_fixture_result_keeps_all_visible_results_but_scopes_settlement_clear() -> None:
     result = fixture_result(request_for("m1"))
-    assert {clear["boss"] for clear in result["clears"]} == {"LUCID", "WILL"}
+    assert {clear["boss"] for clear in result["clears"]} == {"LUCID", "WILL", "SLIME"}
     lucid = result["clears"][0]
     assert lucid["bossDifficulty"] == "HARD"
     assert lucid["ascendantTier"] == "Divine Ascendant"
     assert lucid["members"][0]["bossNeso"] == "600"
     assert lucid["members"][0]["drops"][0]["category"] == "COIN"
     assert {entry["bossName"] for entry in result["raffleResults"]} == {"Lucid", "Will", "Other Boss"}
+    slime = next(clear for clear in result["clears"] if clear["boss"] == "SLIME")
+    assert slime["bossDifficulty"] == "CHAOS"
+    assert slime["ascendantTier"] == "Eternal Ascendant Chaos Guardian"
+    assert slime["members"][0]["bossNeso"] == "0"
+    assert slime["members"][0]["powerCrystalAmount"] == "0"
 
 
 @pytest.mark.parametrize(
@@ -708,6 +713,91 @@ def test_clear_with_no_other_rewards_has_empty_excluded_rewards() -> None:
     result = normalize_live_history(request, histories, layers, {})
 
     assert result["clears"][0]["excludedRewards"] == []
+
+
+def test_chaos_slime_clear_generates_with_zero_coin_and_power_crystal() -> None:
+    # docs/IMPL_PLAN_RAFFLE_CHAOS_SLIME.md S5 acceptance criteria 1-2: a Chaos Guardian Angel
+    # Slime clear (boss prizes empty -- the real observed shape is a RAFFLE_STATE_PARTICIPATE_FAIL
+    # boss roll) plus an Ascendant NESO win produces exactly one clear with the boss having no
+    # coin and no Power Crystal.
+    request = request_for("m1")
+    histories = {
+        "m1": [
+            {
+                "raffledAt": request.raffledAt,
+                "layerId": 205045,
+                "clearInformations": [{"clearedAt": "2026-08-22T14:30:13.660Z", "partyCount": 6}],
+                "prizes": [],
+            },
+            {
+                "raffledAt": request.raffledAt,
+                "layerId": 900201,
+                "clearInformations": [],
+                "prizes": [{"itemId": 1, "winCount": {"value": "325000000"}}],
+            },
+        ]
+    }
+    layers = [
+        {"layerId": 205045, "boss": {"bossName": "Guardian Angel Slime", "difficulty": "DIFFICULTY_CHAOS", "raffleLayerName": "Chaos Guardian Angel Slime"}},
+        {"layerId": 900201, "contents": {"groupName": "Ascendant Tier Raffle", "layerName": "Eternal Ascendant Chaos Guardian"}},
+    ]
+
+    result = normalize_live_history(request, histories, layers, {})
+
+    assert len(result["clears"]) == 1
+    clear = result["clears"][0]
+    assert clear["boss"] == "SLIME"
+    assert clear["bossDifficulty"] == "CHAOS"
+    assert clear["ascendantTier"] == "Eternal Ascendant Chaos Guardian"
+    member = clear["members"][0]
+    assert member["bossNeso"] == "0"
+    assert member["ascendantNeso"] == "325000000"
+    assert member["powerCrystalAmount"] == "0"
+    assert member["drops"] == []
+
+
+def test_chaos_slime_coin_classified_reward_surfaces_as_excluded_not_silently_dropped() -> None:
+    # docs/IMPL_PLAN_RAFFLE_CHAOS_SLIME.md S2 regression: Slime has no coin configured at all
+    # (TARGET_COINS has no "SLIME" entry), so a COIN-classified reward it wins must be
+    # fail-visible via excludedRewards, not silently vanish (the failure class this whole
+    # follow-up closes for the Ascendant side too).
+    request = request_for("m1")
+    histories = {
+        "m1": [{
+            "raffledAt": request.raffledAt,
+            "layerId": 205045,
+            "clearInformations": [{"clearedAt": "2026-08-22T14:30:13.660Z", "partyCount": 1}],
+            "prizes": [{"itemId": 999001, "winCount": {"value": "5"}}],
+        }]
+    }
+    layers = [{"layerId": 205045, "boss": {"bossName": "Guardian Angel Slime", "difficulty": "DIFFICULTY_CHAOS", "raffleLayerName": "Chaos Guardian Angel Slime"}}]
+    metadata = {999001: {"itemName": "Phantasma Coin", "tier0": "Consumable", "tier1": "Exchange Currency"}}
+
+    result = normalize_live_history(request, histories, layers, metadata)
+
+    clear = result["clears"][0]
+    assert clear["excludedRewards"] == [{"name": "Phantasma Coin", "quantity": "5"}]
+    assert clear["members"][0]["drops"] == []
+
+
+def test_normal_guardian_angel_slime_never_becomes_a_clear_candidate() -> None:
+    # docs/IMPL_PLAN_RAFFLE_CHAOS_SLIME.md S5 acceptance criterion 5/§6#4: Normal Guardian Angel
+    # Slime is out of scope (LULU-141 user ruling) -- absent from ASCENDANT_TIER_BY_BOSS, so
+    # `_boss_distribution_context` returns None and it never surfaces as a clear candidate.
+    request = request_for("m1")
+    histories = {
+        "m1": [{
+            "raffledAt": request.raffledAt,
+            "layerId": 205038,
+            "clearInformations": [{"clearedAt": "2026-08-22T14:30:13.660Z", "partyCount": 1}],
+            "prizes": [{"itemId": 1, "winCount": {"value": "100"}}],
+        }]
+    }
+    layers = [{"layerId": 205038, "boss": {"bossName": "Guardian Angel Slime", "difficulty": "DIFFICULTY_NORMAL", "raffleLayerName": "Guardian Angel Slime"}}]
+
+    result = normalize_live_history(request, histories, layers, {})
+
+    assert result["clears"] == []
 
 
 def test_shared_contract_fixture_matches_fixture_normalizer() -> None:

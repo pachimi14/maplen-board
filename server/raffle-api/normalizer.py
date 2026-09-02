@@ -9,8 +9,8 @@ from contracts import CreateJobRequest
 
 
 SCHEMA_VERSION = 3
-CLASSIFICATION_VERSION = 3
-TARGET_BOSSES = {"Lucid": "LUCID", "Will": "WILL"}
+CLASSIFICATION_VERSION = 4
+TARGET_BOSSES = {"Lucid": "LUCID", "Will": "WILL", "Guardian Angel Slime": "SLIME"}
 TARGET_COINS = {"LUCID": "Phantasma Coin", "WILL": "Arachno Coin"}
 FT_ITEM_NAME = "Sealed Mirror World Nodestone"
 ASCENDANT_TIER_BY_BOSS = {
@@ -20,8 +20,13 @@ ASCENDANT_TIER_BY_BOSS = {
     ("WILL", "DIFFICULTY_EASY"): "Luminous Ascendant",
     ("WILL", "DIFFICULTY_NORMAL"): "Glorious Ascendant",
     ("WILL", "DIFFICULTY_HARD"): "Eternal Ascendant",
+    # docs/IMPL_PLAN_RAFFLE_CHAOS_SLIME.md: only the Chaos difficulty of Guardian Angel Slime is
+    # a distribution target (LULU-141 user ruling). Normal Guardian Angel Slime
+    # (DIFFICULTY_NORMAL) is deliberately absent -- an absent table entry makes
+    # `_boss_distribution_context` return None, so it never becomes a clear candidate.
+    ("SLIME", "DIFFICULTY_CHAOS"): "Eternal Ascendant Chaos Guardian",
 }
-BOSS_DIFFICULTIES = {"DIFFICULTY_EASY": "EASY", "DIFFICULTY_NORMAL": "NORMAL", "DIFFICULTY_HARD": "HARD"}
+BOSS_DIFFICULTIES = {"DIFFICULTY_EASY": "EASY", "DIFFICULTY_NORMAL": "NORMAL", "DIFFICULTY_HARD": "HARD", "DIFFICULTY_CHAOS": "CHAOS"}
 CLEAR_CLUSTER_WINDOW = timedelta(hours=1)
 POWER_CRYSTAL_PATTERN = re.compile(
     r"^(?P<amount>\d+)(?P<suffix>[KM]?) Power Crystal Coupon$", re.IGNORECASE
@@ -40,6 +45,15 @@ def _drops(boss: str, member_index: int) -> list[dict]:
     if member_index == 1:
         drops.append({"dropId": f"fixture-{boss.lower()}-equipment", "category": "EQUIPMENT", "name": f"Fixture {boss.title()} Equipment", "quantity": "1"})
     return drops
+
+
+def _slime_drops(member_index: int) -> list[dict]:
+    # docs/IMPL_PLAN_RAFFLE_CHAOS_SLIME.md S3: unlike Lucid/Will, Slime has no coin -- the only
+    # fixture drop is a Ring Box (EQUIPMENT), kept at member index 1 to mirror where `_drops`
+    # places the Lucid/Will equipment drop.
+    if member_index == 1:
+        return [{"dropId": "fixture-slime-equipment", "category": "EQUIPMENT", "name": "Fixture Slime Ring Box", "quantity": "1"}]
+    return []
 
 
 def _fixture_wallet_address(asset_key: str) -> str:
@@ -61,6 +75,13 @@ def fixture_result(request: CreateJobRequest) -> dict:
         for index, character in enumerate(request.characters):
             members.append({"memberId": character.memberId, "bossNeso": "600" if index == 0 else "0", "powerCrystalAmount": "100" if index == 0 else "0", "ascendantNeso": "50" if index == 0 else "0", "drops": _drops(boss, index)})
         clears.append({"clearId": "fixture-" + boss.lower(), "boss": boss, "bossDifficulty": difficulty, "ascendantTier": ascendant_tier, "partyCount": len(request.characters), "historyMemberIds": [character.memberId for character in request.characters], "complete": True, "members": members, "excludedRewards": []})
+    # docs/IMPL_PLAN_RAFFLE_CHAOS_SLIME.md S3: Slime has no coin and no Power Crystal in
+    # production -- kept at 0 here too, so fixture (dev/CI) mode preserves that shape instead of
+    # inventing amounts the real boss never grants.
+    slime_members = []
+    for index, character in enumerate(request.characters):
+        slime_members.append({"memberId": character.memberId, "bossNeso": "0", "powerCrystalAmount": "0", "ascendantNeso": "50" if index == 0 else "0", "drops": _slime_drops(index)})
+    clears.append({"clearId": "fixture-slime", "boss": "SLIME", "bossDifficulty": "CHAOS", "ascendantTier": "Eternal Ascendant Chaos Guardian", "partyCount": len(request.characters), "historyMemberIds": [character.memberId for character in request.characters], "complete": True, "members": slime_members, "excludedRewards": []})
     member_wallets = {character.memberId: character.walletOverride or _fixture_wallet_address(character.assetKey) for character in request.characters}
     return {"raffleResults": raffle_results, "clears": clears, "warnings": [{"code": "fixture_mode"}], "errors": [], "memberWallets": member_wallets}
 
@@ -326,7 +347,11 @@ def _member_settlement(member_id: str, boss_code: str, history: dict, ascendant:
     drops = []
     excluded_rewards: list[tuple[str, int]] = []
     drop_prefix = boss_code.lower() + ("-" + drop_scope if drop_scope else "") + "-" + member_id
-    coin_name = TARGET_COINS[boss_code]
+    # docs/IMPL_PLAN_RAFFLE_CHAOS_SLIME.md S2: not every distribution-target boss has a coin
+    # (SLIME does not), so this is `.get(..., "")` rather than a `[...]` lookup that would raise
+    # KeyError. `coin_name == ""` never equals a real reward name, so the branch below always
+    # takes the "COIN classified but no matching coin configured" path for such a boss.
+    coin_name = TARGET_COINS.get(boss_code, "")
     coin_quantity = 0
     coin_image_url = ""
     equipment_index = 0
@@ -340,6 +365,12 @@ def _member_settlement(member_id: str, boss_code: str, history: dict, ascendant:
         if classification == "COIN" and name == coin_name:
             coin_quantity += quantity
             coin_image_url = coin_image_url or _item_icon_url(item_metadata.get(item_id))
+        elif classification == "COIN":
+            # docs/IMPL_PLAN_RAFFLE_CHAOS_SLIME.md S2: a COIN-classified reward that does not
+            # match this boss's configured coin name (including a boss with no coin configured
+            # at all, e.g. SLIME) used to fall out of every branch and vanish silently -- the
+            # same failure class as LULU-119/130. Surfaced instead, same as OTHER below.
+            excluded_rewards.append((name, quantity))
         elif classification == "EQUIPMENT":
             equipment_index += 1
             drops.append({"dropId": f"{drop_prefix}-equipment-{equipment_index}", "category": "EQUIPMENT", "name": name, "quantity": str(quantity), "imageUrl": _item_icon_url(item_metadata.get(item_id))})
@@ -407,8 +438,8 @@ def normalize_live_history(request: CreateJobRequest, character_histories: dict[
             raffle_results.append({"resultId": f"result-{character.memberId}-{history_index + 1}", "memberId": character.memberId, "raffledAt": request.raffledAt, "layerName": layer_name, "bossCode": boss_code, "bossName": display_name, "outcome": "WIN", "rewards": rewards})
     clears = []
     registered_count = len(request.characters)
-    difficulty_order = {"HARD": 0, "NORMAL": 1, "EASY": 2}
-    for boss_code in ("LUCID", "WILL"):
+    difficulty_order = {"CHAOS": 0, "HARD": 1, "NORMAL": 2, "EASY": 3}
+    for boss_code in ("LUCID", "WILL", "SLIME"):
         histories_by_layer: dict[str, dict[str, list[tuple[dict, datetime, int]]]] = {}
         for character in request.characters:
             for history in exact_histories.get(character.memberId, []):
