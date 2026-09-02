@@ -20,7 +20,7 @@
     "updatedAt": "{{date}}, {{time}} UTC"
   },
 "raffle": {
-    "subtitle": "Muestra cada sorteo ganado y calcula el reparto de Lucid y Will del grupo completo con el precio de venta de cada objeto.",
+    "subtitle": "Muestra cada sorteo ganado y calcula el reparto de Lucid, Will y Chaos Guardian Angel Slime del grupo completo con el precio de venta de cada objeto.",
     "defaultPartyName": "Grupo de sorteo",
     "party": "Grupo",
     "partyName": "Nombre del grupo",
@@ -58,7 +58,7 @@
     "totalNeso": "NESO total",
     "totalPowerCrystal": "Power Crystal total",
     "itemTotals": "Totales por objeto",
-    "distributionScope": "Solo Lucid y Will se incluyen en el reparto. Los demás resultados siguen visibles en Raffle Results.",
+    "distributionScope": "Solo Lucid, Will y Chaos Guardian Angel Slime se incluyen en el reparto. Los demás resultados siguen visibles en Raffle Results.",
     "missingInput": "Añade miembros y elige la hora del sorteo.",
     "missingRate": "Introduce la tasa de Power Crystal.",
     "apiError": "No se pudo cargar el historial.",
@@ -95,7 +95,7 @@
     "saleProceeds": "Importe recibido tras la comisión del 5 %",
     "saleAmountBlankIsZero": "Un precio de venta sin completar se calcula como 0.",
     "calculateDistribution": "Calcular reparto",
-    "noPartyClears": "Este grupo completo no derrotó a Lucid ni a Will.",
+    "noPartyClears": "Este grupo completo no derrotó a Lucid, Will ni a Chaos Guardian Angel Slime.",
     "partyCountConfirmationTitle": "Confirmar tamaño del grupo",
     "partyCountConfirmationPrompt": "El jefe fue derrotado por {{partyCount}} jugadores. ¿Calcular el reparto con los {{memberCount}} participantes registrados cuyo historial coincide?",
     "partyCountConfirmAction": "Calcular con {{memberCount}} jugadores",

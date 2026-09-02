@@ -9,8 +9,8 @@ from contracts import CreateJobRequest
 
 
 SCHEMA_VERSION = 3
-CLASSIFICATION_VERSION = 3
-TARGET_BOSSES = {"Lucid": "LUCID", "Will": "WILL"}
+CLASSIFICATION_VERSION = 4
+TARGET_BOSSES = {"Lucid": "LUCID", "Will": "WILL", "Guardian Angel Slime": "SLIME"}
 TARGET_COINS = {"LUCID": "Phantasma Coin", "WILL": "Arachno Coin"}
 FT_ITEM_NAME = "Sealed Mirror World Nodestone"
 ASCENDANT_TIER_BY_BOSS = {
@@ -19,9 +19,22 @@ ASCENDANT_TIER_BY_BOSS = {
     ("LUCID", "DIFFICULTY_HARD"): "Divine Ascendant",
     ("WILL", "DIFFICULTY_EASY"): "Luminous Ascendant",
     ("WILL", "DIFFICULTY_NORMAL"): "Glorious Ascendant",
-    ("WILL", "DIFFICULTY_HARD"): "Eternal Ascendant",
+    # docs/IMPL_PLAN_RAFFLE_CHAOS_SLIME.md follow-up (statement-level orchestrator ruling,
+    # 2026-09-03): was "Eternal Ascendant" -- a bare *prefix* of the real layer name
+    # "Eternal Ascendant Chaos Guardian" (confirmed against production data). A member without
+    # their own "Eternal Ascendant Hard Will" layer (e.g. they only ever cleared Chaos
+    # Guardian's Ascendant) left exactly one prefix-matching candidate, which
+    # `_ascendant_for_boss`'s single-candidate fallback then returned -- silently misattributing
+    # the Chaos Guardian Ascendant's NESO/Power Crystal to a Hard Will clear. Verified real
+    # value below closes this by matching exactly instead of by prefix.
+    ("WILL", "DIFFICULTY_HARD"): "Eternal Ascendant Hard Will",
+    # docs/IMPL_PLAN_RAFFLE_CHAOS_SLIME.md: only the Chaos difficulty of Guardian Angel Slime is
+    # a distribution target (LULU-141 user ruling). Normal Guardian Angel Slime
+    # (DIFFICULTY_NORMAL) is deliberately absent -- an absent table entry makes
+    # `_boss_distribution_context` return None, so it never becomes a clear candidate.
+    ("SLIME", "DIFFICULTY_CHAOS"): "Eternal Ascendant Chaos Guardian",
 }
-BOSS_DIFFICULTIES = {"DIFFICULTY_EASY": "EASY", "DIFFICULTY_NORMAL": "NORMAL", "DIFFICULTY_HARD": "HARD"}
+BOSS_DIFFICULTIES = {"DIFFICULTY_EASY": "EASY", "DIFFICULTY_NORMAL": "NORMAL", "DIFFICULTY_HARD": "HARD", "DIFFICULTY_CHAOS": "CHAOS"}
 CLEAR_CLUSTER_WINDOW = timedelta(hours=1)
 POWER_CRYSTAL_PATTERN = re.compile(
     r"^(?P<amount>\d+)(?P<suffix>[KM]?) Power Crystal Coupon$", re.IGNORECASE
@@ -42,6 +55,15 @@ def _drops(boss: str, member_index: int) -> list[dict]:
     return drops
 
 
+def _slime_drops(member_index: int) -> list[dict]:
+    # docs/IMPL_PLAN_RAFFLE_CHAOS_SLIME.md S3: unlike Lucid/Will, Slime has no coin -- the only
+    # fixture drop is a Ring Box (EQUIPMENT), kept at member index 1 to mirror where `_drops`
+    # places the Lucid/Will equipment drop.
+    if member_index == 1:
+        return [{"dropId": "fixture-slime-equipment", "category": "EQUIPMENT", "name": "Fixture Slime Ring Box", "quantity": "1"}]
+    return []
+
+
 def _fixture_wallet_address(asset_key: str) -> str:
     # Deterministic 0x + 40 hex chars so fixture (dev/CI) mode can exercise
     # the memberWallets contract end-to-end without a real MSU wallet.
@@ -56,11 +78,18 @@ def fixture_result(request: CreateJobRequest) -> dict:
         raffle_results.append({"resultId": f"fixture-other-{character.memberId}", "memberId": character.memberId, "raffledAt": request.raffledAt, "layerName": "Fixture Other Boss", "bossCode": None, "bossName": "Other Boss", "outcome": "WIN", "rewards": [{"rewardName": "Fixture Other Reward", "classification": "OTHER", "quantity": "1", "won": True}]})
     clears = []
     for boss in ("LUCID", "WILL"):
-        difficulty, ascendant_tier = ("HARD", "Divine Ascendant") if boss == "LUCID" else ("HARD", "Eternal Ascendant")
+        difficulty, ascendant_tier = ("HARD", "Divine Ascendant") if boss == "LUCID" else ("HARD", "Eternal Ascendant Hard Will")
         members = []
         for index, character in enumerate(request.characters):
             members.append({"memberId": character.memberId, "bossNeso": "600" if index == 0 else "0", "powerCrystalAmount": "100" if index == 0 else "0", "ascendantNeso": "50" if index == 0 else "0", "drops": _drops(boss, index)})
         clears.append({"clearId": "fixture-" + boss.lower(), "boss": boss, "bossDifficulty": difficulty, "ascendantTier": ascendant_tier, "partyCount": len(request.characters), "historyMemberIds": [character.memberId for character in request.characters], "complete": True, "members": members, "excludedRewards": []})
+    # docs/IMPL_PLAN_RAFFLE_CHAOS_SLIME.md S3: Slime has no coin and no Power Crystal in
+    # production -- kept at 0 here too, so fixture (dev/CI) mode preserves that shape instead of
+    # inventing amounts the real boss never grants.
+    slime_members = []
+    for index, character in enumerate(request.characters):
+        slime_members.append({"memberId": character.memberId, "bossNeso": "0", "powerCrystalAmount": "0", "ascendantNeso": "50" if index == 0 else "0", "drops": _slime_drops(index)})
+    clears.append({"clearId": "fixture-slime", "boss": "SLIME", "bossDifficulty": "CHAOS", "ascendantTier": "Eternal Ascendant Chaos Guardian", "partyCount": len(request.characters), "historyMemberIds": [character.memberId for character in request.characters], "complete": True, "members": slime_members, "excludedRewards": []})
     member_wallets = {character.memberId: character.walletOverride or _fixture_wallet_address(character.assetKey) for character in request.characters}
     return {"raffleResults": raffle_results, "clears": clears, "warnings": [{"code": "fixture_mode"}], "errors": [], "memberWallets": member_wallets}
 
@@ -306,7 +335,21 @@ def _ascendant_for_boss(histories: list[dict], layers_by_id: dict[str, dict], bo
     if len(exact) == 1:
         return exact[0], None
     if len(exact) == 0:
-        prefix = [(name, history) for name, history in candidates if name.casefold().startswith(target_tier_cf)]
+        # docs/IMPL_PLAN_RAFFLE_CHAOS_SLIME.md follow-up (statement-level orchestrator ruling,
+        # 2026-09-03, real-data regression): a configured tier that is a bare *prefix* of
+        # another boss/difficulty's own configured tier must never resolve via a layer that IS
+        # that other entry's exact tier -- excluded from the prefix candidate pool outright.
+        # Without this, a member missing their own Ascendant history (e.g. they only ever
+        # cleared Chaos Guardian, never Hard Will) left exactly one prefix-matching candidate
+        # (the OTHER boss's Ascendant), which was then silently misattributed -- confirmed
+        # against production data (a Chaos Guardian Ascendant NESO win double-counted onto a
+        # Hard Will clear). If this empties the candidate pool, resolution fails visibly
+        # (`ascendant_not_found`, below) instead of guessing.
+        other_target_tiers_cf = {tier.casefold() for tier in ASCENDANT_TIER_BY_BOSS.values() if tier.casefold() != target_tier_cf}
+        prefix = [
+            (name, history) for name, history in candidates
+            if name.casefold().startswith(target_tier_cf) and name.casefold() not in other_target_tiers_cf
+        ]
         if len(prefix) == 1:
             return prefix[0][1], None
         if len(prefix) > 1:
@@ -322,45 +365,97 @@ def _sum_item(history: dict | None, item_id: int) -> int:
     return sum(_quantity(prize) for prize in _prizes(history) if _item_id(prize) == item_id)
 
 
+def _reward_outcome(prize: dict, coin_name: str, boss_code: str, item_metadata: dict[int, dict]) -> tuple[str, str, int, str] | None:
+    """Classifies a single prize (from either the boss's own history or its Ascendant-tier
+    history -- LULU-141 follow-up, orchestrator ruling 2026-09-03) into a settlement outcome:
+    `(kind, name, quantity, imageUrl)`, `kind` one of "coin_match" / "coin_other" /
+    "equipment" / "ft_item" / "other". Returns `None` for a zero-quantity prize, or one this
+    function never settles at all (NESO, Power Crystal -- summed by the caller separately from
+    both histories; a non-Will FT_ITEM). Callers of this function are responsible for excluding
+    NESO/Power-Crystal-classified prizes from an Ascendant history *before* calling it, so
+    their amounts are not double-counted on top of the caller's own separate summation."""
+    quantity = _quantity(prize)
+    if quantity <= 0:
+        return None
+    item_id = _item_id(prize)
+    classification, name = _classification(item_id, item_metadata.get(item_id))
+    image_url = _item_icon_url(item_metadata.get(item_id))
+    if classification == "COIN":
+        return ("coin_match" if name == coin_name else "coin_other", name, quantity, image_url)
+    if classification == "EQUIPMENT":
+        return ("equipment", name, quantity, image_url)
+    if classification == "FT_ITEM":
+        # Only surfaced for Will clears (Lucid/Slime never roll this item); the affiliate is
+        # asked for a resale price like coin/equipment so it can be settled the same way.
+        return ("ft_item", name, quantity, image_url) if boss_code == "WILL" else None
+    if classification == "OTHER":
+        return ("other", name, quantity, image_url)
+    return None
+
+
 def _member_settlement(member_id: str, boss_code: str, history: dict, ascendant: dict | None, item_metadata: dict[int, dict], drop_scope: str = "") -> dict:
     drops = []
     excluded_rewards: list[tuple[str, int]] = []
     drop_prefix = boss_code.lower() + ("-" + drop_scope if drop_scope else "") + "-" + member_id
-    coin_name = TARGET_COINS[boss_code]
+    # docs/IMPL_PLAN_RAFFLE_CHAOS_SLIME.md S2: not every distribution-target boss has a coin
+    # (SLIME does not), so this is `.get(..., "")` rather than a `[...]` lookup that would raise
+    # KeyError. `coin_name == ""` never equals a real reward name, so `_reward_outcome` always
+    # resolves to "coin_other" (fail-visible in excludedRewards) for such a boss.
+    coin_name = TARGET_COINS.get(boss_code, "")
     coin_quantity = 0
     coin_image_url = ""
-    equipment_index = 0
-    ft_item_index = 0
-    for prize in _prizes(history):
-        quantity = _quantity(prize)
-        if quantity <= 0:
-            continue
-        item_id = _item_id(prize)
-        classification, name = _classification(item_id, item_metadata.get(item_id))
-        if classification == "COIN" and name == coin_name:
-            coin_quantity += quantity
-            coin_image_url = coin_image_url or _item_icon_url(item_metadata.get(item_id))
-        elif classification == "EQUIPMENT":
-            equipment_index += 1
-            drops.append({"dropId": f"{drop_prefix}-equipment-{equipment_index}", "category": "EQUIPMENT", "name": name, "quantity": str(quantity), "imageUrl": _item_icon_url(item_metadata.get(item_id))})
-        elif classification == "FT_ITEM" and boss_code == "WILL":
-            # Only surfaced for Will clears (Lucid never rolls this item); the affiliate is
-            # asked for a resale price like coin/equipment so it can be settled the same way.
-            ft_item_index += 1
-            drops.append({"dropId": f"{drop_prefix}-ftitem-{ft_item_index}", "category": "FT_ITEM", "name": name, "quantity": str(quantity), "imageUrl": _item_icon_url(item_metadata.get(item_id))})
-        elif classification == "OTHER":
-            # docs/IMPL_PLAN_RAFFLE_REWARD_VOCAB.md S3: a reward that falls out of every
-            # distributable category used to vanish silently (the exact class of bug behind
-            # LULU-119/130 and this plan's Ring Box/itemId-1000 fixes). Surfaced instead of
-            # dropped, so the next vocabulary drift is visible in the UI, not just in a stale
-            # payout total.
-            excluded_rewards.append((name, quantity))
-    if coin_quantity:
-        drops.insert(0, {"dropId": f"{drop_prefix}-coin", "category": "COIN", "name": coin_name, "quantity": str(coin_quantity), "imageUrl": coin_image_url})
+
+    def _apply(prizes: list[dict], drop_id_segment: str) -> None:
+        # docs/IMPL_PLAN_RAFFLE_CHAOS_SLIME.md follow-up (LULU-141 orchestrator ruling,
+        # 2026-09-03): applied to both the boss's own history (drop_id_segment="") and its
+        # Ascendant-tier history (drop_id_segment="ascendant-"). The segment keeps every
+        # generated dropId unique within a clear (a boss-layer Ring Box and an
+        # Ascendant-layer Ring Box for the same member can never collide), which matters
+        # because the web side keys its per-drop sale-price input by dropId -- a collision
+        # would let one drop's sale price silently overwrite the other's.
+        nonlocal coin_quantity, coin_image_url
+        equipment_index = 0
+        ft_item_index = 0
+        for prize in prizes:
+            outcome = _reward_outcome(prize, coin_name, boss_code, item_metadata)
+            if outcome is None:
+                continue
+            kind, name, quantity, image_url = outcome
+            if kind == "coin_match":
+                coin_quantity += quantity
+                coin_image_url = coin_image_url or image_url
+            elif kind == "equipment":
+                equipment_index += 1
+                drops.append({"dropId": f"{drop_prefix}-{drop_id_segment}equipment-{equipment_index}", "category": "EQUIPMENT", "name": name, "quantity": str(quantity), "imageUrl": image_url})
+            elif kind == "ft_item":
+                ft_item_index += 1
+                drops.append({"dropId": f"{drop_prefix}-{drop_id_segment}ftitem-{ft_item_index}", "category": "FT_ITEM", "name": name, "quantity": str(quantity), "imageUrl": image_url})
+            else:
+                # "coin_other" (docs/IMPL_PLAN_RAFFLE_CHAOS_SLIME.md S2) and "other"
+                # (docs/IMPL_PLAN_RAFFLE_REWARD_VOCAB.md S3): a reward that falls out of every
+                # distributable category used to vanish silently (LULU-119/130's failure
+                # class). Surfaced instead of dropped, so the next vocabulary drift -- or an
+                # Ascendant-layer prize this loop previously never even looked at -- is visible
+                # in the UI, not just in a stale payout total.
+                excluded_rewards.append((name, quantity))
+
+    _apply(_prizes(history), "")
+
     power_crystal = 0
+    ascendant_other_prizes = []
     for prize in _prizes(ascendant or {}):
         item_id = _item_id(prize)
-        power_crystal += _power_crystal_amount(prize, item_metadata.get(item_id))
+        if item_id == 1:
+            continue  # NESO -- summed separately via `_sum_item(ascendant, 1)` below.
+        classification, _name = _classification(item_id, item_metadata.get(item_id))
+        if classification == "POWER_CRYSTAL":
+            power_crystal += _power_crystal_amount(prize, item_metadata.get(item_id))
+            continue
+        ascendant_other_prizes.append(prize)
+    _apply(ascendant_other_prizes, "ascendant-")
+
+    if coin_quantity:
+        drops.insert(0, {"dropId": f"{drop_prefix}-coin", "category": "COIN", "name": coin_name, "quantity": str(coin_quantity), "imageUrl": coin_image_url})
     return {"memberId": member_id, "bossNeso": str(_sum_item(history, 1)), "powerCrystalAmount": str(power_crystal), "ascendantNeso": str(_sum_item(ascendant, 1)), "drops": drops, "excludedRewards": excluded_rewards}
 
 
@@ -407,8 +502,8 @@ def normalize_live_history(request: CreateJobRequest, character_histories: dict[
             raffle_results.append({"resultId": f"result-{character.memberId}-{history_index + 1}", "memberId": character.memberId, "raffledAt": request.raffledAt, "layerName": layer_name, "bossCode": boss_code, "bossName": display_name, "outcome": "WIN", "rewards": rewards})
     clears = []
     registered_count = len(request.characters)
-    difficulty_order = {"HARD": 0, "NORMAL": 1, "EASY": 2}
-    for boss_code in ("LUCID", "WILL"):
+    difficulty_order = {"CHAOS": 0, "HARD": 1, "NORMAL": 2, "EASY": 3}
+    for boss_code in ("LUCID", "WILL", "SLIME"):
         histories_by_layer: dict[str, dict[str, list[tuple[dict, datetime, int]]]] = {}
         for character in request.characters:
             for history in exact_histories.get(character.memberId, []):

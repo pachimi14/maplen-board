@@ -87,7 +87,7 @@ def test_unresolvable_ascendant_tier_raises_a_visible_warning_instead_of_a_silen
             "prizes": [{"itemId": 1, "winCount": {"value": "100"}}],
         }],
     }
-    # No Ascendant-tier history at all: the target tier ("Eternal Ascendant") can never
+    # No Ascendant-tier history at all: the target tier ("Eternal Ascendant Hard Will") can never
     # resolve, so this must surface as a warning rather than a silently-zeroed reward.
     layers = [{"layerId": 205044, "boss": {"bossName": "Will", "difficulty": "DIFFICULTY_HARD", "raffleLayerName": "Hard Will"}}]
 
@@ -96,4 +96,4 @@ def test_unresolvable_ascendant_tier_raises_a_visible_warning_instead_of_a_silen
     clear = result["clears"][0]
     assert clear["members"][0]["powerCrystalAmount"] == "0"
     assert clear["members"][0]["ascendantNeso"] == "0"
-    assert {"code": "ascendant_not_found", "boss": "WILL", "bossDifficulty": "HARD", "expectedTier": "Eternal Ascendant"} in result["warnings"]
+    assert {"code": "ascendant_not_found", "boss": "WILL", "bossDifficulty": "HARD", "expectedTier": "Eternal Ascendant Hard Will"} in result["warnings"]

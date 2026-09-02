@@ -20,7 +20,7 @@
     "updatedAt": "{{date}}, {{time}} UTC"
   },
 "raffle": {
-    "subtitle": "Xem mọi raffle đã thắng, rồi tính phân chia Lucid và Will của cả party theo giá bán từng vật phẩm rơi.",
+    "subtitle": "Xem mọi raffle đã thắng, rồi tính phân chia Lucid, Will và Chaos Guardian Angel Slime của cả party theo giá bán từng vật phẩm rơi.",
     "defaultPartyName": "Nhóm raffle",
     "party": "Nhóm",
     "partyName": "Tên party",
@@ -58,7 +58,7 @@
     "totalNeso": "Tổng NESO",
     "totalPowerCrystal": "Tổng Power Crystal",
     "itemTotals": "Tổng vật phẩm",
-    "distributionScope": "Chỉ Lucid và Will được tính phân chia. Các kết quả khác vẫn hiển thị trong Raffle Results.",
+    "distributionScope": "Chỉ Lucid, Will và Chaos Guardian Angel Slime được tính phân chia. Các kết quả khác vẫn hiển thị trong Raffle Results.",
     "missingInput": "Thêm thành viên và chọn thời gian raffle.",
     "missingRate": "Nhập tỷ lệ quy đổi Power Crystal.",
     "apiError": "Không thể tải lịch sử raffle.",
@@ -95,7 +95,7 @@
     "saleProceeds": "Số tiền nhận sau phí 5%",
     "saleAmountBlankIsZero": "Giá bán chưa nhập sẽ được tính là 0.",
     "calculateDistribution": "Tính phân chia",
-    "noPartyClears": "Nhóm đầy đủ này không có lượt hạ Lucid hoặc Will.",
+    "noPartyClears": "Nhóm đầy đủ này không có lượt hạ Lucid, Will hoặc Chaos Guardian Angel Slime.",
     "partyCountConfirmationTitle": "Xác nhận số thành viên",
     "partyCountConfirmationPrompt": "Boss được hạ bởi {{partyCount}} người. Tính phân chia với {{memberCount}} người đã đăng ký có lịch sử raffle trùng khớp?",
     "partyCountConfirmAction": "Tính với {{memberCount}} người",

@@ -65,6 +65,19 @@ describe("normalizeJobPayload", () => {
     value.clears[0].ascendantTier = "Eternal Ascendant";
     expect(normalizeJobPayload(value).code).toBe("invalidClear");
   });
+
+  // docs/IMPL_PLAN_RAFFLE_CHAOS_SLIME.md S5 acceptance criterion 6: a SLIME:CHAOS clear passes
+  // the contract like any other distribution-target boss/difficulty pair.
+  it("accepts a SLIME:CHAOS clear", () => {
+    const value = payload();
+    value.clears[0].boss = "SLIME";
+    value.clears[0].bossDifficulty = "CHAOS";
+    value.clears[0].ascendantTier = "Eternal Ascendant Chaos Guardian";
+    value.clears[0].members.forEach((member) => { member.drops = []; });
+    const result = normalizeJobPayload(value);
+    expect(result.ok).toBe(true);
+    expect(result.data.clears[0].boss).toBe("SLIME");
+  });
   it("rejects unsafe numeric JSON amounts", () => {
     const value = payload();
     value.clears[0].members[0].bossNeso = 9007199254740993;
@@ -174,8 +187,8 @@ describe("normalizeJobPayload", () => {
     const fixture = JSON.parse(readFileSync(fixtureUrl, "utf8"));
     const result = normalizeJobPayload(fixture.expectedJob);
     expect(result.ok).toBe(true);
-    expect(result.data.clears.map((clear) => clear.boss)).toEqual(["LUCID", "WILL"]);
-    expect(result.data.clears.map((clear) => clear.excludedRewards)).toEqual([[], []]);
+    expect(result.data.clears.map((clear) => clear.boss)).toEqual(["LUCID", "WILL", "SLIME"]);
+    expect(result.data.clears.map((clear) => clear.excludedRewards)).toEqual([[], [], []]);
     expect(result.data.memberWallets).toEqual({ "member-1": "0x0b89e0acd94a1998c9c7c7ba707d8e639cd44135" });
   });
 });

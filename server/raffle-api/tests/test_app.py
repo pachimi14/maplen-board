@@ -55,7 +55,7 @@ def test_fixture_job_contract_does_not_return_asset_key() -> None:
         assert payload["status"] == "complete"
         assert payload["clears"][0]["members"][0]["memberId"] == "member-1"
         assert {entry["bossName"] for entry in payload["raffleResults"]} == {"Lucid", "Will", "Other Boss"}
-        assert {clear["boss"] for clear in payload["clears"]} == {"LUCID", "WILL"}
+        assert {clear["boss"] for clear in payload["clears"]} == {"LUCID", "WILL", "SLIME"}
         assert "assetKey" not in str(payload)
         assert payload["warnings"] == [{"code": "fixture_mode"}]
         assert re.fullmatch(r"0x[0-9a-fA-F]{40}", payload["memberWallets"]["member-1"])

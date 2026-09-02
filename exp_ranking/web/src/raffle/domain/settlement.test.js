@@ -284,6 +284,14 @@ describe("calculateSettlement", () => {
     expect(result.ok).toBe(false);
     expect(result.errors.map((entry) => entry.code)).toContain("carryover_not_balanced");
   });
+
+  // docs/IMPL_PLAN_RAFFLE_CHAOS_SLIME.md S5 acceptance criterion 6: a SLIME clear settles like
+  // any other distribution-target boss -- no invalid_boss error.
+  it("accepts SLIME as a valid distribution-target boss", () => {
+    const result = calculateSettlement(clearInput({ boss: "SLIME" }));
+    expect(result.ok).toBe(true);
+    expect(result.errors).toBeUndefined();
+  });
 });
 
 // docs/IMPL_PLAN_RAFFLE_EXTRA_REWARD.md: extra reward is NESO already

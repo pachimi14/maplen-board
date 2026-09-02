@@ -38,7 +38,7 @@ function initialBossSetting() {
 }
 
 function initialDistributionSettings() {
-  return { LUCID: initialBossSetting(), WILL: initialBossSetting() };
+  return { LUCID: initialBossSetting(), WILL: initialBossSetting(), SLIME: initialBossSetting() };
 }
 
 function formatNesoPreview(value, locale) {
@@ -83,7 +83,7 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
   const [resultTab, setResultTab] = useState("raffles");
   const [selectedResultMemberId, setSelectedResultMemberId] = useState("");
   const [activeClearBoss, setActiveClearBoss] = useState("");
-  const [selectedClearIdsByBoss, setSelectedClearIdsByBoss] = useState({ LUCID: [], WILL: [] });
+  const [selectedClearIdsByBoss, setSelectedClearIdsByBoss] = useState({ LUCID: [], WILL: [], SLIME: [] });
   const [confirmedClearIds, setConfirmedClearIds] = useState([]);
   const [distribution, setDistribution] = useState(initialDistributionSettings);
   const resultsSectionRef = useRef(null);
@@ -134,6 +134,7 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
     setDistribution((current) => ({
       LUCID: { ...current.LUCID, calculated: null },
       WILL: { ...current.WILL, calculated: null },
+      SLIME: { ...current.SLIME, calculated: null },
     }));
   }
 
@@ -226,7 +227,7 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
     setRequestError("");
     setJobResult(null);
     setDistribution(initialDistributionSettings());
-    setSelectedClearIdsByBoss({ LUCID: [], WILL: [] });
+    setSelectedClearIdsByBoss({ LUCID: [], WILL: [], SLIME: [] });
     setConfirmedClearIds([]);
     const memberMap = {};
     const characters = sortPartyMembers(activeParty.members).map((member, index) => {
@@ -241,7 +242,7 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
     const memberIds = characters.map((character) => character.memberId);
     const clears = selectPartyClearCandidates(result.data.clears, memberIds);
     const clearGroups = groupPartyClearCandidates(clears);
-    const initialSelections = { LUCID: [], WILL: [] };
+    const initialSelections = { LUCID: [], WILL: [], SLIME: [] };
     clearGroups.forEach((group) => {
       if (group.clears.length === 1) initialSelections[group.boss] = [group.clears[0].clearId];
     });
@@ -301,6 +302,7 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
     setDistribution((current) => ({
       LUCID: { ...current.LUCID, calculated: null },
       WILL: { ...current.WILL, calculated: null },
+      SLIME: { ...current.SLIME, calculated: null },
     }));
   }
   function toggleClearSelection(clear) {
@@ -337,6 +339,15 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
   // possible drops would just be noise.
   const hasFtItemDrop = activeClear?.boss === "WILL"
     && activeClear.members.some((member) => member.drops.some((drop) => drop.category === "FT_ITEM"));
+  // docs/IMPL_PLAN_RAFFLE_CHAOS_SLIME.md S6: the Power Crystal toggle/rate input only show up
+  // when this clear actually won any Power Crystal (Slime has none in production). Keyed on
+  // the observed amount, not the boss name, so a future Chaos Guardian Ascendant that starts
+  // granting Power Crystal shows the input automatically instead of staying hard-coded off.
+  const hasPowerCrystal = activeClear
+    ? activeClear.members.some((member) => {
+      try { return BigInt(member.powerCrystalAmount) > 0n; } catch { return false; }
+    })
+    : false;
   // G1/LULU-119 follow-up: sale-price inputs for every currently-included
   // sellable drop (coin/equipment/FT Item) -- computed once so the fail-
   // visible "blank = 0" note (below) and the input list itself never
@@ -447,11 +458,11 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
                       </label>)}</div>
                     </fieldset> : null}
                     <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-                      {ITEM_KEYS.map((key) => <label key={key} className="flex items-center gap-2 rounded-lg border border-slate-200 p-2 text-sm dark:border-slate-700"><input type="checkbox" checked={activeSetting.include[key]} onChange={(event) => updateBossSetting(activeClear.boss, (setting) => ({ ...setting, include: { ...setting.include, [key]: event.target.checked } }))} />{t("raffle.item_" + key)}</label>)}
+                      {ITEM_KEYS.filter((key) => key !== "powerCrystal" || hasPowerCrystal).map((key) => <label key={key} className="flex items-center gap-2 rounded-lg border border-slate-200 p-2 text-sm dark:border-slate-700"><input type="checkbox" checked={activeSetting.include[key]} onChange={(event) => updateBossSetting(activeClear.boss, (setting) => ({ ...setting, include: { ...setting.include, [key]: event.target.checked } }))} />{t("raffle.item_" + key)}</label>)}
                       {hasFtItemDrop ? <label key="ftItem" className="flex items-center gap-2 rounded-lg border border-slate-200 p-2 text-sm dark:border-slate-700"><input type="checkbox" checked={activeSetting.include.ftItem} onChange={(event) => updateBossSetting(activeClear.boss, (setting) => ({ ...setting, include: { ...setting.include, ftItem: event.target.checked } }))} />{t("raffle.item_ftItem")}</label> : null}
                     </div>
                     {excludedRewardsText ? <p className="raffle-hint-text">{t("raffle.excludedRewardsNote", { list: excludedRewardsText })}</p> : null}
-                    {activeSetting.include.powerCrystal ? <label className="raffle-label max-w-xl">{t("raffle.powerCrystalRate")}<div className="raffle-rate-inline mt-1"><span>{t("raffle.powerCrystalRatePrefix")}</span><input className="raffle-input raffle-rate-input" inputMode="decimal" value={activeSetting.powerCrystalNesoRate} onChange={(event) => updateBossSetting(activeClear.boss, (setting) => ({ ...setting, powerCrystalNesoRate: event.target.value }))} /><span>{t("raffle.powerCrystalRateSuffix")}</span></div><span className="mt-1 block text-xs font-normal text-slate-500 dark:text-slate-400">{t("raffle.powerCrystalRateHelp")}</span></label> : null}
+                    {activeSetting.include.powerCrystal && hasPowerCrystal ? <label className="raffle-label max-w-xl">{t("raffle.powerCrystalRate")}<div className="raffle-rate-inline mt-1"><span>{t("raffle.powerCrystalRatePrefix")}</span><input className="raffle-input raffle-rate-input" inputMode="decimal" value={activeSetting.powerCrystalNesoRate} onChange={(event) => updateBossSetting(activeClear.boss, (setting) => ({ ...setting, powerCrystalNesoRate: event.target.value }))} /><span>{t("raffle.powerCrystalRateSuffix")}</span></div><span className="mt-1 block text-xs font-normal text-slate-500 dark:text-slate-400">{t("raffle.powerCrystalRateHelp")}</span></label> : null}
                     {saleableDrops.length ? <p className="raffle-hint-text">{t("raffle.saleAmountBlankIsZero")}</p> : null}
                     {saleableDrops.map(({ member, drop }) => {
                       const salePrice = activeSetting.saleNesoByDropId[drop.dropId] || "";

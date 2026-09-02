@@ -1,6 +1,6 @@
 export const RAFFLE_SCHEMA_VERSION = 3;
-export const RAFFLE_CLASSIFICATION_VERSION = 3;
-export const RAFFLE_BOSSES = Object.freeze(["LUCID", "WILL"]);
+export const RAFFLE_CLASSIFICATION_VERSION = 4;
+export const RAFFLE_BOSSES = Object.freeze(["LUCID", "WILL", "SLIME"]);
 export const RAFFLE_JOB_STATUSES = Object.freeze(["queued", "resolving", "fetching", "normalizing", "complete", "partial", "error", "cancelled"]);
 const RESULT_OUTCOMES = new Set(["WIN", "LOSE", "UNKNOWN"]);
 const REWARD_CLASSIFICATIONS = new Set(["NESO", "POWER_CRYSTAL", "COIN", "EQUIPMENT", "FT_ITEM", "ASCENDANT_NESO", "OTHER", "UNKNOWN"]);
@@ -11,7 +11,15 @@ const ASCENDANT_TIER_BY_CLEAR = Object.freeze({
   "LUCID:HARD": "Divine Ascendant",
   "WILL:EASY": "Luminous Ascendant",
   "WILL:NORMAL": "Glorious Ascendant",
-  "WILL:HARD": "Eternal Ascendant",
+  // docs/IMPL_PLAN_RAFFLE_CHAOS_SLIME.md follow-up (statement-level orchestrator ruling,
+  // 2026-09-03): was "Eternal Ascendant" -- a bare prefix of the real Chaos Guardian Ascendant
+  // layer name, which let the server misattribute a Slime Ascendant win to a Hard Will clear
+  // for a member without their own Hard Will Ascendant history. Must match normalizer.py's
+  // ASCENDANT_TIER_BY_BOSS[("WILL","DIFFICULTY_HARD")] exactly.
+  "WILL:HARD": "Eternal Ascendant Hard Will",
+  // docs/IMPL_PLAN_RAFFLE_CHAOS_SLIME.md: only the Chaos difficulty of Guardian Angel Slime is
+  // a distribution target (LULU-141 user ruling).
+  "SLIME:CHAOS": "Eternal Ascendant Chaos Guardian",
 });
 const INTEGER_PATTERN = /^\d+$/;
 const ITEM_ICON_PATTERN = /^https:\/\/api-static\.msu\.io\/itemimages\/[A-Za-z0-9_./-]+$/;
@@ -85,8 +93,9 @@ export function normalizeJobPayload(payload) {
     }
   }
 
-  // Up to 6 party sizes per boss/difficulty (LULU-096 independent clusters) x 3 difficulties x 2 bosses.
-  if (!Array.isArray(payload.clears) || payload.clears.length > 36) return { ok: false, code: "invalidClears" };
+  // Up to 6 party sizes per boss/difficulty (LULU-096 independent clusters) x (3 difficulties x
+  // 2 bosses [Lucid/Will] + 1 difficulty x 1 boss [Slime, Chaos-only -- LULU-141]) = 42.
+  if (!Array.isArray(payload.clears) || payload.clears.length > 42) return { ok: false, code: "invalidClears" };
   const clearIds = new Set();
   const dropIds = new Set();
   const normalizedClears = [];

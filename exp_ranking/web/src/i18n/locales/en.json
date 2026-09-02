@@ -20,7 +20,7 @@
     "updatedAt": "{{date}}, {{time}} UTC"
   },
 "raffle": {
-    "subtitle": "View every won raffle, then calculate full-party Lucid and Will settlements using per-drop sale amounts.",
+    "subtitle": "View every won raffle, then calculate full-party Lucid, Will, and Chaos Guardian Angel Slime settlements using per-drop sale amounts.",
     "defaultPartyName": "Raffle Party",
     "party": "Party",
     "partyName": "Party name",
@@ -58,7 +58,7 @@
     "totalNeso": "Total NESO",
     "totalPowerCrystal": "Total Power Crystal",
     "itemTotals": "Item totals",
-    "distributionScope": "Only Lucid and Will are included in settlement. Other results remain visible under Raffle Results.",
+    "distributionScope": "Only Lucid, Will, and Chaos Guardian Angel Slime are included in settlement. Other results remain visible under Raffle Results.",
     "missingInput": "Add party members and choose a raffle time.",
     "missingRate": "Enter the Power Crystal conversion rate.",
     "apiError": "Unable to load raffle history.",
@@ -95,7 +95,7 @@
     "saleProceeds": "Proceeds after 5% fee",
     "saleAmountBlankIsZero": "An unfilled sale price is calculated as 0.",
     "calculateDistribution": "Calculate settlement",
-    "noPartyClears": "This full party has no Lucid or Will clear.",
+    "noPartyClears": "This full party has no Lucid, Will, or Chaos Guardian Angel Slime clear.",
     "partyCountConfirmationTitle": "Party size confirmation",
     "partyCountConfirmationPrompt": "The boss was cleared by {{partyCount}} players. Calculate the settlement using the {{memberCount}} registered raffle participants?",
     "partyCountConfirmAction": "Calculate with {{memberCount}} players",

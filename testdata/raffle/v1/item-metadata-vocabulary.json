@@ -1416,6 +1416,12 @@
   "tier1": "Utility"
  },
  {
+  "itemId": 2358012,
+  "itemName": "Rank 1 Special Skill Ring Box",
+  "tier0": "Consumable",
+  "tier1": "Voucher"
+ },
+ {
   "itemId": 2358013,
   "itemName": "Rank 2 Special Skill Ring Box",
   "tier0": "Consumable",

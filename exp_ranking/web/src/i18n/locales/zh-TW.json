@@ -20,7 +20,7 @@
     "updatedAt": "{{date}}, {{time}} UTC"
   },
 "raffle": {
-    "subtitle": "檢視所有中獎結果，並以每件掉落物的售價計算完整隊伍的 Lucid 與 Will 分配。",
+    "subtitle": "檢視所有中獎結果，並以每件掉落物的售價計算完整隊伍的 Lucid、Will 與 Chaos Guardian Angel Slime 分配。",
     "defaultPartyName": "抽獎隊伍",
     "party": "隊伍",
     "partyName": "隊伍名稱",
@@ -58,7 +58,7 @@
     "totalNeso": "NESO合計",
     "totalPowerCrystal": "Power Crystal合計",
     "itemTotals": "道具合計",
-    "distributionScope": "僅 Lucid 與 Will 列入分配，其他結果仍會顯示於 Raffle Results。",
+    "distributionScope": "僅 Lucid、Will 與 Chaos Guardian Angel Slime 列入分配，其他結果仍會顯示於 Raffle Results。",
     "missingInput": "請新增隊員並選擇抽獎時間。",
     "missingRate": "請輸入Power Crystal換算率。",
     "apiError": "無法取得抽獎紀錄。",
@@ -95,7 +95,7 @@
     "saleProceeds": "扣除5%手續費後的實收金額",
     "saleAmountBlankIsZero": "未填寫的售價將以 0 計算。",
     "calculateDistribution": "計算分配",
-    "noPartyClears": "此完整隊伍沒有Lucid或Will通關。",
+    "noPartyClears": "此完整隊伍沒有 Lucid、Will 或 Chaos Guardian Angel Slime 通關。",
     "partyCountConfirmationTitle": "確認討伐人數",
     "partyCountConfirmationPrompt": "討伐時共有{{partyCount}}人。要使用已登錄且抽獎紀錄一致的{{memberCount}}人計算分配嗎？",
     "partyCountConfirmAction": "以{{memberCount}}人計算",

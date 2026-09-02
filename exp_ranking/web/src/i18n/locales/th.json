@@ -20,7 +20,7 @@
     "updatedAt": "{{date}}, {{time}} UTC"
   },
 "raffle": {
-    "subtitle": "ดูผลราฟเฟิลที่ชนะทั้งหมด แล้วคำนวณการแบ่งรางวัล Lucid และ Will ของทั้งปาร์ตี้ด้วยยอดขายของดรอปแต่ละชิ้น",
+    "subtitle": "ดูผลราฟเฟิลที่ชนะทั้งหมด แล้วคำนวณการแบ่งรางวัล Lucid, Will และ Chaos Guardian Angel Slime ของทั้งปาร์ตี้ด้วยยอดขายของดรอปแต่ละชิ้น",
     "defaultPartyName": "ปาร์ตี้ราฟเฟิล",
     "party": "ปาร์ตี้",
     "partyName": "ชื่อปาร์ตี้",
@@ -58,7 +58,7 @@
     "totalNeso": "NESO รวม",
     "totalPowerCrystal": "Power Crystal รวม",
     "itemTotals": "ยอดรวมไอเทม",
-    "distributionScope": "การแบ่งรางวัลรองรับเฉพาะ Lucid และ Will ส่วนผลอื่นจะแสดงใน Raffle Results",
+    "distributionScope": "การแบ่งรางวัลรองรับเฉพาะ Lucid, Will และ Chaos Guardian Angel Slime ส่วนผลอื่นจะแสดงใน Raffle Results",
     "missingInput": "เพิ่มสมาชิกและเลือกเวลาราฟเฟิล",
     "missingRate": "กรอกอัตราแปลง Power Crystal",
     "apiError": "โหลดประวัติราฟเฟิลไม่ได้",
@@ -95,7 +95,7 @@
     "saleProceeds": "ยอดรับหลังหักค่าธรรมเนียม 5%",
     "saleAmountBlankIsZero": "ราคาขายที่ไม่ได้กรอกจะถูกคำนวณเป็น 0",
     "calculateDistribution": "คำนวณการแบ่ง",
-    "noPartyClears": "ปาร์ตี้ครบชุดนี้ไม่มีเคลียร์ Lucid หรือ Will",
+    "noPartyClears": "ปาร์ตี้ครบชุดนี้ไม่มีเคลียร์ Lucid, Will หรือ Chaos Guardian Angel Slime",
     "partyCountConfirmationTitle": "ยืนยันจำนวนสมาชิก",
     "partyCountConfirmationPrompt": "ตอนกำจัดบอสมี {{partyCount}} คน ต้องการคำนวณการแบ่งด้วยสมาชิกที่ลงทะเบียนและมีประวัติตรงกัน {{memberCount}} คนหรือไม่?",
     "partyCountConfirmAction": "คำนวณด้วย {{memberCount}} คน",

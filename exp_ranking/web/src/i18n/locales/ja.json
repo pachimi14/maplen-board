@@ -20,7 +20,7 @@
     "updatedAt": "{{date}}, {{time}} UTC"
   },
 "raffle": {
-    "subtitle": "全ラッフルの当選結果を確認し、PT全員で倒したLucidとWillのドロップ売却額を含めて分配を計算します。",
+    "subtitle": "全ラッフルの当選結果を確認し、PT全員で倒したLucid・Will・Chaos Guardian Angel Slimeのドロップ売却額を含めて分配を計算します。",
     "defaultPartyName": "ラッフルパーティ",
     "party": "パーティ",
     "partyName": "PT名",
@@ -58,7 +58,7 @@
     "totalNeso": "合計NESO",
     "totalPowerCrystal": "合計Power Crystal",
     "itemTotals": "アイテム別合計",
-    "distributionScope": "分配対象はLucidとWillだけです。その他の結果はRaffle Resultsで確認できます。",
+    "distributionScope": "分配対象はLucid・Will・Chaos Guardian Angel Slimeだけです。その他の結果はRaffle Resultsで確認できます。",
     "missingInput": "メンバーを追加し、ラッフル日時を選択してください。",
     "missingRate": "Power Crystal換算レートを入力してください。",
     "apiError": "ラッフル履歴を取得できません。",
@@ -95,7 +95,7 @@
     "saleProceeds": "手数料5%控除後の受取額",
     "saleAmountBlankIsZero": "未入力の売却額は 0 として計算します。",
     "calculateDistribution": "分配計算",
-    "noPartyClears": "PT全員で倒したLucidまたはWillはありません。",
+    "noPartyClears": "PT全員で倒したLucid・Will・Chaos Guardian Angel Slimeはありません。",
     "partyCountConfirmationTitle": "討伐人数の確認",
     "partyCountConfirmationPrompt": "討伐時は{{partyCount}}人ですが、ラッフル履歴が一致した登録済み{{memberCount}}人で分配計算しますか？",
     "partyCountConfirmAction": "{{memberCount}}人で計算する",

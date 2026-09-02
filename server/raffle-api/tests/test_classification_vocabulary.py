@@ -12,7 +12,9 @@ from normalizer import _classification
 # The fixture is a machine snapshot of the official item metadata vocabulary actually
 # observed in production (236 entries: itemId / itemName / tier0 / tier1 only), plus 6
 # real-data Rank 2-7 Special Skill Ring Box entries added for
-# docs/IMPL_PLAN_RAFFLE_REWARD_VOCAB.md S2 (242 total). It is intentionally NOT hand-authored
+# docs/IMPL_PLAN_RAFFLE_REWARD_VOCAB.md S2 (242 total), plus 1 real-data Rank 1 Special Skill
+# Ring Box entry added for docs/IMPL_PLAN_RAFFLE_CHAOS_SLIME.md S5 (243 total). It is
+# intentionally NOT hand-authored
 # so that `_classification` regressions against the real tier0/tier1 vocabulary are caught
 # even when synthetic unit-test fixtures stay green.
 #
@@ -69,7 +71,7 @@ VOCABULARY = _load_vocabulary()
 
 
 def test_vocabulary_fixture_has_expected_size() -> None:
-    assert len(VOCABULARY) == 242
+    assert len(VOCABULARY) == 243
 
 
 @pytest.mark.parametrize("entry", VOCABULARY, ids=lambda entry: f"{entry['itemId']}:{entry['itemName']}")
@@ -99,9 +101,10 @@ def test_sealed_mirror_world_nodestone_is_ft_item_and_sealed_nodestone_is_other(
 def test_ring_boxes_are_equipment_and_generic_sealed_nodestone_stays_other() -> None:
     # docs/IMPL_PLAN_RAFFLE_REWARD_VOCAB.md S2: Ring Box (tier1=Voucher, name-suffix match) is
     # now sellable EQUIPMENT; the still-excluded Sealed Nodestone (same tier0/tier1) is
-    # unaffected -- only the Ring Box name distinguishes them.
+    # unaffected -- only the Ring Box name distinguishes them. Rank 1 (2358012) was added for
+    # docs/IMPL_PLAN_RAFFLE_CHAOS_SLIME.md S5 (Chaos Guardian Angel Slime's Ascendant reward).
     ring_boxes = [entry for entry in VOCABULARY if entry["itemName"].endswith(RING_BOX_NAME_SUFFIX)]
-    assert len(ring_boxes) == 6
+    assert len(ring_boxes) == 7
     assert all(_classification(entry["itemId"], entry)[0] == "EQUIPMENT" for entry in ring_boxes)
     generic = next(entry for entry in VOCABULARY if entry["itemName"] == "Sealed Nodestone")
     assert _classification(generic["itemId"], generic)[0] == "OTHER"

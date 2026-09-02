@@ -1,4 +1,4 @@
-const BOSSES = new Set(["LUCID", "WILL"]);
+const BOSSES = new Set(["LUCID", "WILL", "SLIME"]);
 const DROP_CATEGORIES = new Set(["COIN", "EQUIPMENT", "FT_ITEM"]);
 const INTEGER_PATTERN = /^\d+$/;
 const SIGNED_INTEGER_PATTERN = /^[+-]?\d+$/;
