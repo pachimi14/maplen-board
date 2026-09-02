@@ -11,7 +11,12 @@ const ASCENDANT_TIER_BY_CLEAR = Object.freeze({
   "LUCID:HARD": "Divine Ascendant",
   "WILL:EASY": "Luminous Ascendant",
   "WILL:NORMAL": "Glorious Ascendant",
-  "WILL:HARD": "Eternal Ascendant",
+  // docs/IMPL_PLAN_RAFFLE_CHAOS_SLIME.md follow-up (statement-level orchestrator ruling,
+  // 2026-09-03): was "Eternal Ascendant" -- a bare prefix of the real Chaos Guardian Ascendant
+  // layer name, which let the server misattribute a Slime Ascendant win to a Hard Will clear
+  // for a member without their own Hard Will Ascendant history. Must match normalizer.py's
+  // ASCENDANT_TIER_BY_BOSS[("WILL","DIFFICULTY_HARD")] exactly.
+  "WILL:HARD": "Eternal Ascendant Hard Will",
   // docs/IMPL_PLAN_RAFFLE_CHAOS_SLIME.md: only the Chaos difficulty of Guardian Angel Slime is
   // a distribution target (LULU-141 user ruling).
   "SLIME:CHAOS": "Eternal Ascendant Chaos Guardian",

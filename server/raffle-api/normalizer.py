@@ -19,7 +19,15 @@ ASCENDANT_TIER_BY_BOSS = {
     ("LUCID", "DIFFICULTY_HARD"): "Divine Ascendant",
     ("WILL", "DIFFICULTY_EASY"): "Luminous Ascendant",
     ("WILL", "DIFFICULTY_NORMAL"): "Glorious Ascendant",
-    ("WILL", "DIFFICULTY_HARD"): "Eternal Ascendant",
+    # docs/IMPL_PLAN_RAFFLE_CHAOS_SLIME.md follow-up (statement-level orchestrator ruling,
+    # 2026-09-03): was "Eternal Ascendant" -- a bare *prefix* of the real layer name
+    # "Eternal Ascendant Chaos Guardian" (confirmed against production data). A member without
+    # their own "Eternal Ascendant Hard Will" layer (e.g. they only ever cleared Chaos
+    # Guardian's Ascendant) left exactly one prefix-matching candidate, which
+    # `_ascendant_for_boss`'s single-candidate fallback then returned -- silently misattributing
+    # the Chaos Guardian Ascendant's NESO/Power Crystal to a Hard Will clear. Verified real
+    # value below closes this by matching exactly instead of by prefix.
+    ("WILL", "DIFFICULTY_HARD"): "Eternal Ascendant Hard Will",
     # docs/IMPL_PLAN_RAFFLE_CHAOS_SLIME.md: only the Chaos difficulty of Guardian Angel Slime is
     # a distribution target (LULU-141 user ruling). Normal Guardian Angel Slime
     # (DIFFICULTY_NORMAL) is deliberately absent -- an absent table entry makes
@@ -70,7 +78,7 @@ def fixture_result(request: CreateJobRequest) -> dict:
         raffle_results.append({"resultId": f"fixture-other-{character.memberId}", "memberId": character.memberId, "raffledAt": request.raffledAt, "layerName": "Fixture Other Boss", "bossCode": None, "bossName": "Other Boss", "outcome": "WIN", "rewards": [{"rewardName": "Fixture Other Reward", "classification": "OTHER", "quantity": "1", "won": True}]})
     clears = []
     for boss in ("LUCID", "WILL"):
-        difficulty, ascendant_tier = ("HARD", "Divine Ascendant") if boss == "LUCID" else ("HARD", "Eternal Ascendant")
+        difficulty, ascendant_tier = ("HARD", "Divine Ascendant") if boss == "LUCID" else ("HARD", "Eternal Ascendant Hard Will")
         members = []
         for index, character in enumerate(request.characters):
             members.append({"memberId": character.memberId, "bossNeso": "600" if index == 0 else "0", "powerCrystalAmount": "100" if index == 0 else "0", "ascendantNeso": "50" if index == 0 else "0", "drops": _drops(boss, index)})
@@ -327,7 +335,21 @@ def _ascendant_for_boss(histories: list[dict], layers_by_id: dict[str, dict], bo
     if len(exact) == 1:
         return exact[0], None
     if len(exact) == 0:
-        prefix = [(name, history) for name, history in candidates if name.casefold().startswith(target_tier_cf)]
+        # docs/IMPL_PLAN_RAFFLE_CHAOS_SLIME.md follow-up (statement-level orchestrator ruling,
+        # 2026-09-03, real-data regression): a configured tier that is a bare *prefix* of
+        # another boss/difficulty's own configured tier must never resolve via a layer that IS
+        # that other entry's exact tier -- excluded from the prefix candidate pool outright.
+        # Without this, a member missing their own Ascendant history (e.g. they only ever
+        # cleared Chaos Guardian, never Hard Will) left exactly one prefix-matching candidate
+        # (the OTHER boss's Ascendant), which was then silently misattributed -- confirmed
+        # against production data (a Chaos Guardian Ascendant NESO win double-counted onto a
+        # Hard Will clear). If this empties the candidate pool, resolution fails visibly
+        # (`ascendant_not_found`, below) instead of guessing.
+        other_target_tiers_cf = {tier.casefold() for tier in ASCENDANT_TIER_BY_BOSS.values() if tier.casefold() != target_tier_cf}
+        prefix = [
+            (name, history) for name, history in candidates
+            if name.casefold().startswith(target_tier_cf) and name.casefold() not in other_target_tiers_cf
+        ]
         if len(prefix) == 1:
             return prefix[0][1], None
         if len(prefix) > 1:

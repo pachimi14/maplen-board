@@ -5,8 +5,9 @@ from pathlib import Path
 
 import pytest
 
+import normalizer
 from contracts import CreateJobRequest
-from normalizer import _boss_distribution_context, _classification, fixture_result, normalize_live_history
+from normalizer import _ascendant_for_boss, _boss_distribution_context, _classification, fixture_result, normalize_live_history
 
 
 def request_for(*member_ids: str) -> CreateJobRequest:
@@ -37,7 +38,7 @@ def test_fixture_result_keeps_all_visible_results_but_scopes_settlement_clear() 
         ("Lucid", "DIFFICULTY_HARD", ("HARD", "Divine Ascendant")),
         ("Will", "DIFFICULTY_EASY", ("EASY", "Luminous Ascendant")),
         ("Will", "DIFFICULTY_NORMAL", ("NORMAL", "Glorious Ascendant")),
-        ("Will", "DIFFICULTY_HARD", ("HARD", "Eternal Ascendant")),
+        ("Will", "DIFFICULTY_HARD", ("HARD", "Eternal Ascendant Hard Will")),
     ],
 )
 def test_all_distributable_boss_difficulties_map_to_ascendant_tiers(
@@ -182,7 +183,7 @@ def test_hard_will_resolves_power_crystal_and_ascendant_neso_via_renamed_eternal
     result = normalize_live_history(request, histories, layers, metadata)
 
     assert len(result["clears"]) == 1
-    assert result["clears"][0]["ascendantTier"] == "Eternal Ascendant"
+    assert result["clears"][0]["ascendantTier"] == "Eternal Ascendant Hard Will"
     member = result["clears"][0]["members"][0]
     assert member["ascendantNeso"] == "3000000"
     assert member["powerCrystalAmount"] == "6000000"
@@ -348,7 +349,7 @@ def test_mixed_will_difficulties_create_separate_candidates_for_user_selection()
     clears = normalize_live_history(request, histories, layers, {})["clears"]
 
     assert [(clear["bossDifficulty"], clear["ascendantTier"]) for clear in clears] == [
-        ("HARD", "Eternal Ascendant"),
+        ("HARD", "Eternal Ascendant Hard Will"),
         ("NORMAL", "Glorious Ascendant"),
     ]
     assert clears[0]["historyMemberIds"] == ["m1", "m2", "m3", "m4"]
@@ -433,7 +434,7 @@ def test_two_disjoint_same_size_groups_both_resolve_independently() -> None:
     # No Ascendant-tier history is fed into this fixture, so every resolved clear also raises
     # `ascendant_not_found` (fail-visible instead of a silent 0 -- see
     # docs/IMPL_PLAN_RAFFLE_ASCENDANT_MATCH.md S2).
-    assert result["warnings"] == [{"code": "ascendant_not_found", "boss": "WILL", "bossDifficulty": "HARD", "expectedTier": "Eternal Ascendant"}] * 3
+    assert result["warnings"] == [{"code": "ascendant_not_found", "boss": "WILL", "bossDifficulty": "HARD", "expectedTier": "Eternal Ascendant Hard Will"}] * 3
 
 
 def test_same_member_repeating_at_the_same_party_size_appears_in_both_well_separated_clusters() -> None:
@@ -604,7 +605,7 @@ def test_ascendant_power_crystal_direct_item_id_amount_equals_quantity() -> None
     }
     layers = [
         {"layerId": 205044, "boss": {"bossName": "Will", "difficulty": "DIFFICULTY_HARD", "raffleLayerName": "Hard Will"}},
-        {"layerId": 900101, "contents": {"groupName": "Ascendant Tier Raffle", "layerName": "Eternal Ascendant"}},
+        {"layerId": 900101, "contents": {"groupName": "Ascendant Tier Raffle", "layerName": "Eternal Ascendant Hard Will"}},
     ]
 
     result = normalize_live_history(request, histories, layers, {})
@@ -637,7 +638,7 @@ def test_legacy_power_crystal_coupon_still_recalculates_the_same_way() -> None:
     }
     layers = [
         {"layerId": 205044, "boss": {"bossName": "Will", "difficulty": "DIFFICULTY_HARD", "raffleLayerName": "Hard Will"}},
-        {"layerId": 900101, "contents": {"groupName": "Ascendant Tier Raffle", "layerName": "Eternal Ascendant"}},
+        {"layerId": 900101, "contents": {"groupName": "Ascendant Tier Raffle", "layerName": "Eternal Ascendant Hard Will"}},
     ]
     metadata = {2832960: {"itemName": "10M Power Crystal Coupon"}}
 
@@ -917,6 +918,131 @@ def test_normal_guardian_angel_slime_never_becomes_a_clear_candidate() -> None:
     result = normalize_live_history(request, histories, layers, {})
 
     assert result["clears"] == []
+
+
+def test_hard_will_never_absorbs_a_members_chaos_guardian_ascendant_real_data_regression() -> None:
+    # Orchestrator NO-GO finding (2026-09-03), reproduced from real API data (Uuaa / pachimi,
+    # 2026-08-27 round): a member with an "Eternal Ascendant Chaos Guardian" history but no
+    # "Eternal Ascendant Hard Will" history of their own cleared both Hard Will and Chaos Slime
+    # in the same 6-person party. Before this fix, Hard Will's configured tier
+    # ("Eternal Ascendant", a bare prefix of "Eternal Ascendant Chaos Guardian") left exactly
+    # one prefix-matching candidate for this member -- silently double-counting the same
+    # 325,000,000 NESO onto both the Will clear and the Slime clear.
+    member_ids = tuple(f"m{index}" for index in range(1, 7))
+    request = request_for(*member_ids)
+    histories = {}
+    for index, member_id in enumerate(member_ids):
+        histories[member_id] = [
+            {
+                "raffledAt": request.raffledAt,
+                "layerId": 205044,
+                "clearInformations": [{"clearedAt": f"2026-08-27T14:0{index}:00Z", "partyCount": 6}],
+                "prizes": [],
+            },
+            {
+                "raffledAt": request.raffledAt,
+                "layerId": 205045,
+                "clearInformations": [{"clearedAt": f"2026-08-27T15:0{index}:00Z", "partyCount": 6}],
+                "prizes": [],
+            },
+        ]
+    # Only m1 (standing in for the real member) has any Ascendant history at all, and it is
+    # exclusively the Chaos Guardian tier -- matching the real observed shape (no
+    # "Eternal Ascendant Hard Will" history anywhere in this party's data).
+    histories["m1"].append({
+        "raffledAt": request.raffledAt,
+        "layerId": 900211,
+        "clearInformations": [],
+        "prizes": [{"itemId": 1, "winCount": {"value": "325000000"}}],
+    })
+    layers = [
+        {"layerId": 205044, "boss": {"bossName": "Will", "difficulty": "DIFFICULTY_HARD", "raffleLayerName": "Hard Will"}},
+        {"layerId": 205045, "boss": {"bossName": "Guardian Angel Slime", "difficulty": "DIFFICULTY_CHAOS", "raffleLayerName": "Chaos Guardian Angel Slime"}},
+        {"layerId": 900211, "contents": {"groupName": "Ascendant Tier Raffle", "layerName": "Eternal Ascendant Chaos Guardian"}},
+    ]
+
+    result = normalize_live_history(request, histories, layers, {})
+
+    will_clear = next(clear for clear in result["clears"] if clear["boss"] == "WILL")
+    slime_clear = next(clear for clear in result["clears"] if clear["boss"] == "SLIME")
+    will_member = next(member for member in will_clear["members"] if member["memberId"] == "m1")
+    slime_member = next(member for member in slime_clear["members"] if member["memberId"] == "m1")
+
+    # The 325,000,000 must attach only to its real source (Slime), never to Will.
+    assert will_member["ascendantNeso"] == "0"
+    assert slime_member["ascendantNeso"] == "325000000"
+    assert {"code": "ascendant_not_found", "boss": "WILL", "bossDifficulty": "HARD", "expectedTier": "Eternal Ascendant Hard Will"} in result["warnings"]
+
+
+def test_no_single_ascendant_history_is_ever_double_counted_across_two_clears() -> None:
+    # Orchestrator NO-GO requirement 2 (2026-09-03): the general invariant behind the regression
+    # above -- one member's one Ascendant history must never be summed into ascendantNeso for
+    # more than one clear at once, across the whole result (not just Will vs. Slime).
+    member_ids = tuple(f"m{index}" for index in range(1, 7))
+    request = request_for(*member_ids)
+    histories = {}
+    for index, member_id in enumerate(member_ids):
+        histories[member_id] = [
+            {
+                "raffledAt": request.raffledAt,
+                "layerId": 205044,
+                "clearInformations": [{"clearedAt": f"2026-08-27T14:0{index}:00Z", "partyCount": 6}],
+                "prizes": [],
+            },
+            {
+                "raffledAt": request.raffledAt,
+                "layerId": 205045,
+                "clearInformations": [{"clearedAt": f"2026-08-27T15:0{index}:00Z", "partyCount": 6}],
+                "prizes": [],
+            },
+        ]
+    histories["m1"].append({
+        "raffledAt": request.raffledAt,
+        "layerId": 900211,
+        "clearInformations": [],
+        "prizes": [{"itemId": 1, "winCount": {"value": "325000000"}}],
+    })
+    layers = [
+        {"layerId": 205044, "boss": {"bossName": "Will", "difficulty": "DIFFICULTY_HARD", "raffleLayerName": "Hard Will"}},
+        {"layerId": 205045, "boss": {"bossName": "Guardian Angel Slime", "difficulty": "DIFFICULTY_CHAOS", "raffleLayerName": "Chaos Guardian Angel Slime"}},
+        {"layerId": 900211, "contents": {"groupName": "Ascendant Tier Raffle", "layerName": "Eternal Ascendant Chaos Guardian"}},
+    ]
+
+    result = normalize_live_history(request, histories, layers, {})
+
+    total_ascendant_neso_across_all_clears_for_m1 = sum(
+        int(member["ascendantNeso"])
+        for clear in result["clears"]
+        for member in clear["members"]
+        if member["memberId"] == "m1"
+    )
+    assert total_ascendant_neso_across_all_clears_for_m1 == 325000000
+
+
+def test_ascendant_prefix_candidate_matching_another_configured_tier_is_excluded(monkeypatch: pytest.MonkeyPatch) -> None:
+    # docs/IMPL_PLAN_RAFFLE_CHAOS_SLIME.md follow-up, fix A (orchestrator ruling 2026-09-03):
+    # class-wide guard, independent of any single real-data tier pairing -- a configured tier
+    # that happens to be a bare prefix of another boss/difficulty's own exact configured tier
+    # must never resolve via that other entry's layer. Verified directly against
+    # `_ascendant_for_boss` with a hypothetical vocabulary (today's real tiers no longer collide
+    # this way after fix B, so this guards the *class* of defect, not just the one instance).
+    monkeypatch.setattr(normalizer, "ASCENDANT_TIER_BY_BOSS", {
+        ("LUCID", "DIFFICULTY_HARD"): "Foo Ascendant",
+        ("WILL", "DIFFICULTY_HARD"): "Foo Ascendant Bar",
+    })
+    layers_by_id = {
+        "boss-layer": {"boss": {"bossName": "Lucid", "difficulty": "DIFFICULTY_HARD"}},
+        "ascendant-layer": {"contents": {"groupName": "Ascendant Tier Raffle", "layerName": "Foo Ascendant Bar"}},
+    }
+    histories = [{"layerId": "ascendant-layer", "raffledAt": "2026-08-20T00:00:00Z", "prizes": []}]
+    boss_history = {"layerId": "boss-layer"}
+
+    ascendant, missing_tier = _ascendant_for_boss(histories, layers_by_id, boss_history)
+
+    # Must fail visibly (no candidate, missing_tier set) instead of silently returning the
+    # other boss's exact-tier layer just because it happens to start with "Foo Ascendant".
+    assert ascendant is None
+    assert missing_tier == "Foo Ascendant"
 
 
 def test_shared_contract_fixture_matches_fixture_normalizer() -> None:
