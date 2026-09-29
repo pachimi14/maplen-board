@@ -16,6 +16,11 @@ describe("raffle storage", () => {
     party.members.push({ assetKey: "CHARfixture001", displayName: "A", worldId: "w1", level: 253, jobName: "Evan", imageUrl: "https://example.test/a.png" });
     party.carryoverEnabled = true;
     party.carryoverByAssetKey.CHARfixture001 = "-25";
+    party.distributionRulesByBoss.LUCID = {
+      taxPercentByAssetKey: { CHARfixture001: "50" },
+      sharePercentByAssetKey: {},
+      powerCrystalNesoRate: "1.25",
+    };
     const backend = memoryBackend();
     expect(saveRaffleState({ ...createEmptyRaffleState(), activePartyId: "p1", parties: [party] }, backend).ok).toBe(true);
     const raw = backend.value(RAFFLE_STORAGE_KEY);
@@ -25,6 +30,8 @@ describe("raffle storage", () => {
     expect(raw).toContain('"jobName":"Evan"');
     expect(raw).toContain('"carryoverEnabled":true');
     expect(raw).toContain('"CHARfixture001":"-25"');
+    expect(raw).toContain('"taxPercentByAssetKey":{"CHARfixture001":"50"}');
+    expect(raw).toContain('"powerCrystalNesoRate":"1.25"');
   });
 
   it("does not overwrite corrupt data while loading", () => {
@@ -66,6 +73,34 @@ describe("raffle storage", () => {
     expect(normalized.state.parties[0]).toMatchObject({
       carryoverEnabled: true,
       carryoverByAssetKey: { CHARfixture001: "-25", CHARfixture002: "25" },
+    });
+  });
+
+  it("persists boss-specific tax and share settings by asset key", () => {
+    const normalized = normalizeRaffleState({
+      version: 1,
+      activePartyId: "p1",
+      parties: [{
+        id: "p1",
+        members: [{ assetKey: "CHARfixture001" }, { assetKey: "CHARfixture002" }],
+        distributionRulesByBoss: {
+          SLIME: {
+            taxPercentByAssetKey: { CHARfixture001: "50", removed: "25" },
+            sharePercentByAssetKey: { CHARfixture002: "100", removed: "75" },
+            powerCrystalNesoRate: "1.25",
+          },
+          WILL: {
+            powerCrystalNesoRate: "not-a-rate",
+          },
+        },
+      }],
+    });
+    expect(normalized.state.parties[0].distributionRulesByBoss).toEqual({
+      SLIME: {
+        taxPercentByAssetKey: { CHARfixture001: "50" },
+        sharePercentByAssetKey: { CHARfixture002: "100" },
+        powerCrystalNesoRate: "1.25",
+      },
     });
   });
 

@@ -81,6 +81,8 @@ const SETTLEMENT_FIELD_LABEL_KEYS = Object.freeze({
   saleNeso: "raffle.saleAmount",
   dropQuantity: "raffle.quantity",
   extraRewardAmount: "raffle.item_extraReward",
+  taxPercent: "raffle.taxPercent",
+  sharePercent: "raffle.sharePercent",
 });
 
 function settlementFieldLabel(t, field) {
@@ -106,6 +108,11 @@ const SETTLEMENT_STATIC_KEYS = Object.freeze({
   invalid_drop: "raffle.errorInvalidDrop",
   carryover_not_balanced: "raffle.carryoverNotBalanced",
   invalid_extra_reward_member: "raffle.errorInvalidExtraRewardMember",
+  invalid_distribution_percent: "raffle.errorInvalidDistributionPercent",
+  tax_share_conflict: "raffle.errorTaxShareConflict",
+  no_distribution_receiver: "raffle.errorNoDistributionReceiver",
+  distribution_over_100: "raffle.errorDistributionOver100",
+  distribution_not_100: "raffle.errorDistributionNot100",
 });
 
 /**
@@ -195,9 +202,37 @@ export function formatNeso(value) {
   }
 }
 
+/** Formats an editable non-negative NESO input while preserving blank/invalid text for validation. */
+export function formatNesoInput(value) {
+  const text = String(value ?? "");
+  if (text === "" || !/^\d+$/.test(text)) return text;
+  return BigInt(text).toLocaleString("en-US");
+}
+
+/** Removes display grouping before the raw value is stored or validated. */
+export function ungroupNesoInput(value) {
+  return String(value ?? "").replace(/,/g, "");
+}
+
 /** Formats a decimal-string NESO amount with its unit suffix, e.g. "1,234 NESO". */
 export function neso(value) {
   return formatNeso(value) + " NESO";
+}
+
+/** True when at least one member has a non-zero quantity or value for a settlement category. */
+export function settlementCategoryHasValue(members, key) {
+  const fields = {
+    bossNeso: ["bossNeso"],
+    powerCrystal: ["powerCrystalAmount", "powerCrystalNeso"],
+    ascendantNeso: ["ascendantNeso"],
+    coin: ["coinQuantity", "coinSaleNeso"],
+    equipment: ["equipmentQuantity", "equipmentSaleNeso"],
+    ftItem: ["ftItemQuantity", "ftItemSaleNeso"],
+    extraReward: ["extraReward"],
+  }[key] || [];
+  return (Array.isArray(members) ? members : []).some((member) => fields.some((field) => {
+    try { return BigInt(member?.[field] ?? "0") !== 0n; } catch { return false; }
+  }));
 }
 
 /**

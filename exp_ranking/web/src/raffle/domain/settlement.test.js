@@ -51,6 +51,39 @@ describe("calculateSaleProceedsNeso", () => {
 });
 
 describe("calculateSettlement", () => {
+  it("pools everyone's winnings, then gives taxed members tax-rate ÷ party-size and distributes the remainder", () => {
+    const partyOrder = ["a", "b", "c", "d", "e", "f"];
+    const members = partyOrder.map((memberId, index) => ({
+      memberId,
+      bossNeso: String((index + 1) * 100),
+      powerCrystalAmount: "0",
+      ascendantNeso: "0",
+      drops: [],
+    }));
+    const result = calculateSettlement(clearInput({
+      partyOrder,
+      members,
+      historyMemberIds: partyOrder,
+      include: { bossNeso: true },
+      saleNesoByDropId: {},
+      taxPercentByMemberId: { a: "50" },
+      sharePercentByMemberId: { b: "10" },
+    }));
+    expect(result.ok).toBe(true);
+    expect(result.total).toBe("2100");
+    expect(result.distributionPool).toBe("2100");
+    expect(result.members.map((member) => member.assignedShare)).toEqual(["175", "211", "429", "429", "428", "428"]);
+    expect(result.members.map((member) => [member.taxPercentText, member.sharePercentText])).toEqual([
+      ["50%", "8.3333%"],
+      [null, "10%"],
+      [null, "20.4166%"],
+      [null, "20.4166%"],
+      [null, "20.4166%"],
+      [null, "20.4166%"],
+    ]);
+    expect(result.members.reduce((sum, member) => sum + BigInt(member.assignedShare), 0n)).toBe(2100n);
+  });
+
   it("adds only selected categories and creates transfers", () => {
     const result = calculateSettlement(clearInput());
     expect(result.ok).toBe(true);

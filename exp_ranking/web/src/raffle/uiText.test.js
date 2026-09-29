@@ -9,12 +9,27 @@ import {
   describeSettlementError,
   formatRaffleRoundLocal,
   formatRaffleRoundUtc,
+  formatNesoInput,
   pcPortionAmount,
   resolveMemberWallet,
   settlementCategoryColumns,
+  settlementCategoryHasValue,
   settlementMemberCategoryCell,
   signedNeso,
+  ungroupNesoInput,
 } from "./uiText.js";
+
+describe("editable NESO formatting", () => {
+  it("adds grouping separators without turning a blank into zero", () => {
+    expect(formatNesoInput("")).toBe("");
+    expect(formatNesoInput("1234567890")).toBe("1,234,567,890");
+  });
+
+  it("accepts a grouped paste while leaving malformed text visible for validation", () => {
+    expect(ungroupNesoInput("1,234,567")).toBe("1234567");
+    expect(formatNesoInput("12x")).toBe("12x");
+  });
+});
 import { calculateSettlement } from "./domain/settlement.js";
 
 function getNested(obj, path) {
@@ -31,6 +46,20 @@ function makeT(messages) {
 
 const t = makeT(ja);
 const tEn = makeT(en);
+
+describe("settlementCategoryHasValue", () => {
+  const zeroMember = { bossNeso: "0", powerCrystalAmount: "0", powerCrystalNeso: "0", ascendantNeso: "0", coinQuantity: "0", coinSaleNeso: "0", equipmentQuantity: "0", equipmentSaleNeso: "0", ftItemQuantity: "0", ftItemSaleNeso: "0", extraReward: "0" };
+
+  it("hides a category when every member has zero quantity and value", () => {
+    expect(settlementCategoryHasValue([zeroMember, { ...zeroMember }], "coin")).toBe(false);
+    expect(settlementCategoryHasValue([zeroMember], "ftItem")).toBe(false);
+  });
+
+  it("keeps a category when any member has a quantity even if its sale value is zero", () => {
+    expect(settlementCategoryHasValue([zeroMember, { ...zeroMember, coinQuantity: "3" }], "coin")).toBe(true);
+    expect(settlementCategoryHasValue([zeroMember, { ...zeroMember, equipmentQuantity: "1" }], "equipment")).toBe(true);
+  });
+});
 
 describe("formatRaffleRoundLocal", () => {
   it("formats a fixed instant using an explicit timeZone (deterministic across hosts)", () => {

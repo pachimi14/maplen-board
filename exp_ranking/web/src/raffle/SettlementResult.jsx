@@ -9,9 +9,11 @@ import {
   pcPortionAmount,
   resolveMemberWallet,
   settlementMemberCategoryCell,
+  settlementCategoryHasValue,
   signedNeso,
 } from "./uiText.js";
-import { buildSettlementShareModel, renderSettlementShareImageBlob, settlementShareFileName } from "./shareImage.js";
+import { DEFAULT_SHARE_IMAGE_OPTIONS, buildSettlementShareModel, renderSettlementShareImageBlob, settlementShareFileName } from "./shareImage.js";
+import { loadShareImagePreferences, saveShareImagePreferences } from "./storage/shareImagePreferences.js";
 import { copyPngBlobToClipboard, copyTextToClipboard, downloadBlob } from "../shareImageIO.js";
 
 function EquipmentIcons({ drops }) {
@@ -29,6 +31,7 @@ export default function SettlementResult({ calculation, include, memberMap, memb
   const { t } = useTranslation();
   const [shareBusy, setShareBusy] = useState(false);
   const [shareStatus, setShareStatus] = useState("idle");
+  const [shareImageOptions, setShareImageOptions] = useState(loadShareImagePreferences);
   const [transferCopyBusy, setTransferCopyBusy] = useState(false);
   const [transferCopyStatus, setTransferCopyStatus] = useState("idle");
   const categoryColumns = [
@@ -43,7 +46,7 @@ export default function SettlementResult({ calculation, include, memberMap, memb
     // once the party has actually entered a non-zero extra reward this week,
     // so a party that never uses it sees the exact same table it always has.
     calculation.categoryTotals.extraReward !== "0" ? { key: "extraReward", label: t("raffle.item_extraReward"), total: calculation.categoryTotals.extraReward } : null,
-  ].filter(Boolean);
+  ].filter((category) => category && settlementCategoryHasValue(calculation.members, category.key));
 
   function categoryQuantity(category) {
     if (category.key === "powerCrystal") return <><strong>{formatNeso(calculation.categoryTotals.powerCrystalAmount)} PC ÷ {powerCrystalNesoRate}</strong><small>{t("raffle.powerCrystalNonTransferable")}</small></>;
@@ -96,6 +99,7 @@ export default function SettlementResult({ calculation, include, memberMap, memb
         roundLocalText,
         roundUtcText,
         memberWallets,
+        displayOptions: shareImageOptions,
       });
       const blob = await renderSettlementShareImageBlob(model);
       const copied = await copyPngBlobToClipboard(blob);
@@ -133,13 +137,46 @@ export default function SettlementResult({ calculation, include, memberMap, memb
     (transfer) => !resolveMemberWallet(memberWallets, transfer.toMemberId),
   ).length;
 
+  const shareImageOptionRows = [
+    ["showRuleDetails", "raffle.shareImageOptionRules"],
+    ["showCategoryBreakdown", "raffle.shareImageOptionCategories"],
+    ["showGross", "raffle.shareImageOptionGross"],
+    ["showAssignedShare", "raffle.shareImageOptionAssignedShare"],
+    ["showSettlement", "raffle.shareImageOptionSettlement"],
+    ["showCarryover", "raffle.shareImageOptionCarryover"],
+    ["showTransfers", "raffle.shareImageOptionTransfers"],
+    ["showWallets", "raffle.shareImageOptionWallets"],
+  ];
+
+  function updateShareImageOption(key, checked) {
+    setShareImageOptions((current) => saveShareImagePreferences({ ...current, [key]: checked }));
+  }
+
   return (
     <article className="raffle-settlement-result">
       <div className="raffle-settlement-header">
         <h3>{t("raffle.settlementSummary")}</h3>
-        <button type="button" className="raffle-button-secondary raffle-share-image-button" disabled={shareBusy} onClick={handleCopyResultImage}>
-          {t("raffle.copyResultImage")}
-        </button>
+        <div className="relative flex flex-wrap items-center justify-end gap-2">
+          <details className="group relative">
+            <summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-900 shadow-sm marker:content-none dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-100 [&::-webkit-details-marker]:hidden">
+              <span>{t("raffle.shareImageCustomize")}</span>
+              <span aria-hidden="true" className="text-base leading-none transition-transform group-open:rotate-180">⌄</span>
+            </summary>
+            <div className="absolute right-0 z-20 mt-2 w-[min(36rem,calc(100vw-2rem))] rounded-xl border border-emerald-300 bg-emerald-50 p-4 shadow-xl dark:border-emerald-700 dark:bg-slate-900">
+              <p className="text-xs text-slate-600 dark:text-slate-300">{t("raffle.shareImageCustomizeHelp")}</p>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                {shareImageOptionRows.map(([key, label]) => <label key={key} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white/70 p-2 text-sm dark:border-slate-700 dark:bg-slate-950/60">
+                  <input type="checkbox" checked={shareImageOptions[key]} disabled={key === "showWallets" && !shareImageOptions.showTransfers} onChange={(event) => updateShareImageOption(key, event.target.checked)} />
+                  {t(label)}
+                </label>)}
+              </div>
+              <button type="button" className="raffle-button-secondary mt-3" onClick={() => setShareImageOptions(saveShareImagePreferences(DEFAULT_SHARE_IMAGE_OPTIONS))}>{t("raffle.shareImageResetDefaults")}</button>
+            </div>
+          </details>
+          <button type="button" className="raffle-button-secondary raffle-share-image-button" disabled={shareBusy} onClick={handleCopyResultImage}>
+            {t("raffle.copyResultImage")}
+          </button>
+        </div>
       </div>
       {shareStatus !== "idle" ? <p role="status" className="raffle-share-status">
         {shareStatus === "generating" ? t("raffle.shareImageGenerating") : null}
@@ -154,19 +191,21 @@ export default function SettlementResult({ calculation, include, memberMap, memb
           <strong>{neso(calculation.total)}</strong>
         </div>
         <div className="raffle-hero-tile">
-          <span>{t("raffle.baseShare")}</span>
-          <strong>{neso(calculation.baseShare)}</strong>
+          <span>{t(calculation.customDistribution ? "raffle.distributionPool" : "raffle.baseShare")}</span>
+          <strong>{neso(calculation.customDistribution ? calculation.distributionPool : calculation.baseShare)}</strong>
         </div>
       </div>
 
       <div className="raffle-sub-metrics">
         <span className="raffle-sub-metric"><small>{t("raffle.transferableNeso")}</small><strong>{neso(calculation.categoryTotals.transferableNeso)}</strong></span>
         <span className="raffle-sub-metric"><small>{t("raffle.distributionMembers")}</small><strong>{calculation.memberCount}</strong></span>
-        <span className="raffle-sub-metric"><small>{t("raffle.remainder")}</small><strong>{neso(calculation.remainder)}</strong></span>
+        {calculation.customDistribution
+          ? <span className="raffle-sub-metric raffle-sub-metric-note">{t("raffle.customDistributionMode")}</span>
+          : <span className="raffle-sub-metric"><small>{t("raffle.remainder")}</small><strong>{neso(calculation.remainder)}</strong></span>}
         {calculation.carryoverEnabled ? <span className="raffle-sub-metric raffle-sub-metric-note">{t("raffle.carryoverEnabled")}</span> : null}
       </div>
 
-      <p className="raffle-settlement-formula">{t("raffle.settlementFormula")}</p>
+      <p className="raffle-settlement-formula">{t(calculation.customDistribution ? "raffle.customSettlementFormula" : "raffle.settlementFormula")}</p>
 
       <section className="raffle-settlement-section raffle-member-cards-section">
         <div className="raffle-member-cards">

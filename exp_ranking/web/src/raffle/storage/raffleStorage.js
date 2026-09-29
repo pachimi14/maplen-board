@@ -3,6 +3,14 @@ export const MAX_PARTIES = 10;
 export const MAX_MEMBERS = 6;
 const SIGNED_INTEGER_PATTERN = /^[+-]?\d+$/;
 const MAX_CARRYOVER_DIGITS = 30;
+const DISTRIBUTION_BOSSES = ["LUCID", "WILL", "SLIME"];
+const PERCENT_PATTERN = /^(?:100(?:\.0{1,6})?|\d{1,2}(?:\.\d{1,6})?)$/;
+const RATE_PATTERN = /^\d{1,30}(?:\.\d{1,18})?$/;
+
+function normalizedRate(value) {
+  const text = String(value ?? "").trim();
+  return RATE_PATTERN.test(text) && Number(text) > 0 ? text : "";
+}
 
 function backendOrDefault(backend) {
   return backend || globalThis.localStorage;
@@ -15,7 +23,7 @@ export function assetKeyFromHistoryKey(historyKey) {
 }
 
 export function createParty(id, name = "Raffle Party") {
-  return { id, name, members: [], carryoverEnabled: false, carryoverByAssetKey: {} };
+  return { id, name, members: [], carryoverEnabled: false, carryoverByAssetKey: {}, distributionRulesByBoss: {} };
 }
 
 export function createEmptyRaffleState() {
@@ -42,6 +50,28 @@ function normalizeMember(member) {
     jobName: typeof member.jobName === "string" ? member.jobName.slice(0, 80) : "",
     imageUrl: typeof member.imageUrl === "string" && /^https:\/\/[^\s]+$/.test(member.imageUrl) ? member.imageUrl.slice(0, 500) : "",
   };
+}
+
+function normalizeDistributionRules(rawRules, members) {
+  const memberAssets = new Set(members.map((member) => member.assetKey));
+  const normalized = {};
+  for (const boss of DISTRIBUTION_BOSSES) {
+    const raw = rawRules?.[boss];
+    if (!raw || typeof raw !== "object") continue;
+    const taxPercentByAssetKey = {};
+    const sharePercentByAssetKey = {};
+    const powerCrystalNesoRate = normalizedRate(raw.powerCrystalNesoRate);
+    for (const assetKey of memberAssets) {
+      const tax = String(raw.taxPercentByAssetKey?.[assetKey] ?? "").trim();
+      const share = String(raw.sharePercentByAssetKey?.[assetKey] ?? "").trim();
+      if (PERCENT_PATTERN.test(tax) && Number(tax) > 0) taxPercentByAssetKey[assetKey] = tax;
+      if (PERCENT_PATTERN.test(share)) sharePercentByAssetKey[assetKey] = share;
+    }
+    if (Object.keys(taxPercentByAssetKey).length || Object.keys(sharePercentByAssetKey).length || powerCrystalNesoRate) {
+      normalized[boss] = { taxPercentByAssetKey, sharePercentByAssetKey, ...(powerCrystalNesoRate ? { powerCrystalNesoRate } : {}) };
+    }
+  }
+  return normalized;
 }
 
 export function normalizeRaffleState(value) {
@@ -73,6 +103,7 @@ export function normalizeRaffleState(value) {
       members,
       carryoverEnabled: rawParty.carryoverEnabled === true,
       carryoverByAssetKey,
+      distributionRulesByBoss: normalizeDistributionRules(rawParty.distributionRulesByBoss, members),
     });
   }
   const activePartyId = parties.some((party) => party.id === value.activePartyId)

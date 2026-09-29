@@ -55,6 +55,16 @@ import {
 const SHARE_IMAGE_TITLE = "Raffle Settlement";
 const SHARE_IMAGE_FOOTER = "lulumi-tools.com";
 export const SHARE_IMAGE_WIDTH = 1200;
+export const DEFAULT_SHARE_IMAGE_OPTIONS = Object.freeze({
+  showRuleDetails: true,
+  showCategoryBreakdown: true,
+  showGross: true,
+  showAssignedShare: true,
+  showSettlement: true,
+  showCarryover: true,
+  showTransfers: true,
+  showWallets: true,
+});
 // R2/LULU-119: soft target cap for how wide the canvas is allowed to grow to
 // fit every column (carryover + up to 6 categories can require more than the
 // default 1200px). This is a guideline, not a hard wall -- primary settlement
@@ -155,6 +165,7 @@ function otherSalesCell(member) {
  */
 export function buildSettlementShareModel(calculation, memberMap, include, powerCrystalNesoRate, t, context = {}) {
   const { bossLabel = "", roundLocalText = "", roundUtcText = "", memberWallets = {} } = context;
+  const displayOptions = { ...DEFAULT_SHARE_IMAGE_OPTIONS, ...(context.displayOptions || {}) };
   const roundLine = roundLocalText && roundUtcText
     ? t("raffle.targetRoundValue", { local: roundLocalText, utc: roundUtcText })
     : "";
@@ -184,7 +195,7 @@ export function buildSettlementShareModel(calculation, memberMap, include, power
   const hasOtherSales = Boolean(include?.equipment || include?.ftItem);
   const showOtherSalesColumn = hasOtherSales && calculation.members.some((member) =>
     BigInt(member.equipmentSaleNeso || "0") + BigInt(member.ftItemSaleNeso || "0") !== 0n);
-  const showCarryoverColumns = calculation.carryoverEnabled === true
+  const showCarryoverColumns = displayOptions.showCarryover && calculation.carryoverEnabled === true
     && calculation.members.some((member) => member.previousCarryover !== "0" || member.nextCarryover !== "0");
   // docs/IMPL_PLAN_RAFFLE_EXTRA_REWARD.md: extra reward has no include
   // toggle (it isn't a boss-drop category), so it follows the same
@@ -201,14 +212,14 @@ export function buildSettlementShareModel(calculation, memberMap, include, power
   // are dropped entirely when all-zero (G3, see showCoinColumn/
   // showOtherSalesColumn above). This does NOT change SettlementResult.jsx
   // (untouched, still shows every category regardless of zero values).
-  const memberCategoryColumns = settlementCategoryColumns(include, t)
+  const memberCategoryColumns = (displayOptions.showCategoryBreakdown ? settlementCategoryColumns(include, t) : [])
     .filter((column) => column.key !== "equipment" && column.key !== "ftItem")
     .filter((column) => column.key !== "coin" || showCoinColumn)
     .map((column) => ({ ...column, note: column.key === "powerCrystal" ? t("raffle.powerCrystalNonTransferable") : null }));
-  if (showOtherSalesColumn) {
+  if (displayOptions.showCategoryBreakdown && showOtherSalesColumn) {
     memberCategoryColumns.push({ key: OTHER_SALES_KEY, label: t("raffle.otherSales"), note: null });
   }
-  if (showExtraRewardColumn) {
+  if (displayOptions.showCategoryBreakdown && showExtraRewardColumn) {
     memberCategoryColumns.push({ key: "extraReward", label: t("raffle.item_extraReward"), note: null });
   }
 
@@ -225,10 +236,17 @@ export function buildSettlementShareModel(calculation, memberMap, include, power
     return {
       memberId: member.memberId,
       name: memberDisplayName(memberMap, member.memberId),
+      ruleLabel: displayOptions.showRuleDetails && member.taxPercentText
+        ? t("raffle.shareImageTaxAndShareRule", { tax: member.taxPercentText, share: member.sharePercentText })
+        : displayOptions.showRuleDetails && member.sharePercentText
+          ? t("raffle.shareImageShareRule", { percent: member.sharePercentText })
+          : null,
       categoryCells: memberCategoryColumns.map((column) => column.key === OTHER_SALES_KEY
         ? otherSalesCell(member)
         : { key: column.key, ...settlementMemberCategoryCell(member, column.key, { powerCrystalNesoRate }) }),
       gross: neso(member.gross),
+      assignedShare: neso(member.assignedShare),
+      assignedShareLabel: displayOptions.showAssignedShare ? t("raffle.shareImageAssignedShare") + " " + neso(member.assignedShare) : null,
       settlementKind: settlement.kind,
       settlementLabel: settlement.label,
       settlementAmount: settlement.amount != null ? neso(settlement.amount) : null,
@@ -249,10 +267,14 @@ export function buildSettlementShareModel(calculation, memberMap, include, power
     bossLine: bossLabel,
     roundLine,
     summaryLines,
-    baseShareLine: { label: t("raffle.baseShare"), value: neso(calculation.baseShare) },
+    baseShareLine: {
+      label: t(calculation.customDistribution ? "raffle.distributionPool" : "raffle.baseShare"),
+      value: neso(calculation.customDistribution ? calculation.distributionPool : calculation.baseShare),
+    },
     memberSectionTitle: t("raffle.memberBreakdown"),
     memberColumnLabel: t("raffle.member"),
     grossColumnLabel: t("raffle.grossWon"),
+    assignedShareColumnLabel: t("raffle.shareImageAssignedShare"),
     settlementColumnLabel: t("raffle.settlement"),
     // G3: the previous/next-carryover columns are only added to the member
     // table layout when showCarryoverColumns is true (carryoverEnabled AND
@@ -261,6 +283,7 @@ export function buildSettlementShareModel(calculation, memberMap, include, power
     previousCarryoverColumnLabel: t("raffle.previousCarryover"),
     nextCarryoverColumnLabel: t("raffle.nextCarryover"),
     memberCategoryColumns,
+    displayOptions,
     memberRows,
     transferSectionTitle: t("raffle.actualTransfers"),
     transferNamesLabel: t("raffle.payer") + " → " + t("raffle.receiver"),
@@ -357,21 +380,29 @@ function measureMemberTableLayout(ctx, model) {
   function computeAt(secondaryFontSize) {
     const nameWidth = MEMBER_NAME_COL_WIDTH;
 
-    const grossWidth = Math.max(
+    const grossWidth = model.displayOptions.showGross ? Math.max(
       MEMBER_GROSS_COL_WIDTH,
       requiredWidth(measure, [
         { text: model.grossColumnLabel, font: categoryPrimaryFont() },
         ...model.memberRows.map((row) => ({ text: row.gross, font: `bold 13px ${FONT_FAMILY}` })),
+        ...model.memberRows.map((row) => ({ text: row.assignedShareLabel, font: categorySecondaryFont(secondaryFontSize) })),
       ], CELL_PADDING * 2),
-    );
+    ) : 0;
 
-    const settlementWidth = Math.max(
+    const assignedShareWidth = !model.displayOptions.showGross && model.displayOptions.showAssignedShare
+      ? Math.max(MEMBER_GROSS_COL_WIDTH, requiredWidth(measure, [
+          { text: model.assignedShareColumnLabel, font: categoryPrimaryFont() },
+          ...model.memberRows.map((row) => ({ text: row.assignedShare, font: `bold 13px ${FONT_FAMILY}` })),
+        ], CELL_PADDING * 2))
+      : 0;
+
+    const settlementWidth = model.displayOptions.showSettlement ? Math.max(
       MEMBER_SETTLE_COL_WIDTH,
       requiredWidth(measure, [
         { text: model.settlementColumnLabel, font: categoryPrimaryFont() },
         ...model.memberRows.map((row) => ({ text: row.settlementAmount ? row.settlementLabel + " " + row.settlementAmount : row.settlementLabel, font: categoryPrimaryFont() })),
       ], CELL_PADDING * 2 + SETTLEMENT_PILL_EXTRA_WIDTH),
-    );
+    ) : 0;
 
     // G2/G3: previous + next carryover share one measured width (both
     // columns are only added when showCarryoverColumns is true -- see
@@ -405,9 +436,9 @@ function measureMemberTableLayout(ctx, model) {
     const categoryTotal = categoryWidths.reduce((sum, width) => sum + width, 0);
     // Two carryover columns (previous + next) when shown.
     const carryoverTotal = model.showCarryoverColumns ? carryoverWidth * 2 : 0;
-    const requiredTotal = nameWidth + carryoverTotal + categoryTotal + grossWidth + settlementWidth;
+    const requiredTotal = nameWidth + carryoverTotal + categoryTotal + grossWidth + assignedShareWidth + settlementWidth;
 
-    return { nameWidth, grossWidth, settlementWidth, carryoverWidth, categoryWidths, requiredTotal };
+    return { nameWidth, grossWidth, assignedShareWidth, settlementWidth, carryoverWidth, categoryWidths, requiredTotal };
   }
 
   let secondaryFontSize = MEMBER_CATEGORY_SECONDARY_FONT_SIZE_DEFAULT;
@@ -456,10 +487,17 @@ function buildMemberTableColumns(model, contentX, memberLayout) {
     columns.push({ key: column.key, label: column.label, note: column.note, x, width, align: "right" });
     x += width;
   });
-  columns.push({ key: "gross", label: model.grossColumnLabel, note: null, x, width: memberLayout.grossWidth, align: "right" });
-  x += memberLayout.grossWidth;
-  columns.push({ key: "settlement", label: model.settlementColumnLabel, note: null, x, width: memberLayout.settlementWidth, align: "right" });
-  x += memberLayout.settlementWidth;
+  if (model.displayOptions.showGross) {
+    columns.push({ key: "gross", label: model.grossColumnLabel, note: model.displayOptions.showAssignedShare ? model.assignedShareColumnLabel : null, x, width: memberLayout.grossWidth, align: "right" });
+    x += memberLayout.grossWidth;
+  } else if (model.displayOptions.showAssignedShare) {
+    columns.push({ key: "assignedShare", label: model.assignedShareColumnLabel, note: null, x, width: memberLayout.assignedShareWidth, align: "right" });
+    x += memberLayout.assignedShareWidth;
+  }
+  if (model.displayOptions.showSettlement) {
+    columns.push({ key: "settlement", label: model.settlementColumnLabel, note: null, x, width: memberLayout.settlementWidth, align: "right" });
+    x += memberLayout.settlementWidth;
+  }
   if (model.showCarryoverColumns) {
     columns.push({ key: "nextCarryover", label: model.nextCarryoverColumnLabel, note: null, x, width: memberLayout.carryoverWidth, align: "right" });
   }
@@ -497,17 +535,19 @@ function computeTransferTableColumns(ctx, model, contentX) {
     { text: model.transferAmountLabel, font: headerFont },
     ...model.transferRows.map((row) => ({ text: row.amount, font: `bold 14px ${FONT_FAMILY}` })),
   ], CELL_PADDING * 2);
-  const walletWidth = requiredWidth(measure, [
+  const walletWidth = model.displayOptions.showWallets ? requiredWidth(measure, [
     { text: model.transferWalletLabel, font: headerFont },
     ...model.transferRows.map((row) => ({ text: row.wallet, font: `12px ${MONOSPACE_FONT_FAMILY}` })),
-  ], CELL_PADDING * 2);
+  ], CELL_PADDING * 2) : 0;
 
   let x = contentX;
   const names = { key: "names", label: model.transferNamesLabel, x, width: namesWidth, align: "left" };
   x += namesWidth + TRANSFER_COLUMN_GAP;
   const amount = { key: "amount", label: model.transferAmountLabel, x, width: amountWidth, align: "right" };
   x += amountWidth + TRANSFER_COLUMN_GAP;
-  const wallet = { key: "wallet", label: model.transferWalletLabel, x, width: walletWidth, align: "right" };
+  const wallet = model.displayOptions.showWallets
+    ? { key: "wallet", label: model.transferWalletLabel, x, width: walletWidth, align: "right" }
+    : null;
   return { names, amount, wallet };
 }
 
@@ -570,22 +610,22 @@ function layoutSections(model, ctx) {
 
   // Box 3: transfer table (heading + header row + one fixed-height banded row
   // per transfer, or a single "no transfers" line when the list is empty).
-  const transferBoxY = y;
-  const transferHeadingY = transferBoxY + BOX_PADDING + 14;
-  const transferTableTop = transferHeadingY + 18;
-  const transferRowsTop = transferTableTop + TRANSFER_HEADER_HEIGHT;
-  const transferColumns = computeTransferTableColumns(ctx, model, contentX);
-  const transferRowCount = Math.max(model.transferRows.length, 1);
-  const transferRows = model.transferRows.length
-    ? model.transferRows.map((transfer, index) => ({
-        transfer,
-        index,
-        y: transferRowsTop + index * TRANSFER_ROW_HEIGHT,
-      }))
-    : [];
-  const emptyTransfersY = model.transferRows.length ? null : transferRowsTop;
-  const transferBoxHeight = (transferRowsTop - transferBoxY) + transferRowCount * TRANSFER_ROW_HEIGHT + BOX_PADDING;
-  y = transferBoxY + transferBoxHeight + BOX_GAP;
+  let transferBox = null;
+  if (model.displayOptions.showTransfers) {
+    const transferBoxY = y;
+    const transferHeadingY = transferBoxY + BOX_PADDING + 14;
+    const transferTableTop = transferHeadingY + 18;
+    const transferRowsTop = transferTableTop + TRANSFER_HEADER_HEIGHT;
+    const transferColumns = computeTransferTableColumns(ctx, model, contentX);
+    const transferRowCount = Math.max(model.transferRows.length, 1);
+    const transferRows = model.transferRows.length
+      ? model.transferRows.map((transfer, index) => ({ transfer, index, y: transferRowsTop + index * TRANSFER_ROW_HEIGHT }))
+      : [];
+    const emptyTransfersY = model.transferRows.length ? null : transferRowsTop;
+    const transferBoxHeight = (transferRowsTop - transferBoxY) + transferRowCount * TRANSFER_ROW_HEIGHT + BOX_PADDING;
+    transferBox = { y: transferBoxY, height: transferBoxHeight, headingY: transferHeadingY, headerY: transferTableTop, columns: transferColumns, rows: transferRows, emptyY: emptyTransfersY };
+    y = transferBoxY + transferBoxHeight + BOX_GAP;
+  }
 
   const footer = { text: model.footer, y: y + 8 };
   const totalHeight = footer.y + 16;
@@ -608,15 +648,7 @@ function layoutSections(model, ctx) {
       columns: memberColumns,
       rows: memberRows,
     },
-    transferBox: {
-      y: transferBoxY,
-      height: transferBoxHeight,
-      headingY: transferHeadingY,
-      headerY: transferTableTop,
-      columns: transferColumns,
-      rows: transferRows,
-      emptyY: emptyTransfersY,
-    },
+    transferBox,
     footer,
   };
 }
@@ -744,10 +776,20 @@ function drawMemberTableRow(ctx, columns, row, secondaryFontSize = MEMBER_CATEGO
       const nameFont = `bold 14px ${FONT_FAMILY}`;
       const name = truncateToWidth(ctx, member.name, nameFont, column.width - CELL_PADDING * 2);
       drawText(ctx, { text: name, x: textX, y: primaryY, font: nameFont, color: COLOR.heading, align: column.align });
+      if (member.ruleLabel) {
+        const ruleFont = `bold 11px ${FONT_FAMILY}`;
+        const ruleLabel = truncateToWidth(ctx, member.ruleLabel, ruleFont, column.width - CELL_PADDING * 2);
+        drawText(ctx, { text: ruleLabel, x: textX, y: secondaryY, font: ruleFont, color: COLOR.accent, align: column.align });
+      }
       continue;
     }
     if (column.key === "gross") {
       drawText(ctx, { text: member.gross, x: textX, y: primaryY, font: `bold 13px ${FONT_FAMILY}`, color: COLOR.heading, align: column.align });
+      if (member.assignedShareLabel) drawText(ctx, { text: member.assignedShareLabel, x: textX, y: secondaryY, font: categorySecondaryFont(secondaryFontSize), color: COLOR.accent, align: column.align });
+      continue;
+    }
+    if (column.key === "assignedShare") {
+      drawText(ctx, { text: member.assignedShare, x: textX, y: primaryY, font: `bold 13px ${FONT_FAMILY}`, color: COLOR.accent, align: column.align });
       continue;
     }
     if (column.key === "previousCarryover" || column.key === "nextCarryover") {
@@ -800,7 +842,8 @@ function drawTransferTableRow(ctx, columns, row) {
   const { transfer, index, y } = row;
   const bandColor = index % 2 === 0 ? COLOR.bandWhite : COLOR.bandAlt;
   ctx.fillStyle = bandColor;
-  ctx.fillRect(columns.names.x, y, (columns.wallet.x + columns.wallet.width) - columns.names.x, TRANSFER_ROW_HEIGHT);
+  const lastColumn = columns.wallet || columns.amount;
+  ctx.fillRect(columns.names.x, y, (lastColumn.x + lastColumn.width) - columns.names.x, TRANSFER_ROW_HEIGHT);
 
   const textY = y + TRANSFER_ROW_HEIGHT / 2 + 5;
   const nameFont = `14px ${FONT_FAMILY}`;
@@ -816,14 +859,16 @@ function drawTransferTableRow(ctx, columns, row) {
     align: "right",
   });
 
-  drawText(ctx, {
-    text: transfer.wallet,
-    x: columns.wallet.x + columns.wallet.width - CELL_PADDING,
-    y: textY,
-    font: `12px ${MONOSPACE_FONT_FAMILY}`,
-    color: COLOR.muted,
-    align: "right",
-  });
+  if (columns.wallet) {
+    drawText(ctx, {
+      text: transfer.wallet,
+      x: columns.wallet.x + columns.wallet.width - CELL_PADDING,
+      y: textY,
+      font: `12px ${MONOSPACE_FONT_FAMILY}`,
+      color: COLOR.muted,
+      align: "right",
+    });
+  }
 }
 
 /**
@@ -880,27 +925,27 @@ export function drawSettlementShareImage(ctx, model) {
   }
 
   // Box 3: transfer table (C5).
-  drawSectionBox(ctx, contentX, layout.transferBox.y, contentWidth, layout.transferBox.height);
-  drawText(ctx, {
-    text: model.transferSectionTitle,
-    x: contentX + BOX_PADDING,
-    y: layout.transferBox.headingY,
-    font: `bold 16px ${FONT_FAMILY}`,
-    color: COLOR.heading,
-  });
-  if (layout.transferBox.rows.length) {
-    drawTableHeader(ctx, [layout.transferBox.columns.names, layout.transferBox.columns.amount, layout.transferBox.columns.wallet], layout.transferBox.headerY, TRANSFER_HEADER_HEIGHT);
-    for (const row of layout.transferBox.rows) {
-      drawTransferTableRow(ctx, layout.transferBox.columns, row);
-    }
-  } else {
+  if (layout.transferBox) {
+    drawSectionBox(ctx, contentX, layout.transferBox.y, contentWidth, layout.transferBox.height);
     drawText(ctx, {
-      text: model.noTransfersText,
+      text: model.transferSectionTitle,
       x: contentX + BOX_PADDING,
-      y: layout.transferBox.emptyY + 6,
-      font: `14px ${FONT_FAMILY}`,
-      color: COLOR.muted,
+      y: layout.transferBox.headingY,
+      font: `bold 16px ${FONT_FAMILY}`,
+      color: COLOR.heading,
     });
+    if (layout.transferBox.rows.length) {
+      drawTableHeader(ctx, [layout.transferBox.columns.names, layout.transferBox.columns.amount, layout.transferBox.columns.wallet].filter(Boolean), layout.transferBox.headerY, TRANSFER_HEADER_HEIGHT);
+      for (const row of layout.transferBox.rows) drawTransferTableRow(ctx, layout.transferBox.columns, row);
+    } else {
+      drawText(ctx, {
+        text: model.noTransfersText,
+        x: contentX + BOX_PADDING,
+        y: layout.transferBox.emptyY + 6,
+        font: `14px ${FONT_FAMILY}`,
+        color: COLOR.muted,
+      });
+    }
   }
 
   drawText(ctx, { text: layout.footer.text, x: contentX, y: layout.footer.y, font: `13px ${FONT_FAMILY}`, color: COLOR.muted });

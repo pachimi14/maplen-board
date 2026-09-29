@@ -1,3 +1,5 @@
+import { allocateDistribution, resolveDistributionRules } from "./distributionRules.js";
+
 const BOSSES = new Set(["LUCID", "WILL", "SLIME"]);
 const DROP_CATEGORIES = new Set(["COIN", "EQUIPMENT", "FT_ITEM"]);
 const INTEGER_PATTERN = /^\d+$/;
@@ -256,14 +258,27 @@ export function calculateSettlement(input) {
   if (carryoverEnabled && sumBy(rows, "previousCarryover") !== 0n) {
     errors.push(problem("carryover_not_balanced", "previousCarryover"));
   }
+  const distributionRules = resolveDistributionRules(partyOrder, input?.taxPercentByMemberId, input?.sharePercentByMemberId);
+  if (!distributionRules.ok) errors.push(...distributionRules.errors);
   if (errors.length) return { ok: false, errors };
 
   const total = sumBy(rows, "gross");
+  const customDistribution = [input?.taxPercentByMemberId, input?.sharePercentByMemberId]
+    .some((values) => values && Object.values(values).some((value) => String(value ?? "").trim() !== ""));
+  const ruleByMemberId = new Map(distributionRules.rows.map((row) => [row.memberId, row]));
+  let pool = 0n;
+  const retainedByMemberId = new Map();
+  for (const row of rows) {
+    retainedByMemberId.set(row.memberId, 0n);
+    pool += row.gross;
+  }
+  const poolShares = allocateDistribution(pool, distributionRules, partyOrder);
+  const assignedByMemberId = new Map(partyOrder.map((memberId) => [memberId, (retainedByMemberId.get(memberId) || 0n) + (poolShares.get(memberId) || 0n)]));
   const count = BigInt(rows.length);
   const baseShare = total / count;
   const remainder = Number(total % count);
-  const calculated = rows.map((row, index) => {
-    const assignedShare = baseShare + (index < remainder ? 1n : 0n);
+  const calculated = rows.map((row) => {
+    const assignedShare = assignedByMemberId.get(row.memberId);
     const balance = row.gross - assignedShare - row.previousCarryover;
     const amountDue = balance > 0n ? balance : 0n;
     const amountOwed = balance < 0n ? -balance : 0n;
@@ -290,6 +305,10 @@ export function calculateSettlement(input) {
   const outputErrors = [];
   const resultMembers = finalized.map((row) => ({
     memberId: row.memberId,
+    taxPercentText: customDistribution ? ruleByMemberId.get(row.memberId)?.taxText || null : null,
+    sharePercentText: customDistribution && ruleByMemberId.get(row.memberId)?.share
+      ? ruleByMemberId.get(row.memberId).shareText
+      : null,
     hasHistory: row.hasHistory,
     bossNeso: stringifyChecked(row.bossNeso, outputErrors, "bossNeso", row.memberId),
     powerCrystalAmount: stringifyChecked(row.powerCrystalAmount, outputErrors, "powerCrystalAmount", row.memberId),
@@ -343,6 +362,8 @@ export function calculateSettlement(input) {
     baseShare: baseShareText,
     remainder,
     carryoverEnabled,
+    customDistribution,
+    distributionPool: pool.toString(),
     categoryTotals,
     equipmentDrops,
     members: resultMembers,

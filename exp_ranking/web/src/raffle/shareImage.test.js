@@ -128,6 +128,48 @@ describe("buildSettlementShareModel", () => {
     expect(calculation.transfers.length).toBeGreaterThan(0);
   });
 
+  it("shows each member's applied tax or pool share beneath their name for a custom distribution", () => {
+    const calculation = calculateSettlement({
+      boss: "WILL",
+      complete: true,
+      historyMemberIds: ["a", "b", "c"],
+      partyOrder: ["a", "b", "c"],
+      include: { bossNeso: true },
+      members: [
+        { memberId: "a", bossNeso: "100", powerCrystalAmount: "0", ascendantNeso: "0", drops: [] },
+        { memberId: "b", bossNeso: "100", powerCrystalAmount: "0", ascendantNeso: "0", drops: [] },
+        { memberId: "c", bossNeso: "100", powerCrystalAmount: "0", ascendantNeso: "0", drops: [] },
+      ],
+      taxPercentByMemberId: { a: "50" },
+      sharePercentByMemberId: { b: "25" },
+    });
+    expect(calculation.ok).toBe(true);
+    const model = buildSettlementShareModel(calculation, memberMap, { bossNeso: true }, "1", t);
+    expect(model.memberRows.map((row) => row.ruleLabel)).toEqual(["Tax 50%・傾斜 16.6666%", "傾斜 25%", "傾斜 58.3333%"]);
+  });
+
+  it("honors user-selected image contents while keeping the default model unchanged", () => {
+    const calculation = compositeCalculation();
+    const defaultModel = buildSettlementShareModel(calculation, memberMap, include, "1.2", t);
+    const compactModel = buildSettlementShareModel(calculation, memberMap, include, "1.2", t, {
+      displayOptions: {
+        showRuleDetails: false,
+        showCategoryBreakdown: false,
+        showGross: false,
+        showAssignedShare: true,
+        showSettlement: false,
+        showCarryover: false,
+        showTransfers: false,
+        showWallets: false,
+      },
+    });
+    expect(defaultModel.memberCategoryColumns.length).toBeGreaterThan(0);
+    expect(compactModel.memberCategoryColumns).toEqual([]);
+    expect(compactModel.memberRows.every((row) => row.ruleLabel == null)).toBe(true);
+    expect(compactModel.displayOptions).toMatchObject({ showGross: false, showAssignedShare: true, showTransfers: false });
+    expect(measureSettlementShareImageHeight(compactModel)).toBeLessThan(measureSettlementShareImageHeight(defaultModel));
+  });
+
   it("labels who pays/receives using the same rule as the settlement UI (describeMemberSettlement)", () => {
     const calculation = compositeCalculation();
     const model = buildSettlementShareModel(calculation, memberMap, include, "1.2", t);
@@ -193,12 +235,12 @@ describe("buildSettlementShareModel member table (C4)", () => {
     expect(model.memberCategoryColumns.map((column) => column.key)).toEqual(settlementCategoryColumns(include, t).map((column) => column.key));
   });
 
-  it("excludes raffle-history and assigned-share from every member row", () => {
+  it("excludes raffle history while carrying the exact assigned share for the image", () => {
     const calculation = compositeCalculation();
     const model = buildSettlementShareModel(calculation, memberMap, include, "1.2", t);
     for (const row of model.memberRows) {
       expect(row).not.toHaveProperty("hasHistory");
-      expect(row).not.toHaveProperty("assignedShare");
+      expect(row.assignedShare).toBe(neso(calculation.members.find((member) => member.memberId === row.memberId).assignedShare));
     }
   });
 
@@ -1138,9 +1180,10 @@ describe("member table column widths never overlap (R2/LULU-119, updated for the
     // Pinned measured value (LULU-119 follow-up round 3): 10 member-table
     // columns (member/previousCarryover/bossNeso/powerCrystal/ascendantNeso/
     // coin/otherSales/gross/settlement/nextCarryover) need more than the
-    // default 1200px; still comfortably within the SHARE_IMAGE_MAX_WIDTH
-    // guideline.
-    expect(size.width).toBe(1420);
+    // The added full-width entitlement line needs a small amount of extra
+    // space in the maximal configuration; it remains comfortably within
+    // the SHARE_IMAGE_MAX_WIDTH guideline.
+    expect(size.width).toBe(1448);
     expect(size.width).toBeGreaterThan(SHARE_IMAGE_WIDTH);
     expect(size.width).toBeLessThanOrEqual(SHARE_IMAGE_MAX_WIDTH);
   });
