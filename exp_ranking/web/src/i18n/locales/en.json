@@ -43,6 +43,8 @@
     "invalidNavigatorUrl": "Enter a valid MSU Navigator character URL.",
     "addToParty": "Add to party",
     "newParty": "New party",
+    "deleteParty": "Delete party",
+    "deletePartyConfirm": "Delete “{{name}}”? This cannot be undone.",
     "noParty": "Create a party to begin.",
     "add": "Add",
     "remove": "Remove",

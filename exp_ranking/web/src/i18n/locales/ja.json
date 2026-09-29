@@ -43,6 +43,8 @@
     "invalidNavigatorUrl": "正しいMSU NavigatorのキャラクターURLを入力してください。",
     "addToParty": "PTに追加",
     "newParty": "新規パーティ",
+    "deleteParty": "PTを削除",
+    "deletePartyConfirm": "「{{name}}」を削除しますか？この操作は元に戻せません。",
     "noParty": "パーティを作成してください。",
     "add": "追加",
     "remove": "削除",

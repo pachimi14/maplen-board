@@ -43,6 +43,8 @@
     "invalidNavigatorUrl": "請輸入有效的 MSU Navigator 角色 URL。",
     "addToParty": "加入隊伍",
     "newParty": "新增隊伍",
+    "deleteParty": "刪除隊伍",
+    "deletePartyConfirm": "要刪除「{{name}}」嗎？此操作無法復原。",
     "noParty": "請先建立隊伍。",
     "add": "新增",
     "remove": "移除",

@@ -30,6 +30,16 @@ export function createEmptyRaffleState() {
   return { version: 1, activePartyId: "", parties: [] };
 }
 
+export function removePartyFromState(state, partyId) {
+  const index = state.parties.findIndex((party) => party.id === partyId);
+  if (index < 0) return state;
+  const parties = state.parties.filter((party) => party.id !== partyId);
+  const activePartyId = state.activePartyId === partyId
+    ? parties[Math.min(index, parties.length - 1)]?.id || ""
+    : state.activePartyId;
+  return { ...state, activePartyId, parties };
+}
+
 function normalizeCarryover(value) {
   const text = String(value ?? "0").trim();
   if (!SIGNED_INTEGER_PATTERN.test(text)) return "0";

@@ -43,6 +43,8 @@
     "invalidNavigatorUrl": "Nhập URL nhân vật MSU Navigator hợp lệ.",
     "addToParty": "Thêm vào party",
     "newParty": "Nhóm mới",
+    "deleteParty": "Xóa nhóm",
+    "deletePartyConfirm": "Xóa “{{name}}”? Không thể hoàn tác thao tác này.",
     "noParty": "Hãy tạo nhóm để bắt đầu.",
     "add": "Thêm",
     "remove": "Xóa",

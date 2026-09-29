@@ -43,6 +43,8 @@
     "invalidNavigatorUrl": "Introduce una URL válida de personaje de MSU Navigator.",
     "addToParty": "Añadir al grupo",
     "newParty": "Nuevo grupo",
+    "deleteParty": "Eliminar grupo",
+    "deletePartyConfirm": "¿Eliminar «{{name}}»? Esta acción no se puede deshacer.",
     "noParty": "Crea un grupo para comenzar.",
     "add": "Añadir",
     "remove": "Quitar",

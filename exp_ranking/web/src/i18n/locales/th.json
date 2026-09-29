@@ -43,6 +43,8 @@
     "invalidNavigatorUrl": "กรอก URL ตัวละครของ MSU Navigator ที่ถูกต้อง",
     "addToParty": "เพิ่มเข้าปาร์ตี้",
     "newParty": "ปาร์ตี้ใหม่",
+    "deleteParty": "ลบปาร์ตี้",
+    "deletePartyConfirm": "ลบ “{{name}}” หรือไม่? ไม่สามารถย้อนกลับได้",
     "noParty": "สร้างปาร์ตี้เพื่อเริ่มต้น",
     "add": "เพิ่ม",
     "remove": "ลบ",

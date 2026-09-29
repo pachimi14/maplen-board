@@ -15,7 +15,7 @@ export default function DistributionRuleSettings({ partyOrder, memberMap, settin
     }
     return { ...current, ...patch, allocationPrepared: false };
   });
-  return <details open={hasRuleInput} className={hasRuleInput
+  return <details defaultOpen={hasRuleInput} className={hasRuleInput
     ? "group rounded-xl border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-950/20"
     : "group rounded-xl border-2 border-amber-500 bg-amber-50 shadow-lg ring-2 ring-amber-200/70 dark:border-amber-400 dark:bg-amber-950/30 dark:ring-amber-800/60"}>
     <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 marker:content-none [&::-webkit-details-marker]:hidden">

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { RAFFLE_STORAGE_KEY, assetKeyFromHistoryKey, createEmptyRaffleState, createParty, loadRaffleState, normalizeRaffleState, saveRaffleState } from "./raffleStorage.js";
+import { RAFFLE_STORAGE_KEY, assetKeyFromHistoryKey, createEmptyRaffleState, createParty, loadRaffleState, normalizeRaffleState, removePartyFromState, saveRaffleState } from "./raffleStorage.js";
 
 function memoryBackend(initial = {}) {
   const data = new Map(Object.entries(initial));
@@ -73,6 +73,27 @@ describe("raffle storage", () => {
     expect(normalized.state.parties[0]).toMatchObject({
       carryoverEnabled: true,
       carryoverByAssetKey: { CHARfixture001: "-25", CHARfixture002: "25" },
+    });
+  });
+
+  it("removes a party and selects the adjacent party", () => {
+    const state = {
+      version: 1,
+      activePartyId: "p2",
+      parties: [createParty("p1", "One"), createParty("p2", "Two"), createParty("p3", "Three")],
+    };
+    expect(removePartyFromState(state, "p2")).toMatchObject({
+      activePartyId: "p3",
+      parties: [{ id: "p1" }, { id: "p3" }],
+    });
+    expect(removePartyFromState({ ...state, activePartyId: "p3" }, "p3")).toMatchObject({
+      activePartyId: "p2",
+      parties: [{ id: "p1" }, { id: "p2" }],
+    });
+    expect(removePartyFromState({ version: 1, activePartyId: "p1", parties: [state.parties[0]] }, "p1")).toEqual({
+      version: 1,
+      activePartyId: "",
+      parties: [],
     });
   });
 

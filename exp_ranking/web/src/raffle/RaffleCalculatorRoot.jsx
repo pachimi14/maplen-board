@@ -15,7 +15,7 @@ import { RaffleResultList, RaffleResultSummary } from "./RaffleResultCard.jsx";
 import PartyCarryoverSettings from "./PartyCarryoverSettings.jsx";
 import SettlementResult from "./SettlementResult.jsx";
 import DistributionRuleSettings from "./DistributionRuleSettings.jsx";
-import { MAX_MEMBERS, MAX_PARTIES, createEmptyRaffleState, createParty, loadRaffleState, saveRaffleState } from "./storage/raffleStorage.js";
+import { MAX_MEMBERS, MAX_PARTIES, createEmptyRaffleState, createParty, loadRaffleState, removePartyFromState, saveRaffleState } from "./storage/raffleStorage.js";
 import { loadRaffleHistoryCache, saveRaffleHistoryCache } from "./storage/historyCache.js";
 import { loadRaffleSalePrices, saveRaffleSalePrice } from "./storage/salePriceCache.js";
 import { copyTextToClipboard } from "../shareImageIO.js";
@@ -180,6 +180,19 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
     const id = "party-" + Date.now().toString(36);
     updateModel((current) => ({ ...current, activePartyId: id, parties: [...current.parties, createParty(id, t("raffle.defaultPartyName"))] }));
     setJobResult(null);
+  }
+
+  function removeActiveParty() {
+    if (!activeParty || !window.confirm(t("raffle.deletePartyConfirm", { name: activeParty.name }))) return;
+    updateModel((current) => removePartyFromState(current, activeParty.id));
+    setJobResult(null);
+    setProgress(null);
+    setHistoryCacheInfo(null);
+    setDistribution(initialDistributionSettings());
+    setSelectedClearIdsByBoss({ LUCID: [], WILL: [], SLIME: [] });
+    setConfirmedClearIds([]);
+    setActiveClearBoss("");
+    setRequestError("");
   }
 
   function addMember(candidate) {
@@ -549,7 +562,10 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
             </div> : null}
             {model.parties.length ? <select className="raffle-input mt-3" value={activeParty?.id || ""} onChange={(event) => { updateModel((current) => ({ ...current, activePartyId: event.target.value })); setJobResult(null); }}>{model.parties.map((party) => <option key={party.id} value={party.id}>{party.name}</option>)}</select> : <p className="mt-3 text-sm text-slate-500">{t("raffle.noParty")}</p>}
             {activeParty ? <>
-              <label className="raffle-label mt-4">{t("raffle.partyName")}<input className="raffle-input mt-1" maxLength={80} value={activeParty.name} onChange={(event) => updateParty((party) => ({ ...party, name: event.target.value }))} /></label>
+              <div className="mt-4 flex items-end gap-2">
+                <label className="raffle-label min-w-0 flex-1">{t("raffle.partyName")}<input className="raffle-input mt-1" maxLength={80} value={activeParty.name} onChange={(event) => updateParty((party) => ({ ...party, name: event.target.value }))} /></label>
+                <button type="button" className="raffle-button-remove shrink-0" onClick={removeActiveParty}>{t("raffle.deleteParty")}</button>
+              </div>
               <div className="mt-3 rounded-lg border border-slate-200 p-3 dark:border-slate-700">
                 <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-sm font-semibold">{t("raffle.sharePartyTitle")}</p><p className="text-xs text-slate-500">{t("raffle.sharePartyHelp")}</p></div><button type="button" className="raffle-button-secondary" disabled={!activeParty.members.length} onClick={copyPartyShareLink}>{t(partyShareStatus === "copied" ? "raffle.partyLinkCopied" : "raffle.copyPartyLink")}</button></div>
                 {partyShareStatus === "failed" ? <input className="raffle-input mt-2" readOnly value={buildPartyShareUrl(activeParty)} onFocus={(event) => event.target.select()} /> : null}
