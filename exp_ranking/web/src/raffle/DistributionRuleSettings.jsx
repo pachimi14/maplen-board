@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { materializeAutomaticShares, resolveDistributionRules } from "./domain/distributionRules.js";
 
 export default function DistributionRuleSettings({ partyOrder, memberMap, setting, updateSetting, t }) {
@@ -7,6 +8,12 @@ export default function DistributionRuleSettings({ partyOrder, memberMap, settin
   const hasRuleInput = partyOrder.some((memberId) =>
     String(setting.taxPercentByMemberId[memberId] || "").trim()
     || String(setting.sharePercentByMemberId[memberId] || "").trim());
+  const [open, setOpen] = useState(hasRuleInput);
+  const previouslyHadRuleInput = useRef(hasRuleInput);
+  useEffect(() => {
+    if (hasRuleInput && !previouslyHadRuleInput.current) setOpen(true);
+    previouslyHadRuleInput.current = hasRuleInput;
+  }, [hasRuleInput]);
   const edit = (field, memberId, value) => updateSetting((current) => {
     const next = { ...current[field], [memberId]: value };
     const patch = { [field]: next };
@@ -15,7 +22,7 @@ export default function DistributionRuleSettings({ partyOrder, memberMap, settin
     }
     return { ...current, ...patch, allocationPrepared: false };
   });
-  return <details defaultOpen={hasRuleInput} className={hasRuleInput
+  return <details open={open} onToggle={(event) => setOpen(event.currentTarget.open)} className={hasRuleInput
     ? "group rounded-xl border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-950/20"
     : "group rounded-xl border-2 border-amber-500 bg-amber-50 shadow-lg ring-2 ring-amber-200/70 dark:border-amber-400 dark:bg-amber-950/30 dark:ring-amber-800/60"}>
     <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 marker:content-none [&::-webkit-details-marker]:hidden">
