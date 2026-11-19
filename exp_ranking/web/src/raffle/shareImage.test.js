@@ -1211,3 +1211,111 @@ describe("member table column widths never overlap (R2/LULU-119, updated for the
     expect(size.width).toBeGreaterThanOrEqual(SHARE_IMAGE_WIDTH);
   });
 });
+
+// LULU-144 (docs/IMPL_PLAN_RAFFLE_BOX_CATEGORY.md): Ring Box (re-tagged BOX
+// before calculation) gets its own share-image column right after coin; it
+// is no longer part of "Other Sales" (= equipment + FT Item only).
+describe("buildSettlementShareModel Box column (LULU-144)", () => {
+  const boxMemberMap = {
+    a: { displayName: "Alice" },
+    b: { displayName: "Bob" },
+    c: { displayName: "Cleo" },
+    d: { displayName: "Dana" },
+    e: { displayName: "Eve" },
+    f: { displayName: "Finn" },
+  };
+  const includeAll = { bossNeso: true, powerCrystal: true, ascendantNeso: true, coin: true, equipment: true, ftItem: true, box: true };
+
+  function boxCalculation({ memberIds = ["a", "b", "c"], boxSalePrice = "10000000", include: includeOverride = includeAll, carryoverEnabled = false } = {}) {
+    const result = calculateSettlement({
+      boss: "WILL",
+      complete: true,
+      historyMemberIds: memberIds,
+      partyOrder: memberIds,
+      include: includeOverride,
+      powerCrystalNesoRate: "1.1",
+      carryoverEnabled,
+      previousCarryoverByMemberId: Object.fromEntries(memberIds.map((memberId) => [memberId, "0"])),
+      saleNesoByDropId: { coin1: "100000", equip1: "300000", ft1: "500000", box1: boxSalePrice },
+      members: memberIds.map((memberId) => {
+        if (memberId === "a") {
+          return {
+            memberId,
+            bossNeso: "9000000",
+            powerCrystalAmount: "0",
+            ascendantNeso: "12000000",
+            drops: [
+              { dropId: "coin1", category: "COIN", name: "Arachno Coin", quantity: "10" },
+              { dropId: "equip1", category: "EQUIPMENT", name: "AbsoLab Knight Suit", quantity: "1", imageUrl: "https://api-static.msu.io/itemimages/icon/1003172.png" },
+              { dropId: "ft1", category: "FT_ITEM", name: "Sealed Mirror World Nodestone", quantity: "1" },
+            ],
+          };
+        }
+        if (memberId === "b") {
+          return { memberId, bossNeso: "0", powerCrystalAmount: "100000000", ascendantNeso: "0", drops: [] };
+        }
+        if (memberId === "c") {
+          return { memberId, bossNeso: "0", powerCrystalAmount: "0", ascendantNeso: "0", drops: [
+            { dropId: "box1", category: "BOX", name: "Rank 3 Special Skill Ring Box", quantity: "1" },
+          ] };
+        }
+        return { memberId, bossNeso: "0", powerCrystalAmount: "0", ascendantNeso: "0", drops: [] };
+      }),
+    });
+    expect(result.ok).toBe(true);
+    return result;
+  }
+
+  it("adds a Box column (boxSaleNeso after the 5% fee) between coin and otherSales, and keeps Box out of otherSales", () => {
+    const calculation = boxCalculation();
+    const model = buildSettlementShareModel(calculation, boxMemberMap, includeAll, "1.1", t);
+    expect(model.memberCategoryColumns.map((column) => column.key)).toEqual(["bossNeso", "powerCrystal", "ascendantNeso", "coin", "box", "otherSales"]);
+    expect(model.memberCategoryColumns.find((column) => column.key === "box").label).toBe(ja.raffle.item_box);
+    const cells = Object.fromEntries(model.memberRows.map((row) => [row.memberId, Object.fromEntries(row.categoryCells.map((cell) => [cell.key, cell]))]));
+    expect(cells.c.box).toEqual({ key: "box", primary: neso("9500000"), secondary: null, zero: false });
+    expect(cells.a.box).toEqual({ key: "box", primary: "0", secondary: null, zero: true });
+    // otherSales = equipment 285,000 + FT 475,000 only (no Box).
+    expect(cells.a.otherSales.primary).toBe(neso("760000"));
+    expect(cells.c.otherSales).toMatchObject({ primary: "0", zero: true });
+  });
+
+  it("hides the Box column when every member's Box value is 0", () => {
+    const zeroPrice = buildSettlementShareModel(boxCalculation({ boxSalePrice: "" }), boxMemberMap, includeAll, "1.1", t);
+    expect(zeroPrice.memberCategoryColumns.map((column) => column.key)).not.toContain("box");
+    const unchecked = { ...includeAll, box: false };
+    const notIncluded = buildSettlementShareModel(boxCalculation({ include: unchecked }), boxMemberMap, unchecked, "1.1", t);
+    expect(notIncluded.memberCategoryColumns.map((column) => column.key)).not.toContain("box");
+  });
+
+  it("shows the Box column when a single member has a non-zero Box value", () => {
+    const model = buildSettlementShareModel(boxCalculation({ boxSalePrice: "1" }), boxMemberMap, includeAll, "1.1", t);
+    // 1 NESO * 95 / 100 = 0 -> still all-zero; 20 NESO -> 19.
+    expect(model.memberCategoryColumns.map((column) => column.key)).not.toContain("box");
+    const visible = buildSettlementShareModel(boxCalculation({ boxSalePrice: "20" }), boxMemberMap, includeAll, "1.1", t);
+    expect(visible.memberCategoryColumns.map((column) => column.key)).toContain("box");
+  });
+
+  it("maximal configuration (all categories + FT Item + Box + both carryover columns, 6 members) draws with no overlapping cells and reports the canvas width", () => {
+    const memberIds = ["a", "b", "c", "d", "e", "f"];
+    const calculation = boxCalculation({ memberIds, carryoverEnabled: true });
+    const model = buildSettlementShareModel(calculation, boxMemberMap, includeAll, "1.1", t);
+    expect(model.memberCategoryColumns.map((column) => column.key)).toEqual(["bossNeso", "powerCrystal", "ascendantNeso", "coin", "box", "otherSales"]);
+    expect(model.showCarryoverColumns).toBe(true);
+    const { ctx, fillTextCalls } = makeMeasuringMockCtx();
+
+    const size = drawSettlementShareImage(ctx, model);
+
+    assertNoOverlapWithinAnyRow(fillTextCalls);
+    for (const row of model.memberRows) {
+      for (const text of row.categoryCells.map((cell) => cell.primary).filter(Boolean)) {
+        expect(fillTextCalls.some((call) => call.text === text)).toBe(true);
+      }
+    }
+    // Pinned with the 7px/char mock measurer (same mock as the existing
+    // maximal-configuration test, which pins 1448 without Box): the Box
+    // column adds one more category column. Acceptance criterion 8 (as
+    // corrected in c9940da): <= SHARE_IMAGE_MAX_WIDTH with zero overlap.
+    expect(size.width).toBe(1566);
+    expect(size.width).toBeLessThanOrEqual(SHARE_IMAGE_MAX_WIDTH);
+  });
+});

@@ -144,6 +144,15 @@ const PILL_COLOR = {
 // and never calls settlementCategoryColumns() -- is completely unaffected;
 // only this share-image assembly step re-shapes the columns.
 const OTHER_SALES_KEY = "otherSales";
+// LULU-144: Ring Box (BOX) is no longer part of "Other Sales" -- it gets its
+// own share-image column right after coin, value = boxSaleNeso (after the 5%
+// fee), hidden when every member's value is 0 (LULU-127 rule).
+const BOX_KEY = "box";
+
+function boxCell(member) {
+  const amount = member.boxSaleNeso || "0";
+  return { key: BOX_KEY, primary: amount === "0" ? "0" : neso(amount), secondary: null, zero: amount === "0" };
+}
 
 function otherSalesCell(member) {
   const amount = BigInt(member.equipmentSaleNeso || "0") + BigInt(member.ftItemSaleNeso || "0");
@@ -192,6 +201,7 @@ export function buildSettlementShareModel(calculation, memberMap, include, power
   //     carryoverEnabled is false (unchanged prior behavior) OR when every
   //     member's previousCarryover AND nextCarryover are both 0.
   const showCoinColumn = calculation.members.some((member) => member.coinSaleNeso !== "0");
+  const showBoxColumn = Boolean(include?.box) && calculation.members.some((member) => (member.boxSaleNeso || "0") !== "0");
   const hasOtherSales = Boolean(include?.equipment || include?.ftItem);
   const showOtherSalesColumn = hasOtherSales && calculation.members.some((member) =>
     BigInt(member.equipmentSaleNeso || "0") + BigInt(member.ftItemSaleNeso || "0") !== 0n);
@@ -216,6 +226,9 @@ export function buildSettlementShareModel(calculation, memberMap, include, power
     .filter((column) => column.key !== "equipment" && column.key !== "ftItem")
     .filter((column) => column.key !== "coin" || showCoinColumn)
     .map((column) => ({ ...column, note: column.key === "powerCrystal" ? t("raffle.powerCrystalNonTransferable") : null }));
+  if (displayOptions.showCategoryBreakdown && showBoxColumn) {
+    memberCategoryColumns.push({ key: BOX_KEY, label: t("raffle.item_box"), note: null });
+  }
   if (displayOptions.showCategoryBreakdown && showOtherSalesColumn) {
     memberCategoryColumns.push({ key: OTHER_SALES_KEY, label: t("raffle.otherSales"), note: null });
   }
@@ -243,7 +256,9 @@ export function buildSettlementShareModel(calculation, memberMap, include, power
           : null,
       categoryCells: memberCategoryColumns.map((column) => column.key === OTHER_SALES_KEY
         ? otherSalesCell(member)
-        : { key: column.key, ...settlementMemberCategoryCell(member, column.key, { powerCrystalNesoRate }) }),
+        : column.key === BOX_KEY
+          ? boxCell(member)
+          : { key: column.key, ...settlementMemberCategoryCell(member, column.key, { powerCrystalNesoRate }) }),
       gross: neso(member.gross),
       assignedShare: neso(member.assignedShare),
       assignedShareLabel: displayOptions.showAssignedShare ? t("raffle.shareImageAssignedShare") + " " + neso(member.assignedShare) : null,
