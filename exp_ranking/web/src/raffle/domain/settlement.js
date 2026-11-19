@@ -1,7 +1,9 @@
 import { allocateDistribution, resolveDistributionRules } from "./distributionRules.js";
 
 const BOSSES = new Set(["LUCID", "WILL", "SLIME"]);
-const DROP_CATEGORIES = new Set(["COIN", "EQUIPMENT", "FT_ITEM"]);
+// LULU-144: "BOX" (Ring Box) is a Web-side category -- the API still sends it
+// as EQUIPMENT and domain/boxDrops.js re-tags it before calculation.
+const DROP_CATEGORIES = new Set(["COIN", "EQUIPMENT", "FT_ITEM", "BOX"]);
 const INTEGER_PATTERN = /^\d+$/;
 const SIGNED_INTEGER_PATTERN = /^[+-]?\d+$/;
 const RATE_PATTERN = /^(\d+)(?:\.(\d{1,18}))?$/;
@@ -185,14 +187,20 @@ export function calculateSettlement(input) {
     let equipmentSaleNeso = 0n;
     let ftItemQuantity = 0n;
     let ftItemSaleNeso = 0n;
+    let boxQuantity = 0n;
+    let boxSaleNeso = 0n;
     const equipmentDrops = [];
+    const boxDrops = [];
     for (const drop of Array.isArray(member.drops) ? member.drops : []) {
       if (!drop?.dropId || seenDrops.has(drop.dropId) || !DROP_CATEGORIES.has(drop.category)) {
         errors.push(problem("invalid_drop", "drops", memberId, drop?.dropId || ""));
         continue;
       }
       seenDrops.add(drop.dropId);
-      const selected = drop.category === "COIN" ? include.coin : drop.category === "FT_ITEM" ? include.ftItem : include.equipment;
+      const selected = drop.category === "COIN" ? include.coin
+        : drop.category === "FT_ITEM" ? include.ftItem
+          : drop.category === "BOX" ? include.box
+            : include.equipment;
       if (!selected) continue;
       const quantity = parseInteger(drop.quantity, "dropQuantity", errors, { memberId, dropId: drop.dropId });
       // G1 (LULU-119 follow-up, user ruling): an unfilled sale price is
@@ -205,8 +213,8 @@ export function calculateSettlement(input) {
         dropId: drop.dropId,
         required: false,
       });
-      // FT Item is a marketplace-sellable item just like coin/equipment: same
-      // 5% sale-proceeds deduction applies (LULU-090 rule).
+      // FT Item / Box are marketplace-sellable items just like coin/equipment:
+      // same 5% sale-proceeds deduction applies (LULU-090 rule).
       const saleNeso = salePriceToProceeds(salePriceNeso);
       if (drop.category === "COIN") {
         coinQuantity += quantity;
@@ -214,6 +222,17 @@ export function calculateSettlement(input) {
       } else if (drop.category === "FT_ITEM") {
         ftItemQuantity += quantity;
         ftItemSaleNeso += saleNeso;
+      } else if (drop.category === "BOX") {
+        boxQuantity += quantity;
+        boxSaleNeso += saleNeso;
+        boxDrops.push({
+          dropId: drop.dropId,
+          name: typeof drop.name === "string" ? drop.name : "",
+          quantity: quantity.toString(),
+          imageUrl: typeof drop.imageUrl === "string" ? drop.imageUrl : "",
+          salePriceNeso: salePriceNeso.toString(),
+          saleNeso: saleNeso.toString(),
+        });
       } else {
         equipmentQuantity += quantity;
         equipmentSaleNeso += saleNeso;
@@ -233,7 +252,7 @@ export function calculateSettlement(input) {
     const extraReward = extraRewardByMemberId.get(memberId) || 0n;
     // Extra reward is already-received NESO (not a marketplace sale), so it
     // skips the 5% sale fee and goes straight into transferableNeso.
-    const transferableNeso = bossNeso + ascendantNeso + coinSaleNeso + equipmentSaleNeso + ftItemSaleNeso + extraReward;
+    const transferableNeso = bossNeso + ascendantNeso + coinSaleNeso + equipmentSaleNeso + ftItemSaleNeso + boxSaleNeso + extraReward;
     return {
       memberId,
       hasHistory: historyMemberIds.has(memberId),
@@ -248,6 +267,9 @@ export function calculateSettlement(input) {
       equipmentDrops,
       ftItemQuantity,
       ftItemSaleNeso,
+      boxQuantity,
+      boxSaleNeso,
+      boxDrops,
       extraReward,
       previousCarryover,
       transferableNeso,
@@ -321,6 +343,9 @@ export function calculateSettlement(input) {
     equipmentDrops: row.equipmentDrops,
     ftItemQuantity: stringifyChecked(row.ftItemQuantity, outputErrors, "ftItemQuantity", row.memberId),
     ftItemSaleNeso: stringifyChecked(row.ftItemSaleNeso, outputErrors, "ftItemSaleNeso", row.memberId),
+    boxQuantity: stringifyChecked(row.boxQuantity, outputErrors, "boxQuantity", row.memberId),
+    boxSaleNeso: stringifyChecked(row.boxSaleNeso, outputErrors, "boxSaleNeso", row.memberId),
+    boxDrops: row.boxDrops,
     extraReward: stringifyChecked(row.extraReward, outputErrors, "extraReward", row.memberId),
     transferableNeso: stringifyChecked(row.transferableNeso, outputErrors, "transferableNeso", row.memberId),
     previousCarryover: stringifyChecked(row.previousCarryover, outputErrors, "previousCarryover", row.memberId),
@@ -347,10 +372,13 @@ export function calculateSettlement(input) {
     equipmentSaleNeso: stringifyChecked(sumBy(rows, "equipmentSaleNeso"), outputErrors, "categoryEquipmentSaleNeso"),
     ftItemQuantity: stringifyChecked(sumBy(rows, "ftItemQuantity"), outputErrors, "categoryFtItemQuantity"),
     ftItemSaleNeso: stringifyChecked(sumBy(rows, "ftItemSaleNeso"), outputErrors, "categoryFtItemSaleNeso"),
+    boxQuantity: stringifyChecked(sumBy(rows, "boxQuantity"), outputErrors, "categoryBoxQuantity"),
+    boxSaleNeso: stringifyChecked(sumBy(rows, "boxSaleNeso"), outputErrors, "categoryBoxSaleNeso"),
     extraReward: stringifyChecked(sumBy(rows, "extraReward"), outputErrors, "categoryExtraReward"),
     transferableNeso: stringifyChecked(sumBy(rows, "transferableNeso"), outputErrors, "categoryTransferableNeso"),
   };
   const equipmentDrops = finalized.flatMap((row) => row.equipmentDrops.map((drop) => ({ ...drop, memberId: row.memberId })));
+  const boxDrops = finalized.flatMap((row) => row.boxDrops.map((drop) => ({ ...drop, memberId: row.memberId })));
   const totalText = stringifyChecked(total, outputErrors, "total");
   const baseShareText = stringifyChecked(baseShare, outputErrors, "baseShare");
   if (outputErrors.length) return { ok: false, errors: outputErrors };
@@ -366,6 +394,7 @@ export function calculateSettlement(input) {
     distributionPool: pool.toString(),
     categoryTotals,
     equipmentDrops,
+    boxDrops,
     members: resultMembers,
     transfers: resultTransfers,
   };
