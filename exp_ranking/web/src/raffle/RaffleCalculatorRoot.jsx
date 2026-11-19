@@ -691,7 +691,7 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
             <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{t("raffle.targetRound")}: <strong>{t("raffle.targetRoundValue", { local: targetRoundLocalText, utc: targetRoundUtcText })}</strong></p>
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t("raffle.historyCacheResetHelp")}</p>
             <button type="button" className="raffle-button-primary mt-4 w-full" disabled={running} onClick={() => loadPartyHistory(false)}>{running ? t("raffle.loading") : t("raffle.loadPartyHistory")}</button>
-            <button type="button" className="raffle-button-secondary mt-2 w-full" disabled={running} onClick={enterManualMode}>{t("raffle.manualMode")}</button>
+            <button type="button" className="raffle-button-secondary mt-2 w-full" disabled={running} onClick={enterManualMode}>{t("raffle.manualModeEnter")}</button>
             {jobResult && historyCacheInfo ? <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
               <span>{t(historyCacheInfo.fromCache ? "raffle.historyLoadedFromCache" : "raffle.historyLoadedFresh", { time: new Date(historyCacheInfo.loadedAt).toLocaleString(language) })}</span>
               <button type="button" className="raffle-button-secondary" disabled={running} onClick={() => loadPartyHistory(true)}>{t("raffle.refreshPartyHistory")}</button>
