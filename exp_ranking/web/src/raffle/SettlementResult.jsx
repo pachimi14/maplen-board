@@ -27,7 +27,9 @@ function EquipmentIcons({ drops, fallbackLabel = "EQ" }) {
   })}</span>;
 }
 
-export default function SettlementResult({ calculation, include, memberMap, memberWallets = {}, powerCrystalNesoRate, bossLabel = "", roundLocalText = "", roundUtcText = "" }) {
+// hideHistory (LULU-145): manual-mode results have no raffle history, so the
+// "raffle history yes/no" badge and column are hidden. Default keeps them.
+export default function SettlementResult({ calculation, include, memberMap, memberWallets = {}, powerCrystalNesoRate, bossLabel = "", roundLocalText = "", roundUtcText = "", hideHistory = false }) {
   const { t } = useTranslation();
   const [shareBusy, setShareBusy] = useState(false);
   const [shareStatus, setShareStatus] = useState("idle");
@@ -221,7 +223,7 @@ export default function SettlementResult({ calculation, include, memberMap, memb
             return <article key={member.memberId} className="raffle-member-card">
               <header className="raffle-member-card-header">
                 <h4>{memberName(memberMap, member.memberId)}</h4>
-                {!member.hasHistory ? <span className="raffle-history-no">{t("raffle.historyNo")}</span> : null}
+                {!member.hasHistory && !hideHistory ? <span className="raffle-history-no">{t("raffle.historyNo")}</span> : null}
               </header>
               <p className="raffle-member-card-gross">{t("raffle.grossWon")}: <strong>{neso(member.gross)}</strong></p>
               {pcAmount != null ? <p className="raffle-member-card-pc-note">{t("raffle.pcPortionNote", { amount: neso(pcAmount) })}</p> : null}
@@ -295,7 +297,7 @@ export default function SettlementResult({ calculation, include, memberMap, memb
             <table className="raffle-settlement-table raffle-member-table">
               <thead><tr>
                 <th>{t("raffle.member")}</th>
-                <th>{t("raffle.raffleHistory")}</th>
+                {!hideHistory ? <th>{t("raffle.raffleHistory")}</th> : null}
                 {calculation.carryoverEnabled ? <th>{t("raffle.previousCarryover")}</th> : null}
                 {categoryColumns.map((category) => <th key={category.key}>{category.label}{category.key === "powerCrystal" ? <small className="raffle-th-note">{t("raffle.powerCrystalNonTransferable")}</small> : null}</th>)}
                 <th className="raffle-col-settle">{t("raffle.grossWon")}</th>
@@ -305,7 +307,7 @@ export default function SettlementResult({ calculation, include, memberMap, memb
               </tr></thead>
               <tbody>{calculation.members.map((member) => <tr key={member.memberId}>
                 <th scope="row">{memberName(memberMap, member.memberId)}</th>
-                <td><span className={member.hasHistory ? "raffle-history-yes" : "raffle-history-no"}>{t(member.hasHistory ? "raffle.historyYes" : "raffle.historyNo")}</span></td>
+                {!hideHistory ? <td><span className={member.hasHistory ? "raffle-history-yes" : "raffle-history-no"}>{t(member.hasHistory ? "raffle.historyYes" : "raffle.historyNo")}</span></td> : null}
                 {calculation.carryoverEnabled ? <td>{carryoverBadge(member.previousCarryover)}</td> : null}
                 {categoryColumns.map((category) => <td key={category.key} className="raffle-member-amount">{memberCategoryValue(member, category.key)}</td>)}
                 <td className="raffle-strong-amount raffle-col-settle">{neso(member.gross)}</td>

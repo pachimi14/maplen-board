@@ -251,7 +251,20 @@
     "rankingCandidatesLoading": "Đang tải danh sách gợi ý từ bảng xếp hạng…",
     "rankingCandidatesUnavailable": "Không thể hiển thị gợi ý từ bảng xếp hạng lúc này. Bạn vẫn có thể tìm kiếm bằng nút API ở trên.",
     "apiCandidateBadge": "API",
-    "apiUnavailableAnnouncement": "Không thể kết nối API chính thức. Các nhân vật Lv.225+ có trong bảng xếp hạng vẫn có thể thêm từ danh sách gợi ý ở trên. Nhân vật dưới Lv.225 vui lòng thêm lại sau khi API hoạt động trở lại."
+    "apiUnavailableAnnouncement": "Không thể kết nối API chính thức. Các nhân vật Lv.225+ có trong bảng xếp hạng vẫn có thể thêm từ danh sách gợi ý ở trên. Nhân vật dưới Lv.225 vui lòng thêm lại sau khi API hoạt động trở lại.",
+    "manualMode": "Chế độ thủ công",
+    "manualModeActive": "Chế độ thủ công: đang nhập phần thưởng bằng tay",
+    "manualModeApiHint": "Khi API ngừng hoạt động, bạn có thể nhập phần thưởng bằng tay trong \"Chế độ thủ công\" để tính toán.",
+    "manualLabelSuffix": " (nhập tay)",
+    "manualDifficulty": "Độ khó",
+    "manualSelectBossHelp": "Lucid, Will và Chaos Guardian Angel Slime được quyết toán riêng. Hãy chọn một boss để nhập phần thưởng.",
+    "manualChooseBoss": "Hãy chọn boss để nhập phần thưởng.",
+    "manualEntryHeading": "Nhập phần thưởng",
+    "manualBlankIsZero": "Ô để trống được tính là 0.",
+    "manualQuantity": "Số lượng",
+    "manualSaleTotal": "Giá bán (trước phí 5%, tổng NESO)",
+    "manualItemName": "Tên (tùy chọn)",
+    "manualAddRow": "+ Thêm"
   },
   "period": {
     "daily": "Ngày",

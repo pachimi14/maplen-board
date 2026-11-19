@@ -7,6 +7,7 @@ import { currentRaffleRoundUtc } from "./domain/raffleRound.js";
 import { combineSelectedPartyClears, formatPartyBossName, formatPartyClearTitle, groupPartyClearCandidates, requiresDistributionConfirmation, selectPartyClearCandidates } from "./domain/partyClears.js";
 import { sortPartyMembers } from "./domain/partyOrder.js";
 import { reclassifyBoxDrops } from "./domain/boxDrops.js";
+import { MANUAL_BOSSES, MANUAL_COIN_NAME_BY_BOSS, MANUAL_DEFAULT_DIFFICULTY, MANUAL_DIFFICULTIES_BY_BOSS, MANUAL_ITEM_KEYS_BY_BOSS, buildManualClear, partySessionFromMembers } from "./domain/manualClear.js";
 import { calculateSaleProceedsNeso, calculateSettlement } from "./domain/settlement.js";
 import { resolveDistributionRules } from "./domain/distributionRules.js";
 import { buildPartyShareUrl, decodePartyShare } from "./domain/partyShare.js";
@@ -19,6 +20,8 @@ import DistributionRuleSettings from "./DistributionRuleSettings.jsx";
 import { MAX_MEMBERS, MAX_PARTIES, createEmptyRaffleState, createParty, loadRaffleState, removePartyFromState, saveRaffleState } from "./storage/raffleStorage.js";
 import { loadRaffleHistoryCache, saveRaffleHistoryCache } from "./storage/historyCache.js";
 import { loadRaffleSalePrices, saveRaffleSalePrice } from "./storage/salePriceCache.js";
+import { loadManualEntries, saveManualEntries } from "./storage/manualEntryStorage.js";
+import ManualEntryTable from "./ManualEntryTable.jsx";
 import { copyTextToClipboard } from "../shareImageIO.js";
 import { describeProgressStage, describeRaffleCode, describeRaffleEntry, describeSettlementError, formatNesoInput, formatRaffleRoundLocal, formatRaffleRoundUtc, scrollElementIntoView, ungroupNesoInput } from "./uiText.js";
 import "./raffle.css";
@@ -47,6 +50,12 @@ function initialBossSetting() {
     allocationPrepared: true,
     calculated: null,
   };
+}
+
+// LULU-145: one boss's manual-mode input, with the API mode's defaults filled in.
+function manualBossEntry(bosses, boss) {
+  const saved = bosses?.[boss] || {};
+  return { difficulty: saved.difficulty || MANUAL_DEFAULT_DIFFICULTY[boss], include: { ...initialBossSetting().include, ...saved.include }, entriesByAssetKey: saved.entriesByAssetKey || {} };
 }
 
 function initialDistributionSettings() {
@@ -125,12 +134,23 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
   const [sharedParty, setSharedParty] = useState(initialSharedParty);
   const [partyShareStatus, setPartyShareStatus] = useState("idle");
   const [historyCacheInfo, setHistoryCacheInfo] = useState(null);
+  // LULU-145 (docs/IMPL_PLAN_RAFFLE_MANUAL_MODE.md): manual mode is bound to the
+  // party (id + roster) it was opened for -- switching/deleting the party or
+  // changing its members leaves it. Input lives in manualBosses (persisted).
+  const [manualPartyKey, setManualPartyKey] = useState("");
+  const [manualBosses, setManualBosses] = useState({});
   const resultsSectionRef = useRef(null);
   const settlementRef = useRef(null);
   const distributionItemsRef = useRef(null);
 
   const activeParty = model.parties.find((party) => party.id === model.activePartyId) || model.parties[0] || null;
   const sortedActiveMembers = activeParty ? sortPartyMembers(activeParty.members) : [];
+  const activeAssetKeys = sortedActiveMembers.map((member) => member.assetKey);
+  const activePartyKey = activeParty ? activeParty.id + "|" + activeAssetKeys.join(",") : "";
+  const manualMode = manualPartyKey !== "" && manualPartyKey === activePartyKey;
+  // The roster the settlement runs on: the API job's, or (manual mode) the same
+  // position-based memberIds built from the party itself, with no known wallets.
+  const session = manualMode ? { ...partySessionFromMembers(sortedActiveMembers), memberWallets: {} } : jobResult;
   // S1: ranking-first predictive candidates -- recomputed locally from the
   // already-fetched ranking board as the user types (zero network calls).
   const rankingCandidates = useMemo(
@@ -155,8 +175,12 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
   }, [dirty, model]);
 
   useEffect(() => {
-    if (jobResult) scrollElementIntoView(resultsSectionRef.current);
-  }, [jobResult]);
+    if (jobResult || manualMode) scrollElementIntoView(resultsSectionRef.current);
+  }, [jobResult, manualMode]);
+
+  useEffect(() => {
+    if (manualPartyKey && manualPartyKey !== activePartyKey) setManualPartyKey("");
+  }, [manualPartyKey, activePartyKey]);
 
   function updateModel(updater) {
     setDirty(true);
@@ -226,7 +250,7 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
     setSearching(false);
     setSearchCompleted(true);
     if (!searched.ok || searched.data?.schemaVersion !== RAFFLE_SCHEMA_VERSION || !Array.isArray(searched.data?.results)) {
-      setRequestError(describeRaffleCode(searched.code || "invalidResponse", { t }));
+      setRequestError(describeRaffleCode(searched.code || "invalidResponse", { t }) + " " + t("raffle.manualModeApiHint"));
       // S2: the official API is unreachable/failing, but ranking candidates
       // (above) still work and are not blocked by this failure -- surface
       // that explicitly instead of leaving the user to guess.
@@ -300,6 +324,7 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
 
   async function loadPartyHistory(forceRefresh = false) {
     if (!activeParty?.members.length) { setRequestError(t("raffle.missingParty")); return; }
+    setManualPartyKey("");
     setRequestError("");
     setJobResult(null);
     setHistoryCacheInfo(null);
@@ -325,10 +350,34 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
     setProgress({ stage: "queued", completedCharacters: 0, totalCharacters: characters.length, elapsedMs: 0 });
     const result = await raffleSource.runJob({ raffledAt: targetRound, characters }, { onProgress: setProgress });
     setRunning(false);
-    if (!result.ok) { setRequestError(describeRaffleCode(result.code, { t })); return; }
+    if (!result.ok) { setRequestError(describeRaffleCode(result.code, { t }) + " " + t("raffle.manualModeApiHint")); return; }
     const savedAt = Date.now();
     saveRaffleHistoryCache(targetRound, assetKeys, result.data, { now: savedAt });
     applyPartyHistory(result.data, memberMap, characters.map((character) => character.memberId), savedAt, false);
+  }
+
+  function enterManualMode() {
+    if (!activeParty?.members.length) { setRequestError(t("raffle.missingParty")); return; }
+    const { partyOrder, memberMap } = partySessionFromMembers(sortedActiveMembers);
+    setJobResult(null);
+    setProgress(null);
+    setRequestError("");
+    setHistoryCacheInfo(null);
+    setConfirmedClearIds([]);
+    setActiveClearBoss("");
+    setDistribution(distributionSettingsForParty(activeParty, partyOrder, memberMap));
+    setManualBosses(loadManualEntries(targetRound, activeAssetKeys).bosses);
+    setManualPartyKey(activePartyKey);
+  }
+
+  // Any manual input change is saved right away and clears that boss's result
+  // (an outdated result must never stay on screen looking valid).
+  function updateManualBoss(boss, updater) {
+    const next = { ...manualBosses, [boss]: updater(manualBossEntry(manualBosses, boss)) };
+    setManualBosses(next);
+    setDistribution((current) => ({ ...current, [boss]: { ...current[boss], calculated: null } }));
+    const saved = saveManualEntries(targetRound, activeAssetKeys, next);
+    if (!saved.ok) setStorageCode(saved.code);
   }
 
   function updateBossSetting(boss, updater) {
@@ -340,7 +389,7 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
   // the user still has to pick the intended member and amount).
   function addExtraRewardRow(boss) {
     const rowId = "extra-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
-    const defaultMemberId = jobResult?.partyOrder?.[0] || "";
+    const defaultMemberId = session?.partyOrder?.[0] || "";
     updateBossSetting(boss, (setting) => ({ ...setting, extraRewards: [...setting.extraRewards, { rowId, memberId: defaultMemberId, amountNeso: "" }] }));
   }
 
@@ -352,17 +401,16 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
     updateBossSetting(boss, (setting) => ({ ...setting, extraRewards: setting.extraRewards.filter((row) => row.rowId !== rowId) }));
   }
 
-  function calculateBoss(clear) {
+  function calculateBoss(clear, setting = distribution[clear.boss]) {
     const sourceClears = Array.isArray(clear?.sourceClears) ? clear.sourceClears : [clear];
     if (sourceClears.some((source) => requiresDistributionConfirmation(source) && !confirmedClearIds.includes(source.clearId))) return;
-    const setting = distribution[clear.boss];
-    const previousCarryoverByMemberId = Object.fromEntries(jobResult.partyOrder.map((memberId) => {
-      const assetKey = jobResult.memberMap[memberId]?.assetKey || "";
+    const previousCarryoverByMemberId = Object.fromEntries(session.partyOrder.map((memberId) => {
+      const assetKey = session.memberMap[memberId]?.assetKey || "";
       return [memberId, activeParty?.carryoverByAssetKey?.[assetKey] ?? "0"];
     }));
     const calculated = calculateSettlement({
       ...clear,
-      partyOrder: jobResult.partyOrder,
+      partyOrder: session.partyOrder,
       include: setting.include,
       powerCrystalNesoRate: setting.powerCrystalNesoRate,
       saleNesoByDropId: setting.saleNesoByDropId,
@@ -445,11 +493,11 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
   function updateBossDistributionRule(boss, updater) {
     const next = { ...updater(distribution[boss]), calculated: null };
     setDistribution((current) => ({ ...current, [boss]: next }));
-    if (!jobResult) return;
+    if (!session) return;
     const taxPercentByAssetKey = {};
     const sharePercentByAssetKey = {};
-    for (const memberId of jobResult.partyOrder) {
-      const assetKey = jobResult.memberMap[memberId]?.assetKey;
+    for (const memberId of session.partyOrder) {
+      const assetKey = session.memberMap[memberId]?.assetKey;
       if (!assetKey) continue;
       const tax = String(next.taxPercentByMemberId?.[memberId] ?? "").trim();
       const share = String(next.sharePercentByMemberId?.[memberId] ?? "").trim();
@@ -483,11 +531,24 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
   // are re-tagged as BOX here, the single point where the active clear is
   // built -- everything downstream (checkboxes, sale inputs, calculation)
   // sees the BOX category.
-  const activeClear = jobResult ? reclassifyBoxDrops(combineSelectedPartyClears(selectedClears, jobResult.partyOrder)) : null;
+  // LULU-145: in manual mode the active clear is built from the typed values
+  // (already BOX-tagged) and carries its own include / sale prices.
+  const manualBoss = manualMode && activeClearBoss ? manualBossEntry(manualBosses, activeClearBoss) : null;
+  const manualBuilt = manualBoss ? buildManualClear({
+    boss: activeClearBoss,
+    difficulty: manualBoss.difficulty,
+    partyOrder: session.partyOrder,
+    include: manualBoss.include,
+    entriesByMemberId: Object.fromEntries(session.partyOrder.map((memberId) => [memberId, manualBoss.entriesByAssetKey[session.memberMap[memberId]?.assetKey]])),
+    labels: { equipment: t("raffle.item_equipment"), box: t("raffle.item_box") },
+  }) : null;
+  const activeClear = manualBuilt ? manualBuilt.clear : jobResult ? reclassifyBoxDrops(combineSelectedPartyClears(selectedClears, jobResult.partyOrder)) : null;
   const activeClearSelectionKey = activeClear?.sourceClears.map((clear) => clear.clearId).join("|") || "";
-  const activeSetting = activeClear ? distribution[activeClear.boss] : null;
-  const activeDistributionRules = activeSetting && jobResult
-    ? resolveDistributionRules(jobResult.partyOrder, activeSetting.taxPercentByMemberId, activeSetting.sharePercentByMemberId)
+  const activeSetting = activeClear
+    ? manualBuilt ? { ...distribution[activeClear.boss], include: manualBuilt.include, saleNesoByDropId: manualBuilt.saleNesoByDropId } : distribution[activeClear.boss]
+    : null;
+  const activeDistributionRules = activeSetting && session
+    ? resolveDistributionRules(session.partyOrder, activeSetting.taxPercentByMemberId, activeSetting.sharePercentByMemberId)
     : null;
   const activeRulesNeedEqualSplit = activeDistributionRules?.ok
     && activeDistributionRules.rows.some((row) => row.share?.automatic);
@@ -531,7 +592,7 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
             : activeSetting.include.equipment)
     : [];
   const activeClearBossLabel = activeClear
-    ? [...new Set(activeClear.sourceClears.map((clear) => formatPartyClearTitle(clear)))].join(", ")
+    ? [...new Set(activeClear.sourceClears.map((clear) => formatPartyClearTitle(clear)))].join(", ") + (manualBuilt ? t("raffle.manualLabelSuffix") : "")
     : "";
   // S3 (docs/IMPL_PLAN_RAFFLE_REWARD_VOCAB.md): informational only (not an alert -- Sealed
   // Nodestone shows up most weeks, so alerting on it would just be noise) note listing every
@@ -540,6 +601,37 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
   const excludedRewardsText = activeClear?.excludedRewards?.length
     ? activeClear.excludedRewards.map((reward) => reward.name + " ×" + reward.quantity).join(", ")
     : "";
+
+  // Shared by the API and manual (LULU-145) flows -- the same Power Crystal
+  // rate input, extra reward rows, distribution rules, calculate button and
+  // result, fed by `session` (API job roster or the manual-mode roster).
+  const showPowerCrystalRate = Boolean(activeSetting?.include.powerCrystal && (manualBuilt || hasPowerCrystal));
+  const powerCrystalRateField = activeClear && activeSetting && showPowerCrystalRate ? <label className="raffle-label max-w-xl">{t("raffle.powerCrystalRate")}<div className="raffle-rate-inline mt-1"><span>{t("raffle.powerCrystalRatePrefix")}</span><input className="raffle-input raffle-rate-input" inputMode="decimal" value={activeSetting.powerCrystalNesoRate} onChange={(event) => updateBossPowerCrystalRate(activeClear.boss, event.target.value)} /><span>{t("raffle.powerCrystalRateSuffix")}</span></div><span className="mt-1 block text-xs font-normal text-slate-500 dark:text-slate-400">{t("raffle.powerCrystalRateHelp")}</span></label> : null;
+  const settlementPanel = activeClear && activeSetting && session ? <>
+    <div className="raffle-extra-reward-section">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h4 className="font-semibold">{t("raffle.item_extraReward")}</h4>
+        <button type="button" className="raffle-button-secondary" onClick={() => addExtraRewardRow(activeClear.boss)}>{t("raffle.addExtraReward")}</button>
+      </div>
+      <p className="raffle-hint-text">{t("raffle.extraRewardHelp")}</p>
+      {activeSetting.extraRewards.map((row) => <div key={row.rowId} className="raffle-extra-reward-row mt-2 grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-center">
+        <select className="raffle-input" value={row.memberId} onChange={(event) => updateExtraRewardRow(activeClear.boss, row.rowId, { memberId: event.target.value })}>
+          {session.partyOrder.map((memberId) => <option key={memberId} value={memberId}>{session.memberMap[memberId]?.displayName || memberId}</option>)}
+        </select>
+        <label className="raffle-label">
+          <span className="mt-1 block text-xs font-normal text-slate-500">{t("raffle.extraRewardAmountLabel")}</span>
+          <input className="raffle-input mt-1" inputMode="numeric" value={row.amountNeso} placeholder="0" onChange={(event) => updateExtraRewardRow(activeClear.boss, row.rowId, { amountNeso: event.target.value })} />
+        </label>
+        <button type="button" className="raffle-button-remove" onClick={() => removeExtraRewardRow(activeClear.boss, row.rowId)}>{t("raffle.remove")}</button>
+      </div>)}
+    </div>
+    <DistributionRuleSettings partyOrder={session.partyOrder} memberMap={session.memberMap} setting={activeSetting} updateSetting={(updater) => updateBossDistributionRule(activeClear.boss, updater)} t={t} />
+    <button type="button" className="raffle-button-primary w-full" disabled={!distributionRosterConfirmed || !activeDistributionReady} onClick={() => calculateBoss(activeClear, activeSetting)}>{t("raffle.calculateDistribution")}</button>
+    {!distributionRosterConfirmed ? <p className="raffle-hint-text">{t("raffle.confirmBeforeCalculate")}</p> : null}
+    <div ref={settlementRef}>
+      {activeSetting.calculated ? activeSetting.calculated.ok ? <SettlementResult hideHistory={Boolean(manualBuilt)} calculation={activeSetting.calculated} include={activeSetting.include} memberMap={session.memberMap} memberWallets={session.memberWallets} powerCrystalNesoRate={activeSetting.powerCrystalNesoRate} bossLabel={activeClearBossLabel} roundLocalText={targetRoundLocalText} roundUtcText={targetRoundUtcText} /> : <div role="alert" className="space-y-1 rounded-xl border border-rose-400 bg-rose-50 p-3 text-sm text-rose-900">{activeSetting.calculated.errors.map((error, index) => <p key={index}>{describeSettlementError(error, { t, memberMap: session.memberMap, dropNameByDropId })}</p>)}</div> : null}
+    </div>
+  </> : null;
 
   useEffect(() => {
     if (activeSetting?.calculated?.ok) scrollElementIntoView(settlementRef.current);
@@ -599,12 +691,13 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
             <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{t("raffle.targetRound")}: <strong>{t("raffle.targetRoundValue", { local: targetRoundLocalText, utc: targetRoundUtcText })}</strong></p>
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t("raffle.historyCacheResetHelp")}</p>
             <button type="button" className="raffle-button-primary mt-4 w-full" disabled={running} onClick={() => loadPartyHistory(false)}>{running ? t("raffle.loading") : t("raffle.loadPartyHistory")}</button>
+            <button type="button" className="raffle-button-secondary mt-2 w-full" disabled={running} onClick={enterManualMode}>{t("raffle.manualMode")}</button>
             {jobResult && historyCacheInfo ? <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
               <span>{t(historyCacheInfo.fromCache ? "raffle.historyLoadedFromCache" : "raffle.historyLoadedFresh", { time: new Date(historyCacheInfo.loadedAt).toLocaleString(language) })}</span>
               <button type="button" className="raffle-button-secondary" disabled={running} onClick={() => loadPartyHistory(true)}>{t("raffle.refreshPartyHistory")}</button>
             </div> : null}
             <div className="mt-4" aria-live="polite">
-              {progress ? <>
+              {manualMode ? <p className="text-sm font-semibold text-sky-800 dark:text-sky-200">{t("raffle.manualModeActive")}</p> : progress ? <>
                 <div className="raffle-progress-bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress.totalCharacters > 0 ? Math.round((progress.completedCharacters / progress.totalCharacters) * 100) : 0}>
                   <div className="raffle-progress-bar-fill" style={{ width: (progress.totalCharacters > 0 ? Math.round((progress.completedCharacters / progress.totalCharacters) * 100) : 0) + "%" }} />
                 </div>
@@ -617,8 +710,21 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
 
         <section ref={resultsSectionRef}>
           <div className="raffle-card raffle-results-card">
-            <h2>{"3. " + t("raffle.results")}</h2>
-            {!jobResult ? <p className="mt-3 text-sm text-slate-500">{t("raffle.noResults")}</p> : <div className="mt-4 space-y-4">
+            <h2>{"3. " + t("raffle.results")}{manualMode ? <span className="ml-2 inline-block rounded-full bg-sky-600 px-2.5 py-1 align-middle text-[11px] font-black tracking-wider text-white">{t("raffle.manualMode")}</span> : null}</h2>
+            {manualMode ? <div className="mt-4 space-y-4">
+              <section className="rounded-xl border border-slate-300 bg-white p-4 dark:border-slate-700 dark:bg-slate-950/20">
+                <h3 className="font-semibold">{t("raffle.selectBossFirstTitle")}</h3>
+                <p className="raffle-hint-text">{t("raffle.manualSelectBossHelp")}</p>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{MANUAL_BOSSES.map((boss) => <button key={boss} type="button" className={activeClearBoss === boss ? "raffle-boss-active" : "raffle-boss"} onClick={() => setActiveClearBoss(boss)}>{(boss === "SLIME" ? "Chaos " : "") + formatPartyBossName(boss)}</button>)}</div>
+              </section>
+              {manualBoss && activeClear && activeSetting ? <div className="space-y-4">
+                <label className="raffle-label max-w-xs">{t("raffle.manualDifficulty")}<select className="raffle-input mt-1" value={activeClear.bossDifficulty} disabled={MANUAL_DIFFICULTIES_BY_BOSS[activeClearBoss].length < 2} onChange={(event) => updateManualBoss(activeClearBoss, (entry) => ({ ...entry, difficulty: event.target.value }))}>{MANUAL_DIFFICULTIES_BY_BOSS[activeClearBoss].map((difficulty) => <option key={difficulty} value={difficulty}>{difficulty.charAt(0) + difficulty.slice(1).toLowerCase()}</option>)}</select></label>
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">{MANUAL_ITEM_KEYS_BY_BOSS[activeClearBoss].map((key) => <label key={key} className="flex items-center gap-2 rounded-lg border border-slate-200 p-2 text-sm dark:border-slate-700"><input type="checkbox" checked={manualBoss.include[key]} onChange={(event) => updateManualBoss(activeClearBoss, (entry) => ({ ...entry, include: { ...entry.include, [key]: event.target.checked } }))} />{t("raffle.item_" + key) + (key === "coin" ? " (" + MANUAL_COIN_NAME_BY_BOSS[activeClearBoss] + ")" : "")}</label>)}</div>
+                <ManualEntryTable boss={activeClearBoss} include={activeSetting.include} partyOrder={session.partyOrder} memberMap={session.memberMap} entriesByAssetKey={manualBoss.entriesByAssetKey} onChange={(assetKey, updater) => updateManualBoss(activeClearBoss, (entry) => ({ ...entry, entriesByAssetKey: { ...entry.entriesByAssetKey, [assetKey]: updater(entry.entriesByAssetKey[assetKey] || {}) } }))} />
+                {powerCrystalRateField}
+                {settlementPanel}
+              </div> : <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">{t("raffle.manualChooseBoss")}</p>}
+            </div> : !jobResult ? <p className="mt-3 text-sm text-slate-500">{t("raffle.noResults")}</p> : <div className="mt-4 space-y-4">
               <div className="grid grid-cols-2 gap-2" role="tablist" aria-label={t("raffle.results")}>
                 <button type="button" role="tab" aria-selected={resultTab === "raffles"} className={resultTab === "raffles" ? "raffle-boss-active" : "raffle-boss"} onClick={() => setResultTab("raffles")}><span className="block">Raffle Results</span><span className="raffle-tab-sublabel">{t("raffle.tabRafflesSub")}</span></button>
                 <button type="button" role="tab" aria-selected={resultTab === "clears"} className={resultTab === "clears" ? "raffle-boss-active" : "raffle-boss"} onClick={() => setResultTab("clears")}><span className="block">Party Clears</span><span className="raffle-tab-sublabel">{t("raffle.tabClearsSub")}</span></button>
@@ -676,7 +782,7 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
                       {hasBoxDrop ? <label key="box" className="flex items-center gap-2 rounded-lg border border-slate-200 p-2 text-sm dark:border-slate-700"><input type="checkbox" checked={activeSetting.include.box} onChange={(event) => updateBossSetting(activeClear.boss, (setting) => ({ ...setting, include: { ...setting.include, box: event.target.checked } }))} />{t("raffle.item_box")}</label> : null}
                     </div>
                     {excludedRewardsText ? <p className="raffle-hint-text">{t("raffle.excludedRewardsNote", { list: excludedRewardsText })}</p> : null}
-                    {activeSetting.include.powerCrystal && hasPowerCrystal ? <label className="raffle-label max-w-xl">{t("raffle.powerCrystalRate")}<div className="raffle-rate-inline mt-1"><span>{t("raffle.powerCrystalRatePrefix")}</span><input className="raffle-input raffle-rate-input" inputMode="decimal" value={activeSetting.powerCrystalNesoRate} onChange={(event) => updateBossPowerCrystalRate(activeClear.boss, event.target.value)} /><span>{t("raffle.powerCrystalRateSuffix")}</span></div><span className="mt-1 block text-xs font-normal text-slate-500 dark:text-slate-400">{t("raffle.powerCrystalRateHelp")}</span></label> : null}
+                    {powerCrystalRateField}
                     {saleableDrops.length ? <p className="raffle-hint-text">{t("raffle.saleAmountBlankIsZero")} {t("raffle.salePriceCacheHelp")}</p> : null}
                     {saleableDrops.map(({ member, drop }) => {
                       const salePrice = activeSetting.saleNesoByDropId[drop.dropId] || "";
@@ -692,29 +798,7 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
                         </span>
                       </label>;
                     })}
-                    <div className="raffle-extra-reward-section">
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <h4 className="font-semibold">{t("raffle.item_extraReward")}</h4>
-                        <button type="button" className="raffle-button-secondary" onClick={() => addExtraRewardRow(activeClear.boss)}>{t("raffle.addExtraReward")}</button>
-                      </div>
-                      <p className="raffle-hint-text">{t("raffle.extraRewardHelp")}</p>
-                      {activeSetting.extraRewards.map((row) => <div key={row.rowId} className="raffle-extra-reward-row mt-2 grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-center">
-                        <select className="raffle-input" value={row.memberId} onChange={(event) => updateExtraRewardRow(activeClear.boss, row.rowId, { memberId: event.target.value })}>
-                          {jobResult.partyOrder.map((memberId) => <option key={memberId} value={memberId}>{jobResult.memberMap[memberId]?.displayName || memberId}</option>)}
-                        </select>
-                        <label className="raffle-label">
-                          <span className="mt-1 block text-xs font-normal text-slate-500">{t("raffle.extraRewardAmountLabel")}</span>
-                          <input className="raffle-input mt-1" inputMode="numeric" value={row.amountNeso} placeholder="0" onChange={(event) => updateExtraRewardRow(activeClear.boss, row.rowId, { amountNeso: event.target.value })} />
-                        </label>
-                        <button type="button" className="raffle-button-remove" onClick={() => removeExtraRewardRow(activeClear.boss, row.rowId)}>{t("raffle.remove")}</button>
-                      </div>)}
-                    </div>
-                    <DistributionRuleSettings partyOrder={jobResult.partyOrder} memberMap={jobResult.memberMap} setting={activeSetting} updateSetting={(updater) => updateBossDistributionRule(activeClear.boss, updater)} t={t} />
-                    <button type="button" className="raffle-button-primary w-full" disabled={!distributionRosterConfirmed || !activeDistributionReady} onClick={() => calculateBoss(activeClear)}>{t("raffle.calculateDistribution")}</button>
-                    {!distributionRosterConfirmed ? <p className="raffle-hint-text">{t("raffle.confirmBeforeCalculate")}</p> : null}
-                    <div ref={settlementRef}>
-                      {activeSetting.calculated ? activeSetting.calculated.ok ? <SettlementResult calculation={activeSetting.calculated} include={activeSetting.include} memberMap={jobResult.memberMap} memberWallets={jobResult.memberWallets} powerCrystalNesoRate={activeSetting.powerCrystalNesoRate} bossLabel={activeClearBossLabel} roundLocalText={targetRoundLocalText} roundUtcText={targetRoundUtcText} /> : <div role="alert" className="space-y-1 rounded-xl border border-rose-400 bg-rose-50 p-3 text-sm text-rose-900">{activeSetting.calculated.errors.map((error, index) => <p key={index}>{describeSettlementError(error, { t, memberMap: jobResult.memberMap, dropNameByDropId })}</p>)}</div> : null}
-                    </div>
+                    {settlementPanel}
                   </div> : null}
                 </> : <p className="text-sm text-slate-500">{t("raffle.noPartyClears")}</p>}
               </div>}
