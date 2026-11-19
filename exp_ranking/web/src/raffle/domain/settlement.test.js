@@ -567,3 +567,250 @@ describe("member order normalization feeds a stable settlement (LULU-104)", () =
     ]);
   });
 });
+
+// LULU-144 (docs/IMPL_PLAN_RAFFLE_BOX_CATEGORY.md): Ring Box drops re-tagged
+// as "BOX" by domain/boxDrops.js are their own toggle (include.box), settled
+// with the same 5% sale fee (LULU-090) and counted as transferable NESO.
+describe("calculateSettlement BOX category", () => {
+  function boxInput(overrides = {}) {
+    return clearInput({
+      boss: "WILL",
+      historyMemberIds: ["a", "b"],
+      include: { coin: true, equipment: true, ftItem: false, box: true, bossNeso: true, powerCrystal: false, ascendantNeso: false },
+      saleNesoByDropId: { box1: "10000000", equip1: "300" },
+      members: [
+        { memberId: "a", bossNeso: "600", powerCrystalAmount: "0", ascendantNeso: "0", drops: [{ dropId: "box1", category: "BOX", name: "Rank 3 Special Skill Ring Box", quantity: "1", imageUrl: "https://api-static.msu.io/itemimages/icon/2028394.png" }] },
+        { memberId: "b", bossNeso: "0", powerCrystalAmount: "0", ascendantNeso: "0", drops: [{ dropId: "equip1", category: "EQUIPMENT", name: "Arcane Umbra Archer Gloves", quantity: "1" }] },
+      ],
+      ...overrides,
+    });
+  }
+
+  it("deducts the 5% sale fee from a 10,000,000 NESO Box and adds it to transferable NESO", () => {
+    const result = calculateSettlement(boxInput());
+    expect(result.ok).toBe(true);
+    expect(result.members[0]).toMatchObject({
+      boxQuantity: "1",
+      boxSaleNeso: "9500000",
+      boxDrops: [{ dropId: "box1", name: "Rank 3 Special Skill Ring Box", quantity: "1", imageUrl: "https://api-static.msu.io/itemimages/icon/2028394.png", salePriceNeso: "10000000", saleNeso: "9500000" }],
+      equipmentQuantity: "0",
+      equipmentSaleNeso: "0",
+      equipmentDrops: [],
+      transferableNeso: String(600 + 9500000),
+      gross: String(600 + 9500000),
+    });
+    expect(result.members[1]).toMatchObject({ boxQuantity: "0", boxSaleNeso: "0", boxDrops: [], equipmentSaleNeso: "285" });
+    expect(result.categoryTotals).toMatchObject({ boxQuantity: "1", boxSaleNeso: "9500000", equipmentSaleNeso: "285", transferableNeso: String(600 + 9500000 + 285) });
+    expect(result.boxDrops).toEqual([{ dropId: "box1", name: "Rank 3 Special Skill Ring Box", quantity: "1", imageUrl: "https://api-static.msu.io/itemimages/icon/2028394.png", salePriceNeso: "10000000", saleNeso: "9500000", memberId: "a" }]);
+    expect(result.equipmentDrops.map((drop) => drop.dropId)).toEqual(["equip1"]);
+    expect(result.total).toBe(String(600 + 9500000 + 285));
+  });
+
+  it("excludes Box when include.box is false (0 everywhere, no sale value required)", () => {
+    const result = calculateSettlement(boxInput({
+      include: { coin: true, equipment: true, ftItem: false, box: false, bossNeso: true, powerCrystal: false, ascendantNeso: false },
+      saleNesoByDropId: { equip1: "300" },
+    }));
+    expect(result.ok).toBe(true);
+    expect(result.members[0]).toMatchObject({ boxQuantity: "0", boxSaleNeso: "0", boxDrops: [], transferableNeso: "600" });
+    expect(result.categoryTotals).toMatchObject({ boxQuantity: "0", boxSaleNeso: "0", transferableNeso: "885" });
+    expect(result.boxDrops).toEqual([]);
+    expect(result.total).toBe("885");
+  });
+
+  it("treats an unfilled Box sale price as 0 (LULU-126)", () => {
+    const result = calculateSettlement(boxInput({ saleNesoByDropId: { equip1: "300" } }));
+    expect(result.ok).toBe(true);
+    expect(result.members[0]).toMatchObject({ boxQuantity: "1", boxSaleNeso: "0" });
+    expect(result.members[0].boxDrops[0]).toMatchObject({ salePriceNeso: "0", saleNeso: "0" });
+  });
+
+  it("does not let include.box pick up EQUIPMENT drops, or include.equipment pick up BOX drops", () => {
+    const equipmentOnly = calculateSettlement(boxInput({
+      include: { equipment: true, box: false, bossNeso: false },
+    }));
+    expect(equipmentOnly.ok).toBe(true);
+    expect(equipmentOnly.total).toBe("285");
+    const boxOnly = calculateSettlement(boxInput({
+      include: { equipment: false, box: true, bossNeso: false },
+    }));
+    expect(boxOnly.ok).toBe(true);
+    expect(boxOnly.total).toBe("9500000");
+  });
+
+  // Acceptance criterion 6: for input without BOX drops, every pre-existing
+  // output field is byte-identical to the output captured from the code
+  // before LULU-144 (golden below); only the new box* fields are added.
+  it("keeps every pre-existing output field identical for input without BOX drops (golden captured before LULU-144)", () => {
+    const input = {
+      boss: "WILL",
+      complete: true,
+      historyMemberIds: ["a", "b"],
+      partyOrder: ["a", "b", "c"],
+      include: { coin: true, equipment: true, ftItem: true, bossNeso: true, powerCrystal: true, ascendantNeso: true },
+      powerCrystalNesoRate: "1.1",
+      carryoverEnabled: true,
+      previousCarryoverByMemberId: { a: "-1000", b: "1000", c: "0" },
+      saleNesoByDropId: { coin1: "1000000", equip1: "3000000", ft1: "5000000" },
+      extraRewards: [{ rowId: "r1", memberId: "c", amountNeso: "700000" }],
+      members: [
+        { memberId: "a", bossNeso: "9000000", powerCrystalAmount: "100000000", ascendantNeso: "12000000", drops: [
+          { dropId: "coin1", category: "COIN", name: "Arachno Coin", quantity: "10" },
+          { dropId: "ft1", category: "FT_ITEM", name: "Sealed Mirror World Nodestone", quantity: "1" },
+        ] },
+        { memberId: "b", bossNeso: "0", powerCrystalAmount: "0", ascendantNeso: "0", drops: [
+          { dropId: "equip1", category: "EQUIPMENT", name: "Arcane Umbra Archer Gloves", quantity: "1", imageUrl: "https://api-static.msu.io/itemimages/icon/1082699.png" },
+        ] },
+        { memberId: "c", bossNeso: "5", powerCrystalAmount: "0", ascendantNeso: "0", drops: [] },
+      ],
+    };
+    const goldenBeforeBox = {
+    "ok": true,
+    "boss": "WILL",
+    "total": "121159096",
+    "memberCount": 3,
+    "baseShare": "40386365",
+    "remainder": 1,
+    "carryoverEnabled": true,
+    "customDistribution": false,
+    "distributionPool": "121159096",
+    "categoryTotals": {
+      "bossNeso": "9000005",
+      "powerCrystalAmount": "100000000",
+      "powerCrystalNeso": "90909091",
+      "ascendantNeso": "12000000",
+      "coinQuantity": "10",
+      "coinSaleNeso": "950000",
+      "equipmentQuantity": "1",
+      "equipmentSaleNeso": "2850000",
+      "ftItemQuantity": "1",
+      "ftItemSaleNeso": "4750000",
+      "extraReward": "700000",
+      "transferableNeso": "30250005"
+    },
+    "equipmentDrops": [
+      {
+        "dropId": "equip1",
+        "name": "Arcane Umbra Archer Gloves",
+        "quantity": "1",
+        "imageUrl": "https://api-static.msu.io/itemimages/icon/1082699.png",
+        "salePriceNeso": "3000000",
+        "saleNeso": "2850000",
+        "memberId": "b"
+      }
+    ],
+    "members": [
+      {
+        "memberId": "a",
+        "taxPercentText": null,
+        "sharePercentText": null,
+        "hasHistory": true,
+        "bossNeso": "9000000",
+        "powerCrystalAmount": "100000000",
+        "powerCrystalNeso": "90909091",
+        "ascendantNeso": "12000000",
+        "coinQuantity": "10",
+        "coinSaleNeso": "950000",
+        "equipmentQuantity": "0",
+        "equipmentSaleNeso": "0",
+        "equipmentDrops": [],
+        "ftItemQuantity": "1",
+        "ftItemSaleNeso": "4750000",
+        "extraReward": "0",
+        "transferableNeso": "26700000",
+        "previousCarryover": "-1000",
+        "gross": "117609091",
+        "assignedShare": "40386366",
+        "balance": "77223725",
+        "payment": "26700000",
+        "receipt": "0",
+        "nextCarryover": "-50523725"
+      },
+      {
+        "memberId": "b",
+        "taxPercentText": null,
+        "sharePercentText": null,
+        "hasHistory": true,
+        "bossNeso": "0",
+        "powerCrystalAmount": "0",
+        "powerCrystalNeso": "0",
+        "ascendantNeso": "0",
+        "coinQuantity": "0",
+        "coinSaleNeso": "0",
+        "equipmentQuantity": "1",
+        "equipmentSaleNeso": "2850000",
+        "equipmentDrops": [
+          {
+            "dropId": "equip1",
+            "name": "Arcane Umbra Archer Gloves",
+            "quantity": "1",
+            "imageUrl": "https://api-static.msu.io/itemimages/icon/1082699.png",
+            "salePriceNeso": "3000000",
+            "saleNeso": "2850000"
+          }
+        ],
+        "ftItemQuantity": "0",
+        "ftItemSaleNeso": "0",
+        "extraReward": "0",
+        "transferableNeso": "2850000",
+        "previousCarryover": "1000",
+        "gross": "2850000",
+        "assignedShare": "40386365",
+        "balance": "-37537365",
+        "payment": "0",
+        "receipt": "26700000",
+        "nextCarryover": "10837365"
+      },
+      {
+        "memberId": "c",
+        "taxPercentText": null,
+        "sharePercentText": null,
+        "hasHistory": false,
+        "bossNeso": "5",
+        "powerCrystalAmount": "0",
+        "powerCrystalNeso": "0",
+        "ascendantNeso": "0",
+        "coinQuantity": "0",
+        "coinSaleNeso": "0",
+        "equipmentQuantity": "0",
+        "equipmentSaleNeso": "0",
+        "equipmentDrops": [],
+        "ftItemQuantity": "0",
+        "ftItemSaleNeso": "0",
+        "extraReward": "700000",
+        "transferableNeso": "700005",
+        "previousCarryover": "0",
+        "gross": "700005",
+        "assignedShare": "40386365",
+        "balance": "-39686360",
+        "payment": "0",
+        "receipt": "0",
+        "nextCarryover": "39686360"
+      }
+    ],
+    "transfers": [
+      {
+        "fromMemberId": "a",
+        "toMemberId": "b",
+        "amount": "26700000"
+      }
+    ]
+  };
+    const withBoxOn = calculateSettlement({ ...input, include: { ...input.include, box: true } });
+    const withBoxOff = calculateSettlement(input);
+    for (const result of [withBoxOn, withBoxOff]) {
+      const { boxDrops, categoryTotals: { boxQuantity, boxSaleNeso, ...categoryTotals }, members, ...rest } = result;
+      expect(boxDrops).toEqual([]);
+      expect([boxQuantity, boxSaleNeso]).toEqual(["0", "0"]);
+      expect({
+        ...rest,
+        categoryTotals,
+        members: members.map(({ boxQuantity: q, boxSaleNeso: s, boxDrops: d, ...member }) => {
+          expect([q, s, d]).toEqual(["0", "0", []]);
+          return member;
+        }),
+      }).toEqual(goldenBeforeBox);
+    }
+    expect(withBoxOn).toEqual(withBoxOff);
+  });
+});
