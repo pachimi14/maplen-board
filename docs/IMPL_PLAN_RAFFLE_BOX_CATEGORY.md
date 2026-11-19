@@ -69,7 +69,7 @@
 | 5 | Box 計算 | 売却価格 10,000,000 の Box → `boxSaleNeso = 9,500,000`、`transferableNeso` に同額加算、`include.box=false` で 0 | `settlement.test.js` |
 | 6 | 既存値の不変 | Box を含まない既存 fixture の `calculateSettlement` 出力が、新フィールド以外で変更前と完全一致 | 既存テストが無修正で緑 + 追加の比較テスト |
 | 7 | 初期値 | `include.box === true` / `include.ftItem === false` | Root の初期設定(単体テストか実機) |
-| 8 | 共有画像 | Box 列: 全員0なら非表示 / 1人でも非0なら表示。最大構成(全カテゴリ+FT+Box+持ち越し+6人)でキャンバス幅 1200px 以内・文字の重なり0 | `shareImage.test.js` + 実レンダリング確認 |
+| 8 | 共有画像 | Box 列: 全員0なら非表示 / 1人でも非0なら表示。最大構成(全カテゴリ+FT+Box+持ち越し+6人)でキャンバス幅 ≤ `SHARE_IMAGE_MAX_WIDTH`(1800px、LULU-121 の自動拡張規則)・文字の重なり0 ※当初「1200px 以内」としていたのは統括の誤り(着手前から最大構成は 1448px)。実装担当の停止報告で訂正 | `shareImage.test.js` + 実レンダリング確認 |
 | 9 | i18n | 新キーが6ロケールすべてに存在(キー集合が一致) | 既存のロケール整合テスト or `grep -c` |
 | 10 | 範囲外ファイル | `server/`・`contract.js`・`package.json` の差分 0 行 | `git diff --stat origin/main -- server exp_ranking/web/src/raffle/domain/contract.js exp_ranking/web/package.json` |
 
@@ -77,7 +77,7 @@
 
 - 計画と実コードの構造差(行番号ズレ以上)、または受け入れ基準の未達が2回の試行で解消しない
 - スコープ外ファイル(特に `server/`・`contract.js`・`storage/`)を触る必要が生じた
-- 共有画像が最大構成で 1200px に収まらず、列の削減・統合などの**レイアウト判断**が必要になった(推奨案を付けて報告)
+- 共有画像が最大構成で 1800px(`SHARE_IMAGE_MAX_WIDTH`)に収まらず、列の削減・統合などの**レイアウト判断**が必要になった(推奨案を付けて報告)
 - 既存テストの期待値を書き換えないと緑にならない(FT 初期OFF に起因するものは除く。その場合は該当テスト名を報告に列挙)
 
 ## 6. コミット分割
