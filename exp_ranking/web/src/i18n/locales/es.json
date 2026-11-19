@@ -252,6 +252,7 @@
     "rankingCandidatesUnavailable": "Los candidatos del ranking no están disponibles. Aún puedes buscar con el botón de la API de arriba.",
     "apiCandidateBadge": "API",
     "apiUnavailableAnnouncement": "No se pudo conectar con la API oficial. Los personajes de Nv.225+ que aparecen en el ranking se pueden añadir desde los candidatos de arriba. Los personajes por debajo de Nv.225 podrán añadirse cuando la API vuelva a estar disponible.",
+    "manualModeEnter": "Modo manual",
     "manualMode": "Modo manual",
     "manualModeActive": "Modo manual: introduciendo los premios a mano",
     "manualModeApiHint": "Mientras la API no funcione, puedes introducir los premios a mano en el \"Modo manual\" y calcular.",

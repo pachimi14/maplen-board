@@ -252,6 +252,7 @@
     "rankingCandidatesUnavailable": "目前無法顯示排名候選名單。你仍可使用上方的 API 搜尋按鈕。",
     "apiCandidateBadge": "API",
     "apiUnavailableAnnouncement": "無法連線到官方 API。等級 225 以上、已列入排名的角色仍可從上方候選名單新增；等級 225 以下的角色請待 API 恢復後再新增。",
+    "manualModeEnter": "手動模式",
     "manualMode": "手動模式",
     "manualModeActive": "手動模式：正在手動輸入中獎內容",
     "manualModeApiHint": "API 停止期間，可在「手動模式」手動輸入中獎內容並計算。",

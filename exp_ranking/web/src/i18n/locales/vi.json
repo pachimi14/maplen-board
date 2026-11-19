@@ -252,6 +252,7 @@
     "rankingCandidatesUnavailable": "Không thể hiển thị gợi ý từ bảng xếp hạng lúc này. Bạn vẫn có thể tìm kiếm bằng nút API ở trên.",
     "apiCandidateBadge": "API",
     "apiUnavailableAnnouncement": "Không thể kết nối API chính thức. Các nhân vật Lv.225+ có trong bảng xếp hạng vẫn có thể thêm từ danh sách gợi ý ở trên. Nhân vật dưới Lv.225 vui lòng thêm lại sau khi API hoạt động trở lại.",
+    "manualModeEnter": "Chế độ thủ công",
     "manualMode": "Chế độ thủ công",
     "manualModeActive": "Chế độ thủ công: đang nhập phần thưởng bằng tay",
     "manualModeApiHint": "Khi API ngừng hoạt động, bạn có thể nhập phần thưởng bằng tay trong \"Chế độ thủ công\" để tính toán.",
