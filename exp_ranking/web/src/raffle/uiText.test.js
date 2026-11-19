@@ -59,6 +59,14 @@ describe("settlementCategoryHasValue", () => {
     expect(settlementCategoryHasValue([zeroMember, { ...zeroMember, coinQuantity: "3" }], "coin")).toBe(true);
     expect(settlementCategoryHasValue([zeroMember, { ...zeroMember, equipmentQuantity: "1" }], "equipment")).toBe(true);
   });
+
+  // LULU-144: Box (Ring Box) category follows the same quantity-or-value rule.
+  it("hides/keeps the Box category by boxQuantity/boxSaleNeso", () => {
+    const zeroBoxMember = { ...zeroMember, boxQuantity: "0", boxSaleNeso: "0" };
+    expect(settlementCategoryHasValue([zeroBoxMember], "box")).toBe(false);
+    expect(settlementCategoryHasValue([zeroBoxMember, { ...zeroBoxMember, boxQuantity: "1" }], "box")).toBe(true);
+    expect(settlementCategoryHasValue([zeroBoxMember, { ...zeroBoxMember, boxSaleNeso: "9500000" }], "box")).toBe(true);
+  });
 });
 
 describe("formatRaffleRoundLocal", () => {

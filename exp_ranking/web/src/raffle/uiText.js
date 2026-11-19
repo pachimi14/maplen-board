@@ -228,6 +228,7 @@ export function settlementCategoryHasValue(members, key) {
     coin: ["coinQuantity", "coinSaleNeso"],
     equipment: ["equipmentQuantity", "equipmentSaleNeso"],
     ftItem: ["ftItemQuantity", "ftItemSaleNeso"],
+    box: ["boxQuantity", "boxSaleNeso"],
     extraReward: ["extraReward"],
   }[key] || [];
   return (Array.isArray(members) ? members : []).some((member) => fields.some((field) => {

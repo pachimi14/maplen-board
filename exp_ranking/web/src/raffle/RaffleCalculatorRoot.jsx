@@ -6,6 +6,7 @@ import { isDisplayableWorldId } from "./domain/worldDisplay.js";
 import { currentRaffleRoundUtc } from "./domain/raffleRound.js";
 import { combineSelectedPartyClears, formatPartyBossName, formatPartyClearTitle, groupPartyClearCandidates, requiresDistributionConfirmation, selectPartyClearCandidates } from "./domain/partyClears.js";
 import { sortPartyMembers } from "./domain/partyOrder.js";
+import { reclassifyBoxDrops } from "./domain/boxDrops.js";
 import { calculateSaleProceedsNeso, calculateSettlement } from "./domain/settlement.js";
 import { resolveDistributionRules } from "./domain/distributionRules.js";
 import { buildPartyShareUrl, decodePartyShare } from "./domain/partyShare.js";
@@ -29,9 +30,11 @@ function initialModel() {
   return { state: loaded.state || createEmptyRaffleState(), storageCode: loaded.ok ? "" : loaded.code };
 }
 
+// LULU-144: Box (Ring Box) is distributed by default, FT Item is not (the
+// party's usual rule) -- both stay toggleable when the clear has such drops.
 function initialBossSetting() {
   return {
-    include: { coin: true, equipment: true, ftItem: true, bossNeso: true, powerCrystal: true, ascendantNeso: true },
+    include: { coin: true, equipment: true, ftItem: false, box: true, bossNeso: true, powerCrystal: true, ascendantNeso: true },
     powerCrystalNesoRate: "1.1",
     saleNesoByDropId: {},
     // docs/IMPL_PLAN_RAFFLE_EXTRA_REWARD.md: rows of { rowId, memberId,
@@ -476,7 +479,11 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
   const selectedClears = activeClearBoss && jobResult
     ? jobResult.clears.filter((clear) => clear.boss === activeClearBoss && selectedClearIdsByBoss[activeClearBoss]?.includes(clear.clearId))
     : [];
-  const activeClear = jobResult ? combineSelectedPartyClears(selectedClears, jobResult.partyOrder) : null;
+  // LULU-144: Ring Box drops arrive as EQUIPMENT (API contract unchanged) and
+  // are re-tagged as BOX here, the single point where the active clear is
+  // built -- everything downstream (checkboxes, sale inputs, calculation)
+  // sees the BOX category.
+  const activeClear = jobResult ? reclassifyBoxDrops(combineSelectedPartyClears(selectedClears, jobResult.partyOrder)) : null;
   const activeClearSelectionKey = activeClear?.sourceClears.map((clear) => clear.clearId).join("|") || "";
   const activeSetting = activeClear ? distribution[activeClear.boss] : null;
   const activeDistributionRules = activeSetting && jobResult
@@ -499,6 +506,10 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
   // possible drops would just be noise.
   const hasFtItemDrop = activeClear?.boss === "WILL"
     && activeClear.members.some((member) => member.drops.some((drop) => drop.category === "FT_ITEM"));
+  // LULU-144: same show-only-when-present rule as FT Item, for Ring Box.
+  const hasBoxDrop = activeClear
+    ? activeClear.members.some((member) => member.drops.some((drop) => drop.category === "BOX"))
+    : false;
   // docs/IMPL_PLAN_RAFFLE_CHAOS_SLIME.md S6: the Power Crystal toggle/rate input only show up
   // when this clear actually won any Power Crystal (Slime has none in production). Keyed on
   // the observed amount, not the boss name, so a future Chaos Guardian Ascendant that starts
@@ -509,12 +520,15 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
     })
     : false;
   // G1/LULU-119 follow-up: sale-price inputs for every currently-included
-  // sellable drop (coin/equipment/FT Item) -- computed once so the fail-
+  // sellable drop (coin/equipment/FT Item/Box) -- computed once so the fail-
   // visible "blank = 0" note (below) and the input list itself never
   // disagree about which drops actually have an input rendered.
   const saleableDrops = activeClear && activeSetting
     ? activeClear.members.flatMap((member) => member.drops.map((drop) => ({ member, drop })))
-      .filter(({ drop }) => drop.category === "COIN" ? activeSetting.include.coin : drop.category === "FT_ITEM" ? activeSetting.include.ftItem : activeSetting.include.equipment)
+      .filter(({ drop }) => drop.category === "COIN" ? activeSetting.include.coin
+        : drop.category === "FT_ITEM" ? activeSetting.include.ftItem
+          : drop.category === "BOX" ? activeSetting.include.box
+            : activeSetting.include.equipment)
     : [];
   const activeClearBossLabel = activeClear
     ? [...new Set(activeClear.sourceClears.map((clear) => formatPartyClearTitle(clear)))].join(", ")
@@ -659,6 +673,7 @@ export default function RaffleCalculatorRoot({ rankingCharacters = [], rankingLo
                     <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
                       {ITEM_KEYS.filter((key) => key !== "powerCrystal" || hasPowerCrystal).map((key) => <label key={key} className="flex items-center gap-2 rounded-lg border border-slate-200 p-2 text-sm dark:border-slate-700"><input type="checkbox" checked={activeSetting.include[key]} onChange={(event) => updateBossSetting(activeClear.boss, (setting) => ({ ...setting, include: { ...setting.include, [key]: event.target.checked } }))} />{t("raffle.item_" + key)}</label>)}
                       {hasFtItemDrop ? <label key="ftItem" className="flex items-center gap-2 rounded-lg border border-slate-200 p-2 text-sm dark:border-slate-700"><input type="checkbox" checked={activeSetting.include.ftItem} onChange={(event) => updateBossSetting(activeClear.boss, (setting) => ({ ...setting, include: { ...setting.include, ftItem: event.target.checked } }))} />{t("raffle.item_ftItem")}</label> : null}
+                      {hasBoxDrop ? <label key="box" className="flex items-center gap-2 rounded-lg border border-slate-200 p-2 text-sm dark:border-slate-700"><input type="checkbox" checked={activeSetting.include.box} onChange={(event) => updateBossSetting(activeClear.boss, (setting) => ({ ...setting, include: { ...setting.include, box: event.target.checked } }))} />{t("raffle.item_box")}</label> : null}
                     </div>
                     {excludedRewardsText ? <p className="raffle-hint-text">{t("raffle.excludedRewardsNote", { list: excludedRewardsText })}</p> : null}
                     {activeSetting.include.powerCrystal && hasPowerCrystal ? <label className="raffle-label max-w-xl">{t("raffle.powerCrystalRate")}<div className="raffle-rate-inline mt-1"><span>{t("raffle.powerCrystalRatePrefix")}</span><input className="raffle-input raffle-rate-input" inputMode="decimal" value={activeSetting.powerCrystalNesoRate} onChange={(event) => updateBossPowerCrystalRate(activeClear.boss, event.target.value)} /><span>{t("raffle.powerCrystalRateSuffix")}</span></div><span className="mt-1 block text-xs font-normal text-slate-500 dark:text-slate-400">{t("raffle.powerCrystalRateHelp")}</span></label> : null}
