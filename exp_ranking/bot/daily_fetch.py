@@ -36,8 +36,9 @@ JST = timezone(timedelta(hours=9))
 
 MIN_FREE_GB = 5
 G3_MIN_ROWS = 10_000  # published population is ~10,601
+G4A_MIN_DAYS = 85  # retention 90d -> measured 87-88 days after main.py; <85 means the DB was damaged
 WAIT_WINDOW_START = (9, 0)  # JST: poll for the official update only near the reset
-WAIT_WINDOW_END = (9, 45)
+WAIT_WINDOW_END = (10, 30)
 DISPATCH_MAX_RETRIES = 2
 DISPATCH_RETRY_INTERVAL_SEC = 60
 RUN_WAIT_TIMEOUT_SEC = 90 * 60
@@ -62,8 +63,17 @@ class GateInput:
     expected_day: str
     latest_day: str | None
     expected_day_rows: int
-    days_before: int
-    days_after: int
+    days_after: int  # distinct snapshot days in the local DB after main.py (retention-trimmed, NOT comparable to the Release total)
+
+
+def evaluate_post_sync(days_before: int, days_after_sync: int, downloaded: bool, merged_rows: int) -> list[str]:
+    """G4b: after sync_db_to_release (a union), the local DB must hold at least what the Release held."""
+    failed: list[str] = []
+    if days_after_sync < days_before:
+        failed.append(f"G4b snapshot days after sync {days_after_sync} < Release days before {days_before}")
+    if downloaded and merged_rows <= 0:
+        failed.append("G4b Release was downloaded but merged_rows == 0 (merge did not run?)")
+    return failed
 
 
 def evaluate_gates(g: GateInput) -> list[str]:
@@ -75,8 +85,8 @@ def evaluate_gates(g: GateInput) -> list[str]:
         failed.append(f"G2 latest ranking_day {g.latest_day!r} != expected {g.expected_day!r}")
     if g.expected_day_rows < G3_MIN_ROWS:
         failed.append(f"G3 rows for {g.expected_day} = {g.expected_day_rows} < {G3_MIN_ROWS}")
-    if g.days_after < g.days_before:
-        failed.append(f"G4 snapshot days decreased {g.days_before} -> {g.days_after}")
+    if g.days_after < G4A_MIN_DAYS:
+        failed.append(f"G4a snapshot days after main.py {g.days_after} < {G4A_MIN_DAYS}")
     return failed
 
 
@@ -211,12 +221,12 @@ def fetch_published_day() -> str | None:
         return None
 
 
-def build_main_env(extras: dict[str, str], now_jst: datetime) -> dict[str, str]:
+def build_main_env(extras: dict[str, str], now_jst: datetime, *, force_fetch: bool = False) -> dict[str, str]:
     env = dict(os.environ)
     env.update(parse_env_file(PRODUCTION_ENV_PATH.read_text(encoding="utf-8")))
     env.update(extras)
     env["ENFORCE_JST_FETCH_WINDOW"] = "true" if should_wait_for_update(now_jst) else ""
-    env["FORCE_RANKING_FETCH"] = ""
+    env["FORCE_RANKING_FETCH"] = "true" if force_fetch else ""
     env["SKIP_MSU_RANKING_FETCH"] = ""
     env["SKIP_DEPLOY_IF_DAY_CAPTURED"] = "false"
     env["SNAPSHOT_GUARD_RELEASE_RESTORED"] = "true"
@@ -285,11 +295,14 @@ def dispatch_and_wait() -> None:
         deadline = time.time() + 120
         while time.time() < deadline and run_id is None:
             time.sleep(5)
-            out = run_cmd(
+            lp = run_cmd(
                 ["gh", "run", "list", "--workflow", WORKFLOW_FILE, "--event", "workflow_dispatch",
-                 "--limit", "5", "--json", "databaseId,createdAt"]
-            ).stdout
-            for r in sorted(json.loads(out), key=lambda r: r["databaseId"], reverse=True):
+                 "--limit", "5", "--json", "databaseId,createdAt"], check=False
+            )
+            if lp.returncode != 0:
+                logger.warning("gh run list failed (transient?), retrying: %s", (lp.stderr or "").strip()[:200])
+                continue
+            for r in sorted(json.loads(lp.stdout), key=lambda r: r["databaseId"], reverse=True):
                 created = datetime.fromisoformat(r["createdAt"].replace("Z", "+00:00"))
                 if created >= t0:
                     run_id = r["databaseId"]
@@ -301,8 +314,12 @@ def dispatch_and_wait() -> None:
         conclusion = None
         deadline = time.time() + RUN_WAIT_TIMEOUT_SEC
         while time.time() < deadline:
-            out = run_cmd(["gh", "run", "view", str(run_id), "--json", "status,conclusion"]).stdout
-            info = json.loads(out)
+            vp = run_cmd(["gh", "run", "view", str(run_id), "--json", "status,conclusion"], check=False)
+            if vp.returncode != 0:
+                logger.warning("gh run view failed (transient?), retrying: %s", (vp.stderr or "").strip()[:200])
+                time.sleep(POLL_SEC)
+                continue
+            info = json.loads(vp.stdout)
             if info["status"] == "completed":
                 conclusion = info["conclusion"]
                 break
@@ -370,13 +387,16 @@ def run(dry_run: bool, expected_day: str) -> None:
     if rows_expected >= G3_MIN_ROWS:
         logger.info("Release already has %s: skip fetch, redo dispatch + publish check only", expected_day)
     else:
+        if 0 < rows_expected < G3_MIN_ROWS:
+            logger.warning("partial capture detected: %d rows for %s (< %d); forcing re-fetch",
+                           rows_expected, expected_day, G3_MIN_ROWS)
+            env = build_main_env(extras, now_jst, force_fetch=True)
         rc = run_main_py(env)
         gate = GateInput(
             main_rc=rc,
             expected_day=expected_day,
             latest_day=latest_snapshot_date(db_path),
             expected_day_rows=count_snapshots_for_date(db_path, expected_day),
-            days_before=days_before,
             days_after=count_snapshot_dates(db_path),
         )
         failed = evaluate_gates(gate)
@@ -390,6 +410,11 @@ def run(dry_run: bool, expected_day: str) -> None:
         logger.info("Release sync: %s", result)
         if not result.get("uploaded"):
             raise DailyFetchError(f"Release sync did not upload: {result}")
+        post_failed = evaluate_post_sync(
+            days_before, count_snapshot_dates(db_path), bool(result.get("downloaded")), int(result.get("merged_rows") or 0)
+        )
+        if post_failed:
+            raise DailyFetchError("post-sync check failed (Release is additive, not corrupted): " + "; ".join(post_failed))
 
     dispatch_and_wait()
     wait_for_site(expected_day)
