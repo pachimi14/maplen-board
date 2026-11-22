@@ -66,13 +66,14 @@ class GateInput:
     days_after: int  # distinct snapshot days in the local DB after main.py (retention-trimmed, NOT comparable to the Release total)
 
 
-def evaluate_post_sync(days_before: int, days_after_sync: int, downloaded: bool, merged_rows: int) -> list[str]:
-    """G4b: after sync_db_to_release (a union), the local DB must hold at least what the Release held."""
+def evaluate_post_sync(days_before: int, days_after_sync: int) -> list[str]:
+    """G4b: after sync_db_to_release (a union), the local DB must hold at least what the Release held.
+
+    merged_rows is deliberately not a gate (advisory warning at the call site).
+    """
     failed: list[str] = []
     if days_after_sync < days_before:
         failed.append(f"G4b snapshot days after sync {days_after_sync} < Release days before {days_before}")
-    if downloaded and merged_rows <= 0:
-        failed.append("G4b Release was downloaded but merged_rows == 0 (merge did not run?)")
     return failed
 
 
@@ -410,9 +411,11 @@ def run(dry_run: bool, expected_day: str) -> None:
         logger.info("Release sync: %s", result)
         if not result.get("uploaded"):
             raise DailyFetchError(f"Release sync did not upload: {result}")
-        post_failed = evaluate_post_sync(
-            days_before, count_snapshot_dates(db_path), bool(result.get("downloaded")), int(result.get("merged_rows") or 0)
-        )
+        if result.get("downloaded") and not int(result.get("merged_rows") or 0):
+            logger.warning(
+                "sync downloaded the asset but merged_rows == 0 (expected when the Release holds <= retention days)"
+            )
+        post_failed = evaluate_post_sync(days_before, count_snapshot_dates(db_path))
         if post_failed:
             raise DailyFetchError("post-sync check failed (Release is additive, not corrupted): " + "; ".join(post_failed))
 

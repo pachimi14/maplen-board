@@ -46,11 +46,12 @@ def test_g4a_real_numbers_shrunk_db_passes():
 
 
 def test_g4b_post_sync():
-    assert df.evaluate_post_sync(173, 173, True, 623712) == []
-    assert df.evaluate_post_sync(173, 174, True, 10) == []
-    assert df.evaluate_post_sync(173, 172, True, 10)[0].startswith("G4b")
-    assert df.evaluate_post_sync(173, 173, True, 0)[0].startswith("G4b")
-    assert df.evaluate_post_sync(0, 88, False, 0) == []
+    assert df.evaluate_post_sync(173, 173) == []
+    assert df.evaluate_post_sync(173, 174) == []
+    assert df.evaluate_post_sync(173, 172)[0].startswith("G4b")
+    # merged_rows == 0 is normal when the Release holds <= retention days (nothing was trimmed),
+    # so it is not a gate: only the day count matters.
+    assert df.evaluate_post_sync(88, 88) == []
 
 
 def test_extract_latest_snapshot_date():
