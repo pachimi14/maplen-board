@@ -13,7 +13,7 @@ The PC never touches git (no push).
 schtasks /create /tn LulumiDailyFetch /xml "C:\Users\pachi\Desktop\msu ranking\exp_ranking\bot\ops\LulumiDailyFetch.xml"
 ```
 
-Triggers: JST 09:05 / 13:00 / 20:00 daily (the PC time zone must be JST). Later runs of the
+Triggers: JST 09:05 / 13:00 / 20:00 daily from 2026-11-23 (the PC time zone must be JST). Later runs of the
 same day exit in seconds when the site already serves the day. Requires: user logged on,
 `gh auth login` done (scopes repo + workflow), PC awake (task has WakeToRun).
 
