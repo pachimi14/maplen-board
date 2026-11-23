@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
   <RegistrationInfo>
     <Description>Lulumi daily ranking fetch (daily_fetch.py): fetch from this PC, write Release db-store, dispatch Pages. 3x/day; later runs no-op once the site serves the day.</Description>

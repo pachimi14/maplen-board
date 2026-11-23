@@ -7,11 +7,21 @@ Flow: preflight -> already-published check -> Release `db-store` download -> `ma
 fail-closed gates -> Release merge-write -> `gh workflow run maplen-board-pages.yml` -> wait for site.
 The PC never touches git (no push).
 
-## Register (user action, once; run in a normal terminal)
+## Register (once; needs no admin rights)
 
 ```
 schtasks /create /tn LulumiDailyFetch /xml "C:\Users\pachi\Desktop\msu ranking\exp_ranking\bot\ops\LulumiDailyFetch.xml"
 ```
+
+Verify (expect `State : Ready` and a `NextRunTime`):
+
+```
+Get-ScheduledTask -TaskName LulumiDailyFetch | Format-List State
+Get-ScheduledTaskInfo -TaskName LulumiDailyFetch | Format-List NextRunTime,LastTaskResult
+```
+
+Do not add an `<?xml ... encoding="UTF-8"?>` declaration to the XML: Task Scheduler expects UTF-16 and
+fails with "The task XML is malformed. (1,40)".
 
 Triggers: JST 09:05 / 13:00 / 20:00 daily from 2026-11-23 (the PC time zone must be JST). Later runs of the
 same day exit in seconds when the site already serves the day. Requires: user logged on,
