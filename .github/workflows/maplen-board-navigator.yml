@@ -10,9 +10,17 @@ on:
     workflows: ["MapleN Board Pages"]
     types: [completed]
     branches: [main, master]
-  schedule:
-    # Backup if Pages workflow_run did not fire (JST 10:00)
-    - cron: "0 1 * * *"
+  # === 静音化中(DECISION_LOG LULU-152、2026-11-23)===
+  # この cron は Pages の workflow_run が発火しなかった日の保険だが、PC 定時実行(LULU-151)が
+  # 主系になった環境では常に冗長で、かつ害がある: (a) `concurrency: maplen-board-pages` を
+  # 共有するため PC の公開 dispatch を待たせる (b) 末尾で Release へ `--clobber` upload するため、
+  # PC の Release 書込がこの run の復元より後・upload より前に挟まると当日分が Release から消える。
+  # 復旧手順: PC 主系をやめて GitHub 側の cron 起動に戻すときに、下の `schedule:` ブロックの
+  # `#` を外すだけで元に戻る。
+  # 取得スケジュールの変更はユーザー専権事項 — 復旧も必ずユーザーの指示を待つ。
+  # schedule:
+  #   # Backup if Pages workflow_run did not fire (JST 10:00)
+  #   - cron: "0 1 * * *"
   workflow_dispatch:
 
 concurrency:
