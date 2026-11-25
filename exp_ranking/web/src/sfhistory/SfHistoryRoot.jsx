@@ -313,6 +313,7 @@ export default function SfHistoryRoot() {
               currentStatus={latestState.status}
               currentExpected={currentExpected}
               currentUpdatedAt={latestState.latestUpdatedAt}
+              dataEndDate={pricesState.endDate}
               stats={stats}
               percentile={percentile}
             />
