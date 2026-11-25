@@ -10,6 +10,11 @@ only, 4h re-derived) -> the driver judges the one-line JSON result.
 Nothing in this folder has been registered, installed or run against the network by the implementer.
 Every step below is for the user.
 
+> **WARNING: never run `scripts/gen_item_list.py` on this PC.** The 3 discovery-derived items
+> (1004811 / 1053064 / 1152199) exist only in the VPS `sf_discovery_monitored_groups`, so regenerating here
+> shrinks the item list from 34 to 31 and the fetch of those 3 silently stops. Use the committed snapshot of
+> `data/sf_history_items.json` (plan section 1 "do not touch" also covers it).
+
 ## 0. One-time: build the local DB (real network, ~884 requests, <= 40 min)
 
 ```
@@ -19,9 +24,11 @@ python scripts\cube_backfill.py --db data\sf_price_history.sqlite
 sqlite3 data\sf_price_history.sqlite "PRAGMA integrity_check;"
 ```
 
-Also confirm `python -m pytest tests/test_gen_item_list.py -q` is green after the backfill. `maxStar` is
-derived from this DB, so before the backfill `test_build_item_list_derives_max_star_from_real_db` failing
-with `assert None == 20` is normal. If it still fails after the backfill, that is a real anomaly: report it.
+After the backfill, `test_build_item_list_derives_max_star_from_real_db` turns green (before the backfill it
+fails with `assert None == 20`, which is normal). Conversely,
+`test_build_item_list_leaves_the_existing_catalog_items_byte_identical` fails once the local DB exists, which is
+also normal: its premise only holds while no local DB exists (a test-side issue; DECISION_LOG LULU-156, backlog
+section 7). If any OTHER test fails, that is a real anomaly: report it.
 
 This also fills the gap since 2026-11-18. Check the gap is gone (expect 0 rows):
 
