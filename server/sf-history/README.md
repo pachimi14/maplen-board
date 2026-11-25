@@ -230,6 +230,27 @@ call the official API, and only when actually run (backfill/update) or when
 calls the official API** -- `fetcher.Fetcher` and `LatestPriceCache` are
 always exercised through fake sessions in tests.
 
+## PC-primary daily fetch (IMPL_PLAN_SH47)
+
+The official history endpoint answers 403 to the VPS (LULU-153). The home PC therefore runs
+`ops/sf_daily_fetch.py` once a day (JST 17:00) and ships only the increment:
+
+- `scripts/export_increment.py` -- read-only; last N days (default 3) of `sf_price_history_hourly` and
+  `sf_cube_price_history_hourly` as gzip JSONL (`"t"`: `sf` / `cube`).
+- `scripts/ingest_increment.py` -- VPS side; reads the file from stdin or `--file`, appends with
+  `INSERT OR IGNORE` only (existing hourly rows are never changed), re-derives the 4h rows of the combos
+  in the file through `aggregate` / `cube_aggregate` `update_combo_incremental`, and prints ONE JSON line on
+  stdout: `{"insertedSf":N,"insertedCube":M,"combosTouched":K,"maxPriceAt":"...","integrity":"ok"}`.
+  `PRAGMA integrity_check` runs before and after; `--backup` snapshots the DB first. Sending the same file
+  twice inserts 0 rows the second time.
+- Setup, key, task registration and failure handling: `ops/README.md`. VPS unit for a manual re-run of a
+  spooled file: `deploy/sf-history-ingest.service.example`.
+
+The existing 4-hourly `sf-history-update.timer` is left as is (stopping it is a separate, user-owned decision).
+
+Known limit: the ingest only appends. If the official API later revises a value the VPS already holds,
+the VPS keeps its first value (the PC DB, which UPSERTs, may differ).
+
 ## Rate-limit discipline (IMPL_PLAN_SH2 §2)
 
 All HTTP requests -- including any ad-hoc/manual checks -- must go through

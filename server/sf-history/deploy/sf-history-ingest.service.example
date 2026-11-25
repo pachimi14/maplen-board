@@ -1,0 +1,21 @@
+[Unit]
+Description=Lulumi Tools SF price history -- ingest a spooled increment file (one-shot, manual)
+After=network-online.target
+
+[Service]
+# One-shot, never a daemon (OPS-1). Normal deliveries do NOT use this unit: the PC's dedicated key is
+# bound to a forced command (ingest_increment.sh) that runs scripts/ingest_increment.py directly.
+# This unit is for re-running a file that was already spooled on the VPS:
+#   systemctl start sf-history-ingest.service
+# It appends with INSERT OR IGNORE only, so re-running the same file is harmless.
+# Deliberately NOT enabled and NOT wanted by any target; runs as botuser, never root.
+Type=oneshot
+User=botuser
+Group=botuser
+WorkingDirectory=/home/botuser/apps/lulumi-tools-sf-history
+StandardInput=file:/home/botuser/apps/lulumi-tools-sf-history/data/incoming/increment.jsonl.gz
+ExecStart=/home/botuser/apps/lulumi-tools-sf-history/.venv/bin/python scripts/ingest_increment.py \
+  --db /home/botuser/apps/lulumi-tools-sf-history/data/sf_price_history.sqlite --backup
+NoNewPrivileges=true
+PrivateTmp=true
+MemoryMax=300M
