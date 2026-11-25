@@ -677,6 +677,8 @@
       "currentUnavailable": "現在価格を取得できません",
       "currentUnavailableHint": "上流の価格取得に失敗しました。履歴の最終値で代用はしません。",
       "currentAsOf": "{{timestamp}} 時点",
+      "updateCadence": "1日1回（JST 17時頃）更新",
+      "lastUpdated": "最終更新 {{timestamp}}",
       "periodAverage": "期間平均",
       "periodHigh": "期間高値",
       "periodLow": "期間安値",

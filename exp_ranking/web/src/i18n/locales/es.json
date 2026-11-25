@@ -677,6 +677,8 @@
       "currentUnavailable": "Precio actual no disponible",
       "currentUnavailableHint": "No se pudo obtener el precio de origen. No se sustituye por el último valor histórico.",
       "currentAsOf": "A fecha de {{timestamp}}",
+      "updateCadence": "Se actualiza una vez al día (hacia las 17:00 JST)",
+      "lastUpdated": "Última actualización: {{timestamp}}",
       "periodAverage": "Media del período",
       "periodHigh": "Máximo del período",
       "periodLow": "Mínimo del período",
