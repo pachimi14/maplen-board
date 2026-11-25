@@ -649,7 +649,7 @@
     "main30d": "30???"
   },
   "sfhistory": {
-    "pageDescription": "選擇裝備與強化星數範圍，即可查看期望強化費用的走勢，以及目前價格在這段歷史中處於什麼水準。",
+    "pageDescription": "選擇裝備與強化星數範圍，即可查看期望強化費用的走勢。",
     "loading": "載入中...",
     "equipment": {
       "label": "裝備",
@@ -772,7 +772,7 @@
     "cube": "Cube"
   },
   "sfhistoryCube": {
-    "pageDescription": "選擇裝備與魔方種類，即可查看市場價格的走勢，以及目前價格在這段歷史中處於什麼水準。",
+    "pageDescription": "選擇裝備與魔方種類，即可查看市場價格的走勢。",
     "cubeType": {
       "label": "魔方種類"
     },

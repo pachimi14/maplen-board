@@ -649,7 +649,7 @@
     "main30d": "30-day gain"
   },
   "sfhistory": {
-    "pageDescription": "Pick a piece of gear and a star range to see how its Expected enhancement cost has moved, and where the current value sits against that history.",
+    "pageDescription": "Pick a piece of gear and a star range to see how its Expected enhancement cost has moved.",
     "loading": "Loading...",
     "equipment": {
       "label": "Equipment",
@@ -772,7 +772,7 @@
     "cube": "Cube"
   },
   "sfhistoryCube": {
-    "pageDescription": "Pick a piece of gear and a cube type to see how its market price has moved, and where the current value sits against that history.",
+    "pageDescription": "Pick a piece of gear and a cube type to see how its market price has moved.",
     "cubeType": {
       "label": "Cube Type"
     },

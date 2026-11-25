@@ -649,7 +649,7 @@
     "main30d": "Ganancia 30 d?as"
   },
   "sfhistory": {
-    "pageDescription": "Elige un equipo y un rango de estrellas para ver cómo ha evolucionado su coste esperado de mejora y en qué nivel se sitúa el valor actual frente a ese historial.",
+    "pageDescription": "Elige un equipo y un rango de estrellas para ver cómo ha evolucionado su coste esperado de mejora.",
     "loading": "Cargando...",
     "equipment": {
       "label": "Equipo",
@@ -772,7 +772,7 @@
     "cube": "Cube"
   },
   "sfhistoryCube": {
-    "pageDescription": "Elige un equipo y un tipo de cubo para ver cómo ha evolucionado su precio de mercado y en qué nivel se sitúa el valor actual frente a ese historial.",
+    "pageDescription": "Elige un equipo y un tipo de cubo para ver cómo ha evolucionado su precio de mercado.",
     "cubeType": {
       "label": "Tipo de cubo"
     },
