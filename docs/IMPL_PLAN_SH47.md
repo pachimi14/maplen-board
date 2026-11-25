@@ -16,7 +16,7 @@
 |---|---|---|
 | ローカルDBの用意 | **コード変更ゼロ** | `scripts/update.py` の `run_update` が `db.apply_schema(conn)` を呼ぶ。空ファイルを `--db` に渡せばスキーマから作られる |
 | 1日1回でも取りこぼさない | **コード変更ゼロ** | `_window_start` = その combo の `MAX(price_at)` − 8h。窓は `fetch_history_page` が1リクエストで取り切る(ページングなし)ので、**間隔を空けるほど窓が伸びるだけでリクエスト数は増えない** |
-| 2026-11-18 以降の欠測(7日)を埋める | **コード変更ゼロ** | `scripts/backfill.py` の `WINDOW_DAYS = 160.0`。1 combo = 1リクエストで保持期間全体を取る。**初回に1度走らせればローカルDBが完成し、同時に欠測も消える**(VPSから900MBを落とす必要はない) |
+| 2026-11-18 以降の欠測(7日)を埋める | **コード変更ゼロ** | `scripts/backfill.py` の `WINDOW_DAYS = 160.0`。1 combo = 1リクエストで保持期間全体を取る。**初回に1度走らせればローカルDBが出来て、同時に欠測も消える**(VPSから900MBを落とす必要はない)。ただし取れるのは**直近約160日ぶんだけ**で、VPS の266日ぶんの複製にはならない(§10 参照) |
 | 取得の失敗からの復帰 | **コード変更ゼロ** | run が途中で死んでも、未処理 combo の `MAX(price_at)` は進まないので**翌日の窓が自動的にその分伸びる**。恒久的な欠測にはならない(上流保持150日の範囲内) |
 | 日次スケジュール | 既存の写し | `exp_ranking/bot/ops/`(LulumiDailyFetch)が確立済みのひな型。`.bat` + タスクXML + 日次ログ + デスクトップ失敗マーカー |
 | VPSへの転送の検証 | 既存の作法 | SH-6 の受け入れ基準と同じ `PRAGMA integrity_check` + 行数照合 |
@@ -52,6 +52,7 @@
 **触らないもの(明示)**
 - `fetcher.py` / `db.py` / `aggregate.py` / `cube.py` / `cube_aggregate.py` / `app.py` / `discovery.py` / `fetch_latest.py`
 - `scripts/update.py` / `scripts/backfill.py` / `scripts/cube_backfill.py` / `scripts/rebuild_4h.py`
+- **`scripts/gen_item_list.py` は PC で実行しない**(実測 2026-11-25): discovery 由来の3装備(`1004811` `1053064` `1152199`)は VPS の `sf_discovery_monitored_groups` にしか存在しないため、PC で再生成すると **34装備 → 31装備**に減り、その3件の取得が黙って止まる。`data/sf_history_items.json` は**コミット済みのスナップショットを使う**
 - 取得URL・params・`period=2`・`MIN_INTERVAL_SEC=1.0`・`derive_max_requests`・429の停止レール
 - `contract/response_fields.json` と両側の契約テスト(応答は1バイトも変えない)
 - `exp_ranking/` 配下すべて / `.github/workflows/` すべて / 既存の `LulumiDailyFetch` タスク
@@ -79,10 +80,10 @@
 |---|------|--------|----------|
 | 1 | 既存テスト全緑 | 全パス、0 failed | `cd server/sf-history && python -m pytest .` |
 | 2 | 新規2本のテスト | 各3ケース以上が緑(正常 / 空 / 二重取り込み) | 同上 |
-| 3 | 初回 backfill のローカル行数 | hourly **≥ 4,298,287**(VPS現在値)、cube hourly **≥ 686,834** | `sqlite3 <local> "SELECT COUNT(*) FROM sf_price_history_hourly"` |
-| 4 | 初回 backfill のリクエスト数 | SF **748**、CUBE **136**(±0。予算 798/186 を超えない) | 標準エラー出力の `requests=` 行 |
-| 5 | 初回 backfill の所要時間 | **≤ 40分** | ログの開始/終了時刻 |
-| 6 | 欠測の消滅 | `2026-11-18T15:00:00Z` 〜 初回実行時刻 の各 UTC 時刻で、(item,upgrade) 748 組の欠けが **0 件** | 時刻×combo のクロス集計SQL(§6に記載) |
+| 3 | 初回 backfill のローカル行数 | **実測で確定(2026-11-25、統括実施)**: SF hourly **2,694,888行 / 736 combos**(1 combo 中央値 3,794行 = 158.1日)、最古 `price_at` = `2026-06-18T07:00:00Z`(now − 160日)、CUBE hourly **498,911行**、ファイル **397.0 MiB**。**✅ 達成**。**combos は 748 ではなく 736 が正**(☆20止まりの装備6件 × upgrade 20,21 = 12 combos は上流に存在せず、取得は成功するが0行で返る)。上流の保持は約160日で、VPS の 4,298,287行は266日ぶんの蓄積なので新規 backfill では再現できない | `sqlite3 <local> "SELECT COUNT(*), MIN(price_at) FROM sf_price_history_hourly"` |
+| 4 | 初回 backfill のリクエスト数 | **実測: SF 748 / CUBE 136、429 は 0、combo エラー 0。ただし SF は2パス必要だった** — `backfill.py` は予算に**凍結定数 `DEFAULT_MAX_REQUESTS=700`** を使う(`update.py` は `derive_max_requests` に直されているのに取り残されている)ため、746件中700件で `RequestBudgetExceededError` で停止。resumable なので再実行で残り46件を完了。**✅ 達成(再実行込み)**。この欠陥は §7 バックログへ | 実行ログの `requests_made` |
+| 5 | 初回 backfill の所要時間 | **実測: SF 約15分**(06:47:09Z→07:00:48Z で700件 + 残46件で約1分)、**CUBE 2分38秒**(07:00:48Z→07:03:26Z)。合計 **約18分**。**✅ 達成(基準 ≤40分)** | ログの開始/終了時刻 |
+| 6 | 欠測の消滅 | **実測: ✅ 達成。** `2026-11-18T15:00:00Z` 以降の **158時間すべてが 736 combos ちょうど**で、**115,598行を回復**(VPS が止まった時点からの7日欠測が完全に埋まった)。唯一の例外は最新の進行中バケット `2026-11-25T06:00:00Z`(46 combos)で、これは取得中に時間が進んだだけ。**翌日の run の8時間ルックバックで自動的に埋まる**(欠測ではない)。**判定の期待値は 748 ではなく 736**(基準3の訂正と同じ理由) | `... GROUP BY price_at HAVING COUNT(*) <> 736`(§6に記載) |
 | 7 | 日次 run のリクエスト数と時間 | SF 748 / CUBE 136、**≤ 25分** | ドライバのログ |
 | 8 | 増分 export のサイズ | 直近3日 ≈ **62,784行**、gzip **≤ 1.0 MiB** | `export_increment.py` の出力 + `ls -l` |
 | 9 | **取り込みの冪等性** | 同じ増分ファイルを2回流して、**2回目の挿入行数 = 0**、`sf_price_history_4h` の行数と全 `end_price` が1回目の後と完全一致 | ingest の戻り値JSON + 前後のチェックサムSQL |
@@ -140,7 +141,7 @@ sqlite3 data/sf_price_history.sqlite "SELECT COUNT(*) FROM sf_price_history_hour
 sqlite3 data/sf_price_history.sqlite "
   SELECT price_at, COUNT(*) AS combos FROM sf_price_history_hourly
   WHERE price_at >= '2026-11-18T15:00:00Z'
-  GROUP BY price_at HAVING combos <> 748;"
+  GROUP BY price_at HAVING combos <> 736;"   # 736 = 748 - (☆20止まり6件 × upgrade 20,21)
 
 # 日次(ドライバ経由。リハーサルは転送しない)
 python ops/sf_daily_fetch.py --dry-run     # 取得も転送もしない。経路と設定だけ確認
@@ -192,6 +193,7 @@ ssh -i <key> root@163.44.118.206 '
 
 ## 10. 残るリスク(この計画では解消しない。明示して残す)
 
+- **VPS の DB にしか存在しない過去がある**。上流の保持は約160日なので、VPS が持つ `2026-02-25`〜`2026-06-18` の**約113日は、失えばどこからも復元できない**(PC の backfill では取れない)。この DB のバックアップ体制が現状どうなっているかは**未確認**。ランキング側(Release `db-store` + Drive)と違い、確認した記録が無い → 要調査(§7 バックログ候補)
 - **PC が単一障害点**。PC が落ちた日は取得されず、**静かに失敗する**(検出手段が無い)。DECISION_LOG §6-1 に既に挙がっている同じ穴で、ランキング側と共通。検出(朝の未更新通知)は別テーマ
 - **接続例外で run が traceback で死ぬ**(§0.2)。欠測にはならないが、失敗が読みづらい
 - **公式 OpenAPI 復帰後の扱い**。`fetch_latest.py` は `MSU_OPEN_API_KEY` があれば公式 OpenAPI を使う経路を既に持つ(SH-23)。現在価格はキー配備で復活しうるが、**履歴**は依然このレガシー経路しかない
