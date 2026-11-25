@@ -33,8 +33,10 @@ section 7). If any OTHER test fails, that is a real anomaly: report it.
 This also fills the gap since 2026-11-18. Check the gap is gone (expect 0 rows):
 
 ```
-sqlite3 data\sf_price_history.sqlite "SELECT price_at, COUNT(*) AS combos FROM sf_price_history_hourly WHERE price_at >= '2026-11-18T15:00:00Z' GROUP BY price_at HAVING combos <> 748;"
+sqlite3 data\sf_price_history.sqlite "SELECT price_at, COUNT(*) AS combos FROM sf_price_history_hourly WHERE price_at >= '2026-11-18T15:00:00Z' GROUP BY price_at HAVING combos <> 736;"
 ```
+
+736 = 34 items x 22 upgrades - 12 combos (6 items with maxStar=20 x upgrade 20,21, which return zero rows with HTTP 200). Do not use 748.
 
 ## 1. One-time: dedicated transfer key (user only; never commit a private key)
 
