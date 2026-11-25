@@ -19,6 +19,10 @@ python scripts\cube_backfill.py --db data\sf_price_history.sqlite
 sqlite3 data\sf_price_history.sqlite "PRAGMA integrity_check;"
 ```
 
+Also confirm `python -m pytest tests/test_gen_item_list.py -q` is green after the backfill. `maxStar` is
+derived from this DB, so before the backfill `test_build_item_list_derives_max_star_from_real_db` failing
+with `assert None == 20` is normal. If it still fails after the backfill, that is a real anomaly: report it.
+
 This also fills the gap since 2026-11-18. Check the gap is gone (expect 0 rows):
 
 ```
@@ -29,15 +33,16 @@ sqlite3 data\sf_price_history.sqlite "SELECT price_at, COUNT(*) AS combos FROM s
 
 1. On the PC: `ssh-keygen -t ed25519 -f %USERPROFILE%\.ssh\lulumi_sf_ingest -N ""`
    (the private key stays on the PC; do not paste it into chat, docs or logs).
-2. On the VPS, put a forced-command wrapper `ingest_increment.sh` for `botuser` that (a) takes a
-   snapshot, (b) reads the gzip from stdin and runs the ingest, e.g. (adjust paths):
+2. On the VPS, put a forced-command wrapper `ingest_increment.sh` for `botuser` that (a) reads the gzip from stdin and runs the ingest, e.g. (adjust paths):
    ```
    #!/bin/sh
    exec /home/botuser/apps/lulumi-tools-sf-history/.venv/bin/python \
      /home/botuser/apps/lulumi-tools-sf-history/scripts/ingest_increment.py \
-     --db /home/botuser/apps/lulumi-tools-sf-history/data/sf_price_history.sqlite --backup
+     --db /home/botuser/apps/lulumi-tools-sf-history/data/sf_price_history.sqlite
    ```
-   `--backup` snapshots the DB to `<db>.pre-ingest-<ts>` (keeps the newest 1; ~0.9 GiB of disk) before inserting.
+   The ingest ALWAYS snapshots the DB to `<db>.pre-ingest-<ts>` before inserting (default; only
+   `--no-backup` disables it, so the wrapper cannot lose the safety net). It keeps the newest 1
+   (`--backup-keep`); ~0.9 GiB of disk.
 3. Add the PUBLIC key to `botuser`'s `authorized_keys` as one line with the restrictions:
    `command="/home/botuser/bin/ingest_increment.sh",restrict ssh-ed25519 AAAA... lulumi-sf-ingest`
 4. Trust the host once: `ssh -i <key> botuser@163.44.118.206` (it will only run the forced command; the

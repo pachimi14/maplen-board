@@ -241,7 +241,7 @@ The official history endpoint answers 403 to the VPS (LULU-153). The home PC the
   `INSERT OR IGNORE` only (existing hourly rows are never changed), re-derives the 4h rows of the combos
   in the file through `aggregate` / `cube_aggregate` `update_combo_incremental`, and prints ONE JSON line on
   stdout: `{"insertedSf":N,"insertedCube":M,"combosTouched":K,"maxPriceAt":"...","integrity":"ok"}`.
-  `PRAGMA integrity_check` runs before and after; `--backup` snapshots the DB first. Sending the same file
+  `PRAGMA integrity_check` runs before and after; the DB is snapshotted first by default (`--no-backup` to skip). Sending the same file
   twice inserts 0 rows the second time.
 - Setup, key, task registration and failure handling: `ops/README.md`. VPS unit for a manual re-run of a
   spooled file: `deploy/sf-history-ingest.service.example`.

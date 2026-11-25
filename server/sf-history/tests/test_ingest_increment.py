@@ -178,7 +178,7 @@ def test_malformed_line_rolls_back_everything(tmp_path: Path, capsys) -> None:
     conn.close()
 
 
-def test_reads_stdin_and_backup_snapshot_pruned(tmp_path: Path, capsys, monkeypatch) -> None:
+def test_reads_stdin_and_default_backup_snapshot_pruned(tmp_path: Path, capsys, monkeypatch) -> None:
     import io
     import sys
 
@@ -193,7 +193,7 @@ def test_reads_stdin_and_backup_snapshot_pruned(tmp_path: Path, capsys, monkeypa
 
     monkeypatch.setattr(sys, "stdin", _Stdin)
     capsys.readouterr()
-    rc = ingest_increment.main(["--db", str(vps), "--now", NOW, "--backup"])
+    rc = ingest_increment.main(["--db", str(vps), "--now", NOW])
     assert rc == 0
     assert json.loads(capsys.readouterr().out)["insertedSf"] == 16
     snaps = sorted(p.name for p in tmp_path.glob("vps.sqlite.pre-ingest-*"))
@@ -201,3 +201,16 @@ def test_reads_stdin_and_backup_snapshot_pruned(tmp_path: Path, capsys, monkeypa
     snap_conn = db.connect(tmp_path / snaps[0])
     assert db.count_hourly_rows(snap_conn) == 8  # snapshot is the PRE-ingest state
     snap_conn.close()
+
+
+def test_snapshot_taken_by_default_and_skipped_with_no_backup(tmp_path: Path, capsys) -> None:
+    inc = _make_pc_increment(tmp_path)
+    a = tmp_path / "a.sqlite"
+    _make_vps(a)
+    assert ingest_increment.main(["--db", str(a), "--file", str(inc), "--now", NOW]) == 0  # no backup flag
+    assert len(list(tmp_path.glob("a.sqlite.pre-ingest-*"))) == 1
+
+    b = tmp_path / "b.sqlite"
+    _make_vps(b)
+    assert ingest_increment.main(["--db", str(b), "--file", str(inc), "--now", NOW, "--no-backup"]) == 0
+    assert list(tmp_path.glob("b.sqlite.pre-ingest-*")) == []

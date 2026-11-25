@@ -15,7 +15,7 @@ Group=botuser
 WorkingDirectory=/home/botuser/apps/lulumi-tools-sf-history
 StandardInput=file:/home/botuser/apps/lulumi-tools-sf-history/data/incoming/increment.jsonl.gz
 ExecStart=/home/botuser/apps/lulumi-tools-sf-history/.venv/bin/python scripts/ingest_increment.py \
-  --db /home/botuser/apps/lulumi-tools-sf-history/data/sf_price_history.sqlite --backup
+  --db /home/botuser/apps/lulumi-tools-sf-history/data/sf_price_history.sqlite
 NoNewPrivileges=true
 PrivateTmp=true
 MemoryMax=300M

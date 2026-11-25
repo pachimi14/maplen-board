@@ -13,7 +13,8 @@ inserts 0 hourly rows. Re-deriving unchanged hourly data is a no-op by
 construction (same input -> same 4h rows).
 
 All-or-nothing for the hourly insert: a malformed line aborts with exit 2 and
-rolls everything back. ``PRAGMA integrity_check`` runs BEFORE the insert (abort
+rolls everything back. The pre-ingest snapshot is taken BY DEFAULT (``--no-backup`` to skip), so the safety
+net does not depend on how a wrapper script calls this. ``PRAGMA integrity_check`` runs BEFORE the insert (abort
 with exit 3 if not ok) and AFTER it.
 
 stdout carries exactly ONE JSON line (the PC driver parses it); logs go to stderr:
@@ -23,7 +24,7 @@ DB after a successful ingest).
 
 Usage:
     python scripts/ingest_increment.py --db data/x.sqlite < increment.jsonl.gz
-    python scripts/ingest_increment.py --db data/x.sqlite --file increment.jsonl.gz --backup
+    python scripts/ingest_increment.py --db data/x.sqlite --file increment.jsonl.gz     # snapshots first by default; --no-backup to skip
 """
 
 from __future__ import annotations
@@ -158,7 +159,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--db", type=Path, default=DEFAULT_DB_PATH)
     parser.add_argument("--file", type=Path, default=None, help="gzip JSONL path (default: stdin)")
     parser.add_argument("--now", default=None, help="pin 'now' (ISO8601 UTC) for 4h derivation (tests)")
-    parser.add_argument("--backup", action="store_true", help="snapshot the DB to <db>.pre-ingest-<ts> before inserting")
+    parser.add_argument("--no-backup", action="store_true", help="skip the pre-ingest snapshot (default: ALWAYS snapshot to <db>.pre-ingest-<ts> before inserting)")
     parser.add_argument("--backup-keep", type=int, default=1, help="how many pre-ingest snapshots to keep (default 1)")
     args = parser.parse_args(argv)
 
@@ -173,7 +174,7 @@ def main(argv: list[str] | None = None) -> int:
         if not integrity_ok(conn):
             print("sf-history ingest: integrity_check FAILED before insert; nothing written", file=sys.stderr)
             return 3
-        if args.backup:
+        if not args.no_backup:
             dest = backup_db(conn, args.db, stamp=now.strftime("%Y%m%dT%H%M%SZ"), keep=args.backup_keep)
             print(f"sf-history ingest: backup {dest}", file=sys.stderr)
         stream = open(args.file, "rb") if args.file else sys.stdin.buffer
