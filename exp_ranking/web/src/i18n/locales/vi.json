@@ -678,7 +678,7 @@
       "currentUnavailableHint": "Lấy giá từ nguồn thất bại. Chúng tôi không thay thế bằng giá trị lịch sử gần nhất.",
       "currentAsOf": "Tính đến {{timestamp}}",
       "updateCadence": "Cập nhật mỗi ngày một lần (khoảng 17:00 JST)",
-      "lastUpdated": "Cập nhật lần cuối: {{timestamp}}",
+      "dataAsOf": "Dữ liệu tính đến {{timestamp}}",
       "periodAverage": "Trung bình kỳ",
       "periodHigh": "Cao nhất kỳ",
       "periodLow": "Thấp nhất kỳ",

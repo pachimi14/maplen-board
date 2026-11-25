@@ -46,17 +46,17 @@ describe("SummaryCards (IMPL_PLAN_SH48)", () => {
     }
   });
 
-  it("#7 shows the cadence note and the last-updated time once each when not ready", () => {
+  it("#7 shows the cadence note and the data-as-of time once each when not ready", () => {
     const html = render({ currentStatus: "error", dataEndDate: END_DATE });
     expect(count(html, "1日1回（JST 17時頃）更新")).toBe(1);
-    expect(count(html, "最終更新")).toBe(1);
+    expect(count(html, "データは")).toBe(1);
     expect(html).toContain("2026");
   });
 
-  it("omits the last-updated time (never invents one) when endDate is absent", () => {
+  it("omits the data-as-of time (never invents one) when endDate is absent", () => {
     const html = render({ currentStatus: "error", dataEndDate: null });
     expect(count(html, "1日1回（JST 17時頃）更新")).toBe(1);
-    expect(count(html, "最終更新")).toBe(0);
+    expect(count(html, "データは")).toBe(0);
   });
 
   it("#6 restores both original cards, and no cadence note, when currentStatus is ready", () => {
@@ -64,7 +64,7 @@ describe("SummaryCards (IMPL_PLAN_SH48)", () => {
     expect(count(html, "現在値")).toBe(1);
     expect(count(html, "現在の位置")).toBe(1);
     expect(count(html, "1日1回")).toBe(0);
-    expect(count(html, "最終更新")).toBe(0);
+    expect(count(html, "データは")).toBe(0);
     expect(count(html, "現在価格を取得できません")).toBe(0);
   });
 });

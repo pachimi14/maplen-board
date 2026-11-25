@@ -78,20 +78,24 @@ export default function SummaryCards({ currentStatus, currentExpected, currentUp
   // rendered and a one-line cadence note takes their place -- this is a
   // branch on `currentStatus`, not a removal: once the official price is
   // back and `currentStatus === "ready"`, the original two cards return
-  // with no further change. The "last updated" time is the history's own
-  // `endDate` (how far the data reaches), never `priceVersion` (when it
-  // was ingested), and is omitted when absent -- no number is invented.
+  // with no further change. The time shown is the history's `endDate`: how
+  // far the data reaches (the still-forming last bucket), NOT when the
+  // page was updated -- hence "data as of", not "last updated". It is
+  // shown as-is: adding the bucket length (+4h) would display an instant
+  // for which no data exists yet (an overstated freshness), and
+  // `priceVersion` (ingest time) is not the data's reach either. Omitted
+  // when absent -- no number is invented.
   if (currentStatus !== "ready") {
-    const lastUpdated = typeof dataEndDate === "string" ? formatTimestamp(dataEndDate, { locale: language }) : "";
+    const dataAsOf = typeof dataEndDate === "string" ? formatTimestamp(dataEndDate, { locale: language }) : "";
     return (
       <>
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">{statCards}</div>
         <p className="sfh-summary-cadence text-xs text-slate-400">
           <span>{t("sfhistory.summary.updateCadence")}</span>
-          {lastUpdated ? (
+          {dataAsOf ? (
             <>
               {" / "}
-              <span>{t("sfhistory.summary.lastUpdated", { timestamp: lastUpdated })}</span>
+              <span>{t("sfhistory.summary.dataAsOf", { timestamp: dataAsOf })}</span>
             </>
           ) : null}
         </p>

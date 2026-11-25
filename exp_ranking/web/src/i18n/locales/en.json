@@ -678,7 +678,7 @@
       "currentUnavailableHint": "Fetching the upstream price failed. We do not substitute the last historical value for it.",
       "currentAsOf": "As of {{timestamp}}",
       "updateCadence": "Updated once a day (around 17:00 JST)",
-      "lastUpdated": "Last updated: {{timestamp}}",
+      "dataAsOf": "Data as of {{timestamp}}",
       "periodAverage": "Period Average",
       "periodHigh": "Period High",
       "periodLow": "Period Low",

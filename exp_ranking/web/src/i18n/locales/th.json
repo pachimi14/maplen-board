@@ -678,7 +678,7 @@
       "currentUnavailableHint": "การดึงราคาจากต้นทางล้มเหลว เราจะไม่ใช้ค่าประวัติล่าสุดแทน",
       "currentAsOf": "ณ เวลา {{timestamp}}",
       "updateCadence": "อัปเดตวันละครั้ง (ประมาณ 17:00 น. JST)",
-      "lastUpdated": "อัปเดตล่าสุด: {{timestamp}}",
+      "dataAsOf": "ข้อมูล ณ เวลา {{timestamp}}",
       "periodAverage": "ค่าเฉลี่ยของช่วงเวลา",
       "periodHigh": "ค่าสูงสุดของช่วงเวลา",
       "periodLow": "ค่าต่ำสุดของช่วงเวลา",
