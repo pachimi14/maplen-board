@@ -118,7 +118,7 @@
     "calculateDistribution": "計算分配",
    "distributionRuleTitle": "Tax・傾斜設定",
     "distributionRuleNeedsSetup": "尚未設定・請開啟",
-    "distributionRuleHelp": "所有成員將100%中獎額投入分配池。Tax成員的比例為「Tax率 ÷ 隊伍人數」，剩餘比例依未設定Tax成員的比例或平均分配。",
+    "distributionRuleHelp": "所有成員將100%中獎額投入分配池。Tax成員的比例為「(100 − Tax率) ÷ 隊伍人數」，剩餘比例依未設定Tax成員的比例或平均分配。",
     "splitRemainingEqually": "平均分配剩餘比例",
     "taxPercent": "Tax（%）",
     "sharePercent": "分配比例（%）",
