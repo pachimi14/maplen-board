@@ -649,7 +649,7 @@
     "main30d": "T?ng 30 ng?y"
   },
   "sfhistory": {
-    "pageDescription": "Chọn một trang bị và khoảng sao để xem chi phí nâng cấp kỳ vọng đã thay đổi thế nào, và giá trị hiện tại đang ở mức nào so với lịch sử đó.",
+    "pageDescription": "Chọn một trang bị và khoảng sao để xem chi phí nâng cấp kỳ vọng đã thay đổi thế nào.",
     "loading": "Đang tải...",
     "equipment": {
       "label": "Trang bị",
@@ -677,6 +677,8 @@
       "currentUnavailable": "Không lấy được giá hiện tại",
       "currentUnavailableHint": "Lấy giá từ nguồn thất bại. Chúng tôi không thay thế bằng giá trị lịch sử gần nhất.",
       "currentAsOf": "Tính đến {{timestamp}}",
+      "updateCadence": "Cập nhật mỗi ngày một lần (khoảng 17:00 JST)",
+      "dataAsOf": "Dữ liệu tính đến {{timestamp}}",
       "periodAverage": "Trung bình kỳ",
       "periodHigh": "Cao nhất kỳ",
       "periodLow": "Thấp nhất kỳ",
@@ -770,7 +772,7 @@
     "cube": "Cube"
   },
   "sfhistoryCube": {
-    "pageDescription": "Chọn một trang bị và loại hộp để xem giá thị trường đã thay đổi thế nào, và giá trị hiện tại đang ở mức nào so với lịch sử đó.",
+    "pageDescription": "Chọn một trang bị và loại hộp để xem giá thị trường đã thay đổi thế nào.",
     "cubeType": {
       "label": "Loại hộp"
     },

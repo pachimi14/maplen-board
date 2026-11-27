@@ -31,7 +31,7 @@ function percentileText(t, percentile) {
   return t("sfhistory.summary.percentileCheaperThan", { percent: described.percent });
 }
 
-export default function SummaryCards({ currentStatus, currentExpected, currentUpdatedAt, stats, percentile }) {
+export default function SummaryCards({ currentStatus, currentExpected, currentUpdatedAt, dataEndDate, stats, percentile }) {
   const { t, language } = useTranslation();
 
   const currentReady = currentStatus === "ready" && currentExpected != null;
@@ -53,15 +53,8 @@ export default function SummaryCards({ currentStatus, currentExpected, currentUp
 
   const hasStats = stats.count > 0;
 
-  return (
-    <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
-      <SummaryCard
-        label={t("sfhistory.summary.current")}
-        value={currentValue}
-        title={currentTitle}
-        tone={currentReady ? "text-cyan-300" : "text-amber-400 text-sm"}
-        stamp={currentStampText}
-      />
+  const statCards = (
+    <>
       <SummaryCard
         label={t("sfhistory.summary.periodAverage")}
         value={hasStats ? formatCompactNeso(stats.average) : t("sfhistory.summary.noConfirmedData")}
@@ -77,6 +70,49 @@ export default function SummaryCards({ currentStatus, currentExpected, currentUp
         value={hasStats ? formatCompactNeso(stats.low) : "--"}
         title={hasStats ? formatExactNeso(stats.low) : undefined}
       />
+    </>
+  );
+
+  // IMPL_PLAN_SH48 (A案): while the official current price is unavailable
+  // (`currentStatus !== "ready"`), the "現在値" / "現在の位置" cards are not
+  // rendered and a one-line cadence note takes their place -- this is a
+  // branch on `currentStatus`, not a removal: once the official price is
+  // back and `currentStatus === "ready"`, the original two cards return
+  // with no further change. The time shown is the history's `endDate`: how
+  // far the data reaches (the still-forming last bucket), NOT when the
+  // page was updated -- hence "data as of", not "last updated". It is
+  // shown as-is: adding the bucket length (+4h) would display an instant
+  // for which no data exists yet (an overstated freshness), and
+  // `priceVersion` (ingest time) is not the data's reach either. Omitted
+  // when absent -- no number is invented.
+  if (currentStatus !== "ready") {
+    const dataAsOf = typeof dataEndDate === "string" ? formatTimestamp(dataEndDate, { locale: language }) : "";
+    return (
+      <>
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">{statCards}</div>
+        <p className="sfh-summary-cadence text-xs text-slate-400">
+          <span>{t("sfhistory.summary.updateCadence")}</span>
+          {dataAsOf ? (
+            <>
+              {" / "}
+              <span>{t("sfhistory.summary.dataAsOf", { timestamp: dataAsOf })}</span>
+            </>
+          ) : null}
+        </p>
+      </>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
+      <SummaryCard
+        label={t("sfhistory.summary.current")}
+        value={currentValue}
+        title={currentTitle}
+        tone={currentReady ? "text-cyan-300" : "text-amber-400 text-sm"}
+        stamp={currentStampText}
+      />
+      {statCards}
       <SummaryCard
         label={t("sfhistory.summary.currentPosition")}
         value={percentile != null ? percentileText(t, percentile) : "--"}

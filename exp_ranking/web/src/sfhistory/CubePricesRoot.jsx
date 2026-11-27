@@ -97,7 +97,7 @@ export default function CubePricesRoot() {
   const [additionalCubeTypes, setAdditionalCubeTypes] = useState([]);
   const [period, setPeriod] = useState(DEFAULT_PERIOD);
 
-  const [cubePricesState, setCubePricesState] = useState({ status: "idle", points: [], cubeOrder: null });
+  const [cubePricesState, setCubePricesState] = useState({ status: "idle", points: [], cubeOrder: null, endDate: null });
   const [latestState, setLatestState] = useState({ status: "idle", cubes: null, cubeOrder: null, latestUpdatedAt: null });
 
   useEffect(() => {
@@ -174,10 +174,10 @@ export default function CubePricesRoot() {
     sfHistorySource.loadCubePrices(selectedItemId).then((result) => {
       if (cancelled) return;
       if (!result.ok) {
-        setCubePricesState({ status: "error", points: [], cubeOrder: null });
+        setCubePricesState({ status: "error", points: [], cubeOrder: null, endDate: null });
         return;
       }
-      setCubePricesState({ status: "ready", points: result.points, cubeOrder: result.cubeOrder });
+      setCubePricesState({ status: "ready", points: result.points, cubeOrder: result.cubeOrder, endDate: result.endDate });
     });
     return () => {
       cancelled = true;
@@ -275,6 +275,7 @@ export default function CubePricesRoot() {
               currentStatus={latestState.status}
               currentExpected={currentExpected}
               currentUpdatedAt={latestState.latestUpdatedAt}
+              dataEndDate={cubePricesState.endDate}
               stats={stats}
               percentile={percentile}
             />

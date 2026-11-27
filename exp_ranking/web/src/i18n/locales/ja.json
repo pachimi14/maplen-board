@@ -649,7 +649,7 @@
     "main30d": "30日増加量"
   },
   "sfhistory": {
-    "pageDescription": "装備と強化範囲を選ぶと、期待強化費用の推移と、現在値が過去のどの水準かを確認できます。",
+    "pageDescription": "装備と強化範囲を選ぶと、期待強化費用の推移を確認できます。",
     "loading": "読み込み中...",
     "equipment": {
       "label": "装備",
@@ -677,6 +677,8 @@
       "currentUnavailable": "現在価格を取得できません",
       "currentUnavailableHint": "上流の価格取得に失敗しました。履歴の最終値で代用はしません。",
       "currentAsOf": "{{timestamp}} 時点",
+      "updateCadence": "1日1回（JST 17時頃）更新",
+      "dataAsOf": "データは {{timestamp}} 時点",
       "periodAverage": "期間平均",
       "periodHigh": "期間高値",
       "periodLow": "期間安値",
@@ -770,7 +772,7 @@
     "cube": "Cube"
   },
   "sfhistoryCube": {
-    "pageDescription": "装備とキューブの種類を選ぶと、市場価格の推移と、現在値が過去のどの水準かを確認できます。",
+    "pageDescription": "装備とキューブの種類を選ぶと、市場価格の推移を確認できます。",
     "cubeType": {
       "label": "キューブ種類"
     },

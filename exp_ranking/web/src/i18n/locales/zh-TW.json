@@ -649,7 +649,7 @@
     "main30d": "30???"
   },
   "sfhistory": {
-    "pageDescription": "選擇裝備與強化星數範圍，即可查看期望強化費用的走勢，以及目前價格在這段歷史中處於什麼水準。",
+    "pageDescription": "選擇裝備與強化星數範圍，即可查看期望強化費用的走勢。",
     "loading": "載入中...",
     "equipment": {
       "label": "裝備",
@@ -677,6 +677,8 @@
       "currentUnavailable": "無法取得目前價格",
       "currentUnavailableHint": "取得來源價格失敗。不會以最後一筆歷史資料代替。",
       "currentAsOf": "截至 {{timestamp}}",
+      "updateCadence": "每日更新一次（約 JST 17:00）",
+      "dataAsOf": "資料截至 {{timestamp}}",
       "periodAverage": "期間平均",
       "periodHigh": "期間高點",
       "periodLow": "期間低點",
@@ -770,7 +772,7 @@
     "cube": "Cube"
   },
   "sfhistoryCube": {
-    "pageDescription": "選擇裝備與魔方種類，即可查看市場價格的走勢，以及目前價格在這段歷史中處於什麼水準。",
+    "pageDescription": "選擇裝備與魔方種類，即可查看市場價格的走勢。",
     "cubeType": {
       "label": "魔方種類"
     },

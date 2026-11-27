@@ -649,7 +649,7 @@
     "main30d": "30-day gain"
   },
   "sfhistory": {
-    "pageDescription": "Pick a piece of gear and a star range to see how its Expected enhancement cost has moved, and where the current value sits against that history.",
+    "pageDescription": "Pick a piece of gear and a star range to see how its Expected enhancement cost has moved.",
     "loading": "Loading...",
     "equipment": {
       "label": "Equipment",
@@ -677,6 +677,8 @@
       "currentUnavailable": "Current price unavailable",
       "currentUnavailableHint": "Fetching the upstream price failed. We do not substitute the last historical value for it.",
       "currentAsOf": "As of {{timestamp}}",
+      "updateCadence": "Updated once a day (around 17:00 JST)",
+      "dataAsOf": "Data as of {{timestamp}}",
       "periodAverage": "Period Average",
       "periodHigh": "Period High",
       "periodLow": "Period Low",
@@ -770,7 +772,7 @@
     "cube": "Cube"
   },
   "sfhistoryCube": {
-    "pageDescription": "Pick a piece of gear and a cube type to see how its market price has moved, and where the current value sits against that history.",
+    "pageDescription": "Pick a piece of gear and a cube type to see how its market price has moved.",
     "cubeType": {
       "label": "Cube Type"
     },
