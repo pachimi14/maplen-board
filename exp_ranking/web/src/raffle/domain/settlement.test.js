@@ -51,7 +51,7 @@ describe("calculateSaleProceedsNeso", () => {
 });
 
 describe("calculateSettlement", () => {
-  it("pools everyone's winnings, then gives taxed members tax-rate ÷ party-size and distributes the remainder", () => {
+  it("pools everyone's winnings, then gives taxed members (100 − tax-rate) ÷ party-size and distributes the remainder", () => {
     const partyOrder = ["a", "b", "c", "d", "e", "f"];
     const members = partyOrder.map((memberId, index) => ({
       memberId,
@@ -82,6 +82,34 @@ describe("calculateSettlement", () => {
       [null, "20.4166%"],
     ]);
     expect(result.members.reduce((sum, member) => sum + BigInt(member.assignedShare), 0n)).toBe(2100n);
+  });
+
+  // LULU-164: Tax is the share a member pays (3 members, B and C at Tax 40 → 60% / 20% / 20%).
+  it("settles Tax as the share paid: pool 3,000,000 with B and C at Tax 40 → 1,800,000 / 600,000 / 600,000", () => {
+    const partyOrder = ["A", "B", "C"];
+    const members = partyOrder.map((memberId) => ({
+      memberId,
+      bossNeso: "1000000",
+      powerCrystalAmount: "0",
+      ascendantNeso: "0",
+      drops: [],
+    }));
+    const result = calculateSettlement(clearInput({
+      partyOrder,
+      members,
+      historyMemberIds: partyOrder,
+      include: { bossNeso: true },
+      saleNesoByDropId: {},
+      taxPercentByMemberId: { B: "40", C: "40" },
+    }));
+    expect(result.ok).toBe(true);
+    expect(result.distributionPool).toBe("3000000");
+    expect(result.members.map((member) => member.assignedShare)).toEqual(["1800000", "600000", "600000"]);
+    expect(result.members.map((member) => [member.taxPercentText, member.sharePercentText])).toEqual([
+      [null, "60%"],
+      ["40%", "20%"],
+      ["40%", "20%"],
+    ]);
   });
 
   it("adds only selected categories and creates transfers", () => {

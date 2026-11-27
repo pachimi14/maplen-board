@@ -118,7 +118,7 @@
     "calculateDistribution": "分配計算",
    "distributionRuleTitle": "Tax・傾斜設定",
     "distributionRuleNeedsSetup": "未設定・ここを開く",
-    "distributionRuleHelp": "全員が当選額を100%プールへ入れます。Tax設定者の配分率は「Tax率 ÷ PT人数」で自動決定し、残りをTax未設定者の傾斜率または均等割りで配分します。",
+    "distributionRuleHelp": "全員が当選額を100%プールへ入れます。Tax設定者の配分率は「(100 − Tax率) ÷ PT人数」で自動決定し、残りをTax未設定者の傾斜率または均等割りで配分します。",
     "splitRemainingEqually": "残りを均等割り",
     "taxPercent": "Tax（%）",
     "sharePercent": "傾斜（%）",

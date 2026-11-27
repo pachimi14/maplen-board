@@ -118,7 +118,7 @@
     "calculateDistribution": "Tính phân chia",
    "distributionRuleTitle": "Thiết lập thuế và tỷ lệ",
     "distributionRuleNeedsSetup": "Chưa thiết lập · Mở tại đây",
-    "distributionRuleHelp": "Mọi người góp 100% phần thưởng vào quỹ. Phần của thành viên có thuế bằng tỷ lệ thuế ÷ số thành viên; phần còn lại theo tỷ lệ đã đặt hoặc chia đều cho người không thuế.",
+    "distributionRuleHelp": "Mọi người góp 100% phần thưởng vào quỹ. Phần của thành viên có thuế bằng (100 − tỷ lệ thuế) ÷ số thành viên; phần còn lại theo tỷ lệ đã đặt hoặc chia đều cho người không thuế.",
     "splitRemainingEqually": "Chia đều phần còn lại",
     "taxPercent": "Thuế (%)",
     "sharePercent": "Tỷ lệ (%)",

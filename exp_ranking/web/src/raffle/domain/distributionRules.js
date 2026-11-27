@@ -57,7 +57,7 @@ export function resolveDistributionRules(partyOrder, taxPercentByMemberId = {}, 
   const nonTaxMembers = rows.filter((row) => row.tax.blank);
   if (!nonTaxMembers.length) return { ok: false, errors: [{ code: "no_distribution_receiver", field: "distribution" }] };
   const partySize = BigInt(rows.length);
-  const taxShareUnits = new Map(rows.filter((row) => !row.tax.blank).map((row) => [row.memberId, row.tax.units / partySize]));
+  const taxShareUnits = new Map(rows.filter((row) => !row.tax.blank).map((row) => [row.memberId, (HUNDRED - row.tax.units) / partySize]));
   const explicitTotal = nonTaxMembers.reduce((sum, row) => sum + (row.share.blank ? 0n : row.share.units), 0n);
   const taxShareTotal = [...taxShareUnits.values()].reduce((sum, units) => sum + units, 0n);
   const fixedTotal = explicitTotal + taxShareTotal;

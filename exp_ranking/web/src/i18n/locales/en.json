@@ -118,7 +118,7 @@
     "calculateDistribution": "Calculate settlement",
    "distributionRuleTitle": "Tax and split settings",
     "distributionRuleNeedsSetup": "Not set · Open here",
-    "distributionRuleHelp": "Everyone contributes 100% of their winnings to the pool. A taxed member's share is Tax rate ÷ party size; the remainder follows the non-taxed members' shares or an equal split.",
+    "distributionRuleHelp": "Everyone contributes 100% of their winnings to the pool. A taxed member's share is (100 − Tax rate) ÷ party size; the remainder follows the non-taxed members' shares or an equal split.",
     "splitRemainingEqually": "Split the remainder equally",
     "taxPercent": "Tax (%)",
     "sharePercent": "Share (%)",

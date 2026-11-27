@@ -4,12 +4,44 @@ import { allocateDistribution, materializeAutomaticShares, resolveDistributionRu
 describe("distribution rules", () => {
   const party = ["a", "b", "c", "d", "e", "f"];
 
-  it("gives a taxed member tax-rate ÷ party-size and splits the remainder", () => {
+  it("gives a taxed member (100 − tax-rate) ÷ party-size and splits the remainder", () => {
     const result = resolveDistributionRules(party, { a: "50" }, { b: "10" });
     expect(result.ok).toBe(true);
     expect(result.rows.map((row) => row.taxText)).toEqual(["50%", null, null, null, null, null]);
     expect(result.rows.map((row) => row.shareText)).toEqual(["8.3333%", "10%", "20.4166%", "20.4166%", "20.4166%", "20.4166%"]);
     expect(result.rows[0].shareInputText).toBe("8.333333");
+  });
+
+  // LULU-164: Tax is the share a member pays, so a taxed member keeps (100 − tax) ÷ party-size.
+  it("treats Tax as the share paid: 3 members, B and C at Tax 40 → 60% / 20% / 20%", () => {
+    const result = resolveDistributionRules(["A", "B", "C"], { B: "40", C: "40" });
+    expect(result.ok).toBe(true);
+    expect(result.totalText).toBe("100%");
+    expect(result.rows.map((row) => row.taxText)).toEqual([null, "40%", "40%"]);
+    expect(result.rows.map((row) => row.shareText)).toEqual(["60%", "20%", "20%"]);
+    expect(result.rows.map((row) => row.shareInputText)).toEqual([null, "20", "20"]);
+  });
+
+  it("gives a Tax 100 member 0% and leaves the full remainder to untaxed members", () => {
+    const result = resolveDistributionRules(["a", "b", "c"], { a: "100" });
+    expect(result.ok).toBe(true);
+    expect(result.rows.map((row) => row.shareText)).toEqual(["0%", "50%", "50%"]);
+    expect(result.rows[0].shareInputText).toBe("0");
+  });
+
+  it("gives one Tax 10 member in a 6-member party 15% and the other five 17% each", () => {
+    const result = resolveDistributionRules(party, { a: "10" });
+    expect(result.ok).toBe(true);
+    expect(result.rows.map((row) => row.shareText)).toEqual(["15%", "17%", "17%", "17%", "17%", "17%"]);
+  });
+
+  it("combines Tax with an explicit share: B Tax 40 (→ 20%), A share 50 → C automatic 30%", () => {
+    const result = resolveDistributionRules(["A", "B", "C"], { B: "40" }, { A: "50" });
+    expect(result.ok).toBe(true);
+    expect(result.totalText).toBe("100%");
+    expect(result.rows.map((row) => row.shareText)).toEqual(["50%", "20%", "30%"]);
+    const filled = materializeAutomaticShares(["A", "B", "C"], { B: "40" }, { A: "50" });
+    expect(filled.sharePercentByMemberId).toEqual({ A: "50", C: "30" });
   });
 
   it("supports a zero explicit share while distinguishing it from blank", () => {

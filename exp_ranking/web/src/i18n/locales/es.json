@@ -118,7 +118,7 @@
     "calculateDistribution": "Calcular reparto",
    "distributionRuleTitle": "Configuración de impuesto y reparto",
     "distributionRuleNeedsSetup": "Sin configurar · Abrir",
-    "distributionRuleHelp": "Todos aportan el 100 % de sus premios al fondo. La parte de un miembro con impuesto es impuesto ÷ tamaño del grupo; el resto sigue los repartos configurados o se divide por igual.",
+    "distributionRuleHelp": "Todos aportan el 100 % de sus premios al fondo. La parte de un miembro con impuesto es (100 − impuesto) ÷ tamaño del grupo; el resto sigue los repartos configurados o se divide por igual.",
     "splitRemainingEqually": "Dividir el resto por igual",
     "taxPercent": "Impuesto (%)",
     "sharePercent": "Reparto (%)",
